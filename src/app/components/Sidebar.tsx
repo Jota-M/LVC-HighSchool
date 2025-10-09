@@ -1,13 +1,12 @@
 'use client';
 import { useState } from 'react';
 import { ProSidebar, Menu, MenuItem } from 'react-pro-sidebar';
-import { Box, IconButton, Typography, useTheme } from '@mui/material';
+import { Box, IconButton, Typography, useTheme, Divider } from '@mui/material';
 import Link from 'next/link';
 import 'react-pro-sidebar/dist/css/styles.css';
 import { tokens } from '../dashboard/theme';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 
-// ICONOS
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
 import ContactsOutlinedIcon from '@mui/icons-material/ContactsOutlined';
@@ -41,25 +40,60 @@ const Item = ({ title, to, icon, selected, setSelected }: ItemProps) => {
       icon={icon}
     >
       <Link href={to} className="w-full">
-        <Typography>{title}</Typography>
+        <Typography fontSize="0.95rem" fontWeight={500}>
+          {title}
+        </Typography>
       </Link>
     </MenuItem>
   );
 };
 
-// 🔑 Configuración de menús con roles
-const menuConfig = [
-  { title: 'Dashboard', to: '/dashboard', icon: <HomeOutlinedIcon />, roles: ['admin', 'user'] },
-  { title: 'Users', to: '/dashboard/users', icon: <PeopleOutlinedIcon />, roles: ['admin'] },
-  { title: 'Contacts Information', to: '/contacts', icon: <ContactsOutlinedIcon />, roles: ['admin', 'user'] },
-  { title: 'Invoices Balances', to: '/invoices', icon: <ReceiptOutlinedIcon />, roles: ['admin'] },
-  { title: 'Profile Form', to: '/form', icon: <PersonOutlinedIcon />, roles: ['admin', 'user'] },
-  { title: 'Calendar', to: '/calendar', icon: <CalendarTodayOutlinedIcon />, roles: ['admin', 'user'] },
-  { title: 'FAQ Page', to: '/faq', icon: <HelpOutlineOutlinedIcon />, roles: ['admin', 'user'] },
-  { title: 'Bar Chart', to: '/bar', icon: <BarChartOutlinedIcon />, roles: ['admin'] },
-  { title: 'Pie Chart', to: '/pie', icon: <PieChartOutlineOutlinedIcon />, roles: ['admin'] },
-  { title: 'Line Chart', to: '/line', icon: <TimelineOutlinedIcon />, roles: ['admin'] },
-  { title: 'Geography Chart', to: '/geography', icon: <MapOutlinedIcon />, roles: ['admin'] },
+const sections = [
+  {
+    label: 'Administración',
+    items: [
+      { title: 'Dashboard', to: '/dashboard', icon: <HomeOutlinedIcon />, roles: ['admin', 'user'] },
+      { title: 'Users', to: '/dashboard/users', icon: <PeopleOutlinedIcon />, roles: ['admin'] },
+      { title: 'Docentes', to: '/dashboard/docentes', icon: <ReceiptOutlinedIcon />, roles: ['admin'] },
+      { title: 'Estudiantes', to: '/dashboard/estudiantes', icon: <PersonOutlinedIcon />, roles: ['admin', 'user'] },
+    ],
+  },
+  {
+    label: 'Académica',
+    items: [
+      { title: 'Asignaciones', to: '/dashboard/asignaciones', icon: <ContactsOutlinedIcon />, roles: ['admin', 'user'] },
+      { title: 'Materias', to: '/dashboard/materias', icon: <HelpOutlineOutlinedIcon />, roles: ['admin', 'user'] },
+      { title: 'Horarios y Paralelos', to: '/calendar', icon: <CalendarTodayOutlinedIcon />, roles: ['admin', 'user'] },
+      
+    ],
+  },
+  {
+    label: 'Configuracion',
+    items: [
+      { title: 'Configuración', to: '/pie', icon: <PieChartOutlineOutlinedIcon />, roles: ['admin'] },
+      { title: 'Reportes', to: '/line', icon: <TimelineOutlinedIcon />, roles: ['admin'] },
+    ],
+  },
+  {
+    label: 'Padre de Familia/Tutor',
+    items: [
+      { title: 'Panel Principal', to: '/dashboard/Padre/principal', icon: <HomeOutlinedIcon />, roles: ['admin', 'user'] },
+      { title: 'Calificaciones', to: '/dashboard/Padre/calificaciones', icon: <PeopleOutlinedIcon />, roles: ['admin'] },
+      { title: 'Asistencia', to: '/dashboard/Padre/asistencia', icon: <ReceiptOutlinedIcon />, roles: ['admin'] },
+      { title: 'Horario', to: '/dashboard/Padre/horario', icon: <PersonOutlinedIcon />, roles: ['admin', 'user'] },
+      { title: 'Alertas', to: '/dashboard/Padre/alertas', icon: <TimelineOutlinedIcon />, roles: ['admin', 'user'] },
+    ],
+  },
+  {
+    label: 'Profesor',
+    items: [
+      { title: 'Home  ', to: '/dashboard/profesor/home', icon: <HomeOutlinedIcon />, roles: ['admin', 'user'] },
+      { title: 'Notas y Calificaciones', to: '/dashboard/profesor/notas', icon: <PeopleOutlinedIcon />, roles: ['admin'] },
+      { title: 'Asistencia', to: '/dashboard/profesor/asistencia', icon: <ReceiptOutlinedIcon />, roles: ['admin'] },
+      { title: 'Clases', to: '/dashboard/profesor/clases', icon: <PersonOutlinedIcon />, roles: ['admin', 'user'] },
+    ],
+  },
+  
 ];
 
 const Sidebar = () => {
@@ -76,7 +110,28 @@ const Sidebar = () => {
   return (
     <Box
       sx={{
-        '& .pro-sidebar-inner': { background: `${colors.primary[400]} !important` },
+        height: '100vh',
+        overflow: 'hidden',
+        '& .pro-sidebar-inner': {
+          background: `${colors.primary[400]} !important`,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        },
+        '& .pro-menu': {
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          scrollbarWidth: 'thin',
+          scrollbarColor: `${colors.grey[700]} transparent`,
+        },
+        '& .pro-menu::-webkit-scrollbar': {
+          width: '6px',
+        },
+        '& .pro-menu::-webkit-scrollbar-thumb': {
+          backgroundColor: colors.grey[700],
+          borderRadius: '4px',
+        },
         '& .pro-icon-wrapper': { backgroundColor: 'transparent !important' },
         '& .pro-inner-item': { padding: '5px 35px 5px 20px !important' },
         '& .pro-inner-item:hover': { color: '#868dfb !important' },
@@ -94,7 +149,7 @@ const Sidebar = () => {
             {!isCollapsed && (
               <Box display="flex" justifyContent="space-between" alignItems="center" ml="15px">
                 <Typography variant="h3" color={colors.grey[100]}>
-                  ADMINIS
+                  U.E. LVC
                 </Typography>
                 <IconButton onClick={() => setIsCollapsed(!isCollapsed)}>
                   <MenuOutlinedIcon />
@@ -102,15 +157,17 @@ const Sidebar = () => {
               </Box>
             )}
           </MenuItem>
-           {!isCollapsed && (
+
+          {/* PERFIL */}
+          {!isCollapsed && (
             <Box mb="25px">
               <Box display="flex" justifyContent="center" alignItems="center">
                 <img
                   alt="profile-user"
                   width="100px"
                   height="100px"
-                  src={`./perfil.jpg`}
-                  style={{ cursor: "pointer", borderRadius: "50%" }}
+                  src={`/perfil.jpg`}
+                  style={{ cursor: 'pointer', borderRadius: '50%' }}
                 />
               </Box>
               <Box textAlign="center">
@@ -118,7 +175,7 @@ const Sidebar = () => {
                   variant="h2"
                   color={colors.grey[100]}
                   fontWeight="bold"
-                  sx={{ m: "10px 0 0 0" }}
+                  sx={{ m: '10px 0 0 0' }}
                 >
                   Oswaldo
                 </Typography>
@@ -128,20 +185,35 @@ const Sidebar = () => {
               </Box>
             </Box>
           )}
-          {/* MENÚ SEGÚN EL ROL */}
+
+          {/* MENÚ AGRUPADO POR ÁREAS */}
           <Box paddingLeft={isCollapsed ? undefined : '10%'}>
-            {menuConfig
-              .filter((item) => role && item.roles.includes(role))
-              .map((item) => (
-                <Item
-                  key={item.title}
-                  title={item.title}
-                  to={item.to}
-                  icon={item.icon}
-                  selected={selected}
-                  setSelected={setSelected}
-                />
-              ))}
+            {sections.map((section, i) => (
+              <Box key={i} mb={2}>
+                {!isCollapsed && (
+                  <Typography
+                    variant="subtitle2"
+                    color={colors.grey[300]}
+                    sx={{ textTransform: 'uppercase', fontWeight: 600, mb: 1, ml: 1 }}
+                  >
+                    {section.label}
+                  </Typography>
+                )}
+                {section.items
+                  .filter((item) => role && item.roles.includes(role))
+                  .map((item) => (
+                    <Item
+                      key={item.title}
+                      title={item.title}
+                      to={item.to}
+                      icon={item.icon}
+                      selected={selected}
+                      setSelected={setSelected}
+                    />
+                  ))}
+                {i !== sections.length - 1 && <Divider sx={{ my: 1, bgcolor: colors.grey[700] }} />}
+              </Box>
+            ))}
           </Box>
         </Menu>
       </ProSidebar>

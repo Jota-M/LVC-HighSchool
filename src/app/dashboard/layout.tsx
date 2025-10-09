@@ -5,7 +5,7 @@ import { Box } from "@mui/material";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Box display="flex" height="100vh" >
+    <Box display="flex" height="100dvh" >
       <Sidebar/>
       <Box flex={1} display="flex" flexDirection="column">
         <Topbar />

@@ -6,7 +6,7 @@ function Header() {
 
   return (
     <div className="fixed top-0 left-0 w-full z-20 shadow">
-      <div className="max-w-screen-xl mx-auto flex justify-between items-center py-4 px-6 md:px-20 lg:px-32 text-white">
+      <div className="max-w-screen-xl mx-auto flex justify-between py-4 px-6 md:px-20 lg:px-32 text-white">
         <div className="flex items-center gap-4">
           <img src="./logo.png" alt="Logo" className="w-12" />
           <div>

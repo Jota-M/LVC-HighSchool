@@ -7,7 +7,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [theme, colorMode] = useMode();
 
   return (
-    <html lang="en">
+    <html lang="en" className="scroll-smooth">
       <body>
         <ColorModeContext.Provider value={colorMode}>
           <ThemeProvider theme={theme}>
