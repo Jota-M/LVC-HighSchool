@@ -8,8 +8,6 @@ import PriorityHighIcon from '@mui/icons-material/PriorityHigh'
 
 export default function AnunciosPage() {
   const theme = useTheme()
-
-  // Datos de ejemplo
   const stats = {
     anunciosTotales: 23,
     sinLeer: 5,

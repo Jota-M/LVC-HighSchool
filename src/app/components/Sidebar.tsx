@@ -111,7 +111,7 @@ const Sidebar = () => {
     <Box
       sx={{
         height: '100vh',
-        overflow: 'hidden',
+        
         '& .pro-sidebar-inner': {
           background: `${colors.primary[400]} !important`,
           height: '100%',

@@ -11,7 +11,7 @@ const VerseSection = () => {
   return (
     <Box
       sx={{
-        mt:{xs:3, md:6},
+        margin:1,
         py: { xs: 10, md: 14 },
         backgroundColor,
         textAlign: 'center',

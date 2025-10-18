@@ -153,19 +153,19 @@ function Contact() {
             <Typography variant="body2" gutterBottom>
               <strong>LCV High School</strong>
               <br />
-              B 37/3 Ground Floor Double Story Ramesh Nagar,
+              Avenida Argentina Nro 200 entre
               <br />
-              Near Raja Garden Chowk. Delhi: 110015
+              Calle Trujillo y Luis Espinal
             </Typography>
             <Typography
               variant="body2"
               gutterBottom
               sx={{ color: 'green', fontWeight: 'bold' }}
             >
-              +91 9599272754
+              +591 69624189 76162425 68420862
             </Typography>
             <Typography variant="body2" gutterBottom>
-              hello@info.com.ng
+              lavozdecristohighschool@gmail.com
             </Typography>
 
             {/* Redes sociales */}
