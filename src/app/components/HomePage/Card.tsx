@@ -1,15 +1,18 @@
+// Card.tsx - Componente mejorado
+'use client';
 import * as React from 'react';
 import {
   Card,
-  CardActions,
   CardContent,
   CardMedia,
   Typography,
   Box,
   CardActionArea,
+  useTheme,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CallMadeIcon from '@mui/icons-material/CallMade';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { keyframes } from '@mui/system';
 
 interface MediaCardProps {
@@ -23,11 +26,33 @@ interface MediaCardProps {
   link: string;
 }
 
-// Animación para aparecer los items
+// Animaciones mejoradas
 const fadeIn = keyframes`
-  0% { opacity: 0; transform: translateY(10px); }
+  0% { opacity: 0; transform: translateY(15px); }
   100% { opacity: 1; transform: translateY(0); }
 `;
+
+const gradientShift = keyframes`
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+`;
+
+const shine = keyframes`
+  0% { left: -100%; }
+  100% { left: 200%; }
+`;
+
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+`;
+
+const float = keyframes`
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+`;
+
 
 export default function MediaCard({
   title,
@@ -39,111 +64,215 @@ export default function MediaCard({
   paragraph3,
   link,
 }: MediaCardProps) {
+  const [isHovered, setIsHovered] = React.useState(false);
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   return (
+    
     <Card
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       sx={{
-        width: { xs: "90%", sm: "90%", md: "100%", lg: "100%" },
-        borderRadius: 3,
-        boxShadow: "0 6px 20px rgba(0,0,0,0.12)",
-        transition: "transform 0.3s, box-shadow 0.3s",
-        "&:hover": {
-          transform: "translateY(-10px)",
-          boxShadow: "0 12px 30px rgba(0,0,0,0.2)",
+        width: "100%",
+        borderRadius: 4,
+        position: "relative",
+        overflow: "hidden",
+        boxShadow: isHovered
+          ? "0 20px 60px rgba(1, 87, 155, 0.35)"
+          : "0 10px 30px rgba(0, 0, 0, 0.12)",
+        transition: "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        transform: isHovered ? "translateY(-5px)" : "translateY(0)",
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          inset: -2,
+          borderRadius: 4,
+          padding: 2,
+          background: "linear-gradient(45deg, #01579b, #0288d1, #facc15, #01579b)",
+          backgroundSize: "300% 300%",
+          WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+          WebkitMaskComposite: "xor",
+          maskComposite: "exclude",
+          opacity: isHovered ? 1 : 0,
+          animation: isHovered ? `${gradientShift} 3s ease infinite` : "none",
+          transition: "opacity 0.5s ease",
+          zIndex: -1,
         },
       }}
     >
       <CardActionArea href={link}>
-        {/* Imagen con efecto hover */}
-        <CardMedia
+        {/* Imagen con efectos mejorados */}
+        <Box
           sx={{
-            height: { xs: 150, sm: 180, md: 200, lg: 220 },
-            transition: "transform 0.5s",
-            "&:hover": {
-              transform: "scale(1.05)",
-            },
+            position: "relative",
+            overflow: "hidden",
+            height: { xs: 180, sm: 200, md: 220, lg: 240 },
           }}
-          image={imageurl}
-          title={title}
-        />
-        <CardContent>
-          <Typography
-            gutterBottom
-            variant="caption"
-            component="div"
+        >
+          <CardMedia
             sx={{
-              fontWeight: 'bold',
-              color: '#01579b',
-              animation: `${fadeIn} 0.6s ease forwards`,
+              height: "100%",
+              transition: "transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)",
+              transform: isHovered ? "scale(1.15) rotate(2deg)" : "scale(1) rotate(0deg)",
             }}
-          >
-            {init}
-          </Typography>
+            image={imageurl}
+            title={title}
+          />
 
+          {/* Overlay gradiente mejorado */}
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.7) 100%)",
+              opacity: isHovered ? 1 : 0.6,
+              transition: "opacity 0.5s ease",
+            }}
+          />
+          
+          {/* Efecto de brillo al hover */}
+          <Box
+            sx={{
+              position: "absolute",
+              top: 0,
+              left: "-100%",
+              width: "100%",
+              height: "100%",
+              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+              animation: isHovered ? `${shine} 1.5s ease` : "none",
+              pointerEvents: "none",
+            }}
+          />
+        </Box>
+
+        <CardContent sx={{ p: 3 }}>
+          {/* Header con título e icono */}
           <Box
             display="flex"
             justifyContent="space-between"
-            alignItems="center"
-            sx={{ animation: `${fadeIn} 0.8s ease forwards` }}
+            alignItems="flex-start"
+            mb={1.5}
+            sx={{ animation: `${fadeIn} 0.6s ease forwards` }}
           >
             <Typography
-              gutterBottom
-              variant="h6"
+              variant="h5"
               component="div"
-              sx={{ fontSize: '1.3rem', fontWeight: 'bold' }}
+              sx={{
+                fontSize: { xs: "1.2rem", md: "1.4rem" },
+                fontWeight: "bold",
+                color: isDark ? "#ffd54f" : "#01579b",
+                flex: 1,
+                lineHeight: 1.3,
+              }}
             >
               {title}
             </Typography>
-            <CallMadeIcon
+            <Box
+            sx={{
+              position: "absolute",
+              bottom: -10,
+              right: 5,
+              width: 50,
+              height: 50,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #facc15, #ffd54f)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 4px 20px rgba(250, 204, 21, 0.5)",
+              transform: isHovered ? "scale(1.2) rotate(45deg)" : "scale(1) rotate(0deg)",
+              transition: "all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            }}
+          >
+            <TrendingUpIcon
               sx={{
-                fontSize: '1.2rem',
-                color: 'text.secondary',
-                transition: "transform 0.3s",
-                "&:hover": { transform: "rotate(20deg)" },
+                color: "#01579b",
+                fontSize: "1.5rem",
+                transform: isHovered ? "rotate(-45deg)" : "rotate(0deg)",
+                transition: "transform 0.4s ease",
               }}
             />
           </Box>
+          </Box>
 
+          {/* Descripción */}
           <Typography
-            gutterBottom
             variant="body2"
             sx={{
-              color: 'text.secondary',
-              fontSize: '0.85rem',
-              animation: `${fadeIn} 1s ease forwards`,
+              color: "text.secondary",
+              fontSize: "0.9rem",
+              lineHeight: 1.6,
+              mb: 2,
+              animation: `${fadeIn} 0.8s ease forwards`,
             }}
           >
             {paragraph}
           </Typography>
 
-          <Box sx={{ mt: 1 }}>
+          {/* Lista de características mejorada */}
+          <Box sx={{ mt: 2 }}>
             {[paragraph1, paragraph2, paragraph3].map((text, index) => (
               <Box
                 key={index}
                 display="flex"
                 alignItems="center"
-                mb={0.5}
+                mb={1.2}
                 sx={{
-                  animation: `${fadeIn} ${1 + index * 0.2}s ease forwards`,
+                  animation: `${fadeIn} ${0.8 + index * 0.15}s ease forwards`,
+                  opacity: 0,
+                  animationFillMode: "forwards",
+                  "&:hover": {
+                    transform: "translateX(5px)",
+                  },
+                  transition: "transform 0.3s ease",
                 }}
               >
-                <CheckCircleIcon
+                <Box
                   sx={{
-                    fontSize: '1rem',
-                    color: '#01579b',
-                    marginRight: '6px',
-                    transition: "transform 0.3s",
-                    "&:hover": { transform: "scale(1.2)" },
+                    minWidth: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg, #01579b, #0288d1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    mr: 1.5,
+                    boxShadow: "0 2px 8px rgba(1, 87, 155, 0.3)",
+                    animation: isHovered ? `${pulse} 2s ease-in-out infinite ${index * 0.2}s` : "none",
                   }}
-                />
+                >
+                  <CheckCircleIcon
+                    sx={{
+                      fontSize: "0.9rem",
+                      color: "#fff",
+                    }}
+                  />
+                </Box>
                 <Typography
                   variant="body2"
-                  sx={{ fontSize: '0.75rem', color: 'text.secondary' }}
+                  sx={{
+                    fontSize: "0.85rem",
+                    color: "text.secondary",
+                    fontWeight: 500,
+                  }}
                 >
                   {text}
                 </Typography>
               </Box>
             ))}
           </Box>
+
+          {/* Borde inferior decorativo */}
+          <Box
+            sx={{
+              mt: 2,
+              pt: 2,
+              borderTop: "2px solid",
+              borderImage: "linear-gradient(90deg, transparent, #01579b, #facc15, transparent) 1",
+              opacity: isHovered ? 1 : 0,
+              transition: "opacity 0.5s ease",
+            }}
+          />
         </CardContent>
       </CardActionArea>
     </Card>

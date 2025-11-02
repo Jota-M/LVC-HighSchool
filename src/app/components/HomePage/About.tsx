@@ -1,247 +1,404 @@
-import React from "react";
-import { Box, Typography, Grid, useTheme } from "@mui/material";
-import Title from "./Title";
-import Paragrafth from "./Paragrafth";
-import Pils from "./Pils";
-
-interface ItemProps {
-  title: string;
-  text: string;
-  isDark: boolean;
-  centered: boolean;
-}
+import React, { useEffect, useState, } from "react";
+import { useTheme } from "@mui/material";
 
 function About() {
+  const [isVisible, setIsVisible] = useState(false);
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === "dark";
 
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
+
   return (
-    <Box id='Nosotros'
-      sx={{
+    <div
+    id="Nosotros"
+      style={{
         backgroundColor: isDarkMode ? "#010c17" : "#fff",
         color: isDarkMode ? "#fff" : "#000",
-        py: 10,
-        transition: "background-color 0.5s ease, color 0.5s ease",
-        overflowX: "hidden",
+        padding: "80px 20px",
+        position: "relative",
+        overflow: "hidden",
+        minHeight: "100vh",
       }}
     >
-      <Grid
-        container
-        spacing={6}
-        justifyContent="center"
-        alignItems="flex-start"
-        sx={{
-          maxWidth: "1200px",
-          mx: "auto",
-          px: 3,
+      {/* Fondo con gradiente animado */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "300px",
+          background: isDarkMode
+            ? "radial-gradient(ellipse at top, rgba(1, 87, 155, 0.15), transparent)"
+            : "radial-gradient(ellipse at top, rgba(1, 87, 155, 0.08), transparent)",
+          animation: "pulse 8s ease-in-out infinite",
         }}
-      >
-        {/* --- Propósito --- */}
-          <Grid size={{ xs: 12, md: 6, lg: 6 }}>
-            <Box sx={{ textAlign: { xs: "center", md: "left" } }}>
-              <Title text="Sobre Nosotros" />
-              <Typography
-            variant="h3"
-            sx={{
-              color: '#01579b',
-              fontWeight: 'bold',
-              fontSize: {
-                xs: '1.8rem',
-                sm: '2rem',
-                md: '2.5rem',
-                lg: '3rem',
-              },
-              lineHeight: 1.3,
-              mb: 2,
-              textShadow: '0 0 8px rgba(21, 101, 192, 0.3)',
+      />
+
+      <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+        {/* Sección Principal */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "40px", marginBottom: "60px" }}>
+          {/* Texto Principal */}
+          <div
+            style={{
+              opacity: isVisible ? 1 : 0,
+              transform: isVisible ? "translateX(0)" : "translateX(-50px)",
+              transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
             }}
           >
-            Una educación con{' '}
-            <Box component="span" sx={{ color: '#facc15', textShadow: '0 0 10px rgba(250, 204, 21, 0.5)' }}>
-              propósito eterno
-            </Box>
-             </Typography>
-              <Typography
-                variant="body1"
-                sx={{
-                  mt: 2,
-                  fontSize: { xs: "1rem", sm: "1.1rem", md: "1.15rem" },
-                  lineHeight: 1.6,
-                  color: isDarkMode ? "#ccc" : "#555",
+            <div style={{ color: "#01579b", fontWeight: "bold", fontSize: "14px", letterSpacing: "2px", marginBottom: "10px" }}>
+              SOBRE NOSOTROS
+            </div>
+            <h1
+              style={{
+                color: "#01579b",
+                fontWeight: "bold",
+                fontSize: "clamp(1.8rem, 4vw, 3rem)",
+                lineHeight: 1.3,
+                marginBottom: "20px",
+                animation: "glow 3s ease-in-out infinite",
+              }}
+            >
+              Una educación con{" "}
+              <span
+                style={{
+                  color: "#facc15",
+                  display: "inline-block",
+                  animation: "shimmer 2s ease-in-out infinite",
                 }}
               >
-                Formamos estudiantes íntegros a través de una educación de excelencia académica fundamentada en principios bíblicos. Nuestro compromiso es desarrollar el potencial de cada niño y joven, preparándolos para ser líderes transformadores en la sociedad con un corazón conforme al de Cristo.
-              </Typography>
-            </Box>
-          </Grid>
+                propósito eterno
+              </span>
+            </h1>
+            <p style={{ fontSize: "1.1rem", lineHeight: 1.6, color: isDarkMode ? "#ccc" : "#555" }}>
+              Formamos estudiantes íntegros a través de una educación de excelencia académica fundamentada en principios bíblicos. 
+              Nuestro compromiso es desarrollar el potencial de cada niño y joven, preparándolos para ser líderes transformadores 
+              en la sociedad con un corazón conforme al de Cristo.
+            </p>
+          </div>
 
+          {/* Imagen */}
+          <div
+            style={{
+              position: "relative",
+              opacity: isVisible ? 1 : 0,
+              transform: isVisible ? "translateX(0) scale(1)" : "translateX(50px) scale(0.9)",
+              transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s",
+            }}
+          >
+            <img
+              src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800"
+              alt="Estudiantes"
+              style={{
+                width: "100%",
+                borderRadius: "16px",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+                objectFit: "cover",
+                transition: "transform 0.5s ease",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+            />
+            <div
+              style={{
+                position: "absolute",
+                top: -10,
+                right: -10,
+                width: 100,
+                height: 100,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #01579b, #facc15)",
+                opacity: 0.6,
+                filter: "blur(40px)",
+                animation: "pulse 4s ease-in-out infinite",
+              }}
+            />
+          </div>
+        </div>
 
-        {/* --- Imagen con fade suave --- */}
-        <Grid size={{ xs: 12, md: 6, lg: 6 }}>
-          <Box
-            component="img"
-            src="fondo.jpg"
-            alt="Estudiantes realizando actividades vocacionales"
-            loading="lazy"
-            sx={{
+        {/* Misión y Visión */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "40px", marginBottom: "80px" }}>
+          <InfoCard title="Misión" text="Proporcionar una educación integral centrada en principios cristianos, promoviendo el desarrollo académico, espiritual y social de nuestros estudiantes." isDark={isDarkMode} delay={0.4} />
+          <InfoCard title="Visión" text="Ser una unidad educativa modelo en la formación de ciudadanos con valores, excelencia académica y compromiso con el bienestar de su entorno." isDark={isDarkMode} delay={0.6} />
+        </div>
+
+        {/* Divisor */}
+        <div
+          style={{
+            margin: "60px auto",
+            height: "1px",
+            background: isDarkMode ? "#333" : "#ddd",
+            position: "relative",
+            maxWidth: "200px",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "60px",
+              height: "3px",
+              background: "linear-gradient(90deg, #01579b, #facc15)",
+              borderRadius: "2px",
+            }}
+          />
+        </div>
+
+        {/* Pilares */}
+        <div style={{ textAlign: "center", marginBottom: "40px" }}>
+          <div style={{ color: "#01579b", fontWeight: "bold", fontSize: "14px", letterSpacing: "2px", marginBottom: "10px" }}>
+            NUESTROS PILARES FUNDAMENTALES
+          </div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "40px", marginBottom: "60px" }}>
+          {[
+            { title: "Fe", img: "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=400" },
+            { title: "Educación", img: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400" },
+            { title: "Servicio", img: "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400" },
+            { title: "Comunidad", img: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400" },
+          ].map((p, index) => (
+            <Pillar key={p.title} {...p} index={index} />
+          ))}
+        </div>
+
+        {/* Versículo */}
+        <div
+          style={{
+            marginTop: "60px",
+            textAlign: "center",
+            fontStyle: "italic",
+            fontSize: "clamp(1.4rem, 3vw, 1.8rem)",
+            lineHeight: 1.7,
+            color: isDarkMode ? "#FFD700" : "#FFAA00",
+            padding: "40px 30px",
+            borderRadius: "12px",
+            background: isDarkMode
+              ? "linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,215,0,0.15))"
+              : "linear-gradient(135deg, rgba(255,170,0,0.05), rgba(255,170,0,0.15))",
+            boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
+            border: "1px solid rgba(255,215,0,0.2)",
+            position: "relative",
+            overflow: "hidden",
+            opacity: 0,
+            animation: "fadeUpScale 1s ease forwards 1.5s",
+            transition: "all 0.4s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "scale(1.02)";
+            e.currentTarget.style.boxShadow = "0 12px 30px rgba(255,215,0,0.3)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "scale(1)";
+            e.currentTarget.style.boxShadow = "0 8px 20px rgba(0,0,0,0.1)";
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: "-100%",
               width: "100%",
-              borderRadius: 4,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-              objectFit: "cover",
-              opacity: 0,
-              animation: "fadeIn 1.5s ease forwards",
+              height: "100%",
+              background: "linear-gradient(90deg, transparent, rgba(255,215,0,0.1), transparent)",
+              animation: "shine 3s ease-in-out infinite",
             }}
           />
-        </Grid>
-
-  {/* --- Misión --- */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <InfoCard
-            title="Misión"
-            text="Proporcionar una educación integral centrada en principios cristianos, promoviendo el desarrollo académico, espiritual y social de nuestros estudiantes."
-            isDark={isDarkMode}
-            centered
-          />
-        </Grid>
-
-        {/* --- Visión --- */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <InfoCard
-            title="Visión"
-            text="Ser una unidad educativa modelo en la formación de ciudadanos con valores, excelencia académica y compromiso con el bienestar de su entorno."
-            isDark={isDarkMode}
-            centered
-          />
-        </Grid>        
-        {/* --- Pilares --- */}
-        <Grid size={{ xs: 12 }}>
-          <Box sx={{ textAlign: "center", mt: 8 }}>
-            <Title text="Nuestros Pilares Fundamentales" />
-          </Box>
-
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              flexWrap: "wrap",
-              gap: 4,
-              mt: 5,
-              transition: "transform 0.3s ease",
+          <div
+            style={{
+              marginBottom: "15px",
+              height: "2px",
+              width: "60px",
+              margin: "0 auto 15px",
+              background: isDarkMode ? "#FFD700" : "#FFAA00",
+              borderRadius: "2px",
             }}
-          >
-            {[
-              { title: "Fe", img: "/Pils-1.jpg" },
-              { title: "Educación", img: "/Pils-2.jpg" },
-              { title: "Servicio", img: "/Pils-3.jpg" },
-              { title: "Comunidad", img: "/Pils-4.jpg" },
-            ].map((p) => (
-              <Box
-                key={p.title}
-                sx={{
-                  animation: "fadeUp 1s ease forwards",
-                  opacity: 0,
-                  transform: "translateY(30px)",
-                  "&:nth-of-type(2)": { animationDelay: "0.2s" },
-                  "&:nth-of-type(3)": { animationDelay: "0.4s" },
-                  "&:nth-of-type(4)": { animationDelay: "0.6s" },
-                }}
-              >
-                <Pils image={p.img} title={p.title} description="" />
-              </Box>
-            ))}
-          </Box>
-        </Grid>
-
-        {/* --- Versículo --- */}
-        <Grid size={{ xs: 12 }}>
-          <Box
-            sx={{
-              mt: 3,
-              textAlign: "center",
-              fontStyle: "italic",
-              fontSize: { xs: "1.4rem", sm: "1.6rem", md: "1.8rem" },
-              lineHeight: 1.7,
-              color: isDarkMode ? "#FFD700" : "#FFAA00",
-              px: { xs: 2, sm: 4, md: 6 },
-              py: 4,
-              borderRadius: 3,
-              background: isDarkMode 
-                ? "linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,215,0,0.15))" 
-                : "linear-gradient(135deg, rgba(255,170,0,0.05), rgba(255,170,0,0.15))",
-              boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
-              border: "1px solid rgba(255,215,0,0.2)",
-              transition: "transform 0.4s ease, box-shadow 0.4s ease",
-              "&:hover": {
-                transform: "scale(1.03)",
-                boxShadow: "0 12px 30px rgba(0,0,0,0.2)",
-              },
-              animation: "fadeUp 1s ease forwards",
-              opacity: 0,
+          />
+          "Instruye al niño en su camino, y aun cuando fuere viejo no se apartará de él."
+          <br />
+          <strong>— Proverbios 22:6</strong>
+          <div
+            style={{
+              marginTop: "15px",
+              height: "2px",
+              width: "60px",
+              margin: "15px auto 0",
+              background: isDarkMode ? "#FFD700" : "#FFAA00",
+              borderRadius: "2px",
             }}
-          >
-            <Box sx={{ mb: 2, height: 2, width: 60, mx: "auto", bgcolor: isDarkMode ? "#FFD700" : "#FFAA00", borderRadius: 1 }} />
-            “Instruye al niño en su camino, y aun cuando fuere viejo no se apartará de él.”  
-            <br />
-            <strong>— Proverbios 22:6</strong>
-            <Box sx={{ mt: 2, height: 2, width: 60, mx: "auto", bgcolor: isDarkMode ? "#FFD700" : "#FFAA00", borderRadius: 1 }} />
-          </Box>
-        </Grid>
+          />
+        </div>
+      </div>
 
-      </Grid>
-
-      {/* --- Animaciones globales --- */}
-      <style>
-        {`
-          @keyframes fadeIn {
-            0% { opacity: 0; }
-            100% { opacity: 1; }
-          }
-          @keyframes fadeUp {
-            0% { opacity: 0; transform: translateY(30px); }
-            100% { opacity: 1; transform: translateY(0); }
-          }
-        `}
-      </style>
-    </Box>
+      <style>{`
+        @keyframes fadeUpScale {
+          0% { opacity: 0; transform: translateY(50px) scale(0.8); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes glow {
+          0%, 100% { text-shadow: 0 0 8px rgba(21, 101, 192, 0.3); }
+          50% { text-shadow: 0 0 20px rgba(21, 101, 192, 0.6); }
+        }
+        @keyframes shimmer {
+          0%, 100% { text-shadow: 0 0 10px rgba(250, 204, 21, 0.5); }
+          50% { text-shadow: 0 0 25px rgba(250, 204, 21, 0.8); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.6; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+        @keyframes shine {
+          0% { left: -100%; }
+          100% { left: 200%; }
+        }
+        @keyframes rotateGradient {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
   );
 }
 
-/* --- InfoCard Reutilizable --- */
-function InfoCard({ title, text, isDark ,centered = false}: ItemProps) {
+interface InfoCardProps {
+  title: string;
+  text: string;
+  isDark: boolean;
+  delay?: number;
+}
+
+function InfoCard({ title, text, isDark, delay = 0 }: InfoCardProps) {
   return (
-    <Box
-      sx={{
-        border: `1px solid ${isDark ? "#333" : "#ddd"}`,
-        borderRadius: 3,
-        p: 3,
+    <div
+      style={{
+        border: "2px solid transparent",
+        borderRadius: "12px",
+        padding: "30px",
         backgroundColor: isDark ? "#071929" : "#fafafa",
-        boxShadow: isDark
-          ? "0 4px 12px rgba(0,0,0,0.4)"
-          : "0 4px 12px rgba(0,0,0,0.1)",
-        transition: "transform 0.3s ease, box-shadow 0.3s ease",
-        "&:hover": {
-          transform: "translateY(-6px)",
-          boxShadow: isDark
-            ? "0 10px 24px rgba(0,0,0,0.6)"
-            : "0 10px 24px rgba(0,0,0,0.2)",
-        },
-        animation: "fadeUp 1s ease forwards",
+        boxShadow: isDark ? "0 8px 24px rgba(0,0,0,0.4)" : "0 8px 24px rgba(0,0,0,0.1)",
+        position: "relative",
+        overflow: "hidden",
         opacity: 0,
+        transform: "translateY(30px)",
+        animation: `fadeUpScale 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards`,
+        animationDelay: `${delay}s`,
+        transition: "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-10px) scale(1.02)";
+        e.currentTarget.style.boxShadow = isDark 
+          ? "0 16px 40px rgba(1, 87, 155, 0.5)" 
+          : "0 16px 40px rgba(1, 87, 155, 0.3)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0) scale(1)";
+        e.currentTarget.style.boxShadow = isDark 
+          ? "0 8px 24px rgba(0,0,0,0.4)" 
+          : "0 8px 24px rgba(0,0,0,0.1)";
       }}
     >
-      <Typography
-        variant="h4"
-        sx={{
+      <div
+        style={{
+          position: "absolute",
+          top: 20,
+          right: 20,
+          width: 60,
+          height: 60,
+          borderRadius: "50%",
+          background: "linear-gradient(135deg, #01579b, #facc15)",
+          opacity: 0.1,
+          animation: "pulse 3s ease-in-out infinite",
+        }}
+      />
+      <h3
+        style={{
           color: "#FFD54F",
           fontWeight: "bold",
-          mb: 2,
+          fontSize: "1.8rem",
+          marginBottom: "15px",
           textAlign: "center",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         {title}
-      </Typography>
-      <Paragrafth  text={text} />
-    </Box>
+      </h3>
+      <p
+        style={{
+          lineHeight: 1.8,
+          textAlign: "center",
+          position: "relative",
+          zIndex: 1,
+          fontSize: "1rem",
+        }}
+      >
+        {text}
+      </p>
+    </div>
+  );
+}
+
+interface PillarProps {
+  title: string;
+  img: string;
+  index: number;
+}
+
+function Pillar({ title, img, index }: PillarProps) {
+  return (
+    <div
+      style={{
+        width: 200,
+        textAlign: "center",
+        cursor: "pointer",
+        opacity: 0,
+        transform: "translateY(50px) scale(0.8)",
+        animation: `fadeUpScale 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards`,
+        animationDelay: `${0.8 + index * 0.15}s`,
+        transition: "transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)",
+      }}
+      onMouseEnter={(e) => {
+        const img = e.currentTarget.querySelector("img");
+        e.currentTarget.style.transform = "scale(1.1) rotate(2deg)";
+        if (img) {
+          img.style.boxShadow = "0 12px 40px rgba(1, 87, 155, 0.6)";
+          img.style.borderColor = "#facc15";
+        }
+      }}
+      onMouseLeave={(e) => {
+        const img = e.currentTarget.querySelector("img");
+        e.currentTarget.style.transform = "scale(1) rotate(0deg)";
+        if (img) {
+          img.style.boxShadow = "0 8px 30px rgba(1, 87, 155, 0.4)";
+          img.style.borderColor = "#01579b";
+        }
+      }}
+    >
+      <img
+        src={img}
+        alt={title}
+        style={{
+          width: "100%",
+          height: 200,
+          objectFit: "cover",
+          borderRadius: "50%",
+          border: "4px solid #01579b",
+          boxShadow: "0 8px 30px rgba(1, 87, 155, 0.4)",
+          transition: "all 0.4s ease",
+        }}
+      />
+      <h4 style={{ marginTop: "15px", fontWeight: "bold", color: "#01579b", fontSize: "1.2rem" }}>
+        {title}
+      </h4>
+    </div>
   );
 }
 

@@ -52,8 +52,6 @@ function Page() {
       observer.disconnect();
     };
   }, []);
-
-  // Función para asignar refs sin devolver nada
   const setSectionRef = (index: number) => (el: HTMLDivElement | null): void => {
     sectionsRef.current[index] = el;
   };
@@ -72,8 +70,6 @@ function Page() {
       <div ref={setSectionRef(2)} style={sectionStyle}>
         <Contact />
       </div>
-
-    
         <Footer />
      
     </>
