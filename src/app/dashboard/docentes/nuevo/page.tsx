@@ -81,10 +81,7 @@ export default function Page() {
     startDate: '',
     salary: '',
     bankAccount: '',
-    emergencyContact: '',
-    emergencyPhone: '',
     specialization: '',
-    certifications: '',
   });
 
   const steps = ['Personal', 'Académico', 'Laboral', 'Documentos'];
@@ -214,11 +211,8 @@ export default function Page() {
           contractType: '',
           startDate: '',
           salary: '',
-          bankAccount: '',
-          emergencyContact: '',
-          emergencyPhone: '',
+          bankAccount: '',   
           specialization: '',
-          certifications: '',
         });
       }, 2000);
     } catch (error) {
@@ -589,29 +583,6 @@ export default function Page() {
                   sx={fieldStyle}
                 />
               </Grid>
-
-              <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Contacto de Emergencia"
-                  name="emergencyContact"
-                  value={formData.emergencyContact}
-                  onChange={handleInputChange}
-                  sx={fieldStyle}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Teléfono de Emergencia"
-                  name="emergencyPhone"
-                  value={formData.emergencyPhone}
-                  onChange={handleInputChange}
-                  sx={fieldStyle}
-                />
-              </Grid>
             </Grid>
           </Box>
         );
@@ -702,22 +673,6 @@ export default function Page() {
                   sx={fieldStyle}
                 />
               </Grid>
-
-              <Grid size={{ xs: 12 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="Certificaciones y Cursos Adicionales"
-                  name="certifications"
-                  value={formData.certifications}
-                  onChange={handleInputChange}
-                  multiline
-                  rows={3}
-                  placeholder="Ej: Certificación en Google Classroom, Curso de Pedagogía Digital..."
-                  sx={fieldStyle}
-                />
-              </Grid>
-
               <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
@@ -748,7 +703,7 @@ export default function Page() {
                   select
                   fullWidth
                   size="small"
-                  label="Tipo de Contrato *"
+                  label="Tipo de Contrato "
                   name="contractType"
                   value={formData.contractType}
                   onChange={handleInputChange}
@@ -942,15 +897,6 @@ export default function Page() {
                 }}
               >
                 📄 Contrato Laboral
-                <Chip
-                  label="Requerido"
-                  size="small"
-                  sx={{
-                    backgroundColor: '#ef4444',
-                    color: '#fff',
-                    fontWeight: 600,
-                  }}
-                />
               </Typography>
               <Paper
                 variant="outlined"
