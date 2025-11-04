@@ -8,6 +8,9 @@ import Footer from "./components/HomePage/Footer";
 import VerseSection from "./components/HomePage/Verse";
 import Landing from "./components/HomePage/Landing";
 
+// 🟣 Importamos el botón flotante
+import FloatingPreinscripcionButton from "./components/HomePage/FloatingPreinscripcionButton";
+
 const sectionStyle: React.CSSProperties = {
   opacity: 0,
   transform: "translateY(50px)",
@@ -30,7 +33,7 @@ function Page() {
     };
     window.addEventListener("mousemove", handleMouseMove);
 
-    // Intersection Observer
+    // Intersection Observer para animar secciones
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -52,6 +55,7 @@ function Page() {
       observer.disconnect();
     };
   }, []);
+
   const setSectionRef = (index: number) => (el: HTMLDivElement | null): void => {
     sectionsRef.current[index] = el;
   };
@@ -59,6 +63,7 @@ function Page() {
   return (
     <>
       <Landing />
+
       <div ref={setSectionRef(0)} style={sectionStyle}>
         <About />
       </div>
@@ -70,8 +75,11 @@ function Page() {
       <div ref={setSectionRef(2)} style={sectionStyle}>
         <Contact />
       </div>
-        <Footer />
-     
+
+      {/* 🟢 El botón flotante se renderiza en toda la página */}
+      <FloatingPreinscripcionButton />
+
+      <Footer />
     </>
   );
 }

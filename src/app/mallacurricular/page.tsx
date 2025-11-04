@@ -10,80 +10,199 @@ import {
   CardContent,
   useTheme,
   Chip,
+  keyframes,
+  Tooltip,
+  Fade
 } from '@mui/material';
+import { useState } from "react";
 import {
   School,
   MenuBook,
-  EmojiEvents,
+  ChildCare,
+  LocalLibrary,
+  WorkspacePremium,
   Groups,
   Science,
   Language,
-  SportsBasketball,
+  Favorite,
   Psychology,
   ArrowForward,
   CheckCircle,
+  AutoStories,
 } from '@mui/icons-material';
+import Cards from '../components/HomePage/Card';
+import Navbar from '../PreInscripcion/Navbar';
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
 
+const float = keyframes`
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+`;
+
+const pulse = keyframes`
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+`;
+
+const slideInLeft = keyframes`
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+`;
+
+const slideInRight = keyframes`
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+`;
+const fadeSlideIn = keyframes`
+  0% { opacity: 0; transform: translateY(30px); }
+  100% { opacity: 1; transform: translateY(0); }
+`;
+
+const bgPulse = keyframes`
+  0% { transform: scale(1) rotate(0deg); opacity: 0.15; }
+  50% { transform: scale(1.1) rotate(5deg); opacity: 0.25; }
+  100% { transform: scale(1) rotate(0deg); opacity: 0.15; }
+`;
+
+const floatParticle = keyframes`
+  0%, 100% { transform: translateY(0px) translateX(0px); }
+  33% { transform: translateY(-30px) translateX(15px); }
+  66% { transform: translateY(-15px) translateX(-15px); }
+`;
+
+const shimmer = keyframes`
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+`;
 function MallaCurricularLanding() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const [hoveredCard, setHoveredCard] = useState<number | null>(null);
 
   const features = [
     {
-      icon: <MenuBook sx={{ fontSize: 40 }} />,
-      title: 'Educación Integral',
-      description: 'Formación académica completa que desarrolla todas las capacidades del estudiante',
-      color: '#3b82f6',
+      icon: <Favorite sx={{ fontSize: 40 }} />,
+      title: 'Formación en Valores Cristianos',
+      description: 'Educación centrada en el amor de Cristo y principios bíblicos para formar el carácter',
+      color: '#ef4444',
     },
     {
       icon: <Science sx={{ fontSize: 40 }} />,
-      title: 'Enfoque STEM',
-      description: 'Énfasis en Ciencias, Tecnología, Ingeniería y Matemáticas para el futuro',
+      title: 'Excelencia Académica',
+      description: 'Programa educativo integral con enfoque en ciencias, matemáticas y pensamiento crítico',
       color: '#10b981',
     },
     {
       icon: <Language sx={{ fontSize: 40 }} />,
-      title: 'Idiomas',
-      description: 'Programa bilingüe con inglés intensivo y desarrollo de competencias comunicativas',
+      title: 'Educación Bilingüe',
+      description: 'Programa intensivo de inglés para preparar estudiantes globalmente competentes',
       color: '#f59e0b',
     },
     {
       icon: <Psychology sx={{ fontSize: 40 }} />,
-      title: 'Desarrollo Personal',
-      description: 'Formación en valores, liderazgo y habilidades socioemocionales',
+      title: 'Desarrollo Integral',
+      description: 'Formación espiritual, emocional, social y física basada en principios cristianos',
       color: '#8b5cf6',
     },
     {
-      icon: <SportsBasketball sx={{ fontSize: 40 }} />,
-      title: 'Actividad Física',
-      description: 'Deportes y educación física para un desarrollo integral y saludable',
-      color: '#ef4444',
+      icon: <Groups sx={{ fontSize: 40 }} />,
+      title: 'Comunidad de Fe',
+      description: 'Ambiente familiar donde cada estudiante es valorado como hijo de Dios',
+      color: '#06b6d4',
     },
     {
-      icon: <Groups sx={{ fontSize: 40 }} />,
-      title: 'Trabajo Colaborativo',
-      description: 'Metodologías activas que fomentan el trabajo en equipo y la cooperación',
-      color: '#06b6d4',
+      icon: <AutoStories sx={{ fontSize: 40 }} />,
+      title: 'Enseñanza Bíblica',
+      description: 'Estudio diario de la Palabra de Dios integrado en todas las áreas del conocimiento',
+      color: '#3b82f6',
     },
   ];
 
   const stats = [
-    { number: '12', label: 'Materias Core', icon: <MenuBook /> },
-    { number: '6', label: 'Años de Formación', icon: <School /> },
-    { number: '100%', label: 'Educación en Valores', icon: <EmojiEvents /> },
-    { number: '8+', label: 'Actividades Extracurriculares', icon: <Groups /> },
+    { number: '3', label: 'Niveles Educativos', icon: <School /> },
+    { number: '15+', label: 'Años de Experiencia', icon: <WorkspacePremium /> },
+    { number: '100%', label: 'Educación Cristiana', icon: <Favorite /> },
+    { number: '200+', label: 'Estudiantes Formados', icon: <Groups /> },
   ];
 
   const benefits = [
-    'Curriculum actualizado y adaptado a estándares internacionales',
-    'Desarrollo de competencias del siglo XXI',
-    'Preparación para la educación superior',
-    'Formación basada en valores cristanos',
-    'Metodologías innovadoras de enseñanza',
-    'Evaluación continua y personalizada',
+    'Curriculum basado en principios bíblicos',
+    'Excelencia académica con fundamento cristiano',
+    'Desarrollo de dones y talentos espirituales',
+    'Formación en liderazgo cristiano',
+    'Ambiente seguro y lleno de amor',
+    'Preparación para ser luz en el mundo',
   ];
 
+    const niveles = [
+    {
+      link: "/mallacurricular/inicial",
+      init: "Initial",
+      imageurl: "/Nivels/Initial.jpg",
+      title: "Educación Inicial",
+      paragraph:
+        "Primeros pasos en el aprendizaje con metodología lúdica, desarrollo psicomotor y formación en valores cristianos.",
+      paragraph1: "3 a 5 años",
+      paragraph2: "Desarrollo Integral",
+      paragraph3: "Valores Cristianos",
+    },
+    {
+      link: "/mallacurricular/primaria",
+      init: "Primary",
+      imageurl: "/Nivels/Primary-3.jpg",
+      title: "Educación Primaria",
+      paragraph:
+        "Formación académica sólida con énfasis en lectoescritura, matemáticas, ciencias y desarrollo del pensamiento crítico.",
+      paragraph1: "6 a 12 años",
+      paragraph2: "Bases académicas sólidas",
+      paragraph3: "Pensamiento crítico",
+    },
+    {
+      link: "/mallacurricular/secundaria",
+      init: "Secondary",
+      imageurl: "/Nivels/Secondary-1.jpg",
+      title: "Educación Secundaria",
+      paragraph:
+        "Preparación integral para la educación superior con bachillerato en ciencias, liderazgo y servicio comunitario.",
+      paragraph1: "12 a 18 años",
+      paragraph2: "Bachillerato en ciencias",
+      paragraph3: "Liderazgo cristiano",
+    },
+  ];
+
+
   return (
+    <>
+      <Navbar />
     <Box
       sx={{
         background: isDark
@@ -94,7 +213,7 @@ function MallaCurricularLanding() {
         overflow: 'hidden',
       }}
     >
-      {/* Decoraciones de fondo */}
+      {/* Decoraciones de fondo animadas */}
       <Box
         sx={{
           position: 'absolute',
@@ -104,9 +223,10 @@ function MallaCurricularLanding() {
           height: 600,
           borderRadius: '50%',
           background: isDark
-            ? 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)'
-            : 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%)',
+            ? 'radial-gradient(circle, rgba(239, 68, 68, 0.15) 0%, transparent 70%)'
+            : 'radial-gradient(circle, rgba(239, 68, 68, 0.1) 0%, transparent 70%)',
           filter: 'blur(60px)',
+          animation: `${float} 8s ease-in-out infinite`,
         }}
       />
       <Box
@@ -118,36 +238,32 @@ function MallaCurricularLanding() {
           height: 600,
           borderRadius: '50%',
           background: isDark
-            ? 'radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%)'
-            : 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)',
+            ? 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)'
+            : 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%)',
           filter: 'blur(60px)',
+          animation: `${float} 10s ease-in-out infinite`,
+          animationDelay: '1s',
         }}
       />
 
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: 8 }}>
         {/* Hero Section */}
-        <Box sx={{ textAlign: 'center', mb: 8 }}>
-          <Chip
-            label="Nuestra Propuesta Educativa"
-            sx={{
-              mb: 3,
-              bgcolor: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)',
-              color: '#3b82f6',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              px: 3,
-              py: 3,
-            }}
-          />
-
+        <Box 
+          sx={{ 
+            textAlign: 'center', 
+            mt: 5,
+            mb: 8,
+            animation: `${fadeInUp} 1s ease-out`,
+          }}
+        >
           <Typography
             variant="h1"
             sx={{
               fontWeight: 900,
               fontSize: { xs: '2.5rem', md: '4rem' },
               background: isDark
-                ? 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%)'
-                : 'linear-gradient(135deg, #01579b 0%, #5b21b6 100%)',
+                ? 'linear-gradient(135deg, #facc15, #ffd54f)'
+                : 'linear-gradient(135deg, #dc2626 0%, #01579b 100%)',
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -159,19 +275,16 @@ function MallaCurricularLanding() {
           </Typography>
 
           <Typography
-            variant="h5"
+            variant="h4"
             sx={{
-              color: isDark ? 'grey.400' : 'grey.700',
-              maxWidth: 800,
-              mx: 'auto',
+              color: isDark ? '#01579b' : '#dc2626',
               mb: 2,
-              fontWeight: 400,
-              lineHeight: 1.6,
+              fontWeight: 700,
+              fontStyle: 'italic',
             }}
           >
-            Un programa educativo integral diseñado para formar estudiantes preparados para los desafíos del futuro
+            La Voz de Cristo High School
           </Typography>
-
           <Typography
             variant="body1"
             sx={{
@@ -179,45 +292,29 @@ function MallaCurricularLanding() {
               maxWidth: 700,
               mx: 'auto',
               mb: 5,
+              fontStyle: 'italic',
             }}
           >
-            Descubre cómo nuestra malla curricular combina excelencia académica, formación en valores y desarrollo de habilidades para el siglo XXI
+            "Instruye al niño en su camino, y aun cuando fuere viejo no se apartará de él" - Proverbios 22:6
           </Typography>
-
-          <Button
-            variant="contained"
-            size="large"
-            endIcon={<ArrowForward />}
-            sx={{
-              bgcolor: isDark ? '#3b82f6' : '#01579b',
-              color: 'white',
-              px: 5,
-              py: 2,
-              fontSize: '1.1rem',
-              fontWeight: 600,
-              borderRadius: 3,
-              textTransform: 'none',
-              boxShadow: isDark
-                ? '0 10px 30px rgba(59, 130, 246, 0.3)'
-                : '0 10px 30px rgba(1, 87, 155, 0.3)',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                bgcolor: isDark ? '#2563eb' : '#004d7a',
-                transform: 'translateY(-3px)',
-                boxShadow: isDark
-                  ? '0 15px 40px rgba(59, 130, 246, 0.4)'
-                  : '0 15px 40px rgba(1, 87, 155, 0.4)',
-              },
-            }}
-          >
-            Ver Malla Completa
-          </Button>
         </Box>
 
         {/* Stats Section */}
-        <Grid container spacing={3} sx={{ mb: 8 }}>
+        <Grid 
+          container 
+          spacing={3} 
+          sx={{ 
+            mb: 8,
+          }}
+        >
           {stats.map((stat, index) => (
-            <Grid size={{ xs: 6, md: 3 }} key={index}>
+            <Grid 
+              size={{ xs: 6, md: 3 }} 
+              key={index}
+              sx={{
+                animation: `${fadeInUp} 0.8s ease-out ${index * 0.1}s both`,
+              }}
+            >
               <Card
                 elevation={0}
                 sx={{
@@ -227,18 +324,19 @@ function MallaCurricularLanding() {
                   bgcolor: isDark ? 'rgba(17, 25, 54, 0.6)' : 'rgba(255, 255, 255, 0.8)',
                   backdropFilter: 'blur(10px)',
                   border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
-                  transition: 'all 0.3s ease',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    transform: 'translateY(-8px)',
+                    transform: 'translateY(-12px) scale(1.02)',
                     boxShadow: isDark
-                      ? '0 12px 30px rgba(0,0,0,0.4)'
-                      : '0 12px 30px rgba(0,0,0,0.15)',
+                      ? '0 20px 40px rgba(239, 68, 68, 0.3)'
+                      : '0 20px 40px rgba(239, 68, 68, 0.2)',
+                    borderColor: '#ef4444',
                   },
                 }}
               >
                 <Box
                   sx={{
-                    color: '#3b82f6',
+                    color: '#ef4444',
                     mb: 2,
                     '& svg': { fontSize: 40 },
                   }}
@@ -271,33 +369,44 @@ function MallaCurricularLanding() {
 
         {/* Features Grid */}
         <Box sx={{ mb: 8 }}>
-          <Typography
-            variant="h3"
-            align="center"
+          <Box
             sx={{
-              fontWeight: 700,
-              color: isDark ? 'white' : 'grey.900',
-              mb: 2,
-            }}
-          >
-            ¿Qué hace especial nuestra malla?
-          </Typography>
-          <Typography
-            variant="body1"
-            align="center"
-            sx={{
-              color: isDark ? 'grey.400' : 'grey.600',
+              textAlign: 'center',
               mb: 6,
-              maxWidth: 700,
-              mx: 'auto',
+              animation: `${fadeInUp} 1s ease-out 0.3s both`,
             }}
           >
-            Descubre los pilares fundamentales que conforman nuestra propuesta educativa
-          </Typography>
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 700,
+                color: isDark ? 'white' : 'grey.900',
+                mb: 2,
+              }}
+            >
+              Nuestra Propuesta Educativa
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                color: isDark ? 'grey.400' : 'grey.600',
+                maxWidth: 700,
+                mx: 'auto',
+              }}
+            >
+              Una educación que integra fe y conocimiento para formar discípulos de Cristo preparados para el mundo
+            </Typography>
+          </Box>
 
           <Grid container spacing={3}>
             {features.map((feature, index) => (
-              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={index}>
+              <Grid 
+                size={{ xs: 12, md: 6, lg: 4 }}
+                key={index}
+                sx={{
+                  animation: `${index % 2 === 0 ? slideInLeft : slideInRight} 0.8s ease-out ${0.5 + index * 0.1}s both`,
+                }}
+              >
                 <Card
                   elevation={0}
                   sx={{
@@ -307,13 +416,13 @@ function MallaCurricularLanding() {
                     bgcolor: isDark ? 'rgba(17, 25, 54, 0.6)' : 'rgba(255, 255, 255, 0.8)',
                     backdropFilter: 'blur(10px)',
                     border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
-                    transition: 'all 0.3s ease',
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
-                      transform: 'translateY(-8px)',
+                      transform: 'translateY(-12px) scale(1.02)',
                       borderColor: feature.color,
                       boxShadow: isDark
-                        ? `0 12px 30px ${feature.color}30`
-                        : `0 12px 30px ${feature.color}20`,
+                        ? `0 20px 40px ${feature.color}40`
+                        : `0 20px 40px ${feature.color}30`,
                     },
                   }}
                 >
@@ -328,6 +437,10 @@ function MallaCurricularLanding() {
                       bgcolor: `${feature.color}${isDark ? '25' : '15'}`,
                       color: feature.color,
                       mb: 2,
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'rotate(5deg) scale(1.1)',
+                      },
                     }}
                   >
                     {feature.icon}
@@ -364,14 +477,23 @@ function MallaCurricularLanding() {
             p: { xs: 4, md: 6 },
             borderRadius: 4,
             bgcolor: isDark
-              ? 'rgba(59, 130, 246, 0.1)'
-              : 'linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%)',
-            border: `1px solid ${isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.2)'}`,
+              ? 'rgba(239, 68, 68, 0.1)'
+              : 'linear-gradient(135deg, #fee2e2 0%, #fef3c7 100%)',
+            border: `2px solid ${isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)'}`,
             mb: 8,
+            animation: `${fadeInUp} 1s ease-out 0.8s both`,
           }}
         >
           <Grid container spacing={4} alignItems="center">
             <Grid size={{ xs: 12, md: 5 }}>
+              <Favorite
+                sx={{
+                  fontSize: 60,
+                  color: '#ef4444',
+                  mb: 2,
+                  animation: `${pulse} 2s ease-in-out infinite`,
+                }} 
+              />
               <Typography
                 variant="h4"
                 sx={{
@@ -380,7 +502,7 @@ function MallaCurricularLanding() {
                   mb: 2,
                 }}
               >
-                Beneficios de Nuestro Programa
+                ¿Por qué elegirnos?
               </Typography>
               <Typography
                 variant="body1"
@@ -389,13 +511,19 @@ function MallaCurricularLanding() {
                   lineHeight: 1.7,
                 }}
               >
-                Una educación que prepara a los estudiantes para enfrentar con éxito los retos académicos y personales del futuro
+                En La Voz de Cristo formamos no solo estudiantes académicamente excelentes, sino discípulos de Cristo preparados para brillar en el mundo
               </Typography>
             </Grid>
-            <Grid size={{ xs: 12, md: 7 }}>
+            <Grid size={{xs:12, md:7}} >
               <Grid container spacing={2}>
                 {benefits.map((benefit, index) => (
-                  <Grid size={{ xs: 12, sm: 6 }} key={index}>
+                  <Grid 
+                    size={{xs:12, md:6}} 
+                    key={index}
+                    sx={{
+                      animation: `${fadeInUp} 0.6s ease-out ${1 + index * 0.1}s both`,
+                    }}
+                  >
                     <Box display="flex" alignItems="flex-start" gap={1.5}>
                       <CheckCircle
                         sx={{
@@ -423,52 +551,137 @@ function MallaCurricularLanding() {
           </Grid>
         </Card>
 
-        {/* CTA Final */}
-        <Card
-          elevation={0}
-          sx={{
-            textAlign: 'center',
-            p: { xs: 4, md: 6 },
-            borderRadius: 4,
-            bgcolor: isDark
-              ? 'linear-gradient(135deg, #1e40af 0%, #5b21b6 100%)'
-              : 'linear-gradient(135deg, #01579b 0%, #5b21b6 100%)',
-            color: 'white',
-            border: 'none',
-          }}
-        >
-          <School sx={{ fontSize: 60, mb: 2, opacity: 0.9 }} />
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>
-            ¿Listo para conocer más?
-          </Typography>
-          <Typography variant="body1" sx={{ mb: 4, opacity: 0.9, maxWidth: 600, mx: 'auto' }}>
-            Explora en detalle cada materia, nivel y área de formación de nuestra malla curricular
-          </Typography>
-          <Button
-            variant="contained"
-            size="large"
-            endIcon={<ArrowForward />}
+        {/* Niveles Educativos Section */}
+        <Box sx={{ mb: 8 }}>
+          <Box
             sx={{
-              bgcolor: 'white',
-              color: '#01579b',
-              px: 5,
-              py: 2,
-              fontSize: '1.1rem',
-              fontWeight: 600,
-              borderRadius: 3,
-              textTransform: 'none',
-              '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.9)',
-                transform: 'translateY(-3px)',
-                boxShadow: '0 15px 40px rgba(0,0,0,0.2)',
-              },
+              textAlign: 'center',
+              mb: 6,
+              animation: `${fadeInUp} 1s ease-out 1.2s both`,
             }}
           >
-            Ver Malla Curricular Completa
-          </Button>
-        </Card>
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 700,
+                color: isDark ? 'white' : 'grey.900',
+                mb: 2,
+              }}
+            >
+              Explora Nuestra Malla Curricular
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                color: isDark ? 'grey.400' : 'grey.600',
+                maxWidth: 700,
+                mx: 'auto',
+              }}
+            >
+              Selecciona el nivel educativo para conocer en detalle nuestro programa de estudios
+            </Typography>
+          </Box>
+          <Grid 
+            container 
+            spacing={4} 
+            sx={{ 
+              display: 'flex', 
+              justifyContent: 'center',
+              width: '100%'
+            }}
+          >
+            {niveles.map((nivel, index) => (
+              <Grid
+                key={index}
+                size={{ 
+                  xs: 12, 
+                  sm: 6, 
+                  md: 4, 
+                  
+                }}
+                sx={{
+                  zIndex: 2,
+                  opacity: 0,
+                  transform: "translateY(50px)",
+                  animation: `${fadeSlideIn} 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards`,
+                  animationDelay: `${0.6 + index * 0.2}s`,
+                  display: 'flex',
+                  justifyContent: 'center'
+                }}
+                onMouseEnter={() => setHoveredCard(index)}
+                onMouseLeave={() => setHoveredCard(null)}
+              >
+                <Tooltip
+                  title={
+                    <Box sx={{ p: 1 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ fontWeight: "bold", mb: 0.5 }}
+                      >
+                        Descubre más sobre {nivel.title}
+                      </Typography>
+                      <Typography variant="caption">
+                        Haz clic para ver el plan de estudios completo
+                      </Typography>
+                    </Box>
+                  }
+                  placement="top"
+                  arrow
+                  TransitionComponent={Fade}
+                  TransitionProps={{ timeout: 600 }}
+                >
+                  <Box
+                    sx={{
+                      cursor: "pointer",
+                      width: '100%',
+                      transition: "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                      transform: hoveredCard === index 
+                        ? "translateY(-15px) scale(1.03)" 
+                        : "translateY(0) scale(1)",
+                      filter: hoveredCard !== null && hoveredCard !== index 
+                        ? "brightness(0.7) blur(2px)" 
+                        : "brightness(1) blur(0px)",
+                    }}
+                  >
+                    <Cards {...nivel} />
+                  </Box>
+                </Tooltip>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+
+        {/* Footer con versículo */}
+        <Box 
+          sx={{ 
+            textAlign: 'center', 
+            mt: 8,
+            animation: `${fadeInUp} 1s ease-out 2s both`,
+          }}
+        >
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              color: isDark ? 'grey.400' : 'grey.600',
+              fontStyle: 'italic',
+              mb: 2,
+            }}
+          >
+            "Pero Jesús dijo: Dejad a los niños venir a mí, y no se lo impidáis; porque de los tales es el reino de los cielos"
+          </Typography>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: isDark ? 'grey.500' : 'grey.600',
+              fontWeight: 600,
+            }}
+          >
+            Mateo 19:14
+          </Typography>
+        </Box>
       </Container>
     </Box>
+    </>
   );
 }
 

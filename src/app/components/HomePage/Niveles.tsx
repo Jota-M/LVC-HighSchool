@@ -260,6 +260,7 @@ function Nivels() {
           <Button
             variant="contained"
             endIcon={<ArrowForwardIosIcon />}
+            href="/mallacurricular"
             sx={{
               mt: 2,
               background: isDark
