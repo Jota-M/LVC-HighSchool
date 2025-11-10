@@ -223,11 +223,79 @@ const handleDateChange = (date: Dayjs | null) => {
     [fieldName]: file,
   }));
 };
-
-
   const handleFileRemove = (setter: React.Dispatch<React.SetStateAction<File | null>>) => {
     setter(null);
   };
+  const handleSubmit = async () => {
+  const form = new FormData();
+  const data = {
+    estudiante: {
+      nombres: formData.firstName,
+      apellido_paterno: formData.lastName,
+      apellido_materno: formData.middleName,
+      ci: formData.idNumber,
+      fecha_nacimiento: formData.birthDate ? formData.birthDate.format("YYYY-MM-DD") : null,
+      genero: formData.gender,
+      nacionalidad: formData.nationality,
+      institucion_procedencia: formData.institution,
+      ultimo_grado_cursado: formData.lastGrade,
+      grado_solicitado: formData.gradeRequested,
+      repite_grado: formData.repeatingGrade,
+      turno: formData.turn,
+      discapacidad: formData.hasDisability,
+      descripcion_discapacidad: formData.discapacityDetails,
+      direccion: formData.directAddress,
+      numero_casa: formData.houseNumber,
+      departamento: formData.department,
+      ciudad: formData.city,
+      telefono_domicilio: formData.homePhone,
+      telefono_movil: formData.mobilePhone,
+      correo: formData.email,
+    },
+    representante: {
+      tipo_representante: alignment === "web" ? "Ambos Padres" : alignment === "android" ? "Padre o Madre" : "Tutor Legal",
+      nombres: formData.firstNameParent,
+      apellido_paterno: formData.lastNameParent,
+      apellido_materno: formData.middleNameParent,
+      ci: formData.idNumberParent,
+      fecha_nacimiento: formData.birthDateParent
+        ? formData.birthDateParent.format("YYYY-MM-DD")
+        : null,
+      genero: formData.genderParent,
+      nacionalidad: formData.nationalityParent,
+      profesion: formData.professionParent,
+      lugar_trabajo: formData.workplaceParent,
+      telefono: formData.phoneParent,
+      correo: formData.emailParent,
+    },
+  };
+
+  form.append("data", JSON.stringify(data));
+
+  // 🔥 Usar los estados correctos de archivos
+  if (idFile) form.append("cedula_estudiante", idFile);
+  if (academicFile) form.append("libreta_notas", academicFile);
+  if (birthCertFile) form.append("certificado_nacimiento", birthCertFile);
+  if (parentIdFile) form.append("cedula_representante", parentIdFile);
+
+  try {
+    const res = await fetch("http://localhost:3000/api/preinscripcion", {
+      method: "POST",
+      body: form,
+    });
+
+    const result = await res.json();
+    if (result.success) {
+      alert("✅ Preinscripción enviada correctamente");
+    } else {
+      alert("❌ Error al registrar la preinscripción");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("⚠️ Error de conexión con el servidor");
+  }
+};
+
 
   // Estilos mejorados para los campos
   const fieldStyle = {
@@ -1173,15 +1241,6 @@ const handleDateChange = (date: Dayjs | null) => {
                           }}
                         >
                           🪪 Certificado de Nacimiento del Estudiante
-                          <Chip
-                            label="Requerido"
-                            size="small"
-                            sx={{
-                              backgroundColor: '#ef4444',
-                              color: '#fff',
-                              fontWeight: 600,
-                            }}
-                          />
                         </Typography>
                         <Paper
                           variant="outlined"
@@ -2096,20 +2155,22 @@ const handleDateChange = (date: Dayjs | null) => {
                         variant="contained"
                         endIcon={<CheckCircleOutlineIcon />}
                         sx={{
-                          ...buttonStyle,
                           background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                           color: '#fff',
                           fontSize: '1.1rem',
                           px: 5,
                           py: 2,
+                          transition: 'all 0.3s ease',
                           '&:hover': {
                             transform: 'translateY(-4px)',
                             boxShadow: '0 12px 32px rgba(16, 185, 129, 0.4)',
                           },
                         }}
+                        onClick={handleSubmit} // ← aquí va tu función
                       >
                         Confirmar y Enviar Inscripción
                       </Button>
+
                     </Box>
                   </FormGroup>
                 </Paper>

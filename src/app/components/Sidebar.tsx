@@ -265,52 +265,79 @@ const MenuSection = ({ label, items, selected, setSelected, isCollapsed, role }:
 
 // ==================== SECCIONES DEL MENU ====================
 const sections = [
+  // 🏠 SECCIÓN PRINCIPAL
   {
-    label: 'Administración',
+    label: 'Principal',
     items: [
       { title: 'Dashboard', to: '/dashboard', icon: <HomeOutlinedIcon />, roles: ['admin', 'user'] },
-      { title: 'Usuarios', to: '/dashboard/users', icon: <PeopleOutlinedIcon />, roles: ['admin']},//, badge: 20 },
-      { title: 'Docentes', to: '/dashboard/docentes', icon: <SupervisorAccountOutlinedIcon />, roles: ['admin'] },
-      { title: 'Estudiantes', to: '/dashboard/estudiantes', icon: <SchoolOutlinedIcon />, roles: ['admin', 'user'] },
     ],
   },
+
+  // 👥 GESTIÓN DE PERSONAS
+  {
+    label: 'Gestión de Personas',
+    items: [
+      { title: 'Usuarios', to: '/dashboard/users', icon: <PeopleOutlinedIcon />, roles: ['admin'] },
+      { title: 'Docentes', to: '/dashboard/docentes', icon: <SupervisorAccountOutlinedIcon />, roles: ['admin'] },
+      { title: 'Estudiantes', to: '/dashboard/estudiantes', icon: <SchoolOutlinedIcon />, roles: ['admin', 'user'] },
+      { title: 'Preinscripciones', to: '/dashboard/preinscripciones', icon: <AppRegistrationIcon />, roles: ['admin', 'user'], badge: 12 },
+    ],
+  },
+
+  // 📚 ESTRUCTURA ACADÉMICA
+  {
+    label: 'Estructura Académica',
+    items: [
+      { title: 'Periodos', to: '/dashboard/periodos', icon: <CalendarTodayOutlinedIcon />, roles: ['admin'] },
+      { title: 'Niveles y Grados', to: '/dashboard/niveles-grados', icon: <SchoolOutlinedIcon />, roles: ['admin'] },
+      { title: 'Paralelos', to: '/dashboard/paralelos', icon: <ClassOutlinedIcon />, roles: ['admin'] },
+      { title: 'Materias', to: '/dashboard/materias', icon: <ClassOutlinedIcon />, roles: ['admin', 'user'] },
+    ],
+  },
+
+  // 📋 GESTIÓN ACADÉMICA
   {
     label: 'Gestión Académica',
     items: [
       { title: 'Asignaciones', to: '/dashboard/asignaciones', icon: <ContactsOutlinedIcon />, roles: ['admin', 'user'] },
-      { title: 'Materias', to: '/dashboard/materias', icon: <ClassOutlinedIcon />, roles: ['admin', 'user'] },
-      { title: 'Horarios y Paralelos', to: '/dashboard/horario', icon: <CalendarTodayOutlinedIcon />, roles: ['admin', 'user'] },
-      { title: 'Preinscripciones', to: '/dashboard/preinscripciones', icon: <AppRegistrationIcon />, roles: ['admin', 'user'], badge: 12 },
+      { title: 'Horarios', to: '/dashboard/horarios', icon: <CalendarTodayOutlinedIcon />, roles: ['admin', 'user'] },
     ],
   },
+
+  // 📊 REPORTES Y CONFIGURACIÓN
   {
-    label: 'Configuración',
+    label: 'Sistema',
     items: [
-      { title: 'Ajustes', to: '/pie', icon: <SettingsOutlinedIcon />, roles: ['admin'] },
-      { title: 'Reportes', to: '/line', icon: <AssessmentOutlinedIcon />, roles: ['admin'] },
+      { title: 'Reportes', to: '/dashboard/reportes', icon: <AssessmentOutlinedIcon />, roles: ['admin'] },
+      { title: 'Configuración', to: '/dashboard/configuracion', icon: <SettingsOutlinedIcon />, roles: ['admin'] },
     ],
   },
+
+  // 👨‍👩‍👧 PORTAL PADRES (Solo visible para rol 'padre')
   {
     label: 'Portal Padres',
+    roles: ['padre'], // Esta sección completa solo para padres
     items: [
-      { title: 'Panel Principal', to: '/dashboard/Padre/principal', icon: <HomeOutlinedIcon />, roles: ['admin', 'user'] },
-      { title: 'Calificaciones', to: '/dashboard/Padre/calificaciones', icon: <GradeOutlinedIcon />, roles: ['admin'] },
-      { title: 'Asistencia', to: '/dashboard/Padre/asistencia', icon: <EventAvailableOutlinedIcon />, roles: ['admin'] },
-      { title: 'Horario', to: '/dashboard/Padre/horario', icon: <CalendarTodayOutlinedIcon />, roles: ['admin', 'user'] },
-      { title: 'Alertas', to: '/dashboard/Padre/alertas', icon: <NotificationsActiveOutlinedIcon />, roles: ['admin', 'user'], badge: 2 },
+      { title: 'Inicio', to: '/dashboard/padre/principal', icon: <HomeOutlinedIcon />, roles: ['padre'] },
+      { title: 'Calificaciones', to: '/dashboard/padre/calificaciones', icon: <GradeOutlinedIcon />, roles: ['padre'] },
+      { title: 'Asistencia', to: '/dashboard/padre/asistencia', icon: <EventAvailableOutlinedIcon />, roles: ['padre'] },
+      { title: 'Horario', to: '/dashboard/padre/horario', icon: <CalendarTodayOutlinedIcon />, roles: ['padre'] },
+      { title: 'Alertas', to: '/dashboard/padre/alertas', icon: <NotificationsActiveOutlinedIcon />, roles: ['padre'], badge: 2 },
     ],
   },
+
+  // 👨‍🏫 PORTAL PROFESORES (Solo visible para rol 'profesor')
   {
     label: 'Portal Profesores',
+    roles: ['profesor'], // Esta sección completa solo para profesores
     items: [
-      { title: 'Inicio', to: '/dashboard/profesor/home', icon: <HomeOutlinedIcon />, roles: ['admin', 'user'] },
-      { title: 'Calificaciones', to: '/dashboard/profesor/notas', icon: <GradeOutlinedIcon />, roles: ['admin'] },
-      { title: 'Asistencia', to: '/dashboard/profesor/asistencia', icon: <EventAvailableOutlinedIcon />, roles: ['admin'] },
-      { title: 'Mis Clases', to: '/dashboard/profesor/clases', icon: <ClassOutlinedIcon />, roles: ['admin', 'user'] },
+      { title: 'Inicio', to: '/dashboard/profesor/home', icon: <HomeOutlinedIcon />, roles: ['profesor'] },
+      { title: 'Mis Clases', to: '/dashboard/profesor/clases', icon: <ClassOutlinedIcon />, roles: ['profesor'] },
+      { title: 'Calificaciones', to: '/dashboard/profesor/notas', icon: <GradeOutlinedIcon />, roles: ['profesor'] },
+      { title: 'Asistencia', to: '/dashboard/profesor/asistencia', icon: <EventAvailableOutlinedIcon />, roles: ['profesor'] },
     ],
   },
 ];
-
 // ==================== COMPONENTE PRINCIPAL ====================
 const ModernSidebar = () => {
   const theme = useTheme();
