@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -26,9 +26,12 @@ import {
   Divider,
   Paper,
   Badge,
-  AvatarGroup,
   LinearProgress,
-  Collapse
+  Collapse,
+  CircularProgress,
+  Select,
+  FormControl,
+  InputLabel
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -40,185 +43,309 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import PersonIcon from '@mui/icons-material/Person';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import LocalLibraryIcon from '@mui/icons-material/LocalLibrary';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
-// Tipos
-interface NivelAcademico {
+const API_URL = "http://localhost:3000/api";
+interface Nivel {
   id: number;
   nombre: string;
-  color: string;
-  icon: string;
+  descripcion: string;
+  orden: number;
 }
 
 interface Grado {
   id: number;
-  nombre: string;
   nivel_academico_id: number;
-  nivel?: NivelAcademico;
+  nombre: string;
+  descripcion: string;
+  orden: number;
+}
+
+interface Turno {
+  id: number;
+  nombre: string;
+  hora_inicio: string;
+  hora_fin: string;
 }
 
 interface Paralelo {
   id: number;
-  nombre: string;
   grado_id: number;
-  estudiantes?: number;
-  docente?: string;
-  turno?: 'Mañana' | 'Tarde' | 'Noche';
-  aula?: string;
+  nombre: string;
+  turno_id: number;
+  capacidad_maxima: number;
+  anio: number;
 }
-
-interface GradoConParalelos extends Grado {
-  paralelos: Paralelo[];
+interface ParaleloConEstudiantes extends Paralelo {
+  total_estudiantes: number;
 }
-
-// Datos de ejemplo
-const niveles: NivelAcademico[] = [
-  { id: 1, nombre: 'Educación Inicial', color: '#FF6B6B', icon: '🎨' },
-  { id: 2, nombre: 'Educación Primaria', color: '#4ECDC4', icon: '📚' },
-  { id: 3, nombre: 'Educación Secundaria', color: '#95E1D3', icon: '🎓' },
-];
-
-const grados: Grado[] = [
-  { id: 1, nombre: 'Pre-Kinder', nivel_academico_id: 1, nivel: niveles[0] },
-  { id: 2, nombre: 'Kinder', nivel_academico_id: 1, nivel: niveles[0] },
-  { id: 3, nombre: '1ro de Primaria', nivel_academico_id: 2, nivel: niveles[1] },
-  { id: 4, nombre: '2do de Primaria', nivel_academico_id: 2, nivel: niveles[1] },
-  { id: 5, nombre: '3ro de Primaria', nivel_academico_id: 2, nivel: niveles[1] },
-  { id: 9, nombre: '1ro de Secundaria', nivel_academico_id: 3, nivel: niveles[2] },
-  { id: 10, nombre: '2do de Secundaria', nivel_academico_id: 3, nivel: niveles[2] },
-];
-
-const initialParalelos: Paralelo[] = [
-  { id: 1, nombre: 'A', grado_id: 3, estudiantes: 32, docente: 'Prof. María García', turno: 'Mañana', aula: '101' },
-  { id: 2, nombre: 'B', grado_id: 3, estudiantes: 30, docente: 'Prof. Juan Pérez', turno: 'Mañana', aula: '102' },
-  { id: 3, nombre: 'C', grado_id: 3, estudiantes: 28, docente: 'Prof. Ana López', turno: 'Tarde', aula: '103' },
-  { id: 4, nombre: 'A', grado_id: 4, estudiantes: 35, docente: 'Prof. Carlos Ruiz', turno: 'Mañana', aula: '201' },
-  { id: 5, nombre: 'B', grado_id: 4, estudiantes: 33, docente: 'Prof. Laura Martínez', turno: 'Tarde', aula: '202' },
-  { id: 6, nombre: 'A', grado_id: 9, estudiantes: 40, docente: 'Prof. Roberto Sánchez', turno: 'Mañana', aula: '301' },
-  { id: 7, nombre: 'B', grado_id: 9, estudiantes: 38, docente: 'Prof. Patricia Gómez', turno: 'Mañana', aula: '302' },
-  { id: 8, nombre: 'C', grado_id: 9, estudiantes: 42, docente: 'Prof. Miguel Torres', turno: 'Tarde', aula: '303' },
-  { id: 9, nombre: 'D', grado_id: 9, estudiantes: 39, docente: 'Prof. Sandra Flores', turno: 'Tarde', aula: '304' },
-];
-
-const Paralelos: React.FC = () => {
+interface ParaleloConExtras extends Paralelo {
+  total_estudiantes: number; // para el chip
+  turno_nombre: string;      // para mostrar nombre del turno
+  hora_inicio?: string;      // opcional
+  hora_fin?: string;         // opcional
+}
+const Paralelos = () => {
   const theme = useTheme();
-  const [paralelos, setParalelos] = useState<Paralelo[]>(initialParalelos);
+  
+  // Estados principales
+   const [paralelos, setParalelos] = useState<Paralelo[]>([]);
+  const [niveles, setNiveles] = useState<Nivel[]>([]);
+  const [grados, setGrados] = useState<Grado[]>([]);
+  const [turnos, setTurnos] = useState<Turno[]>([]);
+  const [estadisticas, setEstadisticas] = useState<any>(null);
+
   const [selectedNivel, setSelectedNivel] = useState<number | null>(null);
   const [expandedGrado, setExpandedGrado] = useState<number | null>(null);
+
+  const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingParalelo, setEditingParalelo] = useState<{ grado_id: number; paralelo: Paralelo | null }>({ grado_id: 0, paralelo: null });
+
+  const [editingParalelo, setEditingParalelo] = useState<{
+    grado_id: number;
+    paralelo: Paralelo | null;
+  }>({
+    grado_id: 0,
+    paralelo: null
+  });
+
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'success' as 'success' | 'error' | 'info'
   });
-  const [formData, setFormData] = useState({
+
+  const [formData, setFormData] = useState<Paralelo>({
+    id: 0,
     nombre: '',
-    estudiantes: 0,
-    docente: '',
-    turno: 'Mañana' as 'Mañana' | 'Tarde' | 'Noche',
-    aula: ''
+    grado_id: 0,
+    turno_id: 0,
+    capacidad_maxima: 30,
+    anio: new Date().getFullYear()
   });
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [paralelosRes, nivelesRes, gradosRes, turnosRes, estadisticasRes] = await Promise.all([
+        fetch(`${API_URL}/paralelos`),
+        fetch(`${API_URL}/niveles-academicos`),
+        fetch(`${API_URL}/grados`),
+        fetch(`${API_URL}/turnos`),
+        fetch(`${API_URL}/paralelos/estadisticas`)
+      ]);
+
+      const paralelosData = await paralelosRes.json();
+      const nivelesData = await nivelesRes.json();
+      const gradosData = await gradosRes.json();
+      const turnosData = await turnosRes.json();
+      const estadisticasData = await estadisticasRes.json();
+
+      setParalelos(paralelosData);
+      setNiveles(nivelesData);
+      setGrados(gradosData);
+      setTurnos(turnosData);
+      setEstadisticas(estadisticasData);
+    } catch (error) {
+      console.error('Error cargando datos:', error);
+      setSnackbar({
+        open: true,
+        message: '❌ Error al cargar los datos',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handlers
   const handleOpenDialog = (grado_id: number, paralelo: Paralelo | null = null) => {
     if (paralelo) {
       setEditingParalelo({ grado_id, paralelo });
-      setFormData({
-        nombre: paralelo.nombre,
-        estudiantes: paralelo.estudiantes || 0,
-        docente: paralelo.docente || '',
-        turno: paralelo.turno || 'Mañana',
-        aula: paralelo.aula || ''
-      });
+      setFormData(paralelo);
     } else {
       setEditingParalelo({ grado_id, paralelo: null });
       setFormData({
+        id: 0,
         nombre: '',
-        estudiantes: 0,
-        docente: '',
-        turno: 'Mañana',
-        aula: ''
+        grado_id,
+        turno_id: 0,
+        capacidad_maxima: 30,
+        anio: new Date().getFullYear()
       });
     }
     setOpenDialog(true);
   };
 
-  const handleSave = () => {
-    if (!formData.nombre) {
-      setSnackbar({ open: true, message: 'Por favor completa el nombre del paralelo', severity: 'error' });
+  const handleSave = async () => {
+    if (!formData.nombre || !formData.grado_id || !formData.turno_id) {
+      setSnackbar({ 
+        open: true, 
+        message: 'Por favor completa todos los campos requeridos', 
+        severity: 'error' 
+      });
       return;
     }
 
-    if (editingParalelo.paralelo) {
-      // Editar
-      setParalelos(paralelos.map(p =>
-        p.id === editingParalelo.paralelo!.id
-          ? { ...p, ...formData, grado_id: editingParalelo.grado_id }
-          : p
-      ));
-      setSnackbar({ open: true, message: '✨ Paralelo actualizado exitosamente', severity: 'success' });
-    } else {
-      // Crear
-      const newParalelo: Paralelo = {
-        id: Math.max(...paralelos.map(p => p.id), 0) + 1,
-        grado_id: editingParalelo.grado_id,
-        ...formData
-      };
-      setParalelos([...paralelos, newParalelo]);
-      setSnackbar({ open: true, message: '🎉 Paralelo creado exitosamente', severity: 'success' });
+    try {
+      if (editingParalelo.paralelo) {
+        // Actualizar
+        const response = await fetch(`${API_URL}/paralelos/${editingParalelo.paralelo.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+
+        if (!response.ok) throw new Error('Error al actualizar');
+        
+        setSnackbar({ 
+          open: true, 
+          message: '✨ Paralelo actualizado exitosamente', 
+          severity: 'success' 
+        });
+      } else {
+        // Crear
+        const response = await fetch(`${API_URL}/paralelos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+
+        if (!response.ok) throw new Error('Error al crear');
+        
+        setSnackbar({ 
+          open: true, 
+          message: '🎉 Paralelo creado exitosamente', 
+          severity: 'success' 
+        });
+      }
+
+      setOpenDialog(false);
+      loadData(); // Recargar datos
+    } catch (error) {
+      console.error('Error guardando paralelo:', error);
+      setSnackbar({ 
+        open: true, 
+        message: '❌ Error al guardar el paralelo', 
+        severity: 'error' 
+      });
     }
-    setOpenDialog(false);
   };
 
-  const handleDelete = (id: number) => {
-    setParalelos(paralelos.filter(p => p.id !== id));
-    setSnackbar({ open: true, message: '🗑️ Paralelo eliminado', severity: 'info' });
+  const handleDelete = async (id: number) => {
+  if (!window.confirm('¿Estás seguro de eliminar este paralelo?')) return;
+
+  try {
+    const response = await fetch(`${API_URL}/paralelos/${id}`, {
+      method: 'DELETE'
+    });
+
+    if (!response.ok) throw new Error('Error al eliminar');
+
+    setSnackbar({ 
+      open: true, 
+      message: '🗑️ Paralelo eliminado', 
+      severity: 'info' 
+    });
+    loadData();
+  } catch (error) {
+    console.error('Error eliminando paralelo:', error);
+    setSnackbar({ 
+      open: true, 
+      message: '❌ Error al eliminar el paralelo', 
+      severity: 'error' 
+    });
+  }
+};
+
+
+  // Organizar datos por grado
+type GradoConParalelos = Grado & {
+  paralelos: ParaleloConExtras[];
+  nivel?: Nivel;
+};
+const paralelosConExtras: ParaleloConExtras[] = paralelos.map(p => {
+  const turno = turnos.find(t => t.id === p.turno_id);
+  return {
+    ...p,
+    total_estudiantes: Math.floor(Math.random() * 30) + 5, // valor estático
+    turno_nombre: turno?.nombre || 'Desconocido',
+    hora_inicio: turno?.hora_inicio,
+    hora_fin: turno?.hora_fin
   };
+});
+const gradosConParalelos: GradoConParalelos[] = grados.map(grado => ({
+  ...grado,
+  paralelos: paralelosConExtras.filter(p => p.grado_id === grado.id),
+  nivel: niveles.find(n => n.id === grado.nivel_academico_id)
+}));
 
-  // Organizar datos por nivel y grado
-  const gradosConParalelos: GradoConParalelos[] = grados.map(grado => ({
-    ...grado,
-    paralelos: paralelos.filter(p => p.grado_id === grado.id)
-  }));
-
+  const paralelosConEstudiantes: ParaleloConEstudiantes[] = paralelos.map(p => ({
+  ...p,
+  total_estudiantes: Math.floor(Math.random() * 30) + 5 // valor entre 5 y 34
+}));
   const gradosFiltrados = selectedNivel
     ? gradosConParalelos.filter(g => g.nivel_academico_id === selectedNivel)
     : gradosConParalelos;
 
-  // Estadísticas
-  const totalParalelos = paralelos.length;
-  const totalEstudiantes = paralelos.reduce((sum, p) => sum + (p.estudiantes || 0), 0);
-  const promedioEstudiantes = totalParalelos > 0 ? Math.round(totalEstudiantes / totalParalelos) : 0;
-  const paralelosMasGrandes = paralelos.filter(p => (p.estudiantes || 0) > 35).length;
 
-  const getTurnoColor = (turno?: string) => {
-    switch (turno) {
-      case 'Mañana': return '#FFD93D';
-      case 'Tarde': return '#FF9A3C';
-      case 'Noche': return '#6C5CE7';
-      default: return theme.palette.grey[500];
-    }
+  // Obtener colores e íconos para niveles
+  const getNivelColor = (orden:number) => {
+    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DFE6E9'];
+    return colors[orden % colors.length] || '#95E1D3';
   };
 
-  const getTurnoIcon = (turno?: string) => {
-    switch (turno) {
-      case 'Mañana': return '☀️';
-      case 'Tarde': return '🌤️';
-      case 'Noche': return '🌙';
-      default: return '⏰';
-    }
+  const getNivelIcon = (orden:number) => {
+    const icons = ['🎨', '📚', '🔬', '🎓', '🏆', '🌟'];
+    return icons[orden % icons.length] || '📖';
+  };
+
+  const getTurnoColor = (turnoNombre:string):string => {
+    if (!turnoNombre) return theme.palette.grey[500];
+    if (turnoNombre.toLowerCase().includes('mañana')) return '#FFD93D';
+    if (turnoNombre.toLowerCase().includes('tarde')) return '#FF9A3C';
+    if (turnoNombre.toLowerCase().includes('noche')) return '#6C5CE7';
+    return theme.palette.grey[500];
+  };
+
+   const getTurnoIcon  = (turnoNombre: string): string => {
+    if (!turnoNombre) return '⏰';
+    if (turnoNombre.toLowerCase().includes('mañana')) return '☀️';
+    if (turnoNombre.toLowerCase().includes('tarde')) return '🌤️';
+    if (turnoNombre.toLowerCase().includes('noche')) return '🌙';
+    return '⏰';
   };
 
   const letrasParalelos = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '60vh',
+        flexDirection: 'column',
+        gap: 2
+      }}>
+        <CircularProgress size={60} />
+        <Typography variant="h6" color="text.secondary">
+          Cargando datos...
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -243,12 +370,7 @@ const Paralelos: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.3)}`,
-                  animation: 'rotate 4s linear infinite',
-                  '@keyframes rotate': {
-                    '0%': { transform: 'rotate(0deg)' },
-                    '100%': { transform: 'rotate(360deg)' }
-                  }
+                  boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.3)}`
                 }}
               >
                 <PeopleAltIcon sx={{ fontSize: 36, color: 'white' }} />
@@ -272,156 +394,157 @@ const Paralelos: React.FC = () => {
           </Box>
 
           {/* Cards de Estadísticas */}
-          <Grid container spacing={3} sx={{ mb: 3 }}>
-            <Grid size={{xs:12, sm:6, md:3}}>
-              <Card sx={{
-                background: `linear-gradient(135deg, ${alpha('#4ECDC4', 0.15)} 0%, ${alpha('#4ECDC4', 0.05)} 100%)`,
-                border: `2px solid ${alpha('#4ECDC4', 0.3)}`,
-                borderRadius: 3,
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  transform: 'translateY(-8px) scale(1.02)',
-                  boxShadow: `0 20px 40px ${alpha('#4ECDC4', 0.3)}`,
-                }
-              }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar sx={{
-                      bgcolor: '#4ECDC4',
-                      width: 56,
-                      height: 56,
-                      boxShadow: `0 4px 12px ${alpha('#4ECDC4', 0.4)}`
-                    }}>
-                      <ClassIcon sx={{ fontSize: 32 }} />
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="overline" fontWeight="600" color="text.secondary">
-                        Total Paralelos
-                      </Typography>
-                      <Typography variant="h3" fontWeight="800" sx={{ color: '#4ECDC4' }}>
-                        {totalParalelos}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        En {grados.length} grados
-                      </Typography>
+          {estadisticas && (
+            <Grid container spacing={3} sx={{ mb: 3 }}>
+              <Grid size={{xs:12, sm:6, md:3}}>
+                <Card sx={{
+                  background: `linear-gradient(135deg, ${alpha('#4ECDC4', 0.15)} 0%, ${alpha('#4ECDC4', 0.05)} 100%)`,
+                  border: `2px solid ${alpha('#4ECDC4', 0.3)}`,
+                  borderRadius: 3,
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    transform: 'translateY(-8px) scale(1.02)',
+                    boxShadow: `0 20px 40px ${alpha('#4ECDC4', 0.3)}`,
+                  }
+                }}>
+                  <CardContent sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar sx={{
+                        bgcolor: '#4ECDC4',
+                        width: 56,
+                        height: 56,
+                        boxShadow: `0 4px 12px ${alpha('#4ECDC4', 0.4)}`
+                      }}>
+                        <ClassIcon sx={{ fontSize: 32 }} />
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="overline" fontWeight="600" color="text.secondary">
+                          Total Paralelos
+                        </Typography>
+                        <Typography variant="h3" fontWeight="800" sx={{ color: '#4ECDC4' }}>
+                          {estadisticas.total_paralelos}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          En {grados.length} grados
+                        </Typography>
+                      </Box>
                     </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
 
-            <Grid size={{xs:12, sm:6, md:3}}>
-              <Card sx={{
-                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)} 0%, ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
-                border: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-                borderRadius: 3,
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  transform: 'translateY(-8px) scale(1.02)',
-                  boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.3)}`,
-                }
-              }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar sx={{
-                      bgcolor: 'primary.main',
-                      width: 56,
-                      height: 56,
-                      boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`
-                    }}>
-                      <GroupsIcon sx={{ fontSize: 32 }} />
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="overline" fontWeight="600" color="text.secondary">
-                        Total Estudiantes
-                      </Typography>
-                      <Typography variant="h3" fontWeight="800" color="primary.main">
-                        {totalEstudiantes}
-                      </Typography>
-                      <Typography variant="caption" color="success.main" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <TrendingUpIcon sx={{ fontSize: 14 }} />
-                        Crecimiento del 8%
-                      </Typography>
+              <Grid size={{xs:12, sm:6, md:3}} >
+                <Card sx={{
+                  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)} 0%, ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
+                  border: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                  borderRadius: 3,
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    transform: 'translateY(-8px) scale(1.02)',
+                    boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.3)}`,
+                  }
+                }}>
+                  <CardContent sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar sx={{
+                        bgcolor: 'primary.main',
+                        width: 56,
+                        height: 56,
+                        boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`
+                      }}>
+                        <GroupsIcon sx={{ fontSize: 32 }} />
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="overline" fontWeight="600" color="text.secondary">
+                          Total Estudiantes
+                        </Typography>
+                        <Typography variant="h3" fontWeight="800" color="primary.main">
+                          {estadisticas.total_estudiantes}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Inscritos actualmente
+                        </Typography>
+                      </Box>
                     </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
 
-            <Grid size={{xs:12, sm:6, md:3}}>
-              <Card sx={{
-                background: `linear-gradient(135deg, ${alpha('#FF6B6B', 0.15)} 0%, ${alpha('#FF6B6B', 0.05)} 100%)`,
-                border: `2px solid ${alpha('#FF6B6B', 0.3)}`,
-                borderRadius: 3,
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  transform: 'translateY(-8px) scale(1.02)',
-                  boxShadow: `0 20px 40px ${alpha('#FF6B6B', 0.3)}`,
-                }
-              }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar sx={{
-                      bgcolor: '#FF6B6B',
-                      width: 56,
-                      height: 56,
-                      boxShadow: `0 4px 12px ${alpha('#FF6B6B', 0.4)}`
-                    }}>
-                      <PersonIcon sx={{ fontSize: 32 }} />
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="overline" fontWeight="600" color="text.secondary">
-                        Promedio/Paralelo
-                      </Typography>
-                      <Typography variant="h3" fontWeight="800" sx={{ color: '#FF6B6B' }}>
-                        {promedioEstudiantes}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Estudiantes por sección
-                      </Typography>
+              <Grid size={{xs:12, sm:6, md:3}} >
+                <Card sx={{
+                  background: `linear-gradient(135deg, ${alpha('#FF6B6B', 0.15)} 0%, ${alpha('#FF6B6B', 0.05)} 100%)`,
+                  border: `2px solid ${alpha('#FF6B6B', 0.3)}`,
+                  borderRadius: 3,
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    transform: 'translateY(-8px) scale(1.02)',
+                    boxShadow: `0 20px 40px ${alpha('#FF6B6B', 0.3)}`,
+                  }
+                }}>
+                  <CardContent sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar sx={{
+                        bgcolor: '#FF6B6B',
+                        width: 56,
+                        height: 56,
+                        boxShadow: `0 4px 12px ${alpha('#FF6B6B', 0.4)}`
+                      }}>
+                        <PersonIcon sx={{ fontSize: 32 }} />
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="overline" fontWeight="600" color="text.secondary">
+                          Promedio/Paralelo
+                        </Typography>
+                        <Typography variant="h3" fontWeight="800" sx={{ color: '#FF6B6B' }}>
+                          {estadisticas.promedio_estudiantes}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Estudiantes por sección
+                        </Typography>
+                      </Box>
                     </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
 
-            <Grid size={{xs:12, sm:6, md:3}} >
-              <Card sx={{
-                background: `linear-gradient(135deg, ${alpha('#95E1D3', 0.15)} 0%, ${alpha('#95E1D3', 0.05)} 100%)`,
-                border: `2px solid ${alpha('#95E1D3', 0.3)}`,
-                borderRadius: 3,
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  transform: 'translateY(-8px) scale(1.02)',
-                  boxShadow: `0 20px 40px ${alpha('#95E1D3', 0.3)}`,
-                }
-              }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar sx={{
-                      bgcolor: '#95E1D3',
-                      width: 56,
-                      height: 56,
-                      boxShadow: `0 4px 12px ${alpha('#95E1D3', 0.4)}`
-                    }}>
-                      <WarningAmberIcon sx={{ fontSize: 32 }} />
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="overline" fontWeight="600" color="text.secondary">
-                        Paralelos Llenos
-                      </Typography>
-                      <Typography variant="h3" fontWeight="800" sx={{ color: '#95E1D3' }}>
-                        {paralelosMasGrandes}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Más de 35 estudiantes
-                      </Typography>
+              <Grid size={{xs:12, sm:6, md:3}}>
+                <Card sx={{
+                  background: `linear-gradient(135deg, ${alpha('#95E1D3', 0.15)} 0%, ${alpha('#95E1D3', 0.05)} 100%)`,
+                  border: `2px solid ${alpha('#95E1D3', 0.3)}`,
+                  borderRadius: 3,
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    transform: 'translateY(-8px) scale(1.02)',
+                    boxShadow: `0 20px 40px ${alpha('#95E1D3', 0.3)}`,
+                  }
+                }}>
+                  <CardContent sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar sx={{
+                        bgcolor: '#95E1D3',
+                        width: 56,
+                        height: 56,
+                        boxShadow: `0 4px 12px ${alpha('#95E1D3', 0.4)}`
+                      }}>
+                        <WarningAmberIcon sx={{ fontSize: 32 }} />
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="overline" fontWeight="600" color="text.secondary">
+                          Paralelos Llenos
+                        </Typography>
+                        <Typography variant="h3" fontWeight="800" sx={{ color: '#95E1D3' }}>
+                          {estadisticas.paralelos_llenos}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Capacidad completa
+                        </Typography>
+                      </Box>
                     </Box>
-                  </Box>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Grid>
             </Grid>
-          </Grid>
+          )}
 
           {/* Filtro por Nivel */}
           <Card sx={{
@@ -445,26 +568,30 @@ const Paralelos: React.FC = () => {
                     '&:hover': { transform: 'scale(1.1)' }
                   }}
                 />
-                {niveles.map((nivel) => (
-                  <Chip
-                    key={nivel.id}
-                    icon={<span>{nivel.icon}</span>}
-                    label={nivel.nombre}
-                    onClick={() => setSelectedNivel(nivel.id)}
-                    sx={{
-                      bgcolor: selectedNivel === nivel.id ? nivel.color : alpha(nivel.color, 0.1),
-                      color: selectedNivel === nivel.id ? 'white' : nivel.color,
-                      fontWeight: 'bold',
-                      border: `2px solid ${nivel.color}`,
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        bgcolor: nivel.color,
-                        color: 'white',
-                        transform: 'scale(1.1)'
-                      }
-                    }}
-                  />
-                ))}
+                {niveles.map((nivel) => {
+                  const color = getNivelColor(nivel.orden);
+                  const icon = getNivelIcon(nivel.orden);
+                  return (
+                    <Chip
+                      key={nivel.id}
+                      icon={<span>{icon}</span>}
+                      label={nivel.nombre}
+                      onClick={() => setSelectedNivel(nivel.id)}
+                      sx={{
+                        bgcolor: selectedNivel === nivel.id ? color : alpha(color, 0.1),
+                        color: selectedNivel === nivel.id ? 'white' : color,
+                        fontWeight: 'bold',
+                        border: `2px solid ${color}`,
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          bgcolor: color,
+                          color: 'white',
+                          transform: 'scale(1.1)'
+                        }
+                      }}
+                    />
+                  );
+                })}
               </Box>
             </CardContent>
           </Card>
@@ -473,10 +600,11 @@ const Paralelos: React.FC = () => {
 
       {/* Grados con Paralelos */}
       <Grid container spacing={3}>
-        {gradosFiltrados.map((grado, index) => {
+        {gradosFiltrados.map((grado,index) => {
           const isExpanded = expandedGrado === grado.id;
-          const nivel = grado.nivel!;
-
+          const nivel = grado.nivel;
+          const nivelColor = getNivelColor(nivel?.orden ?? 0);
+          const nivelIcon = getNivelIcon(nivel?.orden ?? 0);
           return (
             <Grid size={{xs:12}} key={grado.id}>
               <Fade in timeout={800 + index * 100}>
@@ -485,14 +613,14 @@ const Paralelos: React.FC = () => {
                   overflow: 'hidden',
                   transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                   boxShadow: isExpanded
-                    ? `0 16px 48px ${alpha(nivel.color, 0.25)}`
+                    ? `0 16px 48px ${alpha(nivelColor, 0.25)}`
                     : `0 4px 12px ${alpha(theme.palette.common.black, 0.1)}`,
                   border: isExpanded
-                    ? `2px solid ${nivel.color}`
+                    ? `2px solid ${nivelColor}`
                     : `1px solid ${theme.palette.divider}`,
                   '&:hover': {
                     transform: 'translateY(-4px)',
-                    boxShadow: `0 12px 32px ${alpha(nivel.color, 0.2)}`,
+                    boxShadow: `0 12px 32px ${alpha(nivelColor, 0.2)}`,
                   }
                 }}>
                   {/* Header del Grado */}
@@ -502,11 +630,11 @@ const Paralelos: React.FC = () => {
                       p: 3,
                       cursor: 'pointer',
                       background: isExpanded
-                        ? `linear-gradient(135deg, ${alpha(nivel.color, 0.15)} 0%, ${alpha(nivel.color, 0.05)} 100%)`
+                        ? `linear-gradient(135deg, ${alpha(nivelColor, 0.15)} 0%, ${alpha(nivelColor, 0.05)} 100%)`
                         : 'transparent',
                       transition: 'all 0.3s ease',
                       '&:hover': {
-                        background: `linear-gradient(135deg, ${alpha(nivel.color, 0.1)} 0%, ${alpha(nivel.color, 0.03)} 100%)`,
+                        background: `linear-gradient(135deg, ${alpha(nivelColor, 0.1)} 0%, ${alpha(nivelColor, 0.03)} 100%)`,
                       }
                     }}
                   >
@@ -515,13 +643,13 @@ const Paralelos: React.FC = () => {
                         <Avatar sx={{
                           width: 56,
                           height: 56,
-                          bgcolor: nivel.color,
+                          bgcolor: nivelColor,
                           fontSize: '1.8rem',
-                          boxShadow: `0 8px 16px ${alpha(nivel.color, 0.4)}`,
+                          boxShadow: `0 8px 16px ${alpha(nivelColor, 0.4)}`,
                           transition: 'all 0.3s ease',
                           transform: isExpanded ? 'scale(1.1)' : 'none'
                         }}>
-                          {nivel.icon}
+                          {nivelIcon}
                         </Avatar>
                         <Box sx={{ flex: 1 }}>
                           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
@@ -529,11 +657,11 @@ const Paralelos: React.FC = () => {
                               {grado.nombre}
                             </Typography>
                             <Chip
-                              label={nivel.nombre}
+                              label={nivel?.nombre ?? 'Sin nivel'}
                               size="small"
                               sx={{
-                                bgcolor: alpha(nivel.color, 0.2),
-                                color: nivel.color,
+                                bgcolor: alpha(nivelColor, 0.2),
+                                color: nivelColor,
                                 fontWeight: 'bold'
                               }}
                             />
@@ -554,15 +682,15 @@ const Paralelos: React.FC = () => {
                                 label="Paralelos"
                                 size="small"
                                 variant="outlined"
-                                sx={{ borderColor: nivel.color }}
+                                sx={{ borderColor: nivelColor }}
                               />
                             </Badge>
                             <Chip
                               icon={<GroupsIcon />}
-                              label={`${grado.paralelos.reduce((sum, p) => sum + (p.estudiantes || 0), 0)} estudiantes`}
+                               label={`${grado.paralelos.reduce((sum, p) => sum + (p.total_estudiantes || 0), 0)} estudiantes`}
                               size="small"
                               variant="outlined"
-                              sx={{ borderColor: nivel.color }}
+                              sx={{ borderColor: nivelColor }}
                             />
                           </Stack>
                         </Box>
@@ -576,10 +704,10 @@ const Paralelos: React.FC = () => {
                               handleOpenDialog(grado.id);
                             }}
                             sx={{
-                              bgcolor: alpha(nivel.color, 0.1),
+                              bgcolor: alpha(nivelColor, 0.1),
                               transition: 'all 0.3s ease',
                               '&:hover': {
-                                bgcolor: nivel.color,
+                                bgcolor: nivelColor,
                                 color: 'white',
                                 transform: 'rotate(90deg) scale(1.2)',
                               }
@@ -603,7 +731,7 @@ const Paralelos: React.FC = () => {
                   {/* Paralelos */}
                   <Collapse in={isExpanded} timeout={500}>
                     <Divider />
-                    <Box sx={{ p: 3, bgcolor: alpha(nivel.color, 0.02) }}>
+                    <Box sx={{ p: 3, bgcolor: alpha(nivelColor, 0.02) }}>
                       {grado.paralelos.length === 0 ? (
                         <Paper
                           elevation={0}
@@ -627,8 +755,8 @@ const Paralelos: React.FC = () => {
                             startIcon={<AddIcon />}
                             onClick={() => handleOpenDialog(grado.id)}
                             sx={{
-                              bgcolor: nivel.color,
-                              '&:hover': { bgcolor: nivel.color, filter: 'brightness(0.9)' }
+                              bgcolor: nivelColor,
+                              '&:hover': { bgcolor: nivelColor, filter: 'brightness(0.9)' }
                             }}
                           >
                             Agregar Primer Paralelo
@@ -637,17 +765,18 @@ const Paralelos: React.FC = () => {
                       ) : (
                         <Grid container spacing={3}>
                           {grado.paralelos.map((paralelo, paraleloIndex) => {
-                            const capacidad = (paralelo.estudiantes || 0) / 40 * 100;
-                            const isLleno = capacidad > 90;
+                            const totalEstudiantes = paralelo.total_estudiantes || 0;
+                            const capacidad = (totalEstudiantes / paralelo.capacidad_maxima) * 100;
+                            const isLleno = capacidad >= 90;
 
                             return (
-                              <Grid size={{xs:12, sm:6, md:4}} key={paralelo.id}>
+                              <Grid size={{xs:12, sm:6, md:4}}  key={paralelo.id}>
                                 <Card
                                   sx={{
                                     height: '100%',
                                     borderRadius: 3,
-                                    border: `2px solid ${isLleno ? '#FF6B6B' : alpha(nivel.color, 0.3)}`,
-                                    background: `linear-gradient(135deg, ${alpha(nivel.color, 0.05)} 0%, ${alpha(nivel.color, 0.02)} 100%)`,
+                                    border: `2px solid ${isLleno ? '#FF6B6B' : alpha(nivelColor, 0.3)}`,
+                                    background: `linear-gradient(135deg, ${alpha(nivelColor, 0.05)} 0%, ${alpha(nivelColor, 0.02)} 100%)`,
                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                     animation: `fadeInScale 0.5s ease ${paraleloIndex * 0.08}s both`,
                                     '@keyframes fadeInScale': {
@@ -662,8 +791,8 @@ const Paralelos: React.FC = () => {
                                     },
                                     '&:hover': {
                                       transform: 'translateY(-12px) scale(1.03)',
-                                      boxShadow: `0 16px 32px ${alpha(nivel.color, 0.3)}`,
-                                      borderColor: nivel.color,
+                                      boxShadow: `0 16px 32px ${alpha(nivelColor, 0.3)}`,
+                                      borderColor: nivelColor,
                                     }
                                   }}
                                 >
@@ -676,10 +805,10 @@ const Paralelos: React.FC = () => {
                                             sx={{
                                               width: 48,
                                               height: 48,
-                                              bgcolor: nivel.color,
+                                              bgcolor: nivelColor,
                                               fontSize: '1.5rem',
                                               fontWeight: 'bold',
-                                              boxShadow: `0 4px 12px ${alpha(nivel.color, 0.4)}`
+                                              boxShadow: `0 4px 12px ${alpha(nivelColor, 0.4)}`
                                             }}
                                           >
                                             {paralelo.nombre}
@@ -705,6 +834,10 @@ const Paralelos: React.FC = () => {
                                               color: '#FF6B6B',
                                               fontWeight: 'bold',
                                               animation: 'pulse 2s ease-in-out infinite',
+                                              '@keyframes pulse': {
+                                                '0%, 100%': { opacity: 1 },
+                                                '50%': { opacity: 0.7 }
+                                              }
                                             }}
                                           />
                                         </Tooltip>
@@ -722,8 +855,8 @@ const Paralelos: React.FC = () => {
                                             <GroupsIcon sx={{ fontSize: 18 }} />
                                             Estudiantes
                                           </Typography>
-                                          <Typography variant="h6" fontWeight="700" sx={{ color: nivel.color }}>
-                                            {paralelo.estudiantes || 0}/40
+                                          <Typography variant="h6" fontWeight="700" sx={{ color: nivelColor }}>
+                                            {totalEstudiantes}/{paralelo.capacidad_maxima}
                                           </Typography>
                                         </Box>
                                         <LinearProgress
@@ -732,10 +865,10 @@ const Paralelos: React.FC = () => {
                                           sx={{
                                             height: 8,
                                             borderRadius: 4,
-                                            bgcolor: alpha(nivel.color, 0.1),
+                                            bgcolor: alpha(nivelColor, 0.1),
                                             '& .MuiLinearProgress-bar': {
                                               borderRadius: 4,
-                                              bgcolor: isLleno ? '#FF6B6B' : nivel.color,
+                                              bgcolor: isLleno ? '#FF6B6B' : nivelColor,
                                               transition: 'all 0.3s ease'
                                             }
                                           }}
@@ -745,88 +878,59 @@ const Paralelos: React.FC = () => {
                                         </Typography>
                                       </Box>
 
-                                      {/* Docente */}
-                                      {paralelo.docente && (
-                                        <Box
-                                          sx={{
-                                            p: 1.5,
-                                            bgcolor: alpha(nivel.color, 0.08),
-                                            borderRadius: 2,
-                                            border: `1px solid ${alpha(nivel.color, 0.2)}`
-                                          }}
-                                        >
-                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                            <Avatar
-                                              sx={{
-                                                width: 32,
-                                                height: 32,
-                                                bgcolor: nivel.color,
-                                                fontSize: '0.875rem'
-                                              }}
-                                            >
-                                              <SchoolIcon fontSize="small" />
-                                            </Avatar>
-                                            <Box sx={{ flex: 1 }}>
-                                              <Typography variant="caption" color="text.secondary" display="block">
-                                                Docente Titular
+                                      {/* Turno y Horario */}
+                                      <Box
+                                        sx={{
+                                          p: 1.5,
+                                          bgcolor: alpha(getTurnoColor(paralelo.turno_nombre), 0.1),
+                                          borderRadius: 2,
+                                          border: `1px solid ${alpha(getTurnoColor(paralelo.turno_nombre), 0.3)}`
+                                        }}
+                                      >
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                          <Avatar
+                                            sx={{
+                                              width: 40,
+                                              height: 40,
+                                              bgcolor: 'transparent',
+                                              fontSize: '1.5rem'
+                                            }}
+                                          >
+                                            {getTurnoIcon(paralelo.turno_nombre)}
+                                          </Avatar>
+                                          <Box sx={{ flex: 1 }}>
+                                            <Typography variant="caption" color="text.secondary" display="block">
+                                              Turno
+                                            </Typography>
+                                            <Typography variant="body2" fontWeight="700" sx={{ color: getTurnoColor(paralelo.turno_nombre) }}>
+                                              {paralelo.turno_nombre}
+                                            </Typography>
+                                            {paralelo.hora_inicio && paralelo.hora_fin && (
+                                              <Typography variant="caption" color="text.secondary">
+                                                {paralelo.hora_inicio.slice(0, 5)} - {paralelo.hora_fin.slice(0, 5)}
                                               </Typography>
-                                              <Typography variant="body2" fontWeight="600">
-                                                {paralelo.docente}
-                                              </Typography>
-                                            </Box>
+                                            )}
                                           </Box>
                                         </Box>
-                                      )}
+                                      </Box>
 
-                                      {/* Turno y Aula */}
-                                      <Grid container spacing={1}>
-                                        {paralelo.turno && (
-                                          <Grid size={{xs:6}}>
-                                            <Box
-                                              sx={{
-                                                p: 1.5,
-                                                bgcolor: alpha(getTurnoColor(paralelo.turno), 0.1),
-                                                borderRadius: 2,
-                                                border: `1px solid ${alpha(getTurnoColor(paralelo.turno), 0.3)}`,
-                                                textAlign: 'center'
-                                              }}
-                                            >
-                                              <Typography variant="h4" sx={{ mb: 0.5 }}>
-                                                {getTurnoIcon(paralelo.turno)}
-                                              </Typography>
-                                              <Typography variant="caption" color="text.secondary" display="block">
-                                                Turno
-                                              </Typography>
-                                              <Typography variant="body2" fontWeight="700" sx={{ color: getTurnoColor(paralelo.turno) }}>
-                                                {paralelo.turno}
-                                              </Typography>
-                                            </Box>
-                                          </Grid>
-                                        )}
-                                        {paralelo.aula && (
-                                          <Grid size={{xs:6}}>
-                                            <Box
-                                              sx={{
-                                                p: 1.5,
-                                                bgcolor: alpha(nivel.color, 0.1),
-                                                borderRadius: 2,
-                                                border: `1px solid ${alpha(nivel.color, 0.3)}`,
-                                                textAlign: 'center'
-                                              }}
-                                            >
-                                              <Typography variant="h4" sx={{ mb: 0.5 }}>
-                                                🚪
-                                              </Typography>
-                                              <Typography variant="caption" color="text.secondary" display="block">
-                                                Aula
-                                              </Typography>
-                                              <Typography variant="body2" fontWeight="700" sx={{ color: nivel.color }}>
-                                                {paralelo.aula}
-                                              </Typography>
-                                            </Box>
-                                          </Grid>
-                                        )}
-                                      </Grid>
+                                      {/* Año */}
+                                      <Box
+                                        sx={{
+                                          p: 1.5,
+                                          bgcolor: alpha(nivelColor, 0.1),
+                                          borderRadius: 2,
+                                          border: `1px solid ${alpha(nivelColor, 0.3)}`,
+                                          textAlign: 'center'
+                                        }}
+                                      >
+                                        <Typography variant="caption" color="text.secondary" display="block">
+                                          Año Académico
+                                        </Typography>
+                                        <Typography variant="h6" fontWeight="700" sx={{ color: nivelColor }}>
+                                          {paralelo.anio}
+                                        </Typography>
+                                      </Box>
                                     </Stack>
 
                                     <Divider sx={{ my: 2 }} />
@@ -974,15 +1078,36 @@ const Paralelos: React.FC = () => {
                 {editingParalelo.paralelo ? '✏️ Editar Paralelo' : '➕ Nuevo Paralelo'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {grados.find(g => g.id === editingParalelo.grado_id)?.nombre}
+                {grados.find(g => g.id === formData.grado_id)?.nombre || 'Selecciona un grado'}
               </Typography>
             </Box>
           </Box>
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           <Grid container spacing={3}>
+            {/* Selector de Grado (solo al crear) */}
+            {!editingParalelo.paralelo && (
+              <Grid size={{xs:12}} >
+                <FormControl fullWidth>
+                  <InputLabel>Grado</InputLabel>
+                  <Select
+                    value={formData.grado_id}
+                    onChange={(e) => setFormData({ ...formData, grado_id: e.target.value })}
+                    label="Grado"
+                    sx={{ borderRadius: 2 }}
+                  >
+                    {grados.map((grado) => (
+                      <MenuItem key={grado.id} value={grado.id}>
+                        {grado.nombre} - {niveles.find(n => n.id === grado.nivel_academico_id)?.nombre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
+
             {/* Selector de Letra */}
-            <Grid size={{xs:12}} >
+            <Grid size={{xs:12}}>
               <Typography variant="body2" fontWeight="600" sx={{ mb: 1.5 }}>
                 Identificación del Paralelo
               </Typography>
@@ -1021,17 +1146,17 @@ const Paralelos: React.FC = () => {
               )}
             </Grid>
 
-            {/* Número de Estudiantes */}
-            <Grid size={{xs:12, md:6}}>
+            {/* Capacidad Máxima */}
+            <Grid size={{xs:12}} >
               <TextField
                 fullWidth
                 type="number"
-                label="Número de Estudiantes"
-                value={formData.estudiantes}
-                onChange={(e) => setFormData({ ...formData, estudiantes: Number(e.target.value) })}
+                label="Capacidad Máxima"
+                value={formData.capacidad_maxima}
+                onChange={(e) => setFormData({ ...formData, capacidad_maxima: Number(e.target.value) })}
                 InputProps={{
                   startAdornment: <GroupsIcon sx={{ mr: 1, color: 'action.active' }} />,
-                  inputProps: { min: 0, max: 50 }
+                  inputProps: { min: 1, max: 50 }
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
@@ -1041,35 +1166,17 @@ const Paralelos: React.FC = () => {
               />
             </Grid>
 
-            {/* Aula */}
-            <Grid size={{xs:12, md:6}}>
+            {/* Año */}
+            <Grid size={{xs:12, md:6}} >
               <TextField
                 fullWidth
-                label="Aula"
-                value={formData.aula}
-                onChange={(e) => setFormData({ ...formData, aula: e.target.value })}
-                placeholder="Ej: 101, A-203"
+                type="number"
+                label="Año Académico"
+                value={formData.anio}
+                onChange={(e) => setFormData({ ...formData, anio: Number(e.target.value) })}
+                placeholder="Ej: 2025"
                 InputProps={{
-                  startAdornment: <span style={{ marginRight: 8 }}>🚪</span>
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                  }
-                }}
-              />
-            </Grid>
-
-            {/* Docente Titular */}
-            <Grid size={{xs:12}}>
-              <TextField
-                fullWidth
-                label="Docente Titular"
-                value={formData.docente}
-                onChange={(e) => setFormData({ ...formData, docente: e.target.value })}
-                placeholder="Ej: Prof. María García"
-                InputProps={{
-                  startAdornment: <SchoolIcon sx={{ mr: 1, color: 'action.active' }} />
+                  inputProps: { min: 2020, max: 2030 }
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
@@ -1080,38 +1187,41 @@ const Paralelos: React.FC = () => {
             </Grid>
 
             {/* Turno */}
-            <Grid size={{xs:12}}>
+            <Grid size={{xs:12}} >
               <Typography variant="body2" fontWeight="600" sx={{ mb: 1.5 }}>
                 Turno
               </Typography>
               <Grid container spacing={2}>
-                {(['Mañana', 'Tarde', 'Noche'] as const).map((turno) => (
-                  <Grid size={{xs:12, sm:4}} key={turno}>
+                {turnos.map((turno) => (
+                  <Grid size={{xs:12, sm:4}}  key={turno.id}>
                     <Card
-                      onClick={() => setFormData({ ...formData, turno })}
+                      onClick={() => setFormData({ ...formData, turno_id: turno.id })}
                       sx={{
                         p: 2,
                         cursor: 'pointer',
                         textAlign: 'center',
-                        border: `2px solid ${formData.turno === turno ? getTurnoColor(turno) : 'transparent'}`,
-                        bgcolor: formData.turno === turno ? alpha(getTurnoColor(turno), 0.1) : 'transparent',
+                        border: `2px solid ${formData.turno_id === turno.id ? getTurnoColor(turno.nombre) : 'transparent'}`,
+                        bgcolor: formData.turno_id === turno.id ? alpha(getTurnoColor(turno.nombre), 0.1) : 'transparent',
                         transition: 'all 0.3s ease',
                         '&:hover': {
                           transform: 'scale(1.05)',
-                          borderColor: getTurnoColor(turno),
-                          bgcolor: alpha(getTurnoColor(turno), 0.15),
-                          boxShadow: `0 8px 16px ${alpha(getTurnoColor(turno), 0.3)}`
+                          borderColor: getTurnoColor(turno.nombre),
+                          bgcolor: alpha(getTurnoColor(turno.nombre), 0.15),
+                          boxShadow: `0 8px 16px ${alpha(getTurnoColor(turno.nombre), 0.3)}`
                         }
                       }}
                     >
                       <Typography variant="h3" sx={{ mb: 1 }}>
-                        {getTurnoIcon(turno)}
+                        {getTurnoIcon(turno.nombre)}
                       </Typography>
-                      <Typography variant="body1" fontWeight="700" sx={{ color: getTurnoColor(turno) }}>
-                        {turno}
+                      <Typography variant="body1" fontWeight="700" sx={{ color: getTurnoColor(turno.nombre) }}>
+                        {turno.nombre}
                       </Typography>
-                      {formData.turno === turno && (
-                        <CheckCircleIcon sx={{ mt: 1, color: getTurnoColor(turno) }} />
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        {turno.hora_inicio?.slice(0, 5)} - {turno.hora_fin?.slice(0, 5)}
+                      </Typography>
+                      {formData.turno_id === turno.id && (
+                        <CheckCircleIcon sx={{ mt: 1, color: getTurnoColor(turno.nombre) }} />
                       )}
                     </Card>
                   </Grid>
@@ -1120,7 +1230,7 @@ const Paralelos: React.FC = () => {
             </Grid>
 
             {/* Preview */}
-            <Grid size={{xs:12}}>
+            <Grid size={{xs:12}} >
               <Divider sx={{ my: 1 }} />
               <Box sx={{
                 p: 2,
@@ -1133,19 +1243,17 @@ const Paralelos: React.FC = () => {
                 </Typography>
                 <Stack spacing={1}>
                   <Typography variant="body2">
-                    📋 <strong>Paralelo {formData.nombre || '?'}</strong> - {grados.find(g => g.id === editingParalelo.grado_id)?.nombre}
+                    📋 <strong>Paralelo {formData.nombre || '?'}</strong> - {grados.find(g => g.id === formData.grado_id)?.nombre || 'Sin grado'}
                   </Typography>
                   <Typography variant="body2">
-                    👥 {formData.estudiantes} estudiantes
+                    👥 Capacidad máxima: {formData.capacidad_maxima} estudiantes
                   </Typography>
-                  {formData.docente && (
-                    <Typography variant="body2">
-                      👨‍🏫 {formData.docente}
-                    </Typography>
-                  )}
                   <Typography variant="body2">
-                    {getTurnoIcon(formData.turno)} Turno {formData.turno}
-                    {formData.aula && ` - 🚪 Aula ${formData.aula}`}
+                    {getTurnoIcon(turnos.find(t => t.id === formData.turno_id)?.nombre ?? '')} 
+                    Turno {turnos.find(t => t.id === formData.turno_id)?.nombre || 'No seleccionado'}
+                  </Typography>
+                  <Typography variant="body2">
+                    📅 Año {formData.anio}
                   </Typography>
                 </Stack>
               </Box>
@@ -1171,6 +1279,7 @@ const Paralelos: React.FC = () => {
             variant="contained"
             size="large"
             startIcon={editingParalelo.paralelo ? <EditIcon /> : <AddIcon />}
+            disabled={!formData.nombre || !formData.grado_id || !formData.turno_id}
             sx={{
               textTransform: 'none',
               borderRadius: 2,
@@ -1182,6 +1291,9 @@ const Paralelos: React.FC = () => {
               '&:hover': {
                 transform: 'translateY(-2px)',
                 boxShadow: `0 12px 24px ${alpha(theme.palette.primary.main, 0.5)}`,
+              },
+              '&:disabled': {
+                opacity: 0.5
               }
             }}
           >
@@ -1217,4 +1329,3 @@ const Paralelos: React.FC = () => {
 };
 
 export default Paralelos;
-                                 

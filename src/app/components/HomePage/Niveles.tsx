@@ -43,7 +43,7 @@ function Nivels() {
       title: "Educación Inicial",
       paragraph:
         "Primeros pasos en el aprendizaje con metodología lúdica, desarrollo psicomotor y formación en valores cristianos.",
-      paragraph1: "3 a 5 años",
+      paragraph1: "4 a 5 años",
       paragraph2: "Desarrollo Integral",
       paragraph3: "Valores Cristianos",
     },
@@ -53,8 +53,8 @@ function Nivels() {
       imageurl: "/Nivels/Primary-3.jpg",
       title: "Educación Primaria",
       paragraph:
-        "Formación académica sólida con énfasis en lectoescritura, matemáticas, ciencias y desarrollo del pensamiento crítico.",
-      paragraph1: "6 a 12 años",
+        "Formación académica sólida con énfasis en lectoescritura, matemáticas, ciencias, lengua extrangera y desarrollo del pensamiento crítico.",
+      paragraph1: "6 a 11 años",
       paragraph2: "Bases académicas sólidas",
       paragraph3: "Pensamiento crítico",
     },
@@ -64,8 +64,8 @@ function Nivels() {
       imageurl: "/Nivels/Secondary-1.jpg",
       title: "Educación Secundaria",
       paragraph:
-        "Preparación integral para la educación superior con bachillerato en ciencias, liderazgo y servicio comunitario.",
-      paragraph1: "12 a 18 años",
+        "Preparación integral para la educación superior con bachillerato en ciencias, lengua extrangera liderazgo y servicio comunitario.",
+      paragraph1: "12 a 17 años",
       paragraph2: "Bachillerato en ciencias",
       paragraph3: "Liderazgo cristiano",
     },

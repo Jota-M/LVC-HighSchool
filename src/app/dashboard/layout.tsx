@@ -2,28 +2,32 @@
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import { Box } from "@mui/material";
+import { useAuthGuard } from '../../hooks/useAuthGuard';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <Box
-      display="flex"
-      height="100vh" // evita corte vertical en móviles
-      minHeight="100vh"
-      overflow="hidden"
-    >
-      <Sidebar />
+  const { loading } = useAuthGuard();
+
+  if (loading) {
+    return (
       <Box
-        flex={1}
-        display="flex"
-        flexDirection="column"
-        minHeight="100vh"
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+        }}
       >
+        Cargando...
+      </Box>
+    );
+  }
+
+  return (
+    <Box display="flex" height="100vh" minHeight="100vh" overflow="hidden">
+      <Sidebar />
+      <Box flex={1} display="flex" flexDirection="column" minHeight="100vh">
         <Topbar />
-        <Box
-          flex={1}
-          overflow="auto" // scroll si el contenido es más alto que la pantalla
-          sx={{ p: { xs: 2, md: 4 } }}
-        >
+        <Box flex={1} overflow="auto" sx={{ p: { xs: 2, md: 4 } }}>
           {children}
         </Box>
       </Box>

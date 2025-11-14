@@ -73,9 +73,9 @@ function About() {
               </span>
             </h1>
             <p style={{ fontSize: "1.1rem", lineHeight: 1.6, color: isDarkMode ? "#ccc" : "#555" }}>
-              Formamos estudiantes íntegros a través de una educación de excelencia académica fundamentada en principios bíblicos. 
+              Formamos estudiantes íntegros a través de una educación Cristocéntrica con excelencia académica fundamentada en principios bíblicos. 
               Nuestro compromiso es desarrollar el potencial de cada niño y joven, preparándolos para ser líderes transformadores 
-              en la sociedad con un corazón conforme al de Cristo.
+              en la sociedad con un corazón conforme a Cristo.
             </p>
           </div>
 
@@ -120,8 +120,21 @@ function About() {
 
         {/* Misión y Visión */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "40px", marginBottom: "80px" }}>
-          <InfoCard title="Misión" text="Proporcionar una educación integral centrada en principios cristianos, promoviendo el desarrollo académico, espiritual y social de nuestros estudiantes." isDark={isDarkMode} delay={0.4} />
-          <InfoCard title="Visión" text="Ser una unidad educativa modelo en la formación de ciudadanos con valores, excelencia académica y compromiso con el bienestar de su entorno." isDark={isDarkMode} delay={0.6} />
+          <InfoCard title="Misión" text="La misión de la Unidad Educativa es formar estudiantes reflexivos, respetuosos, tolerantes 
+y productivos, con una formación integral en aulas implementadas adecuadamente, con 
+personal actualizado y comprometido con la identidad de la Unidad Educativa Particular 
+“La Voz de Cristo” con “Principios Cristianos”, con la misión de ayuda al prójimo, y que 
+responda a las necesidades socio-culturales de la comunidad. 
+Contar con una educación innovadora, para el desarrollo integral, basado en Principios y 
+Valores Cristianos, solidarios y éticos, de conciencia de preservación y mantenimiento del 
+medio ambiente. " isDark={isDarkMode} delay={0.4} />
+          <InfoCard title="Visión" text="Elevar la calidad educativa a través de la implementación de nuevos conceptos 
+pedagógicos, formando estudiantes con criterio propio, analíticos y reflexivos, 
+investigadores, participativos, lectores y productores de textos, basado en la equidad de 
+género. Partimos de nuestra propuesta educativa que integra ciencia, tecnología, arte y cultura, con 
+enfoque Cristo céntrico, que forma seres humanos dignos, fraternos, competentes, justos, 
+solidarios, comprometidos y capaces de liderar procesos de cambio en la familia y la 
+sociedad, para un estado más justo, solidario y humano." isDark={isDarkMode} delay={0.6} />
         </div>
 
         {/* Divisor */}
@@ -160,7 +173,7 @@ function About() {
             { title: "Fe", img: "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=400" },
             { title: "Educación", img: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400" },
             { title: "Servicio", img: "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400" },
-            { title: "Comunidad", img: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400" },
+            { title: "Unidad", img: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400" },
           ].map((p, index) => (
             <Pillar key={p.title} {...p} index={index} />
           ))}
@@ -218,9 +231,9 @@ function About() {
               borderRadius: "2px",
             }}
           />
-          "Instruye al niño en su camino, y aun cuando fuere viejo no se apartará de él."
+          "“Sed, pues, vosotros perfectos, como vuestro Padre que está en los cielos es perfecto."
           <br />
-          <strong>— Proverbios 22:6</strong>
+          <strong> Mateo 5:48</strong>
           <div
             style={{
               marginTop: "15px",

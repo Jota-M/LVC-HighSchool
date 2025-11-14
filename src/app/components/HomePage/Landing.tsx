@@ -70,7 +70,7 @@ function Landing() {
             variant="h1"
             sx={{
               fontFamily: "Roboto",
-              fontSize: { xs: "2rem", sm: "2.5rem", md: "3.5rem", lg: "4rem" },
+              fontSize: { xs: "2rem", sm: "2.5rem", md: "3.5rem", lg: "3.6rem" },
               fontWeight: "bold",
               mb: 1,
               background: isDark
@@ -86,7 +86,7 @@ function Landing() {
                 : "0 0 40px rgba(1, 87, 155, 0.2)"
             }}
           >
-            Educación Con
+            Educación Con Valores Cristianos y
           </Typography>
 
           {/* Segunda parte con amarillo */}
@@ -94,7 +94,7 @@ function Landing() {
             variant="h1"
             sx={{
               fontFamily: "Roboto",
-              fontSize: { xs: "2rem", sm: "2.5rem", md: "3.5rem", lg: "4rem" },
+              fontSize: { xs: "2rem", sm: "2.5rem", md: "3.5rem", lg: "3.6rem" },
               fontWeight: "bold",
               color: isDark ? "#fdd835" : "#facc15",
               textShadow: isDark
@@ -107,18 +107,18 @@ function Landing() {
               }
             }}
           >
-            Valores Cristianos y Excelencia
+             Excelencia Académica.
           </Typography>
 
           <Typography
-            variant="h6"
+            variant="h2"
             sx={{
               color: "rgba(255,255,255,0.9)",
               mt: 2,
               animation: `${fadeIn} 1.5s ease forwards`
             }}
           >
-            Unidad Educativa Particular La Voz De Cristo.
+            Unidad Educativa Particular La Voz de Cristo.
           </Typography>
 
           <Box
@@ -152,6 +152,7 @@ function Landing() {
             </Button>
 
             <Button
+              href="#Contactos"
               variant="outlined"
               sx={{
                 color: isDark ? "#fff" : "#000",

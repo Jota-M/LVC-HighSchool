@@ -83,7 +83,7 @@ const niveles = {
   mañana: {
     inicial: [
       { title: "Pre-Kínder", edad: "3-4 años", total: 30, ocupados: 25 },
-      { title: "Kínder", edad: "4-5 años", total: 28, ocupados: 20 },
+      { title: "Kínder", edad: "4-5 años", total: 50, ocupados: 10 },
     ],
     primaria: [
       { title: "1° Primaria", edad: "6-7 años", total: 30, ocupados: 27 },

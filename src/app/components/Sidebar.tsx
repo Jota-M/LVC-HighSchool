@@ -1,4 +1,6 @@
+// components/ModernSidebar.tsx - Actualizado con autenticación
 'use client';
+
 import { useState } from 'react';
 import {
   Box,
@@ -7,7 +9,6 @@ import {
   useTheme,
   Divider,
   List,
-  ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
@@ -20,14 +21,12 @@ import {
 import { keyframes } from '@mui/system';
 import Link from 'next/link';
 
+// Icons
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
 import ContactsOutlinedIcon from '@mui/icons-material/ContactsOutlined';
-import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
-import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
-import TimelineOutlinedIcon from '@mui/icons-material/TimelineOutlined';
 import MenuOutlinedIcon from '@mui/icons-material/MenuOutlined';
 import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
@@ -40,22 +39,37 @@ import ClassOutlinedIcon from '@mui/icons-material/ClassOutlined';
 import NotificationsActiveOutlinedIcon from '@mui/icons-material/NotificationsActiveOutlined';
 import GradeOutlinedIcon from '@mui/icons-material/GradeOutlined';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
-import { useAuthGuard } from '../hooks/useAuthGuard';
+
+import { useAuth } from '../../context/AuthContext';
 
 // ==================== ANIMACIONES ====================
 const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 `;
 
 const shimmer = keyframes`
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
 `;
 
 const pulse = keyframes`
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 `;
 
 // ==================== INTERFACES ====================
@@ -75,11 +89,20 @@ interface SectionProps {
   selected: string;
   setSelected: (title: string) => void;
   isCollapsed: boolean;
-  role?: string | null;
+  userRoles: string[];
+  userPermissions: string[];
 }
 
 // ==================== COMPONENTE MENU ITEM ====================
-const MenuItem = ({ title, to, icon, selected, setSelected, isCollapsed, badge }: ItemProps) => {
+const MenuItem = ({
+  title,
+  to,
+  icon,
+  selected,
+  setSelected,
+  isCollapsed,
+  badge,
+}: ItemProps) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isActive = selected === title;
@@ -139,6 +162,7 @@ const MenuItem = ({ title, to, icon, selected, setSelected, isCollapsed, badge }
         >
           {icon}
         </ListItemIcon>
+
         {!isCollapsed && (
           <>
             <ListItemText
@@ -182,12 +206,32 @@ const MenuItem = ({ title, to, icon, selected, setSelected, isCollapsed, badge }
 };
 
 // ==================== COMPONENTE SECCION ====================
-const MenuSection = ({ label, items, selected, setSelected, isCollapsed, role }: SectionProps) => {
+const MenuSection = ({
+  label,
+  items,
+  selected,
+  setSelected,
+  isCollapsed,
+  userRoles,
+  userPermissions,
+}: SectionProps) => {
   const [open, setOpen] = useState(true);
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
-  const filteredItems = items.filter((item) => role && item.roles.includes(role));
+  // Filtrar items según roles del usuario
+  const filteredItems = items.filter((item) => {
+    // Si el item requiere roles específicos
+    if (item.roles && item.roles.length > 0) {
+      return item.roles.some((role: string) => userRoles.includes(role));
+    }
+    // Si el item requiere permisos específicos
+    if (item.permissions && item.permissions.length > 0) {
+      return item.permissions.some((perm: string) => userPermissions.includes(perm));
+    }
+    // Si no requiere nada específico, mostrar
+    return true;
+  });
 
   if (filteredItems.length === 0) return null;
 
@@ -269,7 +313,12 @@ const sections = [
   {
     label: 'Principal',
     items: [
-      { title: 'Dashboard', to: '/dashboard', icon: <HomeOutlinedIcon />, roles: ['admin', 'user'] },
+      {
+        title: 'Dashboard',
+        to: '/dashboard',
+        icon: <HomeOutlinedIcon />,
+        roles: ['admin', 'super_admin', 'docente', 'secretaria'],
+      },
     ],
   },
 
@@ -277,10 +326,34 @@ const sections = [
   {
     label: 'Gestión de Personas',
     items: [
-      { title: 'Usuarios', to: '/dashboard/users', icon: <PeopleOutlinedIcon />, roles: ['admin'] },
-      { title: 'Docentes', to: '/dashboard/docentes', icon: <SupervisorAccountOutlinedIcon />, roles: ['admin'] },
-      { title: 'Estudiantes', to: '/dashboard/estudiantes', icon: <SchoolOutlinedIcon />, roles: ['admin', 'user'] },
-      { title: 'Preinscripciones', to: '/dashboard/preinscripciones', icon: <AppRegistrationIcon />, roles: ['admin', 'user'], badge: 12 },
+      {
+        title: 'Usuarios',
+        to: '/dashboard/users',
+        icon: <PeopleOutlinedIcon />,
+        roles: ['admin', 'super_admin'],
+        permissions: ['usuarios.leer'],
+      },
+      {
+        title: 'Docentes',
+        to: '/dashboard/docentes',
+        icon: <SupervisorAccountOutlinedIcon />,
+        roles: ['admin', 'super_admin', 'secretaria'],
+        permissions: ['docentes.leer'],
+      },
+      {
+        title: 'Estudiantes',
+        to: '/dashboard/estudiantes',
+        icon: <SchoolOutlinedIcon />,
+        roles: ['admin', 'super_admin', 'docente', 'secretaria'],
+        permissions: ['estudiantes.leer'],
+      },
+      {
+        title: 'Preinscripciones',
+        to: '/dashboard/preinscripciones',
+        icon: <AppRegistrationIcon />,
+        roles: ['admin', 'super_admin', 'secretaria'],
+        badge: 12,
+      },
     ],
   },
 
@@ -288,10 +361,30 @@ const sections = [
   {
     label: 'Estructura Académica',
     items: [
-      { title: 'Periodos', to: '/dashboard/periodos', icon: <CalendarTodayOutlinedIcon />, roles: ['admin'] },
-      { title: 'Niveles y Grados', to: '/dashboard/niveles-grados', icon: <SchoolOutlinedIcon />, roles: ['admin'] },
-      { title: 'Paralelos', to: '/dashboard/paralelos', icon: <ClassOutlinedIcon />, roles: ['admin'] },
-      { title: 'Materias', to: '/dashboard/materias', icon: <ClassOutlinedIcon />, roles: ['admin', 'user'] },
+      {
+        title: 'Periodos',
+        to: '/dashboard/periodos',
+        icon: <CalendarTodayOutlinedIcon />,
+        roles: ['admin', 'super_admin'],
+      },
+      {
+        title: 'Niveles y Grados',
+        to: '/dashboard/niveles-grados',
+        icon: <SchoolOutlinedIcon />,
+        roles: ['admin', 'super_admin'],
+      },
+      {
+        title: 'Paralelos',
+        to: '/dashboard/paralelos',
+        icon: <ClassOutlinedIcon />,
+        roles: ['admin', 'super_admin'],
+      },
+      {
+        title: 'Materias',
+        to: '/dashboard/materias',
+        icon: <ClassOutlinedIcon />,
+        roles: ['admin', 'super_admin', 'docente'],
+      },
     ],
   },
 
@@ -299,8 +392,18 @@ const sections = [
   {
     label: 'Gestión Académica',
     items: [
-      { title: 'Asignaciones', to: '/dashboard/asignaciones', icon: <ContactsOutlinedIcon />, roles: ['admin', 'user'] },
-      { title: 'Horarios', to: '/dashboard/horarios', icon: <CalendarTodayOutlinedIcon />, roles: ['admin', 'user'] },
+      {
+        title: 'Asignaciones',
+        to: '/dashboard/asignaciones',
+        icon: <ContactsOutlinedIcon />,
+        roles: ['admin', 'super_admin', 'docente'],
+      },
+      {
+        title: 'Horarios',
+        to: '/dashboard/horarios',
+        icon: <CalendarTodayOutlinedIcon />,
+        roles: ['admin', 'super_admin', 'docente'],
+      },
     ],
   },
 
@@ -308,36 +411,91 @@ const sections = [
   {
     label: 'Sistema',
     items: [
-      { title: 'Reportes', to: '/dashboard/reportes', icon: <AssessmentOutlinedIcon />, roles: ['admin'] },
-      { title: 'Configuración', to: '/dashboard/configuracion', icon: <SettingsOutlinedIcon />, roles: ['admin'] },
+      {
+        title: 'Reportes',
+        to: '/dashboard/reportes',
+        icon: <AssessmentOutlinedIcon />,
+        roles: ['admin', 'super_admin'],
+      },
+      {
+        title: 'Configuración',
+        to: '/dashboard/configuracion',
+        icon: <SettingsOutlinedIcon />,
+        roles: ['admin', 'super_admin'],
+      },
     ],
   },
 
-  // 👨‍👩‍👧 PORTAL PADRES (Solo visible para rol 'padre')
+  // 👨‍👩‍👧 PORTAL PADRES
   {
     label: 'Portal Padres',
-    roles: ['padre'], // Esta sección completa solo para padres
     items: [
-      { title: 'Inicio', to: '/dashboard/padre/principal', icon: <HomeOutlinedIcon />, roles: ['padre'] },
-      { title: 'Calificaciones', to: '/dashboard/padre/calificaciones', icon: <GradeOutlinedIcon />, roles: ['padre'] },
-      { title: 'Asistencia', to: '/dashboard/padre/asistencia', icon: <EventAvailableOutlinedIcon />, roles: ['padre'] },
-      { title: 'Horario', to: '/dashboard/padre/horario', icon: <CalendarTodayOutlinedIcon />, roles: ['padre'] },
-      { title: 'Alertas', to: '/dashboard/padre/alertas', icon: <NotificationsActiveOutlinedIcon />, roles: ['padre'], badge: 2 },
+      {
+        title: 'Inicio',
+        to: '/dashboard/Padre/principal',
+        icon: <HomeOutlinedIcon />,
+        roles: ['padre'],
+      },
+      {
+        title: 'Calificaciones',
+        to: '/dashboard/Padre/calificaciones',
+        icon: <GradeOutlinedIcon />,
+        roles: ['padre'],
+      },
+      {
+        title: 'Asistencia',
+        to: '/dashboard/Padre/asistencia',
+        icon: <EventAvailableOutlinedIcon />,
+        roles: ['padre'],
+      },
+      {
+        title: 'Horario',
+        to: '/dashboard/Padre/horario',
+        icon: <CalendarTodayOutlinedIcon />,
+        roles: ['padre'],
+      },
+      {
+        title: 'Alertas',
+        to: '/dashboard/Padre/alertas',
+        icon: <NotificationsActiveOutlinedIcon />,
+        roles: ['padre'],
+        badge: 2,
+      },
     ],
   },
 
-  // 👨‍🏫 PORTAL PROFESORES (Solo visible para rol 'profesor')
+  // 👨‍🏫 PORTAL PROFESORES
   {
     label: 'Portal Profesores',
-    roles: ['profesor'], // Esta sección completa solo para profesores
     items: [
-      { title: 'Inicio', to: '/dashboard/profesor/home', icon: <HomeOutlinedIcon />, roles: ['profesor'] },
-      { title: 'Mis Clases', to: '/dashboard/profesor/clases', icon: <ClassOutlinedIcon />, roles: ['profesor'] },
-      { title: 'Calificaciones', to: '/dashboard/profesor/notas', icon: <GradeOutlinedIcon />, roles: ['profesor'] },
-      { title: 'Asistencia', to: '/dashboard/profesor/asistencia', icon: <EventAvailableOutlinedIcon />, roles: ['profesor'] },
+      {
+        title: 'Inicio',
+        to: '/dashboard/profesor/home',
+        icon: <HomeOutlinedIcon />,
+        roles: ['profesor'],
+      },
+      {
+        title: 'Mis Clases',
+        to: '/dashboard/profesor/clases',
+        icon: <ClassOutlinedIcon />,
+        roles: ['profesor'],
+      },
+      {
+        title: 'Calificaciones',
+        to: '/dashboard/profesor/notas',
+        icon: <GradeOutlinedIcon />,
+        roles: ['profesor'],
+      },
+      {
+        title: 'Asistencia',
+        to: '/dashboard/profesor/asistencia',
+        icon: <EventAvailableOutlinedIcon />,
+        roles: ['profesor'],
+      },
     ],
   },
 ];
+
 // ==================== COMPONENTE PRINCIPAL ====================
 const ModernSidebar = () => {
   const theme = useTheme();
@@ -345,11 +503,27 @@ const ModernSidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selected, setSelected] = useState('Dashboard');
   const [hoverLogo, setHoverLogo] = useState(false);
-  const { loading, role } = useAuthGuard();
+
+  const { user, loading } = useAuth();
+
+  // Obtener roles y permisos del usuario
+  const userRoles = user?.roles?.map((r) => r.nombre) || [];
+  const userPermissions = user?.permisos?.map((p) => p.nombre) || [];
+
+  // Obtener el nombre del rol principal para mostrar
+  const rolePrincipal = user?.roles?.[0]?.descripcion || 'Usuario';
 
   if (loading) {
     return (
-      <Box sx={{ p: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Box
+        sx={{
+          p: 4,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+        }}
+      >
         <Typography>Cargando menú...</Typography>
       </Box>
     );
@@ -427,13 +601,15 @@ const ModernSidebar = () => {
                 variant="h6"
                 sx={{
                   fontWeight: 800,
-                  background: isDark ? 'yellow' : '#01579b',
+                  background: isDark
+                    ? 'linear-gradient(90deg, #ffd700, #ffed4e)'
+                    : 'linear-gradient(90deg, #0288d1, #01579b)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   letterSpacing: 0.5,
                 }}
               >
-                Unidad Educativa Particular L.V.C.
+                U.E. L.V.C.
               </Typography>
               <Typography
                 variant="caption"
@@ -455,7 +631,9 @@ const ModernSidebar = () => {
               transition: 'all 0.3s ease',
               '&:hover': {
                 transform: 'rotate(180deg)',
-                backgroundColor: isDark ? alpha('#0288d1', 0.15) : alpha('#0288d1', 0.1),
+                backgroundColor: isDark
+                  ? alpha('#0288d1', 0.15)
+                  : alpha('#0288d1', 0.1),
               },
             }}
           >
@@ -482,7 +660,9 @@ const ModernSidebar = () => {
               transition: 'all 0.3s ease',
               cursor: 'pointer',
               '&:hover': {
-                backgroundColor: isDark ? alpha('#0288d1', 0.08) : alpha('#0288d1', 0.05),
+                backgroundColor: isDark
+                  ? alpha('#0288d1', 0.08)
+                  : alpha('#0288d1', 0.05),
                 transform: 'translateY(-2px)',
                 boxShadow: isDark
                   ? '0 4px 12px rgba(2,136,209,0.15)'
@@ -510,7 +690,7 @@ const ModernSidebar = () => {
                   textOverflow: 'ellipsis',
                 }}
               >
-                Oswaldo
+                {user?.username}
               </Typography>
               <Typography
                 variant="caption"
@@ -522,7 +702,7 @@ const ModernSidebar = () => {
                   textOverflow: 'ellipsis',
                 }}
               >
-                Director Administrativo
+                {rolePrincipal}
               </Typography>
             </Box>
             <Box
@@ -530,9 +710,11 @@ const ModernSidebar = () => {
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
-                backgroundColor: '#4caf50',
-                boxShadow: '0 0 0 2px rgba(76, 175, 80, 0.2)',
-                animation: `${pulse} 2s ease-in-out infinite`,
+                backgroundColor: user?.activo ? '#4caf50' : '#f44336',
+                boxShadow: `0 0 0 2px ${
+                  user?.activo ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)'
+                }`,
+                animation: user?.activo ? `${pulse} 2s ease-in-out infinite` : 'none',
               }}
             />
           </Box>
@@ -541,7 +723,7 @@ const ModernSidebar = () => {
 
       {isCollapsed && (
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
-          <Tooltip title="Oswaldo - Director Administrativo" placement="right">
+          <Tooltip title={`${user?.username} - ${rolePrincipal}`} placement="right">
             <Avatar
               src="/perfil.jpg"
               sx={{
@@ -590,7 +772,8 @@ const ModernSidebar = () => {
             selected={selected}
             setSelected={setSelected}
             isCollapsed={isCollapsed}
-            role={role}
+            userRoles={userRoles}
+            userPermissions={userPermissions}
           />
         ))}
       </Box>

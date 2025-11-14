@@ -7,8 +7,6 @@ import Contact from "./components/HomePage/Contacts";
 import Footer from "./components/HomePage/Footer";
 import VerseSection from "./components/HomePage/Verse";
 import Landing from "./components/HomePage/Landing";
-
-// 🟣 Importamos el botón flotante
 import FloatingPreinscripcionButton from "./components/HomePage/FloatingPreinscripcionButton";
 
 const sectionStyle: React.CSSProperties = {

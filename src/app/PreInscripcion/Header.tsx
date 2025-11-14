@@ -114,9 +114,6 @@ function Header() {
           zIndex: 0,
         }}
       />
-
-      
-
       {/* Hero Section Mejorado */}
       <Grid
         size={{ xs: 12 }}
@@ -628,8 +625,8 @@ function Header() {
                   Documentos del representante
                 </Typography>
                 <Requisitos icon={<CheckIcon color="success" />} text="Cédula de identidad" />
-                <Requisitos icon={<CheckIcon color="success" />} text="Planilla de servicios básicos" />
-                <Requisitos icon={<CheckIcon color="success" />} text="2 referencias personales" />
+                {/* <Requisitos icon={<CheckIcon color="success" />} text="Planilla de servicios básicos" />
+                <Requisitos icon={<CheckIcon color="success" />} text="2 referencias personales" /> */}
               </Box>
             </Grid>
 

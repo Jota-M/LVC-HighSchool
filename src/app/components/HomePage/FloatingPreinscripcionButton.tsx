@@ -64,7 +64,7 @@ const FloatingPreinscripcionButton = () => {
               Preinscripciones abiertas
             </span>
             <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-              2026 - 2027
+              2026 
             </span>
           </div>
 

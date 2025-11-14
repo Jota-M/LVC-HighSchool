@@ -1,5 +1,7 @@
 "use client";
 import { CssBaseline, ThemeProvider } from "@mui/material";
+import { AuthProvider } from '../context/AuthContext';
+import { useState } from 'react';
 import { ColorModeContext, useMode } from "./dashboard/theme";
 import "./globals.css";
 
@@ -12,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ColorModeContext.Provider value={colorMode}>
           <ThemeProvider theme={theme}>
             <CssBaseline />
-            {children}
+            <AuthProvider>{children}</AuthProvider>
           </ThemeProvider>
         </ColorModeContext.Provider>
       </body>
