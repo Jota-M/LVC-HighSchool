@@ -1,257 +1,514 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Avatar,
+  Button,
+  Paper,
+  TextField,
+  InputAdornment,
   Chip,
   IconButton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Button,
+  Tooltip,
+  Menu,
+  MenuItem,
+  Alert,
+  CircularProgress,
+  alpha,
   useTheme,
-  Grid,
-  Card,
-  CardContent,
 } from '@mui/material';
+import {
+  DataGrid,
+  GridColDef,
+  GridRenderCellParams,
+} from '@mui/x-data-grid';
 
-import { tokens } from '@/app/dashboard/theme';
-
+import SearchIcon from '@mui/icons-material/Search';
+import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import PersonOffIcon from '@mui/icons-material/PersonOff';
+import PersonIcon from '@mui/icons-material/Person';
+import LockResetIcon from '@mui/icons-material/LockReset';
+import HistoryIcon from '@mui/icons-material/History';
+import FilterListIcon from '@mui/icons-material/FilterList';
 
-const stats = [
-  {
-    title: 'Total Usuarios',
-    value: 1247,
-    subtitle: '+12 esta semana',
-    icon: <PeopleAltIcon />,
-    color: 'blueAccent',
-  },
-  {
-    title: 'Usuarios Activos',
-    value: 1189,
-    subtitle: '95.3% del total',
-    icon: <PersonOutlineIcon />,
-    color: 'greenAccent',
-  },
-  {
-    title: 'Pendientes',
-    value: 23,
-    subtitle: 'Requieren aprobación',
-    icon: <AccessTimeIcon />,
-    color: 'yellow', // custom color in-line
-  },
-  {
-    title: 'Inactivos',
-    value: 35,
-    subtitle: '2.8% del total',
-    icon: <RemoveCircleOutlineIcon />,
-    color: 'redAccent',
-  },
-];
+import ProtectedRoute from '../../../components/ProtectedRoute';
+import usuariosService, { Usuario } from '../../../services/usuariosService';
+import UsuarioFormDialog from '../../../components/usuarios/UsuarioFormDialog';
+import UsuarioDeleteDialog from '../../../components/usuarios/UsuarioDeleteDialog';
+import UsuarioResetPasswordDialog from '../../../components/usuarios/UsuarioResetPasswordDialog';
+import UsuarioActividadDialog from '../../../components/usuarios/UsuarioActividadDialog';
 
-const users = [
-  {
-    name: 'María González',
-    email: 'maria.gonzalez@escuela.edu',
-    role: 'Docente',
-    status: 'Activo',
-    lastAccess: 'Hace 2 horas',
-    color: 'greenAccent',
-  },
-  {
-    name: 'Juan Pérez',
-    email: 'juan.perez@estudiante.edu',
-    role: 'Estudiante',
-    status: 'Activo',
-    lastAccess: 'Hace 1 día',
-    color: 'blueAccent',
-  },
-  {
-    name: 'Ana Silva',
-    email: 'ana.silva@secretaria.edu',
-    role: 'Secretaría',
-    status: 'Activo',
-    lastAccess: 'Hace 3 horas',
-    color: 'redAccent',
-  },
-];
-
-const getInitials = (name: string) => {
-  const names = name.split(' ');
-  return names.map((n) => n[0]).join('');
-};
-
-export default function UserDashboard() {
+export default function UsersPage() {
   const theme = useTheme();
-  const colors = tokens(theme.palette.mode);
+  const isDark = theme.palette.mode === 'dark';
 
-  return (
-    <Box p={{ xs: 2, md: 4 }}>
-      <Typography variant="h4" mb={3}>
-        Gestión de Usuarios
-      </Typography>
+  // Estados
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-      {/* === Cards === */}
-      <Grid container spacing={3} mb={4}>
-        {stats.map((stat, index) => {
-          const cardColor =
-            stat.color === 'yellow'
-              ? '#facc15' // Amarillo personalizado para pendientes
-              : colors[stat.color as keyof typeof colors][500];
+  // Paginación y filtros
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalRows, setTotalRows] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [rolFilter, setRolFilter] = useState('');
+  const [activoFilter, setActivoFilter] = useState<boolean | null>(null);
 
-          return (
-            <Grid size={{ xs: 10, sm: 6, md: 3 ,lg:3}} key={index}>
-              <Card
-                sx={{
-                  backgroundColor: colors.primary[400],
-                  display: 'flex',
-                  alignItems: 'center',
-                  p: 2,
-                }}
-              >
-                <Box
-                  sx={{
-                    backgroundColor: cardColor,
-                    color: '#fff',
-                    borderRadius: '50%',
-                    width: 48,
-                    height: 48,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    mr: 2,
-                  }}
-                >
-                  {stat.icon}
-                </Box>
-                <CardContent sx={{ p: 0 }}>
-                  <Typography variant="subtitle2" color={colors.grey[300]}>
-                    {stat.title}
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold" color={colors.grey[100]}>
-                    {stat.value}
-                  </Typography>
-                  <Typography variant="caption" color={colors.grey[300]}>
-                    {stat.subtitle}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          );
-        })}
-      </Grid>
+  // Diálogos
+  const [formOpen, setFormOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [actividadOpen, setActividadOpen] = useState(false);
+  const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null);
 
-      {/* === Tabla de Usuarios === */}
-      <TableContainer
-        component={Paper}
-        sx={{
-          backgroundColor: colors.primary[400],
-        }}
-      >
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ color: colors.grey[100] }}>Usuario</TableCell>
-              <TableCell sx={{ color: colors.grey[100] }}>Rol</TableCell>
-              <TableCell sx={{ color: colors.grey[100] }}>Estado</TableCell>
-              <TableCell sx={{ color: colors.grey[100] }}>Último acceso</TableCell>
-              <TableCell align="center" sx={{ color: colors.grey[100] }}>
-                Acciones
-              </TableCell>
-            </TableRow>
-          </TableHead>
+  // Menú de acciones
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [menuUsuario, setMenuUsuario] = useState<Usuario | null>(null);
 
-          <TableBody>
-            {users.map((user, index) => (
-              <TableRow key={index}>
-                <TableCell>
-                  <Box display="flex" alignItems="center">
-                    <Avatar
-                      sx={{
-                        bgcolor: colors.blueAccent[500],
-                        color: 'white',
-                        mr: 2,
-                      }}
-                    >
-                      {getInitials(user.name)}
-                    </Avatar>
-                    <Box>
-                      <Typography color={colors.grey[100]} fontWeight="bold">
-                        {user.name}
-                      </Typography>
-                      <Typography color={colors.grey[300]} variant="body2">
-                        {user.email}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </TableCell>
+  // Cargar usuarios
+  const cargarUsuarios = async () => {
+    try {
+      setLoading(true);
+      setError('');
 
-                <TableCell>
-                  <Chip
-                    label={user.role}
-                    sx={{
-                      bgcolor: colors[user.color as keyof typeof colors][600],
-                      color: colors.grey[100],
-                      fontWeight: 600,
-                    }}
-                  />
-                </TableCell>
+      const response = await usuariosService.listar({
+        page: page + 1,
+        limit: pageSize,
+        search: searchTerm || undefined,
+        rol: rolFilter || undefined,
+        activo: activoFilter !== null ? activoFilter : undefined,
+      });
 
-                <TableCell>
-                  <Chip
-                    label={user.status}
-                    sx={{
-                      bgcolor: colors.greenAccent[600],
-                      color: colors.grey[100],
-                      fontWeight: 600,
-                    }}
-                  />
-                </TableCell>
+      setUsuarios(response.data.usuarios);
+      setTotalRows(response.data.paginacion.total);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al cargar usuarios');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                <TableCell>
-                  <Typography color={colors.grey[200]}>{user.lastAccess}</Typography>
-                </TableCell>
+  useEffect(() => {
+    cargarUsuarios();
+  }, [page, pageSize, searchTerm, rolFilter, activoFilter]);
 
-                <TableCell align="center">
-                  <IconButton>
-                    <EditIcon sx={{ color: colors.grey[100] }} />
-                  </IconButton>
-                  <IconButton>
-                    <MoreVertIcon sx={{ color: colors.grey[100] }} />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+  // Handlers de menú
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, usuario: Usuario) => {
+    setAnchorEl(event.currentTarget);
+    setMenuUsuario(usuario);
+  };
 
-      {/* === Botón "Nuevo Usuario" === */}
-      <Box display="flex" justifyContent="flex-end" mt={3}>
-        <Button
-          variant="contained"
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setMenuUsuario(null);
+  };
+
+  // Handlers de acciones
+  const handleEdit = (usuario: Usuario) => {
+    setSelectedUsuario(usuario);
+    setFormOpen(true);
+    handleMenuClose();
+  };
+
+  const handleDelete = (usuario: Usuario) => {
+    setSelectedUsuario(usuario);
+    setDeleteOpen(true);
+    handleMenuClose();
+  };
+
+  const handleToggleActivo = async (usuario: Usuario) => {
+    try {
+      await usuariosService.toggleActivo(usuario.id);
+      setSuccess(
+        `Usuario ${usuario.activo ? 'desactivado' : 'activado'} exitosamente`
+      );
+      cargarUsuarios();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al cambiar estado');
+    }
+    handleMenuClose();
+  };
+
+  const handleResetPassword = (usuario: Usuario) => {
+    setSelectedUsuario(usuario);
+    setResetPasswordOpen(true);
+    handleMenuClose();
+  };
+
+  const handleVerActividad = (usuario: Usuario) => {
+    setSelectedUsuario(usuario);
+    setActividadOpen(true);
+    handleMenuClose();
+  };
+
+  // Columnas de la tabla
+  const columns: GridColDef[] = [
+    {
+      field: 'id',
+      headerName: 'ID',
+      width: 70,
+      headerAlign: 'center',
+      align: 'center',
+    },
+    {
+      field: 'username',
+      headerName: 'Usuario',
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params: GridRenderCellParams) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <PersonIcon sx={{ fontSize: 20, color: '#0288d1' }} />
+          <Typography variant="body2" fontWeight={600}>
+            {params.value}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      field: 'email',
+      headerName: 'Email',
+      flex: 1,
+      minWidth: 200,
+    },
+    {
+      field: 'roles',
+      headerName: 'Roles',
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params: GridRenderCellParams) => (
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          {params.value?.map((rol: any) => (
+            <Chip
+              key={rol.id}
+              label={rol.nombre}
+              size="small"
+              sx={{
+                backgroundColor: alpha('#0288d1', 0.1),
+                color: '#0288d1',
+                fontWeight: 600,
+                fontSize: '0.7rem',
+              }}
+            />
+          ))}
+        </Box>
+      ),
+    },
+    {
+      field: 'activo',
+      headerName: 'Estado',
+      width: 120,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params: GridRenderCellParams) => (
+        <Chip
+          label={params.value ? 'Activo' : 'Inactivo'}
+          size="small"
+          color={params.value ? 'success' : 'error'}
+          sx={{ fontWeight: 600 }}
+        />
+      ),
+    },
+    {
+      field: 'verificado',
+      headerName: 'Verificado',
+      width: 120,
+      headerAlign: 'center',
+      align: 'center',
+      renderCell: (params: GridRenderCellParams) => (
+        <Chip
+          label={params.value ? 'Sí' : 'No'}
+          size="small"
+          color={params.value ? 'success' : 'warning'}
+          variant="outlined"
+        />
+      ),
+    },
+    {
+      field: 'created_at',
+      headerName: 'Fecha Creación',
+      width: 150,
+      renderCell: (params: GridRenderCellParams) =>
+        new Date(params.value).toLocaleDateString('es-ES'),
+    },
+    {
+      field: 'acciones',
+      headerName: 'Acciones',
+      width: 80,
+      headerAlign: 'center',
+      align: 'center',
+      sortable: false,
+      filterable: false,
+      renderCell: (params: GridRenderCellParams) => (
+        <IconButton
+          size="small"
+          onClick={(e) => handleMenuOpen(e, params.row)}
           sx={{
-            backgroundColor: colors.blueAccent[500],
-            color: 'white',
             '&:hover': {
-              backgroundColor: colors.blueAccent[600],
+              backgroundColor: alpha('#0288d1', 0.1),
             },
           }}
         >
-          + Nuevo Usuario
-        </Button>
+          <MoreVertIcon />
+        </IconButton>
+      ),
+    },
+  ];
+
+  return (
+    <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
+      <Box>
+        {/* Header */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 3,
+          }}
+        >
+          <Box>
+            <Typography variant="h4" fontWeight={700} gutterBottom>
+              Gestión de Usuarios
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Administra los usuarios del sistema
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => {
+              setSelectedUsuario(null);
+              setFormOpen(true);
+            }}
+            sx={{
+              background: 'linear-gradient(90deg, #0288d1, #01579b)',
+              px: 3,
+              py: 1.5,
+            }}
+          >
+            Nuevo Usuario
+          </Button>
+        </Box>
+
+        {/* Alertas */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+            {error}
+          </Alert>
+        )}
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
+            {success}
+          </Alert>
+        )}
+
+        {/* Filtros */}
+        <Paper
+          sx={{
+            p: 2,
+            mb: 2,
+            backgroundColor: isDark ? '#1a1f2e' : '#fff',
+          }}
+        >
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <TextField
+              placeholder="Buscar por usuario o email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="small"
+              sx={{ minWidth: 300 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <TextField
+              select
+              label="Filtrar por rol"
+              value={rolFilter}
+              onChange={(e) => setRolFilter(e.target.value)}
+              size="small"
+              sx={{ minWidth: 150 }}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              <MenuItem value="admin">Admin</MenuItem>
+              <MenuItem value="super_admin">Super Admin</MenuItem>
+              <MenuItem value="docente">Docente</MenuItem>
+              <MenuItem value="estudiante">Estudiante</MenuItem>
+              <MenuItem value="padre">Padre</MenuItem>
+            </TextField>
+
+            <TextField
+              select
+              label="Filtrar por estado"
+              value={activoFilter === null ? '' : activoFilter.toString()}
+              onChange={(e) =>
+                setActivoFilter(
+                  e.target.value === '' ? null : e.target.value === 'true'
+                )
+              }
+              size="small"
+              sx={{ minWidth: 150 }}
+            >
+              <MenuItem value="">Todos</MenuItem>
+              <MenuItem value="true">Activo</MenuItem>
+              <MenuItem value="false">Inactivo</MenuItem>
+            </TextField>
+
+            <Button
+              variant="outlined"
+              startIcon={<FilterListIcon />}
+              onClick={() => {
+                setSearchTerm('');
+                setRolFilter('');
+                setActivoFilter(null);
+              }}
+            >
+              Limpiar Filtros
+            </Button>
+          </Box>
+        </Paper>
+
+        {/* Tabla */}
+        <Paper
+          sx={{
+            height: 600,
+            backgroundColor: isDark ? '#1a1f2e' : '#fff',
+          }}
+        >
+          <DataGrid
+  rows={usuarios}
+  columns={columns}
+  loading={loading}
+  pagination
+  paginationMode="server"
+  rowCount={totalRows}
+  disableRowSelectionOnClick
+  paginationModel={{ page, pageSize }}
+  onPaginationModelChange={(model) => {
+    setPage(model.page);
+    setPageSize(model.pageSize);
+  }}
+  pageSizeOptions={[5, 10, 25, 50]} // ✅ renamed from rowsPerPageOptions
+  sx={{
+    border: 'none',
+    '& .MuiDataGrid-cell': {
+      borderColor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08),
+    },
+    '& .MuiDataGrid-columnHeaders': {
+      backgroundColor: isDark ? alpha('#0288d1', 0.1) : alpha('#0288d1', 0.05),
+      borderColor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08),
+    },
+  }}
+/>
+
+        </Paper>
+
+        {/* Menú de acciones */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+        >
+          <MenuItem onClick={() => menuUsuario && handleEdit(menuUsuario)}>
+            <EditIcon sx={{ mr: 1, fontSize: 20 }} />
+            Editar
+          </MenuItem>
+          <MenuItem onClick={() => menuUsuario && handleToggleActivo(menuUsuario)}>
+            {menuUsuario?.activo ? (
+              <>
+                <PersonOffIcon sx={{ mr: 1, fontSize: 20 }} />
+                Desactivar
+              </>
+            ) : (
+              <>
+                <PersonIcon sx={{ mr: 1, fontSize: 20 }} />
+                Activar
+              </>
+            )}
+          </MenuItem>
+          <MenuItem
+            onClick={() => menuUsuario && handleResetPassword(menuUsuario)}
+          >
+            <LockResetIcon sx={{ mr: 1, fontSize: 20 }} />
+            Resetear Contraseña
+          </MenuItem>
+          <MenuItem onClick={() => menuUsuario && handleVerActividad(menuUsuario)}>
+            <HistoryIcon sx={{ mr: 1, fontSize: 20 }} />
+            Ver Actividad
+          </MenuItem>
+          <MenuItem
+            onClick={() => menuUsuario && handleDelete(menuUsuario)}
+            sx={{ color: 'error.main' }}
+          >
+            <DeleteIcon sx={{ mr: 1, fontSize: 20 }} />
+            Eliminar
+          </MenuItem>
+        </Menu>
+
+        {/* Diálogos */}
+        <UsuarioFormDialog
+          open={formOpen}
+          onClose={() => {
+            setFormOpen(false);
+            setSelectedUsuario(null);
+          }}
+          usuario={selectedUsuario}
+          onSuccess={() => {
+            setSuccess(
+              selectedUsuario
+                ? 'Usuario actualizado exitosamente'
+                : 'Usuario creado exitosamente'
+            );
+            cargarUsuarios();
+          }}
+        />
+
+        <UsuarioDeleteDialog
+          open={deleteOpen}
+          onClose={() => {
+            setDeleteOpen(false);
+            setSelectedUsuario(null);
+          }}
+          usuario={selectedUsuario}
+          onSuccess={() => {
+            setSuccess('Usuario eliminado exitosamente');
+            cargarUsuarios();
+          }}
+        />
+
+        <UsuarioResetPasswordDialog
+          open={resetPasswordOpen}
+          onClose={() => {
+            setResetPasswordOpen(false);
+            setSelectedUsuario(null);
+          }}
+          usuario={selectedUsuario}
+          onSuccess={() => {
+            setSuccess('Contraseña reseteada exitosamente');
+          }}
+        />
+
+        <UsuarioActividadDialog
+          open={actividadOpen}
+          onClose={() => {
+            setActividadOpen(false);
+            setSelectedUsuario(null);
+          }}
+          usuario={selectedUsuario}
+        />
       </Box>
-    </Box>
+    </ProtectedRoute>
   );
 }

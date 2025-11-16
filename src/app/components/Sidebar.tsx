@@ -221,14 +221,16 @@ const MenuSection = ({
 
   // Filtrar items según roles del usuario
   const filteredItems = items.filter((item) => {
-    // Si el item requiere roles específicos
-    if (item.roles && item.roles.length > 0) {
-      return item.roles.some((role: string) => userRoles.includes(role));
-    }
-    // Si el item requiere permisos específicos
+    // Si el item requiere permisos específicos, verificar permisos
     if (item.permissions && item.permissions.length > 0) {
       return item.permissions.some((perm: string) => userPermissions.includes(perm));
     }
+    
+    // Si el item requiere roles específicos, verificar roles
+    if (item.roles && item.roles.length > 0) {
+      return item.roles.some((role: string) => userRoles.includes(role));
+    }
+    
     // Si no requiere nada específico, mostrar
     return true;
   });
@@ -317,7 +319,7 @@ const sections = [
         title: 'Dashboard',
         to: '/dashboard',
         icon: <HomeOutlinedIcon />,
-        roles: ['admin', 'super_admin', 'docente', 'secretaria'],
+        permissions: [], // Accesible para todos los autenticados
       },
     ],
   },
@@ -330,21 +332,18 @@ const sections = [
         title: 'Usuarios',
         to: '/dashboard/users',
         icon: <PeopleOutlinedIcon />,
-        roles: ['admin', 'super_admin'],
         permissions: ['usuarios.leer'],
       },
       {
         title: 'Docentes',
         to: '/dashboard/docentes',
         icon: <SupervisorAccountOutlinedIcon />,
-        roles: ['admin', 'super_admin', 'secretaria'],
         permissions: ['docentes.leer'],
       },
       {
         title: 'Estudiantes',
         to: '/dashboard/estudiantes',
         icon: <SchoolOutlinedIcon />,
-        roles: ['admin', 'super_admin', 'docente', 'secretaria'],
         permissions: ['estudiantes.leer'],
       },
       {
@@ -365,25 +364,25 @@ const sections = [
         title: 'Periodos',
         to: '/dashboard/periodos',
         icon: <CalendarTodayOutlinedIcon />,
-        roles: ['admin', 'super_admin'],
+        permissions: ['periodos.leer'],
       },
       {
         title: 'Niveles y Grados',
         to: '/dashboard/niveles-grados',
         icon: <SchoolOutlinedIcon />,
-        roles: ['admin', 'super_admin'],
+        permissions: ['niveles.leer'],
       },
       {
         title: 'Paralelos',
         to: '/dashboard/paralelos',
         icon: <ClassOutlinedIcon />,
-        roles: ['admin', 'super_admin'],
+        permissions: ['paralelos.leer'],
       },
       {
         title: 'Materias',
         to: '/dashboard/materias',
         icon: <ClassOutlinedIcon />,
-        roles: ['admin', 'super_admin', 'docente'],
+        permissions: ['materias.leer'],
       },
     ],
   },
@@ -396,13 +395,13 @@ const sections = [
         title: 'Asignaciones',
         to: '/dashboard/asignaciones',
         icon: <ContactsOutlinedIcon />,
-        roles: ['admin', 'super_admin', 'docente'],
+        permissions: ['asignaciones.leer'],
       },
       {
         title: 'Horarios',
         to: '/dashboard/horarios',
         icon: <CalendarTodayOutlinedIcon />,
-        roles: ['admin', 'super_admin', 'docente'],
+        permissions: ['horarios.leer'],
       },
     ],
   },
@@ -415,13 +414,13 @@ const sections = [
         title: 'Reportes',
         to: '/dashboard/reportes',
         icon: <AssessmentOutlinedIcon />,
-        roles: ['admin', 'super_admin'],
+        permissions: ['reportes.leer'],
       },
       {
         title: 'Configuración',
         to: '/dashboard/configuracion',
         icon: <SettingsOutlinedIcon />,
-        roles: ['admin', 'super_admin'],
+        permissions: ['configuracion.leer'],
       },
     ],
   },
@@ -432,31 +431,31 @@ const sections = [
     items: [
       {
         title: 'Inicio',
-        to: '/dashboard/Padre/principal',
+        to: '/dashboard/padre/principal',
         icon: <HomeOutlinedIcon />,
         roles: ['padre'],
       },
       {
         title: 'Calificaciones',
-        to: '/dashboard/Padre/calificaciones',
+        to: '/dashboard/padre/calificaciones',
         icon: <GradeOutlinedIcon />,
         roles: ['padre'],
       },
       {
         title: 'Asistencia',
-        to: '/dashboard/Padre/asistencia',
+        to: '/dashboard/padre/asistencia',
         icon: <EventAvailableOutlinedIcon />,
         roles: ['padre'],
       },
       {
         title: 'Horario',
-        to: '/dashboard/Padre/horario',
+        to: '/dashboard/padre/horario',
         icon: <CalendarTodayOutlinedIcon />,
         roles: ['padre'],
       },
       {
         title: 'Alertas',
-        to: '/dashboard/Padre/alertas',
+        to: '/dashboard/padre/alertas',
         icon: <NotificationsActiveOutlinedIcon />,
         roles: ['padre'],
         badge: 2,
@@ -507,8 +506,8 @@ const ModernSidebar = () => {
   const { user, loading } = useAuth();
 
   // Obtener roles y permisos del usuario
-  const userRoles = user?.roles?.map((r) => r.nombre) || [];
-  const userPermissions = user?.permisos?.map((p) => p.nombre) || [];
+  const userRoles = user?.roles?.map((r: { nombre: any; }) => r.nombre) || [];
+  const userPermissions = user?.permisos?.map((p: { nombre: any; }) => p.nombre) || [];
 
   // Obtener el nombre del rol principal para mostrar
   const rolePrincipal = user?.roles?.[0]?.descripcion || 'Usuario';
