@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import Navbar from "../Navbar";
+import Navbar from "../../login/Header";
 import '@fontsource/roboto';
 import {
   Grid,
@@ -159,23 +159,6 @@ function Header() {
   return (
     <Box sx={{ width: "100%", position: "relative", overflow: "hidden" }}>
       <Navbar />
-
-      {/* Fondo animado decorativo */}
-      <Box
-        sx={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: "600px",
-          background: isDark
-            ? "radial-gradient(circle at 30% 20%, rgba(1, 87, 155, 0.15), transparent)"
-            : "radial-gradient(circle at 30% 20%, rgba(187, 222, 251, 0.3), transparent)",
-          animation: `${pulse} 10s ease-in-out infinite`,
-          zIndex: 0,
-          pointerEvents: "none",
-        }}
-      />
 
       <Container maxWidth="xl" sx={{ position: "relative", zIndex: 1, pt: { xs: 12, md: 18 } }}>
         {/* Hero Section Mejorado */}
@@ -556,13 +539,12 @@ function Header() {
           </Box>
         ))}
 
-        <Divider sx={{ my: 8, opacity: 0.3 }} />
+        <Divider sx={{ opacity: 0.3 }} />
 
         {/* Footer */}
         <Box
           sx={{
             textAlign: "center",
-            py: 4,
             color: "text.secondary",
             opacity: 0,
             animation: `${fadeInUp} 0.8s ease forwards 3s`,
@@ -572,7 +554,7 @@ function Header() {
             © {new Date().getFullYear()} Unidad Educativa Particular "La Voz de Cristo"
           </Typography>
           <Typography variant="caption">
-            Plataforma de Preinscripción — Sistema de Gestión de Cupos
+            Plataforma de Inscripción — Sistema de Gestión de Cupos
           </Typography>
         </Box>
       </Container>

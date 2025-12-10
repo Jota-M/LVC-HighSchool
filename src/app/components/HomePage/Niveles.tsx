@@ -39,7 +39,7 @@ function Nivels() {
     {
       link: "/mallacurricular/inicial",
       init: "Initial",
-      imageurl: "/Nivels/Initial.jpg",
+      imageurl: "/Nivels/Initiall.jpg",
       title: "Educación Inicial",
       paragraph:
         "Primeros pasos en el aprendizaje con metodología lúdica, desarrollo psicomotor y formación en valores cristianos.",
@@ -50,7 +50,7 @@ function Nivels() {
     {
       link: "/mallacurricular/primaria",
       init: "Primary",
-      imageurl: "/Nivels/Primary-3.jpg",
+      imageurl: "/Nivels/Primaryy.jpg",
       title: "Educación Primaria",
       paragraph:
         "Formación académica sólida con énfasis en lectoescritura, matemáticas, ciencias, lengua extrangera y desarrollo del pensamiento crítico.",
@@ -61,7 +61,7 @@ function Nivels() {
     {
       link: "/mallacurricular/secundaria",
       init: "Secondary",
-      imageurl: "/Nivels/Secondary-1.jpg",
+      imageurl: "/Nivels/Secondary.jpg",
       title: "Educación Secundaria",
       paragraph:
         "Preparación integral para la educación superior con bachillerato en ciencias, lengua extrangera liderazgo y servicio comunitario.",
@@ -73,6 +73,7 @@ function Nivels() {
 
   return (
     <>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet"></link>
       <Grid
         id="Niveles"
         container
@@ -84,33 +85,6 @@ function Nivels() {
           overflow: "hidden",
         }}
       >
-        {/* Fondo dinámico mejorado con múltiples capas */}
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            background: isDark
-              ? "radial-gradient(circle at 20% 20%, #0d47a1, #000)"
-              : "radial-gradient(circle at 20% 20%, #bbdefb, #fff)",
-            opacity: 0.15,
-            animation: `${bgPulse} 15s infinite alternate ease-in-out`,
-            zIndex: 0,
-          }}
-        />
-
-        {/* Segunda capa de fondo */}
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            background: isDark
-              ? "radial-gradient(circle at 80% 80%, #1565c0, transparent)"
-              : "radial-gradient(circle at 20% 20%, #90caf9, transparent)",
-            opacity: 0.1,
-            animation: `${bgPulse} 20s infinite alternate-reverse ease-in-out`,
-            zIndex: 0,
-          }}
-        />
 
         {/* Header con badge animado */}
         <Grid
@@ -126,6 +100,7 @@ function Nivels() {
           <Typography
             variant="h3"
             sx={{
+              fontFamily: "Roboto, sans-serif",
               color: isDark ? "#fff" : "#01579b",
               fontWeight: "bold",
               fontSize: { xs: "2rem", md: "3rem", lg: "3.5rem" },
@@ -155,6 +130,7 @@ function Nivels() {
           <Typography
             variant="h6"
             sx={{
+              fontFamily: "Montserrat, sans-serif",
               color: isDark ? "#ddd" : "#555",
               fontSize: { xs: "1rem", md: "1.2rem" },
               lineHeight: 1.8,

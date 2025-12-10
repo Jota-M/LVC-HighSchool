@@ -70,7 +70,7 @@ function Navbar() {
                     : theme.palette.text.secondary,
                 }}
                 >
-                Admisiones 2025
+                Admisiones 2026
             </Typography>
           </Box>
         </div>

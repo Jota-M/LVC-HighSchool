@@ -174,6 +174,7 @@ function Contact() {
           <Typography
             variant="h2"
             sx={{
+              fontFamily: 'Roboto',
               fontWeight: 800,
               background: isDark
                 ? 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)'
@@ -190,6 +191,7 @@ function Contact() {
           <Typography
             variant="h6"
             sx={{ 
+              fontFamily: 'Roboto',
               color: isDark ? 'grey.400' : 'grey.600',
               maxWidth: 600,
               mx: 'auto',

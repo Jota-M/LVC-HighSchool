@@ -51,8 +51,9 @@ export default function DashboardTopBar() {
       position="static"
       elevation={0}
       sx={{
-        backgroundColor: isDark ? '#1a1f2e' : '#ffffff',
-        borderBottom: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
+        background: isDark ? "#020518" : "#ffffff",
+borderBottom: `1px solid ${isDark ? alpha('#fff', 0.2) : alpha('#000', 0.15)}`,
+
       }}
     >
       <Toolbar sx={{ justifyContent: 'space-between' }}>
@@ -64,7 +65,6 @@ export default function DashboardTopBar() {
             color: isDark ? '#fff' : '#263238',
           }}
         >
-          Dashboard
         </Typography>
 
         {/* Acciones de la derecha */}

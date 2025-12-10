@@ -14,13 +14,18 @@ import {
   Stack,
   Tabs,
   Tab,
-  Paper
+  Paper,
+  ToggleButtonGroup,
+  ToggleButton,
+  keyframes
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SearchIcon from '@mui/icons-material/Search';
 import CategoryIcon from '@mui/icons-material/Category';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import TableRowsIcon from '@mui/icons-material/TableRows';
 
 import { useMaterias } from '../../../hooks/useMaterias';
 import { MateriasStats } from '../../../components/materias/MateriasStats';
@@ -30,11 +35,18 @@ import { AreaFormDialog } from '../../../components/materias/AreaFormDialog';
 import { MateriaFormDialog } from '../../../components/materias/MateriaFormDialog';
 import { AreaConocimiento, Materia, AreaFormData, MateriaFormData } from '../../../services/materias';
 
+const bounce = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+`;
+
 const Materias: React.FC = () => {
   const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
   // Estados locales
   const [tabValue, setTabValue] = useState(0);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
@@ -174,234 +186,327 @@ const Materias: React.FC = () => {
   };
 
   // Cálculos de estadísticas
-  const totalHoras = materias.reduce((sum, m) => sum + (m.horas_semanales ?? 0), 0);
-  const totalCreditos = materias.reduce((sum, m) => sum + (m.creditos ?? 0), 0);
-
+  const totalHoras = materias.reduce((sum, m) => sum + (Number(m.horas_semanales) || 0), 0);
+  const totalCreditos = materias.reduce((sum, m) => sum + (Number(m.creditos) || 0), 0);
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header Premium */}
-      <Fade in timeout={600}>
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 2,
-            mb: 3
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box
-                sx={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 3,
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.3)}`,
-                  animation: 'pulse 2s ease-in-out infinite',
-                  '@keyframes pulse': {
-                    '0%, 100%': { transform: 'scale(1)' },
-                    '50%': { transform: 'scale(1.05)' }
-                  }
-                }}
-              >
-                <MenuBookIcon sx={{ fontSize: 36, color: 'white' }} />
-              </Box>
+    <Box sx={{ minHeight: '100vh', py: 4 }}>
+      <Box sx={{ px: 3, maxWidth: 'xl', mx: 'auto' }}>
+        {/* Header Premium */}
+        <Fade in timeout={500}>
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: { xs: 'flex-start', md: 'center' },
+              flexDirection: { xs: 'column', md: 'row' },
+              gap: { xs: 2, md: 0 },
+              mb: 3
+            }}>
+              {/* IZQUIERDA: TÍTULO + PÁRRAFO */}
               <Box>
-                <Typography variant="h3" fontWeight="800" sx={{
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  mb: 0.5
-                }}>
-                  Gestión de Materias
-                </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <AutoAwesomeIcon sx={{ fontSize: 18 }} />
-                  Administra áreas de conocimiento y materias
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <MenuBookIcon
+                    sx={{
+                      color: isDark ? '#facc15' : '#0288d1',
+                      fontSize: 36,
+                      animation: `${bounce} 1.5s infinite`,
+                    }}
+                  />
+                  <Typography
+                    variant="h1"
+                    sx={{
+                      fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                      fontWeight: 800,
+                      background: isDark
+                        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      animation: 'fadeIn 1s ease-out',
+                      '@keyframes fadeIn': {
+                        from: { opacity: 0, transform: 'translateY(-10px)' },
+                        to: { opacity: 1, transform: 'translateY(0)' },
+                      },
+                    }}
+                  >
+                    Gestión de Materias
+                  </Typography>
+                </Box>
+
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{
+                    fontWeight: 500,
+                    letterSpacing: 0.3,
+                    animation: 'fadeInText 1.2s ease-out',
+                    '@keyframes fadeInText': {
+                      from: { opacity: 0, transform: 'translateY(5px)' },
+                      to: { opacity: 1, transform: 'translateY(0)' },
+                    },
+                  }}
+                >
+                  Administra áreas de conocimiento y materias del plan educativo.
                 </Typography>
               </Box>
+
+              {/* DERECHA: BOTONES */}
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  startIcon={<CategoryIcon />}
+                  onClick={() => handleOpenAreaDialog()}
+                  sx={{
+                    borderRadius: { xs: 2, md: 3 },
+                    px: { xs: 2, md: 3 },
+                    py: { xs: 1, md: 1.5 },
+                    textTransform: 'none',
+                    fontSize: { xs: '0.8rem', md: '1rem' },
+                    fontWeight: 'bold',
+                    borderColor: isDark ? '#facc15' : '#0288d1',
+                    color: isDark ? '#facc15' : '#0288d1',
+                    '&:hover': {
+                      borderColor: isDark ? '#f59e0b' : '#01579b',
+                      bgcolor: isDark ? alpha('#facc15', 0.1) : alpha('#0288d1', 0.1),
+                    }
+                  }}
+                >
+                  Nueva Área
+                </Button>
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<AddIcon />}
+                  onClick={() => handleOpenMateriaDialog()}
+                  sx={{
+                    borderRadius: { xs: 2, md: 3 },
+                    px: { xs: 2, md: 4 },
+                    py: { xs: 1, md: 1.5 },
+                    textTransform: 'none',
+                    fontSize: { xs: '0.8rem', md: '1.1rem' },
+                    fontWeight: 'bold',
+                    background: isDark
+                      ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                      : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                    color: isDark ? '#000' : '#fff',
+                    boxShadow: isDark
+                      ? '0 8px 24px rgba(250, 204, 21, 0.3)'
+                      : '0 8px 24px rgba(2, 136, 209, 0.3)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: isDark
+                        ? '0 12px 32px rgba(250, 204, 21, 0.4)'
+                        : '0 12px 32px rgba(2, 136, 209, 0.4)',
+                    }
+                  }}
+                >
+                  Nueva Materia
+                </Button>
+              </Stack>
             </Box>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="outlined"
-                size="large"
-                startIcon={<CategoryIcon />}
-                onClick={() => handleOpenAreaDialog()}
+
+            {/* Estadísticas */}
+            <MateriasStats
+              totalAreas={areas.length}
+              totalMaterias={paginacion.total}
+              totalHoras={totalHoras}
+              totalCreditos={totalCreditos}
+            />
+          </Box>
+        </Fade>
+
+        {/* Tabs y Búsqueda */}
+        <Fade in timeout={700}>
+          <Paper sx={{ 
+            borderRadius: 3, 
+            mb: 3, 
+            overflow: 'hidden',
+            bgcolor: isDark ? alpha('#fff', 0.05) : '#fff'
+          }}>
+            <Box sx={{ 
+              borderBottom: 1, 
+              borderColor: 'divider', 
+              px: 3, 
+              pt: 2,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 2
+            }}>
+              <Tabs 
+                value={tabValue} 
+                onChange={(_, newValue) => setTabValue(newValue)}
                 sx={{
-                  borderRadius: 3,
-                  px: 3,
-                  py: 1.5,
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                }}
-              >
-                Nueva Área
-              </Button>
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={<AddIcon />}
-                onClick={() => handleOpenMateriaDialog()}
-                sx={{
-                  borderRadius: 3,
-                  px: 4,
-                  py: 1.5,
-                  textTransform: 'none',
-                  fontSize: '1.1rem',
-                  fontWeight: 'bold',
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                  boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.4)}`,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: `0 12px 24px ${alpha(theme.palette.primary.main, 0.5)}`,
+                  '& .MuiTab-root': {
+                    textTransform: 'none',
+                    fontSize: { xs: '0.85rem', md: '1rem' },
+                    fontWeight: 600,
+                    minHeight: 48,
+                    '&.Mui-selected': {
+                      color: isDark ? '#facc15' : '#0288d1'
+                    }
+                  },
+                  '& .MuiTabs-indicator': {
+                    backgroundColor: isDark ? '#facc15' : '#0288d1'
                   }
                 }}
               >
-                Nueva Materia
-              </Button>
-            </Stack>
-          </Box>
+                <Tab label="📚 Materias" />
+                <Tab label="📂 Áreas de Conocimiento" />
+              </Tabs>
 
-          {/* Estadísticas */}
-          <MateriasStats
-            totalAreas={areas.length}
-            totalMaterias={paginacion.total}
-            totalHoras={totalHoras}
-            totalCreditos={totalCreditos}
-          />
-        </Box>
-      </Fade>
+              {/* Toggle solo en tab de Materias */}
+              {tabValue === 0 && (
+                <ToggleButtonGroup
+                  value={viewMode}
+                  exclusive
+                  onChange={(e, newMode) => newMode && setViewMode(newMode)}
+                  size="small"
+                  sx={{
+                    bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.03),
+                    borderRadius: { xs: 8, md: 12 },
+                    '& .MuiToggleButton-root': {
+                      border: 'none',
+                      borderRadius: { xs: 8, md: 10 },
+                      px: { xs: 1.5, md: 2.5 },
+                      py: { xs: 0.8, md: 1.5 },
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: { xs: '0.7rem', md: '0.9rem' },
+                      '&.Mui-selected': {
+                        bgcolor: isDark ? '#facc15' : '#0288d1',
+                        color: isDark ? '#000' : '#fff',
+                        '&:hover': {
+                          bgcolor: isDark ? '#f59e0b' : '#01579b',
+                        },
+                      },
+                    },
+                  }}
+                >
+                  <ToggleButton value="cards">
+                    <ViewModuleIcon sx={{ mr: { xs: 0.5, md: 1 }, fontSize: { xs: 16, md: 20 } }} />
+                    Cards
+                  </ToggleButton>
+                  <ToggleButton value="table">
+                    <TableRowsIcon sx={{ mr: { xs: 0.5, md: 1 }, fontSize: { xs: 16, md: 20 } }} />
+                    Tabla
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              )}
+            </Box>
 
-      {/* Tabs y Búsqueda */}
-      <Fade in timeout={700}>
-        <Paper sx={{ borderRadius: 3, mb: 3, overflow: 'hidden' }}>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3, pt: 2 }}>
-            <Tabs 
-              value={tabValue} 
-              onChange={(_, newValue) => setTabValue(newValue)}
-              sx={{
-                '& .MuiTab-root': {
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  minHeight: 48
-                }
-              }}
-            >
-              <Tab label="📚 Materias" />
-              <Tab label="📂 Áreas de Conocimiento" />
-            </Tabs>
-          </Box>
+            {tabValue === 0 && (
+              <Box sx={{ p: 3 }}>
+                <TextField
+                  fullWidth
+                  placeholder="Buscar materias por nombre o código..."
+                  value={search}
+                  onChange={handleSearchChange}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': { 
+                      borderRadius: 2,
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: isDark ? '#facc15' : '#0288d1',
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            )}
+          </Paper>
+        </Fade>
 
-          {tabValue === 0 && (
-            <Box sx={{ p: 3 }}>
-              <TextField
-                fullWidth
-                placeholder="Buscar materias por nombre o código..."
-                value={search}
-                onChange={handleSearchChange}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': { borderRadius: 2 }
+        {/* Contenido por Tab */}
+        <Fade in timeout={800}>
+          <Box>
+            {tabValue === 0 ? (
+              <MateriasTable
+                materias={materias}
+                loading={loading}
+                onEdit={handleOpenMateriaDialog}
+                onDelete={handleDeleteMateria}
+                viewMode={viewMode}
+              />
+            ) : (
+              <AreasGrid
+                areas={areas}
+                onEdit={handleOpenAreaDialog}
+                onDelete={handleDeleteArea}
+                onSelectArea={(areaId: React.SetStateAction<number | undefined>) => {
+                  setSelectedAreaFilter(areaId);
+                  setTabValue(0);
                 }}
               />
-            </Box>
-          )}
-        </Paper>
-      </Fade>
+            )}
+          </Box>
+        </Fade>
 
-      {/* Contenido por Tab */}
-      <Fade in timeout={800}>
-        <Box>
-          {tabValue === 0 ? (
-            <MateriasTable
-              materias={materias}
-              loading={loading}
-              onEdit={handleOpenMateriaDialog}
-              onDelete={handleDeleteMateria}
-            />
-          ) : (
-            <AreasGrid
-              areas={areas}
-              onEdit={handleOpenAreaDialog}
-              onDelete={handleDeleteArea}
-              onSelectArea={(areaId: React.SetStateAction<number | undefined>) => {
-                setSelectedAreaFilter(areaId);
-                setTabValue(0);
-              }}
-            />
-          )}
-        </Box>
-      </Fade>
+        {/* Dialogs */}
+        <AreaFormDialog
+          open={openAreaDialog}
+          onClose={handleCloseAreaDialog}
+          onSave={handleSaveArea}
+          editingArea={editingArea}
+          loading={loading}
+          areas={areas}
+        />
 
-      {/* Dialogs */}
-      <AreaFormDialog
-        open={openAreaDialog}
-        onClose={handleCloseAreaDialog}
-        onSave={handleSaveArea}
-        editingArea={editingArea}
-        loading={loading}
-        areas={areas}
-      />
+        <MateriaFormDialog
+          open={openMateriaDialog}
+          onClose={handleCloseMateriaDialog}
+          onSave={handleSaveMateria}
+          editingMateria={editingMateria}
+          loading={loading}
+          areas={areas}
+        />
 
-      <MateriaFormDialog
-        open={openMateriaDialog}
-        onClose={handleCloseMateriaDialog}
-        onSave={handleSaveMateria}
-        editingMateria={editingMateria}
-        loading={loading}
-        areas={areas}
-      />
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        TransitionComponent={Fade}
-      >
-        <Alert 
-          onClose={() => setSnackbar({ ...snackbar, open: false })} 
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ 
-            width: '100%',
-            borderRadius: 2,
-            fontWeight: 600,
-            boxShadow: `0 8px 16px ${alpha(theme.palette.common.black, 0.2)}`
-          }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-
-      {/* Error Global */}
-      {error && (
+        {/* Snackbar */}
         <Snackbar
-          open={!!error}
-          autoHideDuration={6000}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          open={snackbar.open}
+          autoHideDuration={4000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          TransitionComponent={Fade}
         >
-          <Alert severity="error" variant="filled">
-            {error}
+          <Alert 
+            onClose={() => setSnackbar({ ...snackbar, open: false })} 
+            severity={snackbar.severity}
+            variant="filled"
+            sx={{ 
+              width: '100%',
+              borderRadius: 2,
+              fontWeight: 600,
+              boxShadow: `0 8px 16px ${alpha(theme.palette.common.black, 0.2)}`
+            }}
+          >
+            {snackbar.message}
           </Alert>
         </Snackbar>
-      )}
+
+        {/* Error Global */}
+        {error && (
+          <Snackbar
+            open={!!error}
+            autoHideDuration={6000}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          >
+            <Alert severity="error" variant="filled">
+              {error}
+            </Alert>
+          </Snackbar>
+        )}
+      </Box>
     </Box>
   );
 };

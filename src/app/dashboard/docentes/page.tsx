@@ -1,284 +1,438 @@
-// Page.tsx – versión mejorada
-"use client";
-import React, { useEffect, useState } from "react";
-import { useTheme } from "@mui/material/styles";
-import { tokens } from "@/app/dashboard/theme";
+// pages/Docentes.tsx - VERSIÓN ACTUALIZADA CON 3 TABS
+'use client';
+import React, { useState } from 'react';
 import {
   Box,
+  Container,
   Typography,
   Button,
-  Grid,
-  TextField,
-  InputAdornment,
+  Tabs,
+  Tab,
+  useTheme,
   Fade,
-} from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
-import PeopleIcon from "@mui/icons-material/People";
-import Card from "@/app/components/DashAdmin/Card";
-import DocenteTable from "@/app/components/DashAdmin/DocenteTable";
-import { keyframes } from "@mui/system";
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  keyframes,
+  ToggleButtonGroup,
+  ToggleButton,
+  alpha,
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Assessment as StatsIcon,
+  List as ListIcon,
+  ViewModule as ViewModuleIcon,
+  TableRows as TableRowsIcon,
+  School as SchoolIcon,
+  Assignment as AssignmentIcon,
+} from '@mui/icons-material';
+import { DocentesCardView } from '@/components/docentes/DocentesTable';
+import { DocentesStats } from '@/components/docentes/DocentesStats';
+import { AsignacionesDocente } from '@/components/docentes/AsignacionesDocente';
+import { useDocentes } from '@/hooks/useDocentes';
+import { Docente } from '@/types/docenteTypes';
+import { useRouter } from 'next/navigation';
 
-const gradientMove = keyframes`
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-`;
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
 
-const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-`;
-
-export default function Page() {
-  const theme = useTheme();
-  const colors = tokens(theme.palette.mode);
-
-  const [teachers, setTeachers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    const fetchTeachers = async () => {
-      try {
-        const res = await fetch("http://localhost:3000/api/teachers");
-        const data = await res.json();
-        const teachersArray = Array.isArray(data) ? data : data.teachers;
-
-        setTeachers(
-          teachersArray.map((t: any) => ({
-            name: `${t.first_name} ${t.last_name} ${t.mother_last_name || ""}`,
-            email: t.email,
-            role: "Docente",
-            status: t.status || "Activo",
-            lastAccess: "Hace 1 hora",
-            department: t.department || "Matemáticas",
-            students: Math.floor(Math.random() * 60) + 20,
-            courses: Math.floor(Math.random() * 5) + 1,
-          }))
-        );
-      } catch (error) {
-        console.error("Error fetching teachers:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTeachers();
-  }, []);
-
-  const filteredTeachers = teachers.filter((t) =>
-    t.name.toLowerCase().includes(search.toLowerCase())
+const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
+  return (
+    <div role="tabpanel" hidden={value !== index}>
+      {value === index && <Box sx={{ pt: 4 }}>{children}</Box>}
+    </div>
   );
+};
 
-  const totalStudents = teachers.reduce((acc, t) => acc + (t.students || 0), 0);
+const bounce = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+`;
+
+export const Docentes: React.FC = () => {
+  const theme = useTheme();
+  const router = useRouter();
+  const isDark = theme.palette.mode === 'dark';
+  const [activeTab, setActiveTab] = useState(0);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [docenteToDelete, setDocenteToDelete] = useState<Docente | null>(null);
+
+  // Hook de docentes
+  const {
+    docentes,
+    paginacion,
+    isLoading,
+    filters,
+    actualizarFiltros,
+    eliminar,
+    isDeleting,
+  } = useDocentes();
+
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+
+  const handleSearch = (search: string) => {
+    actualizarFiltros({ search, page: 1 });
+  };
+
+  const handlePageChange = (page: number) => {
+    actualizarFiltros({ page });
+  };
+
+  const handleRowsPerPageChange = (limit: number) => {
+    actualizarFiltros({ limit, page: 1 });
+  };
+
+  const handleView = (docente: Docente) => {
+    if (!docente.id) return console.error('ID de docente inválido');
+    router.push(`/dashboard/docentes/${docente.id}`);
+  };
+
+  const handleEdit = (docente: Docente) => {
+    if (!docente.id) return console.error('ID de docente inválido');
+    router.push(`/dashboard/docentes/${docente.id}/editar`);
+  };
+
+  const handleDeleteClick = (docente: Docente) => {
+    setDocenteToDelete(docente);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (docenteToDelete) {
+      eliminar(docenteToDelete.id);
+      setDeleteDialogOpen(false);
+      setDocenteToDelete(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setDocenteToDelete(null);
+  };
+
+  const handleNuevoDocente = () => {
+    router.push('/dashboard/docentes/registro-completo');
+  };
+
+  const handleFilterChange = (tipo_contrato?: string, especialidad?: string) => {
+    actualizarFiltros({ 
+      tipo_contrato: tipo_contrato as any, 
+      especialidad, 
+      page: 1 
+    });
+  };
 
   return (
     <Box
       sx={{
-        p: { xs: 2, sm: 4 },
-        minHeight: "100vh",
-        
-        backgroundSize: "200% 200%",
-        animation: `${gradientMove} 10s ease infinite`,
-        transition: "all 0.4s ease",
+        minHeight: '100vh',
+        py: 4,
       }}
     >
-      {/* HERO HEADER */}
-      <Fade in timeout={800}>
-        <Box
-          sx={{
-            backgroundColor:
-              theme.palette.mode === "dark"
-                ? "rgba(255,255,255,0.05)"
-                : "rgba(255,255,255,0.6)",
-            borderRadius: "20px",
-            backdropFilter: "blur(14px)",
-            border: `1px solid ${colors.primary[300]}`,
-            boxShadow:
-              theme.palette.mode === "dark"
-                ? "0 8px 32px rgba(0,0,0,0.3)"
-                : "0 8px 24px rgba(0,0,0,0.1)",
-            p: { xs: 3, sm: 4 },
-            mb: 4,
-            animation: `${fadeUp} 0.7s ease`,
-          }}
-        >
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems={{ xs: "flex-start", md: "center" }}
-            flexDirection={{ xs: "column", md: "row" }}
-            gap={3}
-          >
-            <Box>
-              <Typography
-                variant="h2"
-                fontWeight={800}
-                sx={{
-                  background:
-                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  mb: 1,
-                }}
-              >
-                Gestión de Docentes
-              </Typography>
-              <Typography variant="h5" color="text.secondary" fontWeight={500}>
-                Administra el personal docente y sus asignaciones con estilo ✨
-              </Typography>
-            </Box>
+      <Container maxWidth="xl">
+        {/* Header */}
+        <Fade in timeout={500}>
+          <Box sx={{ mb: 4 }}>
 
-            <Box display="flex" gap={2} flexWrap="wrap" alignItems="center">
-              <TextField
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar docentes..."
-                size="small"
-                variant="outlined"
-                sx={{
-                  minWidth: 260,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "14px",
-                    transition: "all 0.3s ease",
-                    "&:hover": {
-                      boxShadow: "0 0 12px rgba(102,126,234,0.3)",
-                    },
-                  },
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
-              <Button
-                variant="contained"
-                href="/dashboard/docentes/nuevo"
-                sx={{
-                  borderRadius: "14px",
-                  px: 3,
-                  py: 1.5,
-                  fontWeight: 700,
-                  textTransform: "none",
-                  fontSize: "0.95rem",
-                  background:
-                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  boxShadow: "0 6px 16px rgba(102, 126, 234, 0.4)",
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    transform: "scale(1.05)",
-                    boxShadow: "0 8px 24px rgba(118,75,162,0.6)",
-                  },
-                }}
-              >
-                <AddIcon sx={{ mr: 1 }} />
-                Agregar Docente
-              </Button>
-            </Box>
-          </Box>
-        </Box>
-      </Fade>
-
-      {/* CARDS DE ESTADÍSTICAS */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <Fade in timeout={500}>
-            <Box>
-              <Card
-                icon={PeopleIcon}
-                title="Total Docentes"
-                value={teachers.length}
-                change={8}
-                goal={100}
-                description="Docentes registrados en la plataforma"
-                colorScheme="blue"
-              />
-            </Box>
-          </Fade>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <Fade in timeout={700}>
-            <Box>
-              <Card
-                icon={PersonAddAlt1Icon}
-                title="Activos"
-                value={teachers.filter((t) => t.status === "Activo").length}
-                change={5}
-                goal={100}
-                description="Docentes actualmente activos"
-                colorScheme="green"
-              />
-            </Box>
-          </Fade>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <Fade in timeout={900}>
-            <Box>
-              <Card
-                icon={PersonAddAlt1Icon}
-                title="Inactivos"
-                value={teachers.filter((t) => t.status === "Inactivo").length}
-                change={-2}
-                goal={30}
-                description="Docentes en estado inactivo"
-                colorScheme="red"
-              />
-            </Box>
-          </Fade>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-          <Fade in timeout={1100}>
-            <Box>
-              <Card
-                icon={PeopleIcon}
-                title="Total Estudiantes"
-                value={totalStudents}
-                change={12}
-                goal={500}
-                description="Estudiantes bajo supervisión"
-                colorScheme="purple"
-              />
-            </Box>
-          </Fade>
-        </Grid>
-      </Grid>
-
-      {/* TABLA DE DOCENTES */}
-      <Fade in timeout={1300}>
-        <Box>
-          {loading ? (
+            {/* CONTENEDOR PRINCIPAL DEL HEADER */}
             <Box
               sx={{
-                backgroundColor: colors.primary[400],
-                borderRadius: "20px",
-                p: 5,
-                textAlign: "center",
-                boxShadow:
-                  theme.palette.mode === "dark"
-                    ? "0 8px 24px rgba(0,0,0,0.3)"
-                    : "0 8px 24px rgba(0,0,0,0.1)",
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: { xs: 'flex-start', md: 'center' },
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: { xs: 2, md: 0 },
+                mb: 3,
               }}
             >
-              <Typography
-                variant="h6"
-                color="text.secondary"
-                fontWeight={600}
-                sx={{ animation: `${fadeUp} 1s ease infinite alternate` }}
+
+              {/* IZQUIERDA: TÍTULO + PÁRRAFO */}
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <SchoolIcon
+                    sx={{
+                      color: isDark ? '#facc15' : '#0288d1',
+                      fontSize: 36,
+                      animation: `${bounce} 1.5s infinite`,
+                    }}
+                  />
+                  <Typography
+                    variant="h1"
+                    sx={{
+                      fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                      fontWeight: 800,
+                      background: isDark
+                        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                    }}
+                  >
+                    Docentes
+                  </Typography>
+                </Box>
+
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{
+                    fontWeight: 500,
+                    letterSpacing: 0.3,
+                  }}
+                >
+                  Gestiona el personal docente, estadísticas y asignaciones académicas.
+                </Typography>
+              </Box>
+
+              {/* DERECHA: TOGGLE + BOTÓN */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 2,
+                  alignItems: 'center',
+                  width: { xs: '100%', md: 'auto' },
+                  justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                }}
               >
-                Cargando datos de docentes...
-              </Typography>
+
+                {/* Toggle View Mode - Solo en tab de Lista */}
+                {activeTab === 0 && (
+                  <ToggleButtonGroup
+                    value={viewMode}
+                    exclusive
+                    onChange={(e, newMode) => newMode && setViewMode(newMode)}
+                    size="small"
+                    sx={{
+                      bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.03),
+                      borderRadius: '12px',
+                      '& .MuiToggleButton-root': {
+                        border: 'none',
+                        borderRadius: '10px',
+                        px: 2,
+                        py: 1,
+                        '&.Mui-selected': {
+                          bgcolor: isDark ? '#facc15' : '#0288d1',
+                          color: isDark ? '#000' : '#fff',
+                          '&:hover': {
+                            bgcolor: isDark ? '#f59e0b' : '#01579b',
+                          },
+                        },
+                      },
+                    }}
+                  >
+                    <ToggleButton value="cards" sx={{ fontSize: { xs: '0.5rem', md: '1rem' } }}>
+                      <ViewModuleIcon sx={{ mr: 0.5, fontSize: { xs: 12, md: 20 } }} />
+                      Cards
+                    </ToggleButton>
+
+                    <ToggleButton value="table" sx={{ fontSize: { xs: '0.5rem', md: '1rem' } }}>
+                      <TableRowsIcon sx={{ mr: 0.5, fontSize: { xs: 12, md: 20 } }}/>
+                      Tabla
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                )}
+
+                {/* Botón Nuevo Docente - Solo en tab de Lista */}
+                {activeTab === 0 && (
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={handleNuevoDocente}
+                    sx={{
+                      fontSize: { xs: '0.6rem', md: '1rem' },
+                      borderRadius: { xs: '8px', md: '12px' },
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      px: { xs: 2, md: 4 },
+                      py: { xs: 0.5, md: 1.5 },
+                      background: isDark
+                        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                      color: isDark ? '#000' : '#fff',
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: isDark
+                          ? '0 8px 24px rgba(250, 204, 21, 0.3)'
+                          : '0 8px 24px rgba(2, 136, 209, 0.3)',
+                      },
+                      transition: 'all 0.3s ease',
+                    }}
+                  >
+                    Nuevo Docente
+                  </Button>
+                )}
+
+              </Box>
             </Box>
-          ) : (
-            <DocenteTable users={filteredTeachers} />
-          )}
-        </Box>
-      </Fade>
+
+            {/* Tabs */}
+              <Tabs
+                value={activeTab}
+                onChange={handleTabChange}
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
+                sx={{
+                  width: '100%',
+                  background: isDark
+                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                  borderRadius: '16px',
+                  p: { xs: 0.5, md: 1 },
+                  backdropFilter: 'blur(20px)',
+                  overflowX: 'auto',
+                  scrollbarWidth: 'none',
+                  '&::-webkit-scrollbar': { display: 'none' },
+
+                  '& .MuiTab-root': {
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    borderRadius: '12px',
+
+                    /** 👇 AQUI ESTÁ LA CLAVE */
+                    minWidth: { xs: 80, md: 'auto' },       // tamaño estático en mobile
+                    maxWidth: { xs: 80, md: 'none' },       // para mantener forma compacta
+
+                    fontSize: { xs: '0.5rem', md: '0.8rem' },
+                    paddingInline: { xs: 1, md: 2 },
+                    minHeight: { xs: 36, md: 48 },
+
+                    color: isDark ? '#000' : '#fff',
+                  },
+
+                  '& .MuiTab-root svg': {
+                    fontSize: { xs: '1rem', md: '1.3rem' },
+                  },
+
+                  '& .Mui-selected': {
+                    color: isDark ? '#fff' : '#fff',
+                  },
+
+                  '& .MuiTabs-indicator': {
+                    backgroundColor: isDark ? '#fff' : '#fff',
+                    height: { xs: 2, md: 3 },
+                    borderRadius: '3px 3px 0 0',
+                  },
+                }}
+              >
+                <Tab icon={<ListIcon />} iconPosition="start" label="Lista de Docentes" />
+                <Tab icon={<StatsIcon />} iconPosition="start" label="Estadísticas" />
+                <Tab icon={<AssignmentIcon />} iconPosition="start" label="Asignaciones" />
+              </Tabs>
+
+
+          </Box>
+        </Fade>
+
+
+        {/* Tab Panels */}
+        <TabPanel value={activeTab} index={0}>
+          <Fade in timeout={700}>
+            <Box>
+              <DocentesCardView
+                docentes={docentes}
+                isLoading={isLoading}
+                page={filters.page || 1}
+                rowsPerPage={filters.limit || 10}
+                totalItems={paginacion?.total || 0}
+                onPageChange={handlePageChange}
+                onRowsPerPageChange={handleRowsPerPageChange}
+                onSearch={handleSearch}
+                onView={handleView}
+                onEdit={handleEdit}
+                onDelete={handleDeleteClick}
+                viewMode={viewMode}
+                onFilterChange={handleFilterChange}
+              />
+            </Box>
+          </Fade>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={1}>
+          <Fade in timeout={700}>
+            <Box>
+              <DocentesStats />
+            </Box>
+          </Fade>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={2}>
+          <Fade in timeout={700}>
+            <Box>
+              <AsignacionesDocente />
+            </Box>
+          </Fade>
+        </TabPanel>
+      </Container>
+
+      {/* Dialog de confirmación de eliminación */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.98)',
+            backdropFilter: 'blur(20px)',
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          ¿Eliminar docente?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Estás seguro de que deseas eliminar a{' '}
+            <strong>
+              {docenteToDelete?.nombres} {docenteToDelete?.apellidos}
+            </strong>
+            ? Esta acción no se puede deshacer.
+            {docenteToDelete?.total_asignaciones && docenteToDelete.total_asignaciones > 0 && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'error.light', borderRadius: 2 }}>
+                ⚠️ Este docente tiene {docenteToDelete.total_asignaciones} asignación(es) activa(s).
+                No podrás eliminarlo hasta que se desasignen.
+              </Box>
+            )}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, gap: 2 }}>
+          <Button
+            onClick={handleDeleteCancel}
+            variant="outlined"
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            variant="contained"
+            color="error"
+            disabled={isDeleting}
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            {isDeleting ? 'Eliminando...' : 'Eliminar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
-}
+};
+
+export default Docentes;

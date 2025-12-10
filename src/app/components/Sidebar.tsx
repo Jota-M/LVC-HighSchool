@@ -1,7 +1,7 @@
-// components/ModernSidebar.tsx - Actualizado con autenticación
+// components/ModernSidebar.tsx - Con navegación mejorada, barra de progreso y drawer mobile
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   IconButton,
@@ -17,15 +17,17 @@ import {
   Chip,
   Tooltip,
   alpha,
+  Drawer,
+  useMediaQuery,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 // Icons
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
 import ContactsOutlinedIcon from '@mui/icons-material/ContactsOutlined';
-import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import MenuOutlinedIcon from '@mui/icons-material/MenuOutlined';
 import AppRegistrationIcon from '@mui/icons-material/AppRegistration';
@@ -39,6 +41,7 @@ import ClassOutlinedIcon from '@mui/icons-material/ClassOutlined';
 import NotificationsActiveOutlinedIcon from '@mui/icons-material/NotificationsActiveOutlined';
 import GradeOutlinedIcon from '@mui/icons-material/GradeOutlined';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
+import CloseIcon from '@mui/icons-material/Close';
 
 import { useAuth } from '../../context/AuthContext';
 
@@ -72,43 +75,87 @@ const pulse = keyframes`
   }
 `;
 
+const progressAnimation = keyframes`
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 70%;
+  }
+  100% {
+    width: 100%;
+  }
+`;
+
 // ==================== INTERFACES ====================
 interface ItemProps {
   title: string;
   to: string;
   icon: React.ReactNode;
-  selected: string;
-  setSelected: (title: string) => void;
+  currentPath: string;
   isCollapsed: boolean;
   badge?: number;
+  onNavigate: () => void;
 }
 
 interface SectionProps {
   label: string;
   items: any[];
-  selected: string;
-  setSelected: (title: string) => void;
+  currentPath: string;
   isCollapsed: boolean;
   userRoles: string[];
   userPermissions: string[];
+  onNavigate: () => void;
 }
+
+// ==================== BARRA DE PROGRESO GLOBAL ====================
+const TopProgressBar = ({ isLoading }: { isLoading: boolean }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
+  if (!isLoading) return null;
+
+  return (
+    <Box
+      sx={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 9999,
+        height: 3,
+        backgroundColor: isDark ? alpha('#0288d1', 0.1) : alpha('#0288d1', 0.05),
+        overflow: 'hidden',
+      }}
+    >
+      <Box
+        sx={{
+          height: '100%',
+          background: 'linear-gradient(90deg, #0288d1, #01579b, #0288d1)',
+          backgroundSize: '200% 100%',
+          animation: `${shimmer} 1.5s linear infinite, ${progressAnimation} 2s ease-in-out`,
+        }}
+      />
+    </Box>
+  );
+};
 
 // ==================== COMPONENTE MENU ITEM ====================
 const MenuItem = ({
   title,
   to,
   icon,
-  selected,
-  setSelected,
+  currentPath,
   isCollapsed,
   badge,
+  onNavigate,
 }: ItemProps) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const isActive = selected === title;
+  const isActive = currentPath === to;
 
   const handleClick = () => {
-    setSelected(title);
+    onNavigate();
   };
 
   const content = (
@@ -209,29 +256,25 @@ const MenuItem = ({
 const MenuSection = ({
   label,
   items,
-  selected,
-  setSelected,
+  currentPath,
   isCollapsed,
   userRoles,
   userPermissions,
+  onNavigate,
 }: SectionProps) => {
   const [open, setOpen] = useState(true);
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
-  // Filtrar items según roles del usuario
   const filteredItems = items.filter((item) => {
-    // Si el item requiere permisos específicos, verificar permisos
     if (item.permissions && item.permissions.length > 0) {
       return item.permissions.some((perm: string) => userPermissions.includes(perm));
     }
     
-    // Si el item requiere roles específicos, verificar roles
     if (item.roles && item.roles.length > 0) {
       return item.roles.some((role: string) => userRoles.includes(role));
     }
     
-    // Si no requiere nada específico, mostrar
     return true;
   });
 
@@ -286,10 +329,10 @@ const MenuSection = ({
                 title={item.title}
                 to={item.to}
                 icon={item.icon}
-                selected={selected}
-                setSelected={setSelected}
+                currentPath={currentPath}
                 isCollapsed={isCollapsed}
                 badge={item.badge}
+                onNavigate={onNavigate}
               />
             </Box>
           ))}
@@ -311,7 +354,6 @@ const MenuSection = ({
 
 // ==================== SECCIONES DEL MENU ====================
 const sections = [
-  // 🏠 SECCIÓN PRINCIPAL
   {
     label: 'Principal',
     items: [
@@ -319,12 +361,10 @@ const sections = [
         title: 'Dashboard',
         to: '/dashboard',
         icon: <HomeOutlinedIcon />,
-        permissions: [], // Accesible para todos los autenticados
+        permissions: [],
       },
     ],
   },
-
-  // 👥 GESTIÓN DE PERSONAS
   {
     label: 'Gestión de Personas',
     items: [
@@ -355,8 +395,6 @@ const sections = [
       },
     ],
   },
-
-  // 📚 ESTRUCTURA ACADÉMICA
   {
     label: 'Estructura Académica',
     items: [
@@ -386,27 +424,29 @@ const sections = [
       },
     ],
   },
-
-  // 📋 GESTIÓN ACADÉMICA
   {
     label: 'Gestión Académica',
     items: [
       {
+        title: 'Matriculas',
+        to: '/dashboard/matriculacion',
+        permissions: ['asignaciones.leer'],
+        icon: <AppRegistrationIcon />,
+      },
+      {
         title: 'Asignaciones',
-        to: '/dashboard/asignaciones',
+        to: '/dashboard/plan-estudio',
         icon: <ContactsOutlinedIcon />,
         permissions: ['asignaciones.leer'],
       },
       {
         title: 'Horarios',
-        to: '/dashboard/horarios',
+        to: '/dashboard/horario',
         icon: <CalendarTodayOutlinedIcon />,
         permissions: ['horarios.leer'],
       },
     ],
   },
-
-  // 📊 REPORTES Y CONFIGURACIÓN
   {
     label: 'Sistema',
     items: [
@@ -424,8 +464,6 @@ const sections = [
       },
     ],
   },
-
-  // 👨‍👩‍👧 PORTAL PADRES
   {
     label: 'Portal Padres',
     items: [
@@ -462,8 +500,6 @@ const sections = [
       },
     ],
   },
-
-  // 👨‍🏫 PORTAL PROFESORES
   {
     label: 'Portal Profesores',
     items: [
@@ -495,65 +531,31 @@ const sections = [
   },
 ];
 
-// ==================== COMPONENTE PRINCIPAL ====================
-const ModernSidebar = () => {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [selected, setSelected] = useState('Dashboard');
-  const [hoverLogo, setHoverLogo] = useState(false);
-
-  const { user, loading } = useAuth();
-
-  // Obtener roles y permisos del usuario
-  const userRoles = user?.roles?.map((r: { nombre: any; }) => r.nombre) || [];
-  const userPermissions = user?.permisos?.map((p: { nombre: any; }) => p.nombre) || [];
-
-  // Obtener el nombre del rol principal para mostrar
-  const rolePrincipal = user?.roles?.[0]?.descripcion || 'Usuario';
-
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          p: 4,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-        }}
-      >
-        <Typography>Cargando menú...</Typography>
-      </Box>
-    );
-  }
-
+// ==================== CONTENIDO DEL SIDEBAR ====================
+const SidebarContent = ({
+  isCollapsed,
+  isMobile,
+  hoverLogo,
+  setHoverLogo,
+  setIsCollapsed,
+  user,
+  rolePrincipal,
+  pathname,
+  userRoles,
+  userPermissions,
+  handleNavigation,
+  isDark,
+  onClose,
+}: any) => {
   return (
     <Box
       sx={{
-        height: '100vh',
-        width: isCollapsed ? 80 : 280,
-        backgroundColor: isDark ? '#1a1f2e' : '#ffffff',
-        borderRight: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        background: isDark? "#020518": "ffffff",
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
         overflow: 'hidden',
-        boxShadow: isDark
-          ? '4px 0 24px rgba(0,0,0,0.3)'
-          : '4px 0 24px rgba(0,0,0,0.08)',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 4,
-          background: 'linear-gradient(90deg, #0288d1, #01579b, #0288d1)',
-          backgroundSize: '200% 100%',
-          animation: `${shimmer} 3s linear infinite`,
-        },
       }}
     >
       {/* HEADER CON LOGO */}
@@ -623,9 +625,15 @@ const ModernSidebar = () => {
           </Box>
         )}
 
-        <Tooltip title={isCollapsed ? 'Expandir' : 'Contraer'} placement="right">
+        <Tooltip title={isMobile ? 'Cerrar' : isCollapsed ? 'Expandir' : 'Contraer'} placement="right">
           <IconButton
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={() => {
+              if (isMobile && onClose) {
+                onClose();
+              } else {
+                setIsCollapsed(!isCollapsed);
+              }
+            }}
             sx={{
               transition: 'all 0.3s ease',
               '&:hover': {
@@ -636,7 +644,7 @@ const ModernSidebar = () => {
               },
             }}
           >
-            <MenuOutlinedIcon sx={{ color: '#0288d1' }} />
+            {isMobile ? <CloseIcon sx={{ color: '#0288d1' }} /> : <MenuOutlinedIcon sx={{ color: '#0288d1' }} />}
           </IconButton>
         </Tooltip>
       </Box>
@@ -768,11 +776,16 @@ const ModernSidebar = () => {
             key={section.label}
             label={section.label}
             items={section.items}
-            selected={selected}
-            setSelected={setSelected}
+            currentPath={pathname || '/dashboard'}
             isCollapsed={isCollapsed}
             userRoles={userRoles}
             userPermissions={userPermissions}
+            onNavigate={() => {
+              handleNavigation();
+              if (isMobile && onClose) {
+                onClose();
+              }
+            }}
           />
         ))}
       </Box>
@@ -794,7 +807,7 @@ const ModernSidebar = () => {
               fontSize: '0.7rem',
             }}
           >
-            © 2024 U.E. LVC
+            © 2026 U.E. LVC
           </Typography>
           <Typography
             variant="caption"
@@ -810,6 +823,190 @@ const ModernSidebar = () => {
         </Box>
       )}
     </Box>
+  );
+};
+
+// ==================== COMPONENTE PRINCIPAL ====================
+const ModernSidebar = () => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [hoverLogo, setHoverLogo] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  const { user, loading } = useAuth();
+  const pathname = usePathname();
+
+  const userRoles = user?.roles?.map((r: { nombre: any }) => r.nombre) || [];
+  const userPermissions = user?.permisos?.map((p: { nombre: any }) => p.nombre) || [];
+  const rolePrincipal = user?.roles?.[0]?.descripcion || 'Usuario';
+
+  // Manejar la navegación
+  const handleNavigation = () => {
+    setIsNavigating(true);
+  };
+
+  // Detectar cuando la página se ha cargado completamente
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsNavigating(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleComplete = () => {
+      setIsNavigating(false);
+    };
+
+    if (document.readyState === 'complete') {
+      handleComplete();
+    } else {
+      window.addEventListener('load', handleComplete);
+      return () => window.removeEventListener('load', handleComplete);
+    }
+  }, []);
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          p: 4,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+        }}
+      >
+        <Typography>Cargando menú...</Typography>
+      </Box>
+    );
+  }
+
+  const sidebarContent = (
+    <SidebarContent
+      isCollapsed={isMobile ? false : isCollapsed}
+      isMobile={isMobile}
+      hoverLogo={hoverLogo}
+      setHoverLogo={setHoverLogo}
+      setIsCollapsed={setIsCollapsed}
+      user={user}
+      rolePrincipal={rolePrincipal}
+      pathname={pathname}
+      userRoles={userRoles}
+      userPermissions={userPermissions}
+      handleNavigation={handleNavigation}
+      isDark={isDark}
+      onClose={() => setMobileOpen(false)}
+    />
+  );
+
+  return (
+    <>
+      {/* BARRA DE PROGRESO SUPERIOR */}
+      <TopProgressBar isLoading={isNavigating} />
+
+      {/* BOTÓN PARA MOBILE - INTEGRADO DEBAJO DEL TOPBAR */}
+      {isMobile && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: -10, // Debajo del topbar
+            left: -10, // alineado al borde izquierdo
+            zIndex: 1100,
+            p: 1,    // padding del contenedor
+          }}
+        >
+          <IconButton
+            onClick={() => setMobileOpen(true)}
+            sx={{
+              width: 57,         // tamaño cuadrado
+              height: 57,        // tamaño cuadrado
+              border: `1px solid ${isDark ? alpha('#fff', 0.12) : alpha('#000', 0.12)}`,
+              boxShadow: isDark
+                ? '0 2px 8px rgba(0,0,0,0.3)'
+                : '0 2px 8px rgba(0,0,0,0.08)',
+              '&:hover': {
+                backgroundColor: isDark ? '#212d3d' : '#f5f5f5',
+                transform: 'scale(1.05)',
+              },
+              transition: 'all 0.3s ease',
+              borderRadius: 2,   // bordes ligeramente redondeados
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <MenuOutlinedIcon sx={{ color: '#0288d1', fontSize: 24 }} />
+          </IconButton>
+        </Box>
+      )}
+
+
+      {/* DRAWER PARA MOBILE */}
+      {isMobile ? (
+        <Drawer
+          anchor="left"
+          open={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+          sx={{
+            '& .MuiDrawer-paper': {
+              width: 280,
+              background: isDark? "#020518": "ffffff",
+              borderRight: `1px solid ${isDark ? alpha('#fff', 0.12) : alpha('#000', 0.12)}`,
+              boxShadow: '4px 0 24px rgba(0,0,0,0.2)',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 4,
+                background: 'linear-gradient(90deg, #0288d1, #01579b, #0288d1)',
+                backgroundSize: '200% 100%',
+                animation: `${shimmer} 3s linear infinite`,
+              },
+            },
+          }}
+        >
+          {sidebarContent}
+        </Drawer>
+      ) : (
+        /* SIDEBAR NORMAL PARA DESKTOP */
+        <Box
+          sx={{
+            height: '100vh',
+            width: isCollapsed ? 80 : 280,
+            backgroundColor: isDark ? '#1a2332' : '#ffffff',
+            borderRight: `1px solid ${isDark ? alpha('#fff', 0.12) : alpha('#000', 0.12)}`,
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+            overflow: 'hidden',
+            boxShadow: isDark
+              ? '4px 0 24px rgba(0,0,0,0.3)'
+              : '4px 0 24px rgba(0,0,0,0.08)',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 4,
+              background: 'linear-gradient(90deg, #0288d1, #01579b, #0288d1)',
+              backgroundSize: '200% 100%',
+              animation: `${shimmer} 3s linear infinite`,
+            },
+          }}
+        >
+          {sidebarContent}
+        </Box>
+      )}
+    </>
   );
 };
 

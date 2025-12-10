@@ -157,75 +157,178 @@ const Paralelos: React.FC = () => {
 
       {/* Grados con Paralelos */}
       <Grid container spacing={3}>
-        {gradosConParalelos.map((grado, idx) => {
-          const isExpanded = expandedGrado === grado.id;
-          const nivel = grado.nivel!;
+      {gradosConParalelos.map((grado, idx) => {
+        const isExpanded = expandedGrado === grado.id;
+        const nivel = grado.nivel!;
 
-          return (
-            <Grid size={{xs:12}} key={grado.id}>
-              <Card sx={{
-                borderRadius: 3,
-                border: isExpanded ? `2px solid ${nivel.color}` : `1px solid ${theme.palette.divider}`,
-                '&:hover': { boxShadow: `0 12px 32px ${alpha(nivel.color || theme.palette.primary.main, 0.2)}` }
-              }}>
-                <Box onClick={() => setExpandedGrado(isExpanded ? null : grado.id)} sx={{ p: 3, cursor: 'pointer' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ width: 56, height: 56, bgcolor: nivel.color, fontSize: '1.8rem' }}>
-                        {nivel.icono}
-                      </Avatar>
-                      <Box>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Typography variant="h5" fontWeight="700">{grado.nombre}</Typography>
-                          <Chip label={nivel.nombre} size="small" sx={{ bgcolor: alpha(nivel.color || theme.palette.primary.main, 0.2) }} />
-                        </Stack>
-                        <Chip label={`${grado.paralelos.length} paralelos`} size="small" variant="outlined" sx={{ mt: 1 }} />
-                      </Box>
+        return (
+          <Grid size={{xs:12}} key={grado.id}>
+            <Card sx={{
+              borderRadius: 3,
+              border: isExpanded ? `2px solid ${nivel.color}` : `1px solid ${theme.palette.divider}`,
+              '&:hover': { boxShadow: `0 12px 32px ${alpha(nivel.color || theme.palette.primary.main, 0.2)}` }
+            }}>
+              <Box 
+                onClick={() => setExpandedGrado(isExpanded ? null : grado.id)} 
+                sx={{ 
+                  p: { xs: 2, md: 3 }, 
+                  cursor: 'pointer' 
+                }}
+              >
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                  gap: { xs: 2, sm: 0 }
+                }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: { xs: 1.5, md: 2 },
+                    flex: 1
+                  }}>
+                    <Avatar sx={{ 
+                      width: { xs: 40, md: 56 }, 
+                      height: { xs: 40, md: 56 }, 
+                      bgcolor: nivel.color, 
+                      fontSize: { xs: '1.2rem', md: '1.8rem' }
+                    }}>
+                      {nivel.icono}
+                    </Avatar>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Stack 
+                        direction={{ xs: 'column', sm: 'row' }} 
+                        spacing={{ xs: 0.5, sm: 1 }} 
+                        alignItems={{ xs: 'flex-start', sm: 'center' }}
+                      >
+                        <Typography 
+                          variant="h5" 
+                          fontWeight="700"
+                          sx={{ 
+                            fontSize: { xs: '1.1rem', md: '1.5rem' },
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: { xs: 'normal', sm: 'nowrap' }
+                          }}
+                        >
+                          {grado.nombre}
+                        </Typography>
+                        <Chip 
+                          label={nivel.nombre} 
+                          size="small" 
+                          sx={{ 
+                            bgcolor: alpha(nivel.color || theme.palette.primary.main, 0.2),
+                            fontSize: { xs: '0.65rem', md: '0.75rem' },
+                            height: { xs: 20, md: 24 }
+                          }} 
+                        />
+                      </Stack>
+                      <Chip 
+                        label={`${grado.paralelos.length} paralelos`} 
+                        size="small" 
+                        variant="outlined" 
+                        sx={{ 
+                          mt: 1,
+                          fontSize: { xs: '0.65rem', md: '0.75rem' },
+                          height: { xs: 20, md: 24 }
+                        }} 
+                      />
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Tooltip title="Agregar paralelo">
-                        <IconButton onClick={(e) => { e.stopPropagation(); handleOpenDialog(); }}>
-                          <AddIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <IconButton>{isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}</IconButton>
-                    </Box>
+                  </Box>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: { xs: 0.5, md: 1 },
+                    flexShrink: 0
+                  }}>
+                    <Tooltip title="Agregar paralelo">
+                      <IconButton 
+                        onClick={(e) => { e.stopPropagation(); handleOpenDialog(); }}
+                        size="small"
+                        sx={{ 
+                          width: { xs: 36, md: 40 },
+                          height: { xs: 36, md: 40 }
+                        }}
+                      >
+                        <AddIcon sx={{ fontSize: { xs: 18, md: 24 } }} />
+                      </IconButton>
+                    </Tooltip>
+                    <IconButton
+                      size="small"
+                      sx={{ 
+                        width: { xs: 36, md: 40 },
+                        height: { xs: 36, md: 40 }
+                      }}
+                    >
+                      {isExpanded ? 
+                        <ExpandLessIcon sx={{ fontSize: { xs: 18, md: 24 } }} /> : 
+                        <ExpandMoreIcon sx={{ fontSize: { xs: 18, md: 24 } }} />
+                      }
+                    </IconButton>
                   </Box>
                 </Box>
+              </Box>
 
-                <Collapse in={isExpanded}>
-                  <Divider />
-                  <Box sx={{ p: 3, bgcolor: alpha(nivel.color || theme.palette.primary.main, 0.02) }}>
-                    {grado.paralelos.length === 0 ? (
-                      <Paper sx={{ p: 4, textAlign: 'center', bgcolor: alpha(theme.palette.warning.main, 0.05) }}>
-                        <WarningAmberIcon sx={{ fontSize: 48, color: 'warning.main', mb: 2 }} />
-                        <Typography variant="h6" gutterBottom>No hay paralelos</Typography>
-                        <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()}>
-                          Agregar Primer Paralelo
-                        </Button>
-                      </Paper>
-                    ) : (
-                      <Grid container spacing={3}>
-                        {grado.paralelos.map((paralelo, pIdx) => (
-                          <Grid size={{xs:12, sm:6, md:4}} key={paralelo.id}>
-                            <ParaleloCard
-                              paralelo={paralelo}
-                              colorNivel={nivel.color || theme.palette.primary.main}
-                              onEdit={handleOpenDialog}
-                              onDelete={handleDelete}
-                              index={pIdx}
-                            />
-                          </Grid>
-                        ))}
-                      </Grid>
-                    )}
-                  </Box>
-                </Collapse>
-              </Card>
-            </Grid>
-          );
-        })}
-      </Grid>
+              <Collapse in={isExpanded}>
+                <Divider />
+                <Box sx={{ 
+                  p: { xs: 2, md: 3 }, 
+                  bgcolor: alpha(nivel.color || theme.palette.primary.main, 0.02) 
+                }}>
+                  {grado.paralelos.length === 0 ? (
+                    <Paper sx={{ 
+                      p: { xs: 3, md: 4 }, 
+                      textAlign: 'center', 
+                      bgcolor: alpha(theme.palette.warning.main, 0.05) 
+                    }}>
+                      <WarningAmberIcon sx={{ 
+                        fontSize: { xs: 36, md: 48 }, 
+                        color: 'warning.main', 
+                        mb: 2 
+                      }} />
+                      <Typography 
+                        variant="h6" 
+                        gutterBottom
+                        sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}
+                      >
+                        No hay paralelos
+                      </Typography>
+                      <Button 
+                        variant="contained" 
+                        startIcon={<AddIcon />} 
+                        onClick={() => handleOpenDialog()}
+                        size="small"
+                        sx={{
+                          fontSize: { xs: '0.8rem', md: '0.875rem' },
+                          px: { xs: 2, md: 3 },
+                          py: { xs: 0.75, md: 1 }
+                        }}
+                      >
+                        Agregar Primer Paralelo
+                      </Button>
+                    </Paper>
+                  ) : (
+                    <Grid container spacing={{ xs: 2, md: 3 }}>
+                      {grado.paralelos.map((paralelo, pIdx) => (
+                        <Grid size={{xs:12, sm:6, md:4}} key={paralelo.id}>
+                          <ParaleloCard
+                            paralelo={paralelo}
+                            colorNivel={nivel.color || theme.palette.primary.main}
+                            onEdit={handleOpenDialog}
+                            onDelete={handleDelete}
+                            index={pIdx}
+                          />
+                        </Grid>
+                      ))}
+                    </Grid>
+                  )}
+                </Box>
+              </Collapse>
+            </Card>
+          </Grid>
+        );
+      })}
+    </Grid>
 
       {/* Dialogs */}
       <ParaleloFormDialog

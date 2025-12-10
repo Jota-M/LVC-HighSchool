@@ -11,7 +11,8 @@ import {
   useTheme,
   Grid,
   Paper,
-  CircularProgress
+  CircularProgress,
+  keyframes
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
@@ -25,8 +26,14 @@ import { NivelFormDialog } from '../../../components/niveles/NivelFormDialog';
 import { GradoFormDialog } from '../../../components/niveles/GradoFormDialog';
 import { NivelAcademico, Grado, NivelFormData, GradoFormData } from '../../../services/niveles';
 
+const bounce = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+`;
+
 const NivelesGrados: React.FC = () => {
   const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
   // Estados locales
   const [openNivelDialog, setOpenNivelDialog] = useState(false);
@@ -171,210 +178,260 @@ const NivelesGrados: React.FC = () => {
         alignItems: 'center', 
         minHeight: '100vh' 
       }}>
-        <CircularProgress size={60} />
+        <CircularProgress 
+          size={60}
+          sx={{
+            color: isDark ? '#facc15' : '#0288d1'
+          }}
+        />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header Premium */}
-      <Fade in timeout={600}>
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 2,
-            mb: 3
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box
-                sx={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 3,
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.3)}`,
-                  animation: 'pulse 2s ease-in-out infinite',
-                  '@keyframes pulse': {
-                    '0%, 100%': { transform: 'scale(1)' },
-                    '50%': { transform: 'scale(1.05)' }
-                  }
-                }}
-              >
-                <AccountTreeIcon sx={{ fontSize: 36, color: 'white' }} />
-              </Box>
+    <Box sx={{ minHeight: '100vh', py: 4 }}>
+      <Box sx={{ px: 3, maxWidth: 'xl', mx: 'auto' }}>
+        {/* Header Premium */}
+        <Fade in timeout={500}>
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: { xs: 'flex-start', md: 'center' },
+              flexDirection: { xs: 'column', md: 'row' },
+              gap: { xs: 2, md: 0 },
+              mb: 3
+            }}>
+              {/* IZQUIERDA: TÍTULO + PÁRRAFO */}
               <Box>
-                <Typography variant="h3" fontWeight="800" sx={{
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  mb: 0.5
-                }}>
-                  Niveles y Grados
-                </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <AutoAwesomeIcon sx={{ fontSize: 18 }} />
-                  Estructura académica jerárquica de tu institución
-                </Typography>
-              </Box>
-            </Box>
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<AddIcon />}
-              onClick={() => handleOpenNivelDialog()}
-              sx={{
-                borderRadius: 3,
-                px: 4,
-                py: 1.5,
-                textTransform: 'none',
-                fontSize: '1.1rem',
-                fontWeight: 'bold',
-                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.4)}`,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: `0 12px 24px ${alpha(theme.palette.primary.main, 0.5)}`,
-                }
-              }}
-            >
-              Crear Nivel
-            </Button>
-          </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <AccountTreeIcon
+                    sx={{
+                      color: isDark ? '#facc15' : '#0288d1',
+                      fontSize: 36,
+                      animation: `${bounce} 1.5s infinite`,
+                    }}
+                  />
+                  <Typography
+                    variant="h1"
+                    sx={{
+                      fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                      fontWeight: 800,
+                      background: isDark
+                        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      animation: 'fadeIn 1s ease-out',
+                      '@keyframes fadeIn': {
+                        from: { opacity: 0, transform: 'translateY(-10px)' },
+                        to: { opacity: 1, transform: 'translateY(0)' },
+                      },
+                    }}
+                  >
+                    Niveles y Grados
+                  </Typography>
+                </Box>
 
-          {/* Estadísticas */}
-          <NivelesStats
-            totalNiveles={niveles.length}
-            totalGrados={totalGrados}
-            totalEstudiantes={totalEstudiantes}
-            totalMaterias={totalMaterias}
-          />
-        </Box>
-      </Fade>
-
-      {/* Lista de Niveles con Grados */}
-      <Grid container spacing={3}>
-        {niveles.length === 0 ? (
-          <Grid size={{xs:12}} >
-            <Fade in timeout={1000}>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 6,
-                  textAlign: 'center',
-                  bgcolor: alpha(theme.palette.info.main, 0.05),
-                  border: `2px dashed ${alpha(theme.palette.info.main, 0.3)}`,
-                  borderRadius: 3
-                }}
-              >
-                <SchoolIcon sx={{ fontSize: 80, color: 'info.main', mb: 2 }} />
-                <Typography variant="h4" fontWeight="700" gutterBottom>
-                  ¡Comienza tu estructura académica!
-                </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 600, mx: 'auto' }}>
-                  Crea niveles académicos (Inicial, Primaria, Secundaria) y organiza tus grados de manera jerárquica.
-                </Typography>
-                <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={<AddIcon />}
-                  onClick={() => handleOpenNivelDialog()}
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
                   sx={{
-                    borderRadius: 3,
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1.1rem',
-                    fontWeight: 'bold'
+                    fontWeight: 500,
+                    letterSpacing: 0.3,
+                    animation: 'fadeInText 1.2s ease-out',
+                    '@keyframes fadeInText': {
+                      from: { opacity: 0, transform: 'translateY(5px)' },
+                      to: { opacity: 1, transform: 'translateY(0)' },
+                    },
                   }}
                 >
-                  Crear Primer Nivel
-                </Button>
-              </Paper>
-            </Fade>
-          </Grid>
-        ) : (
-          niveles.map((nivel, index) => (
-            <Grid size={{xs:12}} key={nivel.id}>
-              <Fade in timeout={800 + index * 100}>
-                <Box>
-                  <NivelCard
-                    nivel={nivel}
-                    onEditNivel={handleOpenNivelDialog}
-                    onDeleteNivel={handleDeleteNivel}
-                    onAddGrado={handleOpenGradoDialog}
-                    onEditGrado={handleOpenGradoDialog}
-                    onDeleteGrado={handleDeleteGrado}
+                  Estructura académica jerárquica de tu institución.
+                </Typography>
+              </Box>
+
+              {/* DERECHA: BOTÓN */}
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<AddIcon />}
+                onClick={() => handleOpenNivelDialog()}
+                sx={{
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1rem',
+                  background: isDark
+                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                  color: isDark ? '#000' : '#fff',
+                  boxShadow: isDark
+                    ? '0 8px 24px rgba(250, 204, 21, 0.3)'
+                    : '0 8px 24px rgba(2, 136, 209, 0.3)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: isDark
+                      ? '0 12px 32px rgba(250, 204, 21, 0.4)'
+                      : '0 12px 32px rgba(2, 136, 209, 0.4)',
+                  },
+                }}
+              >
+                Crear Nivel
+              </Button>
+            </Box>
+
+            {/* Estadísticas */}
+            <NivelesStats
+              totalNiveles={niveles.length}
+              totalGrados={totalGrados}
+              totalEstudiantes={totalEstudiantes}
+              totalMaterias={totalMaterias}
+            />
+          </Box>
+        </Fade>
+
+        {/* Lista de Niveles con Grados */}
+        <Grid container spacing={3}>
+          {niveles.length === 0 ? (
+            <Grid size={{xs:12}} >
+              <Fade in timeout={1000}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 6,
+                    textAlign: 'center',
+                    bgcolor: isDark 
+                      ? alpha('#facc15', 0.05)
+                      : alpha('#0288d1', 0.05),
+                    border: `2px dashed ${isDark ? alpha('#facc15', 0.3) : alpha('#0288d1', 0.3)}`,
+                    borderRadius: 3
+                  }}
+                >
+                  <SchoolIcon 
+                    sx={{ 
+                      fontSize: 80, 
+                      color: isDark ? '#facc15' : '#0288d1',
+                      mb: 2,
+                      animation: `${bounce} 2s infinite`,
+                    }} 
                   />
-                </Box>
+                  <Typography variant="h4" fontWeight="700" gutterBottom>
+                    ¡Comienza tu estructura académica!
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 600, mx: 'auto' }}>
+                    Crea niveles académicos (Inicial, Primaria, Secundaria) y organiza tus grados de manera jerárquica.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<AddIcon />}
+                    onClick={() => handleOpenNivelDialog()}
+                    sx={{
+                      borderRadius: '12px',
+                      px: 4,
+                      py: 1.5,
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold',
+                      textTransform: 'none',
+                      background: isDark
+                        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                      color: isDark ? '#000' : '#fff',
+                      boxShadow: isDark
+                        ? '0 8px 24px rgba(250, 204, 21, 0.3)'
+                        : '0 8px 24px rgba(2, 136, 209, 0.3)',
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: isDark
+                          ? '0 12px 32px rgba(250, 204, 21, 0.4)'
+                          : '0 12px 32px rgba(2, 136, 209, 0.4)',
+                      },
+                    }}
+                  >
+                    Crear Primer Nivel
+                  </Button>
+                </Paper>
               </Fade>
             </Grid>
-          ))
-        )}
-      </Grid>
+          ) : (
+            niveles.map((nivel, index) => (
+              <Grid size={{xs:12}} key={nivel.id}>
+                <Fade in timeout={800 + index * 100}>
+                  <Box>
+                    <NivelCard
+                      nivel={nivel}
+                      onEditNivel={handleOpenNivelDialog}
+                      onDeleteNivel={handleDeleteNivel}
+                      onAddGrado={handleOpenGradoDialog}
+                      onEditGrado={handleOpenGradoDialog}
+                      onDeleteGrado={handleDeleteGrado}
+                    />
+                  </Box>
+                </Fade>
+              </Grid>
+            ))
+          )}
+        </Grid>
 
-      {/* Dialog para Crear/Editar Nivel */}
-      <NivelFormDialog
-        open={openNivelDialog}
-        onClose={handleCloseNivelDialog}
-        onSave={handleSaveNivel}
-        editingNivel={editingNivel}
-        loading={loading}
-        niveles={niveles}
-      />
+        {/* Dialog para Crear/Editar Nivel */}
+        <NivelFormDialog
+          open={openNivelDialog}
+          onClose={handleCloseNivelDialog}
+          onSave={handleSaveNivel}
+          editingNivel={editingNivel}
+          loading={loading}
+          niveles={niveles}
+        />
 
-      {/* Dialog para Crear/Editar Grado */}
-      <GradoFormDialog
-        open={openGradoDialog}
-        onClose={handleCloseGradoDialog}
-        onSave={handleSaveGrado}
-        editingGrado={editingGrado}
-        loading={loading}
-        niveles={niveles}
-      />
+        {/* Dialog para Crear/Editar Grado */}
+        <GradoFormDialog
+          open={openGradoDialog}
+          onClose={handleCloseGradoDialog}
+          onSave={handleSaveGrado}
+          editingGrado={editingGrado}
+          loading={loading}
+          niveles={niveles}
+        />
 
-      {/* Snackbar para notificaciones */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        TransitionComponent={Fade}
-      >
-        <Alert 
-          onClose={() => setSnackbar({ ...snackbar, open: false })} 
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ 
-            width: '100%',
-            borderRadius: 2,
-            fontWeight: 600,
-            boxShadow: `0 8px 16px ${alpha(theme.palette.common.black, 0.2)}`
-          }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-
-      {/* Error Global */}
-      {error && (
+        {/* Snackbar para notificaciones */}
         <Snackbar
-          open={!!error}
-          autoHideDuration={6000}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          open={snackbar.open}
+          autoHideDuration={4000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          TransitionComponent={Fade}
         >
-          <Alert severity="error" variant="filled">
-            {error}
+          <Alert 
+            onClose={() => setSnackbar({ ...snackbar, open: false })} 
+            severity={snackbar.severity}
+            variant="filled"
+            sx={{ 
+              width: '100%',
+              borderRadius: 2,
+              fontWeight: 600,
+              boxShadow: `0 8px 16px ${alpha(theme.palette.common.black, 0.2)}`
+            }}
+          >
+            {snackbar.message}
           </Alert>
         </Snackbar>
-      )}
+
+        {/* Error Global */}
+        {error && (
+          <Snackbar
+            open={!!error}
+            autoHideDuration={6000}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          >
+            <Alert severity="error" variant="filled">
+              {error}
+            </Alert>
+          </Snackbar>
+        )}
+      </Box>
     </Box>
   );
 };

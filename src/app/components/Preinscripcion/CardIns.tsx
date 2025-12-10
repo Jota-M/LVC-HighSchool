@@ -124,7 +124,6 @@ const CardIns: React.FC<Props> = ({
         gap: 2.5,
         position: "relative",
         overflow: "hidden",
-        background: isDark ? "rgba(255,255,255,0.03)" : "#fff",
         border: `2px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}`,
         backdropFilter: "blur(10px)",
         opacity: isVisible ? 1 : 0,
@@ -236,7 +235,7 @@ const CardIns: React.FC<Props> = ({
               variant="h6"
               sx={{
                 fontWeight: "bold",
-                fontSize: "1.2rem",
+                fontSize: "1rem",
                 lineHeight: 1.2,
                 mb: 0.5,
                 color: isDark ? "#fff" : "text.primary",
@@ -486,6 +485,7 @@ const CardIns: React.FC<Props> = ({
         variant="contained"
         fullWidth
         endIcon={<ArrowForwardIcon />}
+        href="/PreInscripcion/registro"
         sx={{
           fontWeight: "bold",
           textTransform: "none",

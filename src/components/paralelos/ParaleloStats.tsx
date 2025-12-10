@@ -36,177 +36,129 @@ export const ParalelosStats: React.FC<ParalelosStatsProps> = ({
   tasaOcupacion
 }) => {
   const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
+  // IMPORTANTE: Asegurar que los valores sean números
+  const safeTotal = Number(totalParalelos) || 0;
+  const safeEstudiantes = Number(totalEstudiantes) || 0;
+  const safePromedio = Number(promedioEstudiantes) || 0;
+  const safeCapacidad = Number(capacidadTotal) || 0;
+  const safeTasa = Number(tasaOcupacion) || 0;
+
+  // Colores variados según el tema
+  const statsConfig = [
+    {
+      title: 'Total Paralelos',
+      value: safeTotal,
+      subtitle: 'Secciones activas',
+      icon: ClassIcon,
+      color: isDark ? '#a78bfa' : '#7c3aed', // Púrpura
+    },
+    {
+      title: 'Total Estudiantes',
+      value: safeEstudiantes,
+      subtitle: `de ${safeCapacidad} cupos`,
+      icon: GroupsIcon,
+      color: isDark ? '#60a5fa' : '#2563eb', // Azul
+    },
+    {
+      title: 'Promedio/Paralelo',
+      value: safePromedio,
+      subtitle: 'Estudiantes',
+      icon: PersonIcon,
+      color: isDark ? '#34d399' : '#059669', // Verde
+    },
+    {
+      title: 'Ocupación',
+      value: `${safeTasa}%`,
+      subtitle: safeTasa >= 90 
+        ? 'Alta demanda' 
+        : paralelosBajoMinimo > 0 
+        ? `${paralelosBajoMinimo} bajo mínimo` 
+        : 'Capacidad óptima',
+      icon: safeTasa >= 90 ? WarningAmberIcon : TrendingUpIcon,
+      color: safeTasa >= 90 
+        ? (isDark ? '#fb923c' : '#ea580c') // Naranja
+        : (isDark ? '#facc15' : '#ca8a04'), // Amarillo/Verde
+      showWarning: safeTasa >= 90,
+    }
+  ];
 
   return (
-    <Grid container spacing={3}>
-      {/* Total Paralelos */}
-      <Grid size={{xs:12, sm:6, md:3}}>
-        <Card sx={{
-          background: `linear-gradient(135deg, ${alpha('#4ECDC4', 0.15)} 0%, ${alpha('#4ECDC4', 0.05)} 100%)`,
-          border: `2px solid ${alpha('#4ECDC4', 0.3)}`,
-          borderRadius: 3,
-          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&:hover': {
-            transform: 'translateY(-8px) scale(1.02)',
-            boxShadow: `0 20px 40px ${alpha('#4ECDC4', 0.3)}`,
-          }
-        }}>
-          <CardContent sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{
-                bgcolor: '#4ECDC4',
-                width: 56,
-                height: 56,
-                boxShadow: `0 4px 12px ${alpha('#4ECDC4', 0.4)}`
-              }}>
-                <ClassIcon sx={{ fontSize: 32 }} />
-              </Avatar>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="overline" fontWeight="600" color="text.secondary">
-                  Total Paralelos
-                </Typography>
-                <Typography variant="h3" fontWeight="800" sx={{ color: '#4ECDC4' }}>
-                  {totalParalelos}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Secciones activas
-                </Typography>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      </Grid>
-
-      {/* Total Estudiantes */}
-      <Grid size={{xs:12, sm:6, md:3}}>
-        <Card sx={{
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)} 0%, ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
-          border: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-          borderRadius: 3,
-          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&:hover': {
-            transform: 'translateY(-8px) scale(1.02)',
-            boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.3)}`,
-          }
-        }}>
-          <CardContent sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{
-                bgcolor: 'primary.main',
-                width: 56,
-                height: 56,
-                boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`
-              }}>
-                <GroupsIcon sx={{ fontSize: 32 }} />
-              </Avatar>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="overline" fontWeight="600" color="text.secondary">
-                  Total Estudiantes
-                </Typography>
-                <Typography variant="h3" fontWeight="800" color="primary.main">
-                  {totalEstudiantes}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  de {capacidadTotal} cupos
-                </Typography>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      </Grid>
-
-      {/* Promedio por Paralelo */}
-      <Grid size={{xs:12, sm:6, md:3}}>
-        <Card sx={{
-          background: `linear-gradient(135deg, ${alpha('#FF6B6B', 0.15)} 0%, ${alpha('#FF6B6B', 0.05)} 100%)`,
-          border: `2px solid ${alpha('#FF6B6B', 0.3)}`,
-          borderRadius: 3,
-          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&:hover': {
-            transform: 'translateY(-8px) scale(1.02)',
-            boxShadow: `0 20px 40px ${alpha('#FF6B6B', 0.3)}`,
-          }
-        }}>
-          <CardContent sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{
-                bgcolor: '#FF6B6B',
-                width: 56,
-                height: 56,
-                boxShadow: `0 4px 12px ${alpha('#FF6B6B', 0.4)}`
-              }}>
-                <PersonIcon sx={{ fontSize: 32 }} />
-              </Avatar>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="overline" fontWeight="600" color="text.secondary">
-                  Promedio/Paralelo
-                </Typography>
-                <Typography variant="h3" fontWeight="800" sx={{ color: '#FF6B6B' }}>
-                  {promedioEstudiantes}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Estudiantes
-                </Typography>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      </Grid>
-
-      {/* Tasa de Ocupación */}
-      <Grid size={{xs:12, sm:6, md:3}}>
-        <Card sx={{
-          background: `linear-gradient(135deg, ${alpha(tasaOcupacion >= 90 ? '#FF9800' : '#4CAF50', 0.15)} 0%, ${alpha(tasaOcupacion >= 90 ? '#FF9800' : '#4CAF50', 0.05)} 100%)`,
-          border: `2px solid ${alpha(tasaOcupacion >= 90 ? '#FF9800' : '#4CAF50', 0.3)}`,
-          borderRadius: 3,
-          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&:hover': {
-            transform: 'translateY(-8px) scale(1.02)',
-            boxShadow: `0 20px 40px ${alpha(tasaOcupacion >= 90 ? '#FF9800' : '#4CAF50', 0.3)}`,
-          }
-        }}>
-          <CardContent sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{
-                bgcolor: tasaOcupacion >= 90 ? '#FF9800' : '#4CAF50',
-                width: 56,
-                height: 56,
-                boxShadow: `0 4px 12px ${alpha(tasaOcupacion >= 90 ? '#FF9800' : '#4CAF50', 0.4)}`
-              }}>
-                {tasaOcupacion >= 90 ? <WarningAmberIcon sx={{ fontSize: 32 }} /> : <TrendingUpIcon sx={{ fontSize: 32 }} />}
-              </Avatar>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="overline" fontWeight="600" color="text.secondary">
-                  Ocupación
-                </Typography>
-                <Typography variant="h3" fontWeight="800" sx={{ color: tasaOcupacion >= 90 ? '#FF9800' : '#4CAF50' }}>
-                  {tasaOcupacion}%
-                </Typography>
-                <Typography variant="caption" sx={{ 
-                  color: tasaOcupacion >= 90 ? 'error.main' : 'success.main',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0.5
+    <Grid container spacing={{ xs: 2, md: 3 }}>
+      {statsConfig.map((stat, index) => {
+        const Icon = stat.icon;
+        
+        return (
+          <Grid size={{xs:12, sm:6, md:3}} key={index}>
+            <Card sx={{
+              background: `linear-gradient(135deg, ${alpha(stat.color, 0.15)} 0%, ${alpha(stat.color, 0.05)} 100%)`,
+              border: `2px solid ${alpha(stat.color, 0.3)}`,
+              borderRadius: { xs: 2, md: 3 },
+              transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                transform: 'translateY(-8px) scale(1.02)',
+                boxShadow: `0 20px 40px ${alpha(stat.color, 0.3)}`,
+              }
+            }}>
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: { xs: 1.5, md: 2 },
+                  flexWrap: { xs: 'wrap', sm: 'nowrap' }
                 }}>
-                  {tasaOcupacion >= 90 ? (
-                    <>
-                      <WarningAmberIcon sx={{ fontSize: 14 }} />
-                      Alta demanda
-                    </>
-                  ) : paralelosBajoMinimo > 0 ? (
-                    <>
-                      <TrendingDownIcon sx={{ fontSize: 14 }} />
-                      {paralelosBajoMinimo} bajo mínimo
-                    </>
-                  ) : (
-                    'Capacidad óptima'
-                  )}
-                </Typography>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      </Grid>
+                  <Avatar sx={{
+                    bgcolor: stat.color,
+                    width: { xs: 48, md: 56 },
+                    height: { xs: 48, md: 56 },
+                    boxShadow: `0 4px 12px ${alpha(stat.color, 0.4)}`
+                  }}>
+                    <Icon sx={{ fontSize: { xs: 24, md: 32 } }} />
+                  </Avatar>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography 
+                      variant="overline" 
+                      fontWeight="600" 
+                      color="text.secondary"
+                      sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' } }}
+                    >
+                      {stat.title}
+                    </Typography>
+                    <Typography 
+                      variant="h3" 
+                      fontWeight="800" 
+                      sx={{ 
+                        color: stat.color,
+                        fontSize: { xs: '1.75rem', md: '3rem' },
+                        lineHeight: 1.2
+                      }}
+                    >
+                      {stat.value}
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: stat.showWarning ? stat.color : 'text.secondary',
+                        fontSize: { xs: '0.65rem', md: '0.75rem' },
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5
+                      }}
+                    >
+                      {stat.showWarning && <WarningAmberIcon sx={{ fontSize: { xs: 12, md: 14 } }} />}
+                      {paralelosBajoMinimo > 0 && index === 3 && !stat.showWarning && (
+                        <TrendingDownIcon sx={{ fontSize: { xs: 12, md: 14 } }} />
+                      )}
+                      {stat.subtitle}
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        );
+      })}
     </Grid>
   );
 };

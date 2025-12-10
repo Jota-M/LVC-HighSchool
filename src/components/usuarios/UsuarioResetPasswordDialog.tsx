@@ -19,6 +19,8 @@ import {
   useTheme,
   Slide,
   Collapse,
+  Zoom,
+  keyframes,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -30,6 +32,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
   Info as InfoIcon,
+  Security as SecurityIcon,
 } from '@mui/icons-material';
 import usuariosService, { Usuario } from '../../services/usuariosService';
 
@@ -39,6 +42,22 @@ interface Props {
   usuario: Usuario | null;
   onSuccess: () => void;
 }
+
+const float = keyframes`
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+`;
+
+const shimmer = keyframes`
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+`;
+
+const shake = keyframes`
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+  20%, 40%, 60%, 80% { transform: translateX(8px); }
+`;
 
 export default function UsuarioResetPasswordDialog({
   open,
@@ -54,6 +73,7 @@ export default function UsuarioResetPasswordDialog({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   // Validación de contraseña en tiempo real
   const getPasswordStrength = () => {
@@ -125,62 +145,107 @@ export default function UsuarioResetPasswordDialog({
       TransitionProps={{ direction: 'up' } as any}
       PaperProps={{
         sx: {
-          borderRadius: 3,
-          backgroundImage: isDark
-            ? 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))'
-            : 'none',
+          borderRadius: 4,
+          overflow: 'hidden',
+          background: isDark
+            ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%)'
+            : 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
+          boxShadow: isDark
+            ? '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 100px rgba(3, 169, 244, 0.1)'
+            : '0 25px 50px -12px rgba(0, 0, 0, 0.3)',
+          border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
         },
       }}
     >
       <form onSubmit={handleReset}>
+        {/* Header Ultra Moderno */}
         <DialogTitle
           sx={{
+            position: 'relative',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             pb: 2,
-            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            pt: 2.5,
+            background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.15)} 0%, ${alpha(theme.palette.info.dark, 0.08)} 100%)`,
+            backdropFilter: 'blur(20px)',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '2px',
+              background: `linear-gradient(90deg, transparent, ${theme.palette.info.main}, transparent)`,
+              animation: `${shimmer} 2s infinite`,
+              backgroundSize: '1000px 100%',
+            },
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 2,
-                background: `linear-gradient(135deg, ${theme.palette.info.main}, ${theme.palette.info.dark})`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <LockResetIcon sx={{ color: 'white', fontSize: 22 }} />
-            </Box>
+            <Zoom in={open} style={{ transitionDelay: '100ms' }}>
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 2.5,
+                  background: `linear-gradient(135deg, ${theme.palette.info.main}, ${theme.palette.info.dark})`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: `0 8px 24px ${alpha(theme.palette.info.main, 0.4)}`,
+                  animation: `${float} 3s ease-in-out infinite`,
+                  position: 'relative',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    inset: -2,
+                    borderRadius: 2.5,
+                    padding: '2px',
+                    background: `linear-gradient(135deg, ${alpha('#fff', 0.4)}, transparent)`,
+                    WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                    WebkitMaskComposite: 'xor',
+                    maskComposite: 'exclude',
+                  },
+                }}
+              >
+                <LockResetIcon sx={{ color: 'white', fontSize: 24 }} />
+              </Box>
+            </Zoom>
             <Box>
-              <Typography variant="h6" fontWeight={700}>
+              <Typography variant="h6" fontWeight={800}>
                 Resetear Contraseña
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Establecer nueva contraseña temporal
+                Nueva contraseña temporal
               </Typography>
             </Box>
           </Box>
-          <IconButton onClick={handleClose} size="small" disabled={loading}>
+          <IconButton 
+            onClick={handleClose} 
+            size="small" 
+            disabled={loading}
+            sx={{
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                transform: 'rotate(90deg) scale(1.1)',
+                bgcolor: alpha(theme.palette.error.main, 0.15),
+              },
+            }}
+          >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent sx={{ px: 3, py: 3 }}>
+        <DialogContent sx={{ px: 3, py: 2.5 }}>
           <Collapse in={!!error}>
             <Alert
               severity="error"
               variant="filled"
               sx={{
-                mb: 3,
-                borderRadius: 2,
-                '& .MuiAlert-icon': {
-                  fontSize: 24,
-                },
+                mb: 2.5,
+                borderRadius: 2.5,
+                animation: `${shake} 0.5s`,
               }}
               onClose={() => setError('')}
             >
@@ -191,35 +256,40 @@ export default function UsuarioResetPasswordDialog({
           {/* Card de usuario */}
           <Box
             sx={{
-              p: 2,
+              p: 2.5,
               mb: 3,
-              borderRadius: 2,
-              background: alpha(theme.palette.info.main, 0.08),
-              border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+              borderRadius: 3,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.12)} 0%, ${alpha(theme.palette.info.main, 0.04)} 100%)`,
+              border: `2px solid ${alpha(theme.palette.info.main, 0.3)}`,
               display: 'flex',
               alignItems: 'center',
               gap: 2,
+              transition: 'all 0.3s',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: `0 8px 24px ${alpha(theme.palette.info.main, 0.2)}`,
+              },
             }}
           >
             <Box
               sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 2,
-                background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.2)}, ${alpha(theme.palette.info.dark, 0.2)})`,
+                width: 48,
+                height: 48,
+                borderRadius: 2.5,
+                background: `linear-gradient(135deg, ${theme.palette.info.main}, ${theme.palette.info.dark})`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: `2px solid ${alpha(theme.palette.info.main, 0.3)}`,
+                boxShadow: `0 4px 12px ${alpha(theme.palette.info.main, 0.4)}`,
               }}
             >
-              <PersonIcon sx={{ color: theme.palette.info.main, fontSize: 24 }} />
+              <PersonIcon sx={{ color: 'white', fontSize: 24 }} />
             </Box>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
                 Resetear contraseña para:
               </Typography>
-              <Typography variant="subtitle1" fontWeight={700}>
+              <Typography variant="h6" fontWeight={700}>
                 {usuario?.username}
               </Typography>
             </Box>
@@ -228,17 +298,18 @@ export default function UsuarioResetPasswordDialog({
           {/* Alerta informativa */}
           <Box
             sx={{
-              p: 2,
+              p: 2.5,
               mb: 3,
-              borderRadius: 2,
-              backgroundColor: alpha(theme.palette.warning.main, 0.08),
-              border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
+              borderRadius: 3,
+              backgroundColor: alpha(theme.palette.warning.main, 0.1),
+              border: `2px solid ${alpha(theme.palette.warning.main, 0.3)}`,
               display: 'flex',
               gap: 1.5,
+              alignItems: 'flex-start',
             }}
           >
-            <InfoIcon sx={{ color: theme.palette.warning.main, fontSize: 20, mt: 0.2 }} />
-            <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+            <SecurityIcon sx={{ color: theme.palette.warning.main, fontSize: 22, mt: 0.2 }} />
+            <Typography variant="body2" sx={{ lineHeight: 1.7, fontWeight: 500 }}>
               El usuario deberá cambiar esta contraseña en su próximo inicio de sesión
             </Typography>
           </Box>
@@ -251,13 +322,23 @@ export default function UsuarioResetPasswordDialog({
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
                 required
                 fullWidth
                 disabled={loading}
+                size="small"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <LockIcon fontSize="small" color="action" />
+                      <LockIcon 
+                        fontSize="small" 
+                        sx={{ 
+                          color: focusedField === 'password' ? theme.palette.info.main : 'action',
+                          transition: 'all 0.3s',
+                          transform: focusedField === 'password' ? 'scale(1.2) rotate(5deg)' : 'scale(1)',
+                        }} 
+                      />
                     </InputAdornment>
                   ),
                   endAdornment: (
@@ -266,30 +347,53 @@ export default function UsuarioResetPasswordDialog({
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
                         size="small"
+                        sx={{
+                          transition: 'all 0.3s',
+                          '&:hover': { 
+                            transform: 'scale(1.2) rotate(15deg)',
+                            bgcolor: alpha(theme.palette.info.main, 0.1),
+                          },
+                        }}
                       >
-                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        {showPassword ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
                       </IconButton>
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: 2.5,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    background: focusedField === 'password' 
+                      ? alpha(theme.palette.info.main, 0.05)
+                      : 'transparent',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 4px 12px ${alpha(theme.palette.info.main, 0.15)}`,
+                    },
+                    '&.Mui-focused': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 0 0 3px ${alpha(theme.palette.info.main, 0.2)}`,
+                    },
                   },
                 }}
               />
 
-              {/* Indicador de fuerza de contraseña */}
+              {/* Indicador de fuerza de contraseña ULTRA MODERNO */}
               {password && (
-                <Box sx={{ mt: 1.5 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography variant="caption" color="text.secondary">
+                <Box sx={{ mt: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
                       Seguridad de la contraseña
                     </Typography>
                     <Typography
                       variant="caption"
-                      fontWeight={600}
-                      color={`${passwordStrength.color}.main`}
+                      fontWeight={700}
+                      sx={{
+                        color: `${passwordStrength.color}.main`,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
                     >
                       {passwordStrength.label}
                     </Typography>
@@ -299,14 +403,29 @@ export default function UsuarioResetPasswordDialog({
                     value={passwordStrength.strength}
                     color={passwordStrength.color as any}
                     sx={{
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundColor: alpha(theme.palette.grey[500], 0.2),
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: alpha(theme.palette.grey[500], 0.15),
+                      '& .MuiLinearProgress-bar': {
+                        borderRadius: 4,
+                        background: 'linear-gradient(90deg, #fcd34d, #f59e0b)', // amarillo a naranja
+                        boxShadow: '0 0 12px rgba(245, 158, 11, 0.5)', // sombra con transparencia
+                      },
                     }}
                   />
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                    Mínimo 8 caracteres. Usa mayúsculas, números y símbolos para mayor seguridad
-                  </Typography>
+                  <Box 
+                    sx={{ 
+                      mt: 1.5, 
+                      p: 1.5, 
+                      borderRadius: 2,
+                      bgcolor: alpha(theme.palette.info.main, 0.05),
+                      border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
+                    }}
+                  >
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.5 }}>
+                      💡 <strong>Consejo:</strong> Usa mayúsculas, números y símbolos para mayor seguridad
+                    </Typography>
+                  </Box>
                 </Box>
               )}
             </Box>
@@ -318,24 +437,51 @@ export default function UsuarioResetPasswordDialog({
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                onFocus={() => setFocusedField('confirm')}
+                onBlur={() => setFocusedField(null)}
                 required
                 fullWidth
                 disabled={loading}
+                size="small"
                 error={confirmPassword.length > 0 && !passwordsMatch}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <LockIcon fontSize="small" color="action" />
+                      <LockIcon 
+                        fontSize="small" 
+                        sx={{ 
+                          color: focusedField === 'confirm' ? theme.palette.info.main : 'action',
+                          transition: 'all 0.3s',
+                          transform: focusedField === 'confirm' ? 'scale(1.2)' : 'scale(1)',
+                        }} 
+                      />
                     </InputAdornment>
                   ),
                   endAdornment: (
                     <InputAdornment position="end">
                       {confirmPassword && (
-                        <Box sx={{ mr: 1 }}>
+                        <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
                           {passwordsMatch ? (
-                            <CheckCircleIcon color="success" fontSize="small" />
+                            <CheckCircleIcon 
+                              color="success" 
+                              fontSize="small"
+                              sx={{
+                                animation: 'scaleIn 0.3s ease',
+                                '@keyframes scaleIn': {
+                                  '0%': { transform: 'scale(0)' },
+                                  '50%': { transform: 'scale(1.2)' },
+                                  '100%': { transform: 'scale(1)' },
+                                },
+                              }}
+                            />
                           ) : (
-                            <CancelIcon color="error" fontSize="small" />
+                            <CancelIcon 
+                              color="error" 
+                              fontSize="small"
+                              sx={{
+                                animation: `${shake} 0.5s`,
+                              }}
+                            />
                           )}
                         </Box>
                       )}
@@ -343,26 +489,65 @@ export default function UsuarioResetPasswordDialog({
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         edge="end"
                         size="small"
+                        sx={{
+                          transition: 'all 0.3s',
+                          '&:hover': { 
+                            transform: 'scale(1.2) rotate(15deg)',
+                            bgcolor: alpha(theme.palette.info.main, 0.1),
+                          },
+                        }}
                       >
-                        {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        {showConfirmPassword ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
                       </IconButton>
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: 2.5,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    background: focusedField === 'confirm' 
+                      ? alpha(theme.palette.info.main, 0.05)
+                      : 'transparent',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 4px 12px ${alpha(theme.palette.info.main, 0.15)}`,
+                    },
+                    '&.Mui-focused': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 0 0 3px ${alpha(theme.palette.info.main, 0.2)}`,
+                    },
                   },
                 }}
               />
               {confirmPassword && (
-                <Typography
-                  variant="caption"
-                  color={passwordsMatch ? 'success.main' : 'error.main'}
-                  sx={{ mt: 0.5, display: 'block', fontWeight: 600 }}
+                <Box
+                  sx={{
+                    mt: 1,
+                    p: 1.5,
+                    borderRadius: 2,
+                    bgcolor: passwordsMatch 
+                      ? alpha(theme.palette.success.main, 0.1)
+                      : alpha(theme.palette.error.main, 0.1),
+                    border: `2px solid ${passwordsMatch 
+                      ? alpha(theme.palette.success.main, 0.3)
+                      : alpha(theme.palette.error.main, 0.3)}`,
+                    transition: 'all 0.3s',
+                  }}
                 >
-                  {passwordsMatch ? '✓ Las contraseñas coinciden' : '✗ Las contraseñas no coinciden'}
-                </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: passwordsMatch ? 'success.main' : 'error.main',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                    }}
+                  >
+                    {passwordsMatch ? '✓ Las contraseñas coinciden' : '✗ Las contraseñas no coinciden'}
+                  </Typography>
+                </Box>
               )}
             </Box>
           </Box>
@@ -372,8 +557,9 @@ export default function UsuarioResetPasswordDialog({
           sx={{
             px: 3,
             py: 2.5,
-            gap: 1.5,
+            gap: 2,
             borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            background: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.01),
           }}
         >
           <Button
@@ -382,13 +568,16 @@ export default function UsuarioResetPasswordDialog({
             variant="outlined"
             size="large"
             sx={{
+              flex: 1,
               textTransform: 'none',
-              fontWeight: 600,
-              borderRadius: 2,
+              fontWeight: 700,
+              borderRadius: 2.5,
               borderWidth: 2,
-              px: 3,
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
                 borderWidth: 2,
+                transform: 'translateY(-4px)',
+                boxShadow: `0 12px 24px ${alpha(theme.palette.primary.main, 0.25)}`,
               },
             }}
           >
@@ -401,14 +590,34 @@ export default function UsuarioResetPasswordDialog({
             size="large"
             startIcon={loading ? null : <LockResetIcon />}
             sx={{
+              flex: 1,
               textTransform: 'none',
-              fontWeight: 600,
-              borderRadius: 2,
-              px: 3,
+              fontWeight: 700,
+              borderRadius: 2.5,
               background: `linear-gradient(135deg, ${theme.palette.info.main}, ${theme.palette.info.dark})`,
-              boxShadow: `0 4px 12px ${alpha(theme.palette.info.main, 0.3)}`,
+              boxShadow: `0 8px 24px ${alpha(theme.palette.info.main, 0.4)}`,
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: '-100%',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                transition: 'left 0.5s',
+              },
               '&:hover': {
-                boxShadow: `0 6px 16px ${alpha(theme.palette.info.main, 0.4)}`,
+                transform: 'translateY(-4px) scale(1.02)',
+                boxShadow: `0 16px 32px ${alpha(theme.palette.info.main, 0.6)}`,
+                '&::before': {
+                  left: '100%',
+                },
+              },
+              '&:active': {
+                transform: 'translateY(-2px) scale(0.98)',
               },
               '&:disabled': {
                 background: theme.palette.action.disabledBackground,

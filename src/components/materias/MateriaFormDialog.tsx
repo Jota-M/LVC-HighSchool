@@ -41,8 +41,9 @@ export const MateriaFormDialog: React.FC<MateriaFormDialogProps> = ({
   areas
 }) => {
   const theme = useTheme();
+
   const [formData, setFormData] = useState<MateriaFormData>({
-    area_conocimiento_id: 0,
+    area_conocimiento_id: areas.length > 0 ? areas[0].id : 0,
     codigo: '',
     nombre: '',
     descripcion: '',
@@ -57,58 +58,64 @@ export const MateriaFormDialog: React.FC<MateriaFormDialogProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (editingMateria) {
-      setFormData({
-        area_conocimiento_id: editingMateria.area_conocimiento_id,
-        codigo: editingMateria.codigo,
-        nombre: editingMateria.nombre,
-        descripcion: editingMateria.descripcion || '',
-        horas_semanales: editingMateria.horas_semanales || 0,
-        creditos: editingMateria.creditos || 0,
-        es_obligatoria: editingMateria.es_obligatoria,
-        tiene_laboratorio: editingMateria.tiene_laboratorio,
-        color: editingMateria.color || '',
-        activo: editingMateria.activo
-      });
-    } else {
-      setFormData({
-        area_conocimiento_id: areas.length > 0 ? areas[0].id : 0,
-        codigo: '',
-        nombre: '',
-        descripcion: '',
-        horas_semanales: 0,
-        creditos: 0,
-        es_obligatoria: true,
-        tiene_laboratorio: false,
-        color: '',
-        activo: true
-      });
-    }
-    setErrors({});
-  }, [editingMateria, open, areas]);
+  if (editingMateria) {
+    setFormData({
+      area_conocimiento_id: editingMateria.area_conocimiento_id,
+      codigo: editingMateria.codigo,
+      nombre: editingMateria.nombre,
+      descripcion: editingMateria.descripcion || '',
+      horas_semanales: editingMateria.horas_semanales || 0,
+      creditos: editingMateria.creditos || 0,
+      es_obligatoria: editingMateria.es_obligatoria,
+      tiene_laboratorio: editingMateria.tiene_laboratorio,
+      color: editingMateria.color || '',
+      activo: editingMateria.activo
+    });
+  } else {
+    // 🔥 ASEGURARSE que siempre haya un área válida
+    const primeraArea = areas.length > 0 ? areas[0].id : undefined;
+    
+    setFormData({
+      area_conocimiento_id: primeraArea || 1, // 🔥 Fallback a 1 si no hay áreas
+      codigo: '',
+      nombre: '',
+      descripcion: '',
+      horas_semanales: 0,
+      creditos: 0,
+      es_obligatoria: true,
+      tiene_laboratorio: false,
+      color: '',
+      activo: true
+    });
+  }
+  setErrors({});
+}, [editingMateria, open, areas]);
+
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+  const newErrors: Record<string, string> = {};
 
-    if (!formData.nombre.trim()) {
-      newErrors.nombre = 'El nombre es requerido';
-    }
+  if (!formData.nombre.trim()) {
+    newErrors.nombre = 'El nombre es requerido';
+  }
 
-    if (!formData.codigo.trim()) {
-      newErrors.codigo = 'El código es requerido';
-    }
+  if (!formData.codigo.trim()) {
+    newErrors.codigo = 'El código es requerido';
+  }
 
-    if (!formData.area_conocimiento_id) {
-      newErrors.area_conocimiento_id = 'Selecciona un área de conocimiento';
-    }
+  // 🔥 Validación mejorada
+  if (!formData.area_conocimiento_id || formData.area_conocimiento_id === 0) {
+    newErrors.area_conocimiento_id = 'Selecciona un área de conocimiento';
+  }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
 
   const handleSave = async () => {
     if (!validateForm()) return;
-
+console.log('📤 Datos a enviar:', formData);
+  console.log('📤 Tipo de area_conocimiento_id:', typeof formData.area_conocimiento_id);
     try {
       await onSave(formData);
       onClose();
@@ -118,33 +125,52 @@ export const MateriaFormDialog: React.FC<MateriaFormDialogProps> = ({
   };
 
   const handleChange = (field: keyof MateriaFormData) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const value = e.target.type === 'number' 
-      ? (e.target.value ? parseFloat(e.target.value) : 0)
-      : e.target.type === 'checkbox'
-      ? (e.target as HTMLInputElement).checked
-      : e.target.value;
-    
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
-    if (errors[field]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
+  e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+) => {
+  let value: any;
+  
+  // Determinar el tipo de valor según el campo
+  if (e.target.type === 'number') {
+    value = e.target.value ? parseFloat(e.target.value) : 0;
+  } else if (e.target.type === 'checkbox') {
+    value = (e.target as HTMLInputElement).checked;
+  } else if (field === 'area_conocimiento_id') {
+    // CRÍTICO: Convertir a número para el área de conocimiento
+    value = parseInt(e.target.value, 10);
+    console.log('🎯 Área seleccionada:', value, typeof value);
+  } else {
+    value = e.target.value;
+  }
+  
+  setFormData(prev => ({ ...prev, [field]: value }));
+  
+  // Limpiar error del campo
+  if (errors[field]) {
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[field];
+      return newErrors;
+    });
+  }
 
-    // Auto-generar código
-    if (field === 'nombre' && !editingMateria) {
-      const area = areas.find(a => a.id === formData.area_conocimiento_id);
-      if (area) {
-        const codigo = `${area.nombre.substring(0, 2).toUpperCase()}${String(value).substring(0, 3).toUpperCase()}`;
-        setFormData(prev => ({ ...prev, codigo }));
-      }
+  // Auto-generar código cuando cambia el nombre
+  if (field === 'nombre' && !editingMateria) {
+    const area = areas.find(a => a.id === formData.area_conocimiento_id);
+    if (area) {
+      const codigo = `${area.nombre.substring(0, 2).toUpperCase()}${String(value).substring(0, 3).toUpperCase()}`;
+      setFormData(prev => ({ ...prev, codigo }));
     }
-  };
+  }
+  
+  // Auto-generar código cuando cambia el área
+  if (field === 'area_conocimiento_id' && !editingMateria && formData.nombre) {
+    const area = areas.find(a => a.id === value);
+    if (area) {
+      const codigo = `${area.nombre.substring(0, 2).toUpperCase()}${formData.nombre.substring(0, 3).toUpperCase()}`;
+      setFormData(prev => ({ ...prev, codigo }));
+    }
+  }
+};
 
   const areaSeleccionada = areas.find(a => a.id === formData.area_conocimiento_id);
 
@@ -194,7 +220,7 @@ export const MateriaFormDialog: React.FC<MateriaFormDialogProps> = ({
               fullWidth
               select
               label="Área de Conocimiento"
-              value={formData.area_conocimiento_id}
+              value={formData.area_conocimiento_id || (areas.length > 0 ? areas[0].id : '')}
               onChange={handleChange('area_conocimiento_id')}
               error={!!errors.area_conocimiento_id}
               helperText={errors.area_conocimiento_id}

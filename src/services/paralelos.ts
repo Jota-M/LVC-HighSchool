@@ -102,7 +102,7 @@ class ParalelosService {
   // ===== TURNOS (asumiendo endpoint similar) =====
   
   async listarTurnos(): Promise<TurnosResponse> {
-    const { data } = await api.get<TurnosResponse>('/turnos');
+    const { data } = await api.get<TurnosResponse>('/turno');
     return data;
   }
 

@@ -21,22 +21,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Cargar usuario SOLO una vez al inicio
   useEffect(() => {
     let isMounted = true;
 
     const loadUser = async () => {
+      console.log('🔄 AuthContext: Cargando usuario...');
       try {
         const currentUser = await authService.getCurrentUser();
         if (isMounted) {
+          console.log('✅ AuthContext: Usuario cargado', currentUser);
           setUser(currentUser);
         }
       } catch (error) {
+        console.log('❌ AuthContext: Error al cargar usuario', error);
         if (isMounted) {
           setUser(null);
         }
       } finally {
         if (isMounted) {
+          console.log('🏁 AuthContext: Carga finalizada, loading = false');
           setLoading(false);
         }
       }
@@ -47,11 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       isMounted = false;
     };
-  }, []); // VACÍO - solo al montar
+  }, []);
 
   const login = async (credential: string, password: string) => {
+    console.log('🔐 AuthContext: Intentando login...');
     const response = await authService.login({ credential, password });
     setUser(response.data.user);
+    console.log('✅ AuthContext: Login exitoso', response.data.user);
     
     // Determinar ruta según rol
     const roles = response.data.user.roles?.map(r => r.nombre) || [];
@@ -61,13 +66,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       targetPath = '/dashboard/padre/principal';
     } else if (roles.includes('profesor')) {
       targetPath = '/dashboard/profesor/home';
+    } else if (roles.includes('admin') || roles.includes('super_admin')) {
+      targetPath = '/dashboard';
     }
     
-    // Usar window.location para forzar navegación completa
+    console.log('🚀 AuthContext: Redirigiendo a', targetPath);
     window.location.href = targetPath;
   };
 
   const logout = async () => {
+    console.log('👋 AuthContext: Cerrando sesión...');
     try {
       await authService.logout();
     } catch (error) {

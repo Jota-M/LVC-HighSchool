@@ -89,7 +89,7 @@ function About() {
             }}
           >
             <img
-              src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800"
+              src="/image.jpg"
               alt="Estudiantes"
               style={{
                 width: "100%",
@@ -120,21 +120,9 @@ function About() {
 
         {/* Misión y Visión */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "40px", marginBottom: "80px" }}>
-          <InfoCard title="Misión" text="La misión de la Unidad Educativa es formar estudiantes reflexivos, respetuosos, tolerantes 
-y productivos, con una formación integral en aulas implementadas adecuadamente, con 
-personal actualizado y comprometido con la identidad de la Unidad Educativa Particular 
-“La Voz de Cristo” con “Principios Cristianos”, con la misión de ayuda al prójimo, y que 
-responda a las necesidades socio-culturales de la comunidad. 
-Contar con una educación innovadora, para el desarrollo integral, basado en Principios y 
-Valores Cristianos, solidarios y éticos, de conciencia de preservación y mantenimiento del 
-medio ambiente. " isDark={isDarkMode} delay={0.4} />
-          <InfoCard title="Visión" text="Elevar la calidad educativa a través de la implementación de nuevos conceptos 
-pedagógicos, formando estudiantes con criterio propio, analíticos y reflexivos, 
-investigadores, participativos, lectores y productores de textos, basado en la equidad de 
-género. Partimos de nuestra propuesta educativa que integra ciencia, tecnología, arte y cultura, con 
-enfoque Cristo céntrico, que forma seres humanos dignos, fraternos, competentes, justos, 
-solidarios, comprometidos y capaces de liderar procesos de cambio en la familia y la 
-sociedad, para un estado más justo, solidario y humano." isDark={isDarkMode} delay={0.6} />
+          <InfoCard title="Misión" text="Formar estudiantes reflexivos, respetuosos, tolerantes y productivos, mediante una educación integral con aulas adecuadamente implementadas y personal actualizado y comprometido con la identidad institucional y los Principios Cristianos.
+            Promovemos una educación innovadora para el desarrollo integral, basada en valores cristianos, solidarios y éticos, con conciencia de servicio al prójimo y de preservación del medio ambiente. " isDark={isDarkMode} delay={0.4} />
+          <InfoCard title="Visión" text="Elevar la calidad educativa mediante la implementación de nuevos enfoques pedagógicos que formen estudiantes con criterio propio, analíticos, reflexivos, investigadores, participativos y con hábito lector y de producción textual, basados en la equidad de género. Integrando la ciencia, tecnología, arte y cultura, con un enfoque cristocéntrico que forma personas dignas, fraternas, competentes, justas, solidarias, comprometidas y capaces de liderar procesos de cambio en la familia y la sociedad" isDark={isDarkMode} delay={0.6} />
         </div>
 
         {/* Divisor */}

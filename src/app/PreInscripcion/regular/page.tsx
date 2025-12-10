@@ -1,463 +1,647 @@
-'use client'
-
-import React, { useState } from 'react'
+// pages/AutoMatriculacion.tsx
+'use client';
+import React, { useState } from 'react';
 import {
-  Grid,
-  Typography,
-  TextField,
-  Button,
   Box,
-  useTheme,
+  Container,
   Paper,
-  Fade,
-  Zoom,
-  Slide,
-} from '@mui/material'
-import AccountCircleSharpIcon from '@mui/icons-material/AccountCircleSharp'
-import SearchSharpIcon from '@mui/icons-material/SearchSharp'
-import RocketLaunchSharpIcon from '@mui/icons-material/RocketLaunchSharp'
-import DataExplorationSharpIcon from '@mui/icons-material/DataExplorationSharp'
-import VerifiedUserIcon from '@mui/icons-material/VerifiedUser'
-import SpeedIcon from '@mui/icons-material/Speed'
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+  Typography,
+  Button,
+  TextField,
+  Stepper,
+  Step,
+  StepLabel,
+  Grid,
+  Avatar,
+  Chip,
+  Alert,
+  Card,
+  CardContent,
+  CardActionArea,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Divider,
+  CircularProgress,
+  useTheme,
+  Stack,
+} from '@mui/material';
+import {
+  School as SchoolIcon,
+  CheckCircle as CheckIcon,
+  ArrowForward as NextIcon,
+  ArrowBack as BackIcon,
+  Person as PersonIcon,
+  Home as HomeIcon,
+} from '@mui/icons-material';
+import Header from '../../login/Header';
+import { useAutoMatriculacion } from '@/hooks/useAutoMatriculacion';
 
-// Componente de tarjeta informativa mejorada
-interface InfoCardProps {
-  icon: React.ElementType;
-  title: string;
-  delay?: number; // or string — depending on what you use it for
-}
+const steps = ['Verificación', 'Información', 'Selección de Paralelo', 'Confirmación'];
 
-const InfoCard: React.FC<InfoCardProps> = ({ icon: Icon, title, delay }) => {
-  const theme = useTheme()
-  const isDark = theme.palette.mode === 'dark'
-  
-  return (
-    <Zoom in={true} style={{ transitionDelay: `${delay}ms` }}>
-      <Paper
-        elevation={0}
-        sx={{
-          p: 3,
-          borderRadius: 4,
-          bgcolor: isDark ? 'rgba(144, 202, 249, 0.08)' : 'rgba(0, 105, 92, 0.06)',
-          border: `1px solid ${isDark ? 'rgba(144, 202, 249, 0.2)' : 'rgba(0, 105, 92, 0.15)'}`,
-          textAlign: 'center',
-          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          position: 'relative',
-          overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: '-100%',
-            width: '100%',
-            height: '100%',
-            background: isDark 
-              ? 'linear-gradient(90deg, transparent, rgba(144, 202, 249, 0.1), transparent)'
-              : 'linear-gradient(90deg, transparent, rgba(0, 105, 92, 0.08), transparent)',
-            transition: 'left 0.6s ease',
-          },
-          '&:hover': {
-            transform: 'translateY(-8px)',
-            boxShadow: isDark 
-              ? '0 12px 40px rgba(144, 202, 249, 0.25)'
-              : '0 12px 40px rgba(0, 105, 92, 0.2)',
-            '&::before': {
-              left: '100%',
-            },
-          },
-        }}
-      >
-        <Box
-          sx={{
-            width: 70,
-            height: 70,
-            borderRadius: '50%',
-            bgcolor: isDark ? 'rgba(144, 202, 249, 0.15)' : 'rgba(0, 105, 92, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            mx: 'auto',
-            mb: 2,
-            transition: 'transform 0.4s ease',
-            '&:hover': {
-              transform: 'rotate(360deg) scale(1.1)',
-            },
-          }}
-        >
-          <Icon sx={{ fontSize: 35, color: isDark ? '#90caf9' : '#00695c' }} />
-        </Box>
-        <Typography
-          variant="h6"
-          sx={{
-            fontWeight: 600,
-            fontSize: '1rem',
-            color: isDark ? 'grey.100' : 'grey.800',
-          }}
-        >
-          {title}
-        </Typography>
-      </Paper>
-    </Zoom>
-  )
-}
-
-// Componente principal
-function Page() {
-  const theme = useTheme()
-  const isDark = theme.palette.mode === 'dark'
+const AutoMatriculacion: React.FC = () => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
-    carnet: '',
-    apellido: '',
-    fecha: '',
-  })
+    codigo: '',
+    ci: '',
+  });
+  const [paraleloSeleccionado, setParaleloSeleccionado] = useState<number | null>(null);
+  const [gradoFiltro, setGradoFiltro] = useState<number | null>(null);
 
-  const handleInputChange = (field: string) => (event: { target: { value: any } }) => {
-    setFormData({ ...formData, [field]: event.target.value })
-  }
+  const {
+    validar,
+    matricular,
+    resetear,
+    isValidando,
+    isMatriculando,
+    isLoadingOpciones,
+    datosEstudiante,
+    opciones,
+    matriculaExitosa,
+  } = useAutoMatriculacion();
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleValidar = () => {
+    if (!formData.codigo || !formData.ci) {
+      alert('Por favor completa todos los campos');
+      return;
+    }
+    validar(formData);
+  };
+
+  const handleNext = () => {
+    setActiveStep((prev) => prev + 1);
+  };
+
+  const handleBack = () => {
+    setActiveStep((prev) => prev - 1);
+  };
+
+  const handleMatricular = () => {
+    if (!paraleloSeleccionado) {
+      alert('Por favor selecciona un paralelo');
+      return;
+    }
+
+    matricular({
+      codigo: formData.codigo,
+      ci: formData.ci,
+      paralelo_id: paraleloSeleccionado,
+    });
+  };
+
+  const handleReiniciar = () => {
+    setActiveStep(0);
+    setFormData({ codigo: '', ci: '' });
+    setParaleloSeleccionado(null);
+    setGradoFiltro(null);
+    resetear();
+  };
+
+  // Validación exitosa, pasar al siguiente paso
+  React.useEffect(() => {
+    if (datosEstudiante && activeStep === 0) {
+      setActiveStep(1);
+    }
+  }, [datosEstudiante, activeStep]);
+
+  // Matrícula exitosa, mostrar confirmación
+  React.useEffect(() => {
+    if (matriculaExitosa) {
+      setActiveStep(3);
+    }
+  }, [matriculaExitosa]);
+
+  // Filtrar paralelos por grado
+  const paralelosFiltrados = React.useMemo(() => {
+    if (!opciones?.paralelos) return [];
+    if (!gradoFiltro) return opciones.paralelos;
+    return opciones.paralelos.filter((p) => p.grado_id === gradoFiltro);
+  }, [opciones?.paralelos, gradoFiltro]);
 
   return (
+    <>
+    <Header></Header>
     <Box
       sx={{
         minHeight: '100vh',
         background: isDark
-          ? 'linear-gradient(135deg, #0a0e27 0%, #1a1d3a 50%, #0f1129 100%)'
-          : 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-        position: 'relative',
-        overflow: 'hidden',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: '-50%',
-          right: '-20%',
-          width: '600px',
-          height: '600px',
-          borderRadius: '50%',
-          background: isDark 
-            ? 'radial-gradient(circle, rgba(66, 165, 245, 0.15), transparent)'
-            : 'radial-gradient(circle, rgba(0, 105, 92, 0.08), transparent)',
-          animation: 'float 20s ease-in-out infinite',
-        },
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          bottom: '-30%',
-          left: '-10%',
-          width: '500px',
-          height: '500px',
-          borderRadius: '50%',
-          background: isDark 
-            ? 'radial-gradient(circle, rgba(38, 198, 218, 0.12), transparent)'
-            : 'radial-gradient(circle, rgba(0, 105, 92, 0.06), transparent)',
-          animation: 'float 25s ease-in-out infinite reverse',
-        },
+          ? 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)'
+          : 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+        pt: 15,
+        display: 'flex',
+        alignItems: 'center',
       }}
     >
-      <Grid container sx={{ position: 'relative', zIndex: 1, pt: 8, pb: 6 }}>
-        {/* Hero Section */}
-        <Grid size={{xs:12}}>
-          <Fade in={true} timeout={1000}>
-            <Box sx={{ textAlign: 'center', mb: 6, px: 3 }}>
-              <Zoom in={true} style={{ transitionDelay: '200ms' }}>
-                <Box
-                  sx={{
-                    display: 'inline-flex',
-                    p: 2,
-                    borderRadius: '50%',
-                    bgcolor: isDark ? 'rgba(144, 202, 249, 0.1)' : 'rgba(0, 105, 92, 0.08)',
-                    mb: 3,
-                    animation: 'pulse 2s ease-in-out infinite',
-                  }}
-                >
-                  <VerifiedUserIcon
-                    sx={{
-                      fontSize: 70,
-                      color: isDark ? '#90caf9' : '#00695c',
-                    }}
-                  />
-                </Box>
-              </Zoom>
-              
-              <Typography
-                variant="h2"
-                sx={{
-                  fontSize: { xs: '2rem', md: '3rem' },
-                  fontWeight: 800,
-                  background: isDark
-                    ? 'linear-gradient(135deg, #90caf9 0%, #26c6da 100%)'
-                    : 'linear-gradient(135deg, #00695c 0%, #00897b 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  mb: 2,
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                ¡Bienvenido de Nuevo!
-              </Typography>
-              
-              <Typography
-                variant="h6"
-                sx={{
-                  maxWidth: 600,
-                  mx: 'auto',
-                  color: isDark ? 'grey.400' : 'grey.700',
-                  fontSize: { xs: '1rem', md: '1.1rem' },
-                  lineHeight: 1.6,
-                  fontWeight: 400,
-                }}
-              >
-                Como estudiante regular, tu proceso de renovación es{' '}
-                <Box component="span" sx={{ 
-                  fontWeight: 700, 
-                  color: isDark ? '#90caf9' : '#00695c',
-                  position: 'relative',
-                  '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    bottom: -2,
-                    left: 0,
-                    width: '100%',
-                    height: 2,
-                    background: isDark ? '#90caf9' : '#00695c',
-                    animation: 'underline 1.5s ease-in-out infinite',
-                  }
-                }}>
-                  rápido y sencillo
-                </Box>
-              </Typography>
-            </Box>
-          </Fade>
-        </Grid>
-
-        {/* Info Cards */}
-        <Grid size={{xs:12}} >
+      <Container maxWidth="md">
+        {/* Header */}
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Box
             sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
+              display: 'inline-flex',
+              alignItems: 'center',
               justifyContent: 'center',
-              gap: 3,
-              px: 3,
-              mb: 6,
-              maxWidth: 900,
-              mx: 'auto',
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              background: isDark
+                ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                : 'linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%)',
+              mb: 2,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
             }}
           >
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 45%', md: '1 1 30%' } }}>
-              <InfoCard icon={SpeedIcon} title="Proceso Acelerado" delay={200} />
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 45%', md: '1 1 30%' } }}>
-              <InfoCard icon={DataExplorationSharpIcon} title="Datos Preguardados" delay={400} />
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 45%', md: '1 1 30%' } }}>
-              <InfoCard icon={AutoAwesomeIcon} title="Fácil de Usar" delay={600} />
-            </Box>
+            <SchoolIcon sx={{ fontSize: 48, color: isDark ? '#000' : '#667eea' }} />
           </Box>
-        </Grid>
+          <Typography
+            variant="h3"
+            sx={{
+              fontWeight: 800,
+              color: '#fff',
+              mb: 1,
+              textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+            }}
+          >
+            Portal de Matrícula
+          </Typography>
+          <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+            Sistema de Auto-Matriculación para Estudiantes
+          </Typography>
+        </Box>
 
-        {/* Form Section */}
-        <Grid size={{xs:12, md:10, lg:8}}sx={{ mx: 'auto', px: 3 }}>
-          <Slide direction="up" in={true} timeout={800}>
-            <Paper
-              elevation={0}
+        {/* Stepper */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            mb: 3,
+            borderRadius: '20px',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
+          }}
+        >
+          <Stepper activeStep={activeStep} alternativeLabel>
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+        </Paper>
+
+        {/* Step 0: Verificación */}
+        {activeStep === 0 && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 5,
+              borderRadius: '24px',
+              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(20px)',
+            }}
+          >
+            <Box sx={{ textAlign: 'center', mb: 4 }}>
+              <PersonIcon sx={{ fontSize: 64, color: isDark ? '#facc15' : '#667eea', mb: 2 }} />
+              <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                Verificación de Identidad
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Ingresa tu código de estudiante y CI para continuar
+              </Typography>
+            </Box>
+
+            <Grid container spacing={3}>
+              <Grid size={{xs:12}} >
+                <TextField
+                  fullWidth
+                  label="Código de Estudiante"
+                  placeholder="Ej: EST-2024-0001"
+                  value={formData.codigo}
+                  onChange={(e) => handleInputChange('codigo', e.target.value.toUpperCase())}
+                  disabled={isValidando}
+                  InputProps={{
+                    startAdornment: <SchoolIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid size={{xs:12}}>
+                <TextField
+                  fullWidth
+                  label="Cédula de Identidad (CI)"
+                  placeholder="Ej: 1234567"
+                  value={formData.ci}
+                  onChange={(e) => handleInputChange('ci', e.target.value)}
+                  disabled={isValidando}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                    },
+                  }}
+                />
+              </Grid>
+            </Grid>
+
+            <Button
+              fullWidth
+              variant="contained"
+              size="large"
+              onClick={handleValidar}
+              disabled={isValidando || !formData.codigo || !formData.ci}
+              endIcon={isValidando ? <CircularProgress size={20} /> : <NextIcon />}
               sx={{
-                p: { xs: 3, md: 5 },
-                borderRadius: 5,
-                bgcolor: isDark ? 'rgba(17, 25, 54, 0.7)' : 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(20px)',
-                border: `1px solid ${isDark ? 'rgba(144, 202, 249, 0.1)' : 'rgba(0, 105, 92, 0.08)'}`,
-                boxShadow: isDark 
-                  ? '0 20px 60px rgba(0, 0, 0, 0.5)'
-                  : '0 20px 60px rgba(0, 0, 0, 0.08)',
+                mt: 4,
+                py: 1.5,
+                borderRadius: '12px',
+                textTransform: 'none',
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                background: isDark
+                  ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                  : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: isDark ? '#000' : '#fff',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+                },
+                transition: 'all 0.3s ease',
               }}
             >
-              <Box sx={{ textAlign: 'center', mb: 4 }}>
-                <Typography
-                  variant="h4"
-                  sx={{
-                    fontWeight: 700,
-                    mb: 1,
-                    color: isDark ? 'white' : 'grey.900',
-                    fontSize: { xs: '1.5rem', md: '2rem' },
-                  }}
-                >
-                  Verificación de Identidad
-                </Typography>
-                <Typography
-                  variant="body1"
-                  sx={{
-                    color: isDark ? 'grey.400' : 'grey.600',
-                    fontSize: { xs: '0.9rem', md: '1rem' },
-                  }}
-                >
-                  Ingresa tu información para localizar tu registro académico
-                </Typography>
-              </Box>
+              {isValidando ? 'Verificando...' : 'Verificar Identidad'}
+            </Button>
+          </Paper>
+        )}
 
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 3,
-                }}
+        {/* Step 1: Información del Estudiante */}
+        {activeStep === 1 && datosEstudiante && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 5,
+              borderRadius: '24px',
+              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(20px)',
+            }}
+          >
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 3 }}>
+              Tu Información
+            </Typography>
+
+            {/* Alerta si ya está matriculado */}
+            {datosEstudiante.ya_matriculado && (
+              <Alert severity="info" sx={{ mb: 3, borderRadius: '12px' }}>
+                <strong>Ya estás matriculado</strong> en el periodo actual:{' '}
+                <strong>{datosEstudiante.periodo_activo?.nombre}</strong>
+              </Alert>
+            )}
+
+            {/* Datos del estudiante */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
+              <Avatar
+                src={datosEstudiante.estudiante.foto_url || undefined}
+                sx={{ width: 100, height: 100 }}
               >
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  label="Número de Carnet"
-                  value={formData.carnet}
-                  onChange={handleInputChange('carnet')}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                      },
-                      '&.Mui-focused': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: isDark 
-                          ? '0 4px 20px rgba(144, 202, 249, 0.2)'
-                          : '0 4px 20px rgba(0, 105, 92, 0.15)',
-                      },
-                    },
-                  }}
+                {datosEstudiante.estudiante.nombres.charAt(0)}
+              </Avatar>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  {datosEstudiante.estudiante.nombres}{' '}
+                  {datosEstudiante.estudiante.apellido_paterno}{' '}
+                  {datosEstudiante.estudiante.apellido_materno}
+                </Typography>
+                <Chip
+                  label={`Código: ${datosEstudiante.estudiante.codigo}`}
+                  size="small"
+                  sx={{ mr: 1, mt: 1 }}
                 />
+              </Box>
+            </Box>
 
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  label="Apellido Paterno"
-                  value={formData.apellido}
-                  onChange={handleInputChange('apellido')}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                      },
-                      '&.Mui-focused': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: isDark 
-                          ? '0 4px 20px rgba(144, 202, 249, 0.2)'
-                          : '0 4px 20px rgba(0, 105, 92, 0.15)',
-                      },
-                    },
-                  }}
-                />
+            <Divider sx={{ my: 3 }} />
 
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  label="Fecha de Nacimiento"
-                  type="date"
-                  value={formData.fecha}
-                  onChange={handleInputChange('fecha')}
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                      },
-                      '&.Mui-focused': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: isDark 
-                          ? '0 4px 20px rgba(144, 202, 249, 0.2)'
-                          : '0 4px 20px rgba(0, 105, 92, 0.15)',
-                      },
-                    },
-                  }}
-                />
+            {/* Última matrícula */}
+            {datosEstudiante.ultima_matricula && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                  Última Matrícula
+                </Typography>
+                <Card sx={{ borderRadius: '12px' }}>
+                  <CardContent>
+                    <Grid container spacing={2}>
+                      <Grid size={{xs:6}} >
+                        <Typography variant="body2" color="text.secondary">
+                          Periodo
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {datosEstudiante.ultima_matricula.periodo_nombre}
+                        </Typography>
+                      </Grid>
+                      <Grid size={{xs:6}} >
+                        <Typography variant="body2" color="text.secondary">
+                          Grado
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {datosEstudiante.ultima_matricula.grado_nombre}
+                        </Typography>
+                      </Grid>
+                      <Grid size={{xs:6}} >
+                        <Typography variant="body2" color="text.secondary">
+                          Paralelo
+                        </Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {datosEstudiante.ultima_matricula.paralelo_nombre}
+                        </Typography>
+                      </Grid>
+                      <Grid size={{xs:6}} >
+                        <Typography variant="body2" color="text.secondary">
+                          Estado
+                        </Typography>
+                        <Chip
+                          label={datosEstudiante.ultima_matricula.estado}
+                          size="small"
+                          color="success"
+                        />
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+              </Box>
+            )}
 
+            {/* Periodo disponible */}
+            {datosEstudiante.periodo_activo && !datosEstudiante.ya_matriculado && (
+              <Alert severity="success" sx={{ mb: 3, borderRadius: '12px' }}>
+                <strong>Periodo Disponible:</strong> {datosEstudiante.periodo_activo.nombre}
+                <br />
+                <strong>Inscripciones:</strong> Hasta el{' '}
+                {new Date(datosEstudiante.periodo_activo.fecha_fin).toLocaleDateString('es-ES')}
+              </Alert>
+            )}
+
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+              <Button onClick={handleReiniciar} startIcon={<BackIcon />} sx={{ textTransform: 'none' }}>
+                Volver
+              </Button>
+              {!datosEstudiante.ya_matriculado && datosEstudiante.periodo_activo && (
                 <Button
                   variant="contained"
-                  size="large"
-                  fullWidth
-                  startIcon={<SearchSharpIcon />}
+                  onClick={handleNext}
+                  endIcon={<NextIcon />}
                   sx={{
-                    py: 2,
-                    borderRadius: 2,
-                    fontWeight: 700,
-                    fontSize: '1.1rem',
+                    borderRadius: '12px',
                     textTransform: 'none',
+                    px: 4,
                     background: isDark
-                      ? 'linear-gradient(135deg, #90caf9 0%, #64b5f6 100%)'
-                      : 'linear-gradient(135deg, #00695c 0%, #00897b 100%)',
-                    boxShadow: isDark 
-                      ? '0 8px 24px rgba(144, 202, 249, 0.3)'
-                      : '0 8px 24px rgba(0, 105, 92, 0.3)',
-                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      width: 0,
-                      height: 0,
-                      borderRadius: '50%',
-                      background: 'rgba(255, 255, 255, 0.3)',
-                      transform: 'translate(-50%, -50%)',
-                      transition: 'width 0.6s, height 0.6s',
-                    },
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: isDark 
-                        ? '0 12px 32px rgba(144, 202, 249, 0.4)'
-                        : '0 12px 32px rgba(0, 105, 92, 0.4)',
-                      '&::before': {
-                        width: '300px',
-                        height: '300px',
-                      },
-                    },
-                    '&:active': {
-                      transform: 'translateY(-2px)',
-                    },
+                      ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: isDark ? '#000' : '#fff',
                   }}
                 >
-                  Buscar mi Registro
+                  Continuar con Matrícula
                 </Button>
+              )}
+            </Box>
+          </Paper>
+        )}
+
+        {/* Step 2: Selección de Paralelo */}
+        {activeStep === 2 && opciones && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 5,
+              borderRadius: '24px',
+              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(20px)',
+            }}
+          >
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 3 }}>
+              Selecciona tu Paralelo
+            </Typography>
+
+            <Alert severity="info" sx={{ mb: 3, borderRadius: '12px' }}>
+              Periodo: <strong>{opciones.periodo_activo.nombre}</strong>
+            </Alert>
+
+            {/* Filtro por grado */}
+            <FormControl fullWidth sx={{ mb: 3 }}>
+              <InputLabel>Filtrar por Grado</InputLabel>
+              <Select
+                value={gradoFiltro || ''}
+                onChange={(e) => setGradoFiltro(e.target.value ? Number(e.target.value) : null)}
+                label="Filtrar por Grado"
+                sx={{ borderRadius: '12px' }}
+              >
+                <MenuItem value="">Todos los grados</MenuItem>
+                {opciones.grados.map((grado) => (
+                  <MenuItem key={grado.id} value={grado.id}>
+                    {grado.nombre} ({grado.nivel_nombre})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Lista de paralelos */}
+            {isLoadingOpciones ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
               </Box>
-            </Paper>
-          </Slide>
-        </Grid>
-      </Grid>
+            ) : paralelosFiltrados.length === 0 ? (
+              <Alert severity="warning" sx={{ borderRadius: '12px' }}>
+                No hay paralelos disponibles para el filtro seleccionado
+              </Alert>
+            ) : (
+              <Grid container spacing={2}>
+                {paralelosFiltrados.map((paralelo) => (
+                  <Grid size={{xs:12}} key={paralelo.id}>
+                    <Card
+                      sx={{
+                        borderRadius: '16px',
+                        border:
+                          paraleloSeleccionado === paralelo.id
+                            ? `3px solid ${isDark ? '#facc15' : '#667eea'}`
+                            : '2px solid transparent',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: 4,
+                        },
+                      }}
+                    >
+                      <CardActionArea onClick={() => setParaleloSeleccionado(paralelo.id)}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box>
+                              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                                {paralelo.grado_nombre} - Paralelo {paralelo.nombre}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {paralelo.turno_nombre} ({paralelo.hora_inicio} - {paralelo.hora_fin})
+                              </Typography>
+                              {paralelo.aula && (
+                                <Chip label={`Aula: ${paralelo.aula}`} size="small" sx={{ mt: 1 }} />
+                              )}
+                            </Box>
+                            <Box sx={{ textAlign: 'right' }}>
+                              <Typography variant="body2" color="text.secondary">
+                                Disponibles
+                              </Typography>
+                              <Typography
+                                variant="h5"
+                                sx={{
+                                  fontWeight: 700,
+                                  color: paralelo.disponibles > 5 ? 'success.main' : 'warning.main',
+                                }}
+                              >
+                                {paralelo.disponibles}/{paralelo.capacidad_maxima}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {paralelo.porcentaje_ocupacion}% ocupado
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </CardContent>
+                      </CardActionArea>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
 
-      {/* Animaciones CSS */}
-      <style jsx global>{`
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0px) translateX(0px);
-          }
-          50% {
-            transform: translateY(-30px) translateX(20px);
-          }
-        }
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+              <Button onClick={handleBack} startIcon={<BackIcon />} sx={{ textTransform: 'none' }}>
+                Atrás
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleMatricular}
+                disabled={!paraleloSeleccionado || isMatriculando}
+                startIcon={isMatriculando ? <CircularProgress size={20} /> : <CheckIcon />}
+                sx={{
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  px: 4,
+                  background: isDark
+                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: isDark ? '#000' : '#fff',
+                }}
+              >
+                {isMatriculando ? 'Procesando...' : 'Confirmar Matrícula'}
+              </Button>
+            </Box>
+          </Paper>
+        )}
 
-        @keyframes pulse {
-          0%, 100% {
-            transform: scale(1);
-          }
-          50% {
-            transform: scale(1.05);
-          }
-        }
+        {/* Step 3: Confirmación */}
+        {activeStep === 3 && matriculaExitosa && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 5,
+              borderRadius: '24px',
+              backgroundColor: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(20px)',
+              textAlign: 'center',
+            }}
+          >
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 100,
+                height: 100,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)',
+                mb: 3,
+              }}
+            >
+              <CheckIcon sx={{ fontSize: 64, color: '#fff' }} />
+            </Box>
 
-        @keyframes underline {
-          0%, 100% {
-            transform: scaleX(1);
-          }
-          50% {
-            transform: scaleX(0.8);
-          }
-        }
-      `}</style>
+            <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>
+              ¡Matrícula Exitosa!
+            </Typography>
+
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+              Tu matrícula ha sido procesada correctamente
+            </Typography>
+
+            <Card sx={{ borderRadius: '16px', mb: 4 }}>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Número de Matrícula
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                      {matriculaExitosa.data.matricula.numero_matricula}
+                    </Typography>
+                  </Box>
+                  <Divider />
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Grado y Paralelo
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      {matriculaExitosa.data.matricula.grado_nombre} -{' '}
+                      {matriculaExitosa.data.matricula.paralelo_nombre}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Turno
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      {matriculaExitosa.data.matricula.turno_nombre}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Fecha de Matrícula
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                      {new Date(matriculaExitosa.data.matricula.fecha_matricula).toLocaleDateString('es-ES')}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+
+            <Alert severity="success" sx={{ mb: 3, borderRadius: '12px' }}>
+              Tu matrícula ha sido confirmada. Puedes presentarte en la institución en las fechas indicadas.
+            </Alert>
+
+            <Button
+              variant="outlined"
+              size="large"
+              onClick={handleReiniciar}
+              startIcon={<HomeIcon />}
+              sx={{
+                borderRadius: '12px',
+                textTransform: 'none',
+                px: 4,
+              }}
+            >
+              Volver al Inicio
+            </Button>
+          </Paper>
+        )}
+      </Container>
     </Box>
-  )
-}
+    </>
+  );
+};
 
-export default Page
+export default AutoMatriculacion;

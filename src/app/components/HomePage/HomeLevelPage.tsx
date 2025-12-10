@@ -147,7 +147,10 @@ export default function HomeLevelPage({
     <Fade in={visible} timeout={700}>
       <Box
         sx={{
-          bgcolor: "background.default",
+          bgcolor: isDark
+          ? 'linear-gradient(135deg, #090B26 0%, #000000 100%)'
+          : 'linear-gradient(135deg, #fdfcfb 0%, #e0e7ff 100%)',
+
           color: "text.primary",
           pt: { xs: 10, md: 15 },
           minHeight: "100vh",
@@ -156,23 +159,6 @@ export default function HomeLevelPage({
         }}
       >
         <Navbar />
-
-        {/* Fondo animado con partículas */}
-        <Box
-          sx={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "100%",
-            background: isDark
-              ? "radial-gradient(circle at 30% 20%, rgba(1, 87, 155, 0.15), transparent)"
-              : "radial-gradient(circle at 30% 20%, rgba(187, 222, 251, 0.3), transparent)",
-            animation: `${pulse} 10s ease-in-out infinite`,
-            zIndex: 0,
-            pointerEvents: "none",
-          }}
-        />
         <Container maxWidth="xl" sx={{ position: "relative", zIndex: 1 }}>
           {/* CABECERA MEJORADA */}
           <Box

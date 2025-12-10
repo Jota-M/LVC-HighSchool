@@ -31,7 +31,7 @@ import {
   AutoStories,
 } from '@mui/icons-material';
 import Cards from '../components/HomePage/Card';
-import Navbar from '../PreInscripcion/Navbar';
+import Navbar from '../login/Header';
 const fadeInUp = keyframes`
   from {
     opacity: 0;
@@ -149,9 +149,9 @@ function MallaCurricularLanding() {
 
   const stats = [
     { number: '3', label: 'Niveles Educativos', icon: <School /> },
-    { number: '15+', label: 'Años de Experiencia', icon: <WorkspacePremium /> },
     { number: '100%', label: 'Educación Cristiana', icon: <Favorite /> },
-    { number: '200+', label: 'Estudiantes Formados', icon: <Groups /> },
+    { number: '', label: 'Participación familiar', icon: <WorkspacePremium /> },
+    { number: '100%', label: 'Seguimiento Academico', icon: <Groups /> },
   ];
 
   const benefits = [
@@ -167,7 +167,7 @@ function MallaCurricularLanding() {
     {
       link: "/mallacurricular/inicial",
       init: "Initial",
-      imageurl: "/Nivels/Initial.jpg",
+      imageurl: "/Nivels/Initiall.jpg",
       title: "Educación Inicial",
       paragraph:
         "Primeros pasos en el aprendizaje con metodología lúdica, desarrollo psicomotor y formación en valores cristianos.",
@@ -178,7 +178,7 @@ function MallaCurricularLanding() {
     {
       link: "/mallacurricular/primaria",
       init: "Primary",
-      imageurl: "/Nivels/Primary-3.jpg",
+      imageurl: "/Nivels/Primaryy.jpg",
       title: "Educación Primaria",
       paragraph:
         "Formación académica sólida con énfasis en lectoescritura, matemáticas, ciencias y desarrollo del pensamiento crítico.",
@@ -189,7 +189,7 @@ function MallaCurricularLanding() {
     {
       link: "/mallacurricular/secundaria",
       init: "Secondary",
-      imageurl: "/Nivels/Secondary-1.jpg",
+      imageurl: "/Nivels/Secondary.jpg",
       title: "Educación Secundaria",
       paragraph:
         "Preparación integral para la educación superior con bachillerato en ciencias, liderazgo y servicio comunitario.",
@@ -202,6 +202,7 @@ function MallaCurricularLanding() {
 
   return (
     <>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet"></link>
       <Navbar />
     <Box
       sx={{
@@ -251,7 +252,7 @@ function MallaCurricularLanding() {
         <Box 
           sx={{ 
             textAlign: 'center', 
-            mt: 5,
+            mt: 8,
             mb: 8,
             animation: `${fadeInUp} 1s ease-out`,
           }}
@@ -259,11 +260,12 @@ function MallaCurricularLanding() {
           <Typography
             variant="h1"
             sx={{
-              fontWeight: 900,
+              fontFamily: "Roboto, sans-serif",
+              fontWeight: 600,
               fontSize: { xs: '2.5rem', md: '4rem' },
               background: isDark
                 ? 'linear-gradient(135deg, #facc15, #ffd54f)'
-                : 'linear-gradient(135deg, #dc2626 0%, #01579b 100%)',
+                : 'linear-gradient(135deg, #01579b , #0288d1)',
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -277,25 +279,14 @@ function MallaCurricularLanding() {
           <Typography
             variant="h4"
             sx={{
-              color: isDark ? '#01579b' : '#dc2626',
+              fontFamily: "Roboto, sans-serif",
+              color: isDark ? '#01579b' :   '#facc15',
               mb: 2,
               fontWeight: 700,
               fontStyle: 'italic',
             }}
           >
             La Voz de Cristo High School
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              color: isDark ? 'grey.500' : 'grey.600',
-              maxWidth: 700,
-              mx: 'auto',
-              mb: 5,
-              fontStyle: 'italic',
-            }}
-          >
-            "Instruye al niño en su camino, y aun cuando fuere viejo no se apartará de él" - Proverbios 22:6
           </Typography>
         </Box>
 
@@ -323,20 +314,20 @@ function MallaCurricularLanding() {
                   borderRadius: 3,
                   bgcolor: isDark ? 'rgba(17, 25, 54, 0.6)' : 'rgba(255, 255, 255, 0.8)',
                   backdropFilter: 'blur(10px)',
-                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+                  border: `1px solid ${isDark ? '#facc15' : '#01579b'}`,
                   transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
                     transform: 'translateY(-12px) scale(1.02)',
                     boxShadow: isDark
-                      ? '0 20px 40px rgba(239, 68, 68, 0.3)'
-                      : '0 20px 40px rgba(239, 68, 68, 0.2)',
-                    borderColor: '#ef4444',
+                      ? '0 20px 40px #facc15'
+                      : '0 20px 40px #01579b',
+                    borderColor: isDark ? '#facc15' : '#01579b',
                   },
                 }}
               >
                 <Box
                   sx={{
-                    color: '#ef4444',
+                    color: isDark ? '#facc15' : '#01579b',
                     mb: 2,
                     '& svg': { fontSize: 40 },
                   }}
@@ -379,6 +370,7 @@ function MallaCurricularLanding() {
             <Typography
               variant="h3"
               sx={{
+                fontFamily: "Roboto, sans-serif",
                 fontWeight: 700,
                 color: isDark ? 'white' : 'grey.900',
                 mb: 2,
@@ -448,6 +440,7 @@ function MallaCurricularLanding() {
                   <Typography
                     variant="h6"
                     sx={{
+                      fontFamily: "Roboto, sans-serif",
                       fontWeight: 700,
                       color: isDark ? 'white' : 'grey.900',
                       mb: 1,
@@ -470,87 +463,6 @@ function MallaCurricularLanding() {
           </Grid>
         </Box>
 
-        {/* Benefits Section */}
-        <Card
-          elevation={0}
-          sx={{
-            p: { xs: 4, md: 6 },
-            borderRadius: 4,
-            bgcolor: isDark
-              ? 'rgba(239, 68, 68, 0.1)'
-              : 'linear-gradient(135deg, #fee2e2 0%, #fef3c7 100%)',
-            border: `2px solid ${isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)'}`,
-            mb: 8,
-            animation: `${fadeInUp} 1s ease-out 0.8s both`,
-          }}
-        >
-          <Grid container spacing={4} alignItems="center">
-            <Grid size={{ xs: 12, md: 5 }}>
-              <Favorite
-                sx={{
-                  fontSize: 60,
-                  color: '#ef4444',
-                  mb: 2,
-                  animation: `${pulse} 2s ease-in-out infinite`,
-                }} 
-              />
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 700,
-                  color: isDark ? 'white' : 'grey.900',
-                  mb: 2,
-                }}
-              >
-                ¿Por qué elegirnos?
-              </Typography>
-              <Typography
-                variant="body1"
-                sx={{
-                  color: isDark ? 'grey.400' : 'grey.700',
-                  lineHeight: 1.7,
-                }}
-              >
-                En La Voz de Cristo formamos no solo estudiantes académicamente excelentes, sino discípulos de Cristo preparados para brillar en el mundo
-              </Typography>
-            </Grid>
-            <Grid size={{xs:12, md:7}} >
-              <Grid container spacing={2}>
-                {benefits.map((benefit, index) => (
-                  <Grid 
-                    size={{xs:12, md:6}} 
-                    key={index}
-                    sx={{
-                      animation: `${fadeInUp} 0.6s ease-out ${1 + index * 0.1}s both`,
-                    }}
-                  >
-                    <Box display="flex" alignItems="flex-start" gap={1.5}>
-                      <CheckCircle
-                        sx={{
-                          color: '#10b981',
-                          fontSize: 24,
-                          flexShrink: 0,
-                          mt: 0.5,
-                        }}
-                      />
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: isDark ? 'grey.300' : 'grey.700',
-                          fontWeight: 500,
-                          lineHeight: 1.6,
-                        }}
-                      >
-                        {benefit}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                ))}
-              </Grid>
-            </Grid>
-          </Grid>
-        </Card>
-
         {/* Niveles Educativos Section */}
         <Box sx={{ mb: 8 }}>
           <Box
@@ -563,8 +475,9 @@ function MallaCurricularLanding() {
             <Typography
               variant="h3"
               sx={{
+                fontFamily: "Roboto, sans-serif",
                 fontWeight: 700,
-                color: isDark ? 'white' : 'grey.900',
+                color: isDark ? '#facc15':'#01579b' ,
                 mb: 2,
               }}
             >
@@ -650,7 +563,87 @@ function MallaCurricularLanding() {
             ))}
           </Grid>
         </Box>
-
+        {/* Benefits Section */}
+        <Card
+          elevation={0}
+          sx={{
+            p: { xs: 4, md: 6 },
+            borderRadius: 4,
+            bgcolor: isDark
+              ? 'rgba(239, 68, 68, 0.1)'
+              : 'linear-gradient(135deg, #fee2e2 0%, #fef3c7 100%)',
+            border: `2px solid ${isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)'}`,
+            mb: 8,
+            animation: `${fadeInUp} 1s ease-out 0.8s both`,
+          }}
+        >
+          <Grid container spacing={4} alignItems="center">
+            <Grid size={{ xs: 12, md: 5 }}>
+              <Favorite
+                sx={{
+                  fontSize: 60,
+                  color: '#ef4444',
+                  mb: 2,
+                  animation: `${pulse} 2s ease-in-out infinite`,
+                }} 
+              />
+              <Typography
+                variant="h4"
+                sx={{
+                  fontFamily: "Roboto, sans-serif",
+                  fontWeight: 700,
+                  color: isDark ? 'white' : 'grey.900',
+                  mb: 2,
+                }}
+              >
+                ¿Por qué elegirnos?
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  color: isDark ? 'grey.400' : 'grey.700',
+                  lineHeight: 1.7,
+                }}
+              >
+                En La Voz de Cristo formamos no solo estudiantes académicamente excelentes, sino discípulos de Cristo preparados para brillar en el mundo
+              </Typography>
+            </Grid>
+            <Grid size={{xs:12, md:7}} >
+              <Grid container spacing={2}>
+                {benefits.map((benefit, index) => (
+                  <Grid 
+                    size={{xs:12, md:6}} 
+                    key={index}
+                    sx={{
+                      animation: `${fadeInUp} 0.6s ease-out ${1 + index * 0.1}s both`,
+                    }}
+                  >
+                    <Box display="flex" alignItems="flex-start" gap={1.5}>
+                      <CheckCircle
+                        sx={{
+                          color: '#10b981',
+                          fontSize: 24,
+                          flexShrink: 0,
+                          mt: 0.5,
+                        }}
+                      />
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: isDark ? 'grey.300' : 'grey.700',
+                          fontWeight: 500,
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {benefit}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Grid>
+          </Grid>
+        </Card>
         {/* Footer con versículo */}
         <Box 
           sx={{ 

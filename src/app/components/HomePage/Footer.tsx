@@ -20,20 +20,20 @@ function Footer() {
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <LocationOn sx={{ mr: 1, fontSize: 20 }} />
             <Typography variant="body2">
-              Av. Amazonas N24-03 y Colón <br /> Quito, Ecuador
+              Avenida Argentina Nro 200 entre Calle Trujillo y Luis Espinal <br /> Potosí, Bolivia
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <Phone sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2">(02) 234-5678 / (02) 234-5679</Typography>
+            <Typography variant="body2">+591 69624189 • 76162425 • 68420862</Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <Email sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2">info@lavozdecristo.edu.ec</Typography>
+            <Typography variant="body2">lavozdecristohighschool@gmail.com</Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <AccessTime sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2">Lun - Vie: 7:00 AM - 4:00 PM</Typography>
+            <Typography variant="body2">Lun - Vie: 1:30 PM - 6:30 PM</Typography>
           </Box>
         </Grid>
 
@@ -46,7 +46,7 @@ function Footer() {
             <Link href="#" underline="hover" color="inherit">Inicio</Link>
             <Link href="#" underline="hover" color="inherit">Nosotros</Link>
             <Link href="#" underline="hover" color="inherit">Niveles Educativos</Link>
-            <Link href="#" underline="hover" sx={{ color: '#38bdf8' }}>Admisiones 2025</Link>
+            <Link href="#" underline="hover" sx={{ color: '#38bdf8' }}>Admisiones 2026</Link>
             <Link href="#" underline="hover" color="inherit">Galería</Link>
             <Link href="#" underline="hover" color="inherit">Noticias</Link>
             <Link href="#" underline="hover" color="inherit">Contacto</Link>
@@ -85,7 +85,7 @@ function Footer() {
       {/* Divider y Derechos */}
       <Divider sx={{ my: 4, bgcolor: 'rgba(255,255,255,0.1)' }} />
       <Typography variant="body2" align="center" sx={{ color: 'gray.400' }}>
-        © 2025 Unidad Educativa Particular Cristiana La Voz de Cristo. Todos los derechos reservados.
+        © 2026 Unidad Educativa Particular Cristiana La Voz de Cristo. Todos los derechos reservados.
       </Typography>
     </Box>
   );
