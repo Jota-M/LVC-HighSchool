@@ -86,8 +86,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
   // Texto dentro del input
   '& .MuiInputBase-input': {
     color: isDark ? '#fff' : '#000',
-    padding: '10px 14px',
-    fontSize: '0.95rem',
   },
 };
 
@@ -179,7 +177,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
         <Grid size={{xs:12,md:6}} >
           <TextField
             fullWidth
-            size="small"
             label="Nombres"
             value={data.nombres}
             onChange={(e) => handleChange('nombres', e.target.value)}
@@ -190,7 +187,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
         <Grid size={{xs:12,md:3}} >
           <TextField
             fullWidth
-            size="small"
             label="Apellido Paterno"
             value={data.apellido_paterno}
             onChange={(e) => handleChange('apellido_paterno', e.target.value)}
@@ -201,7 +197,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
         <Grid size={{xs:12,md:3}} >
           <TextField
             fullWidth
-            size="small"
             label="Apellido Materno"
             value={data.apellido_materno}
             onChange={(e) => handleChange('apellido_materno', e.target.value)}
@@ -215,13 +210,12 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
             value={data.fecha_nacimiento}
             onChange={(date) => handleChange('fecha_nacimiento', date)}
             sx={fieldStyle}
-            slotProps={{ textField: { fullWidth: true, size: 'small', required: true } }}
+            slotProps={{ textField: { fullWidth: true, required: true } }}
           />
         </Grid>
         <Grid size={{xs:12,md:3}}>
           <TextField
             fullWidth
-            size="small"
             label="CI"
             value={data.ci}
             onChange={(e) => handleChange('ci', e.target.value)}
@@ -231,7 +225,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
         <Grid size={{xs:12,md:3}}>
           <TextField
             fullWidth
-            size="small"
             label="Lugar de Nacimiento"
             value={data.lugar_nacimiento}
             onChange={(e) => handleChange('lugar_nacimiento', e.target.value)}
@@ -242,7 +235,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
           <TextField
             select
             fullWidth
-            size="small"
             label="Género"
             value={data.genero || ''}
             onChange={(e) => handleChange('genero', e.target.value)}
@@ -259,7 +251,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
         <Grid size={{xs:12,md:9}}>
           <TextField
             fullWidth
-            size="small"
             label="Dirección"
             value={data.direccion}
             onChange={(e) => handleChange('direccion', e.target.value)}
@@ -269,7 +260,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
         <Grid size={{xs:12,md:3}}>
           <TextField
             fullWidth
-            size="small"
             label="Zona"
             value={data.zona}
             onChange={(e) => handleChange('zona', e.target.value)}
@@ -280,7 +270,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
         <Grid size={{xs:12,md:4}}>
           <TextField
             fullWidth
-            size="small"
             label="Ciudad"
             value={data.ciudad}
             onChange={(e) => handleChange('ciudad', e.target.value)}
@@ -290,7 +279,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
         <Grid size={{xs:12,md:4}}>
           <TextField
             fullWidth
-            size="small"
             label="Teléfono"
             value={data.telefono}
             onChange={(e) => handleChange('telefono', e.target.value)}
@@ -300,7 +288,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
         <Grid size={{xs:12,md:4}}>
           <TextField
             fullWidth
-            size="small"
             label="Email"
             type="email"
             value={data.email}
@@ -312,7 +299,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
         <Grid size={{xs:12,md:6}}>
           <TextField
             fullWidth
-            size="small"
             label="Contacto de Emergencia"
             value={data.contacto_emergencia}
             onChange={(e) => handleChange('contacto_emergencia', e.target.value)}
@@ -322,7 +308,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
         <Grid size={{xs:12,md:6}}>
           <TextField
             fullWidth
-            size="small"
             label="Teléfono de Emergencia"
             value={data.telefono_emergencia}
             onChange={(e) => handleChange('telefono_emergencia', e.target.value)}
@@ -334,7 +319,7 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
           <FormControlLabel
             control={
               <Switch
-                checked={data.tiene_discapacidad}
+                checked={data.tiene_discapacidad || false} 
                 onChange={(e) => handleChange('tiene_discapacidad', e.target.checked)}
               />
             }
@@ -346,7 +331,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
           <Grid size={{xs:12}}>
             <TextField
               fullWidth
-              size="small"
               label="Tipo de discapacidad"
               value={data.tipo_discapacidad}
               onChange={(e) => handleChange('tipo_discapacidad', e.target.value)}

@@ -50,12 +50,40 @@ export const UsuariosStep: React.FC<UsuariosStepProps> = ({
   };
 
   const fieldStyle = {
-    width: '100%',
-    '& .MuiInputBase-root': {
-      borderRadius: '12px',
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.9)',
+  width: '100%',
+
+  // Label
+  '& .MuiInputLabel-root': {
+    color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+    fontWeight: 500,
+    fontSize: '0.95rem',
+    '&.Mui-focused': {
+      color: isDark ? '#facc15' : '#0288d1',
     },
-  };
+  },
+
+  // Caja del input (fondo)
+  '& .MuiInputBase-root': {
+    borderRadius: '12px',
+    
+    transition: '0.2s ease',
+    border: '1px solid transparent',
+
+    '&:hover': {
+      borderColor: isDark ? '#facc15' : '#0288d1',
+    },
+
+    '&.Mui-focused': {
+      borderColor: isDark ? '#facc15' : '#0288d1',
+      boxShadow: `0 0 0 2px ${isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(2, 136, 209, 0.25)'}`,
+    },
+  },
+
+  // Texto dentro del input
+  '& .MuiInputBase-input': {
+    color: isDark ? '#fff' : '#000',
+  },
+};
 
   return (
     <Box>
@@ -93,7 +121,6 @@ export const UsuariosStep: React.FC<UsuariosStepProps> = ({
             <Grid size={{xs:12, md:4}} >
               <TextField
                 fullWidth
-                size="small"
                 label="Username"
                 value={credencialesEstudiante.username}
                 onChange={(e) =>
@@ -106,7 +133,6 @@ export const UsuariosStep: React.FC<UsuariosStepProps> = ({
             <Grid size={{xs:12, md:4}} >
               <TextField
                 fullWidth
-                size="small"
                 label="Password"
                 value={credencialesEstudiante.password}
                 onChange={(e) =>
@@ -119,7 +145,6 @@ export const UsuariosStep: React.FC<UsuariosStepProps> = ({
             <Grid size={{xs:12, md:4}} >
               <TextField
                 fullWidth
-                size="small"
                 label="Email"
                 type="email"
                 value={credencialesEstudiante.email}
@@ -174,7 +199,6 @@ export const UsuariosStep: React.FC<UsuariosStepProps> = ({
                 <Grid size={{xs:12, md:4}} >
                   <TextField
                     fullWidth
-                    size="small"
                     label="Username"
                     value={cred.username}
                     onChange={(e) => handleCredencialTutorChange(index, 'username', e.target.value)}
@@ -185,7 +209,6 @@ export const UsuariosStep: React.FC<UsuariosStepProps> = ({
                 <Grid size={{xs:12, md:4}} >
                   <TextField
                     fullWidth
-                    size="small"
                     label="Password"
                     value={cred.password}
                     onChange={(e) => handleCredencialTutorChange(index, 'password', e.target.value)}

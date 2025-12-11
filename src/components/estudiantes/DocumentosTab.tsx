@@ -27,23 +27,9 @@ import {
   Verified as VerifiedIcon,
   Assignment as AssignmentIcon,
 } from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSnackbar } from 'notistack';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-
-interface Documento {
-  id: number;
-  matricula_id: number;
-  tipo_documento: string;
-  nombre_archivo: string;
-  url_archivo: string;
-  verificado: boolean;
-  verificado_por?: number;
-  fecha_verificacion?: string;
-  observaciones?: string;
-  created_at: string;
-}
+import { useDocumentos } from '@/hooks/useDocumentos';
+import { TIPOS_DOCUMENTO, Documento } from '@/types/documentosTypes';
 
 interface Matricula {
   id: number;
@@ -58,24 +44,12 @@ interface DocumentosTabProps {
   matriculas: Matricula[];
 }
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
-
-const tiposDocumento: Record<string, string> = {
-  certificado_nacimiento: 'Certificado de Nacimiento',
-  ci_estudiante: 'CI del Estudiante',
-  ci_tutor: 'CI del Tutor',
-  libreta_familiar: 'Libreta Familiar',
-  certificado_medico: 'Certificado Médico',
-  boletin_anterior: 'Boletín del Año Anterior',
-  comprobante_pago: 'Comprobante de Pago',
-  otro: 'Otro Documento',
-};
-
-export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matriculas }) => {
+export const DocumentosTab: React.FC<DocumentosTabProps> = ({
+  estudianteId,
+  matriculas,
+}) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const { enqueueSnackbar } = useSnackbar();
-  const queryClient = useQueryClient();
 
   const [selectedMatricula, setSelectedMatricula] = useState<number | null>(
     matriculas.length > 0 ? matriculas[0].id : null
@@ -83,99 +57,30 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [documentoToDelete, setDocumentoToDelete] = useState<Documento | null>(null);
-  const [uploading, setUploading] = useState(false);
 
-  // Query para obtener documentos
-  const { data: documentos, isLoading } = useQuery<Documento[]>({
-    queryKey: ['matricula-documentos', selectedMatricula],
-    queryFn: async () => {
-      if (!selectedMatricula) return [];
-      const response = await fetch(`${API_URL}/matricula/${selectedMatricula}/documentos`, {
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Error al cargar documentos');
-      const result = await response.json();
-      return result.data.documentos;
-    },
-    enabled: !!selectedMatricula,
-  });
+  // Hook personalizado para documentos
+  const {
+    documentos,
+    isLoading,
+    subirDocumento,
+    verificarDocumento,
+    eliminarDocumento,
+    isSubiendo,
+    isEliminando,
+  } = useDocumentos(selectedMatricula);
 
-  // Mutation para verificar documento
-  const verificarMutation = useMutation({
-    mutationFn: async (documentoId: number) => {
-      const response = await fetch(
-        `${API_URL}/matricula/${selectedMatricula}/documentos/${documentoId}/verificar`,
-        {
-          method: 'PATCH',
-          credentials: 'include',
-        }
-      );
-      if (!response.ok) throw new Error('Error al verificar documento');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['matricula-documentos', selectedMatricula] });
-      enqueueSnackbar('Documento verificado exitosamente', { variant: 'success' });
-    },
-    onError: (error: Error) => {
-      enqueueSnackbar(error.message, { variant: 'error' });
-    },
-  });
-
-  // Mutation para eliminar documento
-  const eliminarMutation = useMutation({
-    mutationFn: async (documentoId: number) => {
-      const response = await fetch(
-        `${API_URL}/matricula/${selectedMatricula}/documentos/${documentoId}`,
-        {
-          method: 'DELETE',
-          credentials: 'include',
-        }
-      );
-      if (!response.ok) throw new Error('Error al eliminar documento');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['matricula-documentos', selectedMatricula] });
-      enqueueSnackbar('Documento eliminado exitosamente', { variant: 'success' });
-      setDeleteDialogOpen(false);
-      setDocumentoToDelete(null);
-    },
-    onError: (error: Error) => {
-      enqueueSnackbar(error.message, { variant: 'error' });
-    },
-  });
-
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>, tipoDoc: string) => {
+  const handleUpload = (event: React.ChangeEvent<HTMLInputElement>, tipoDoc: string) => {
     const file = event.target.files?.[0];
-    if (!file || !selectedMatricula) return;
+    if (!file) return;
 
-    setUploading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append('documento', file);
-      formData.append('tipo_documento', tipoDoc);
-
-      const response = await fetch(`${API_URL}/matricula/${selectedMatricula}/documentos`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Error al subir documento');
+    subirDocumento(
+      { tipo_documento: tipoDoc, archivo: file },
+      {
+        onSuccess: () => {
+          setUploadDialogOpen(false);
+        },
       }
-
-      queryClient.invalidateQueries({ queryKey: ['matricula-documentos', selectedMatricula] });
-      enqueueSnackbar('Documento subido exitosamente', { variant: 'success' });
-      setUploadDialogOpen(false);
-    } catch (error: any) {
-      enqueueSnackbar(error.message, { variant: 'error' });
-    } finally {
-      setUploading(false);
-    }
+    );
   };
 
   const handleDelete = (documento: Documento) => {
@@ -185,7 +90,12 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
 
   const confirmDelete = () => {
     if (documentoToDelete) {
-      eliminarMutation.mutate(documentoToDelete.id);
+      eliminarDocumento(documentoToDelete.id, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setDocumentoToDelete(null);
+        },
+      });
     }
   };
 
@@ -196,7 +106,8 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
   if (matriculas.length === 0) {
     return (
       <Alert severity="info" icon={<AssignmentIcon />}>
-        El estudiante no tiene matrículas registradas. Los documentos se asocian a las matrículas.
+        El estudiante no tiene matrículas registradas. Los documentos se asocian a las
+        matrículas.
       </Alert>
     );
   }
@@ -243,6 +154,7 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
           variant="contained"
           startIcon={<UploadIcon />}
           onClick={() => setUploadDialogOpen(true)}
+          disabled={!selectedMatricula}
           sx={{
             borderRadius: '12px',
             textTransform: 'none',
@@ -270,7 +182,9 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
                   p: 3,
                   borderRadius: '16px',
                   bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-                  border: `2px solid ${doc.verificado ? '#10b981' : 'rgba(255, 193, 7, 0.3)'}`,
+                  border: `2px solid ${
+                    doc.verificado ? '#10b981' : 'rgba(255, 193, 7, 0.3)'
+                  }`,
                   position: 'relative',
                 }}
               >
@@ -298,7 +212,9 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      bgcolor: doc.verificado ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255, 193, 7, 0.1)',
+                      bgcolor: doc.verificado
+                        ? 'rgba(16, 185, 129, 0.1)'
+                        : 'rgba(255, 193, 7, 0.1)',
                     }}
                   >
                     {doc.verificado ? (
@@ -310,9 +226,14 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
 
                   <Box sx={{ flex: 1 }}>
                     <Typography variant="body1" fontWeight={700} sx={{ mb: 0.5 }}>
-                      {tiposDocumento[doc.tipo_documento] || doc.tipo_documento}
+                      {TIPOS_DOCUMENTO[doc.tipo_documento as keyof typeof TIPOS_DOCUMENTO] ||
+                        doc.tipo_documento}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: 'block', mb: 1 }}
+                    >
                       {doc.nombre_archivo}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
@@ -320,8 +241,13 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
                     </Typography>
 
                     {doc.verificado && doc.fecha_verificacion && (
-                      <Typography variant="caption" color="success.main" sx={{ display: 'block', mt: 0.5 }}>
-                        ✓ Verificado: {format(new Date(doc.fecha_verificacion), 'dd/MM/yyyy HH:mm')}
+                      <Typography
+                        variant="caption"
+                        color="success.main"
+                        sx={{ display: 'block', mt: 0.5 }}
+                      >
+                        ✓ Verificado:{' '}
+                        {format(new Date(doc.fecha_verificacion), 'dd/MM/yyyy HH:mm')}
                       </Typography>
                     )}
                   </Box>
@@ -339,7 +265,9 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
                     size="small"
                     onClick={() => handleView(doc.url_archivo)}
                     sx={{
-                      bgcolor: isDark ? 'rgba(2, 136, 209, 0.2)' : 'rgba(2, 136, 209, 0.1)',
+                      bgcolor: isDark
+                        ? 'rgba(2, 136, 209, 0.2)'
+                        : 'rgba(2, 136, 209, 0.1)',
                       '&:hover': { bgcolor: '#0288d1', color: '#fff' },
                     }}
                   >
@@ -352,7 +280,9 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
                     href={doc.url_archivo}
                     download
                     sx={{
-                      bgcolor: isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
+                      bgcolor: isDark
+                        ? 'rgba(16, 185, 129, 0.2)'
+                        : 'rgba(16, 185, 129, 0.1)',
                       '&:hover': { bgcolor: '#10b981', color: '#fff' },
                     }}
                   >
@@ -362,10 +292,11 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
                   {!doc.verificado && (
                     <IconButton
                       size="small"
-                      onClick={() => verificarMutation.mutate(doc.id)}
-                      disabled={verificarMutation.isPending}
+                      onClick={() => verificarDocumento({ documentoId: doc.id })}
                       sx={{
-                        bgcolor: isDark ? 'rgba(250, 204, 21, 0.2)' : 'rgba(250, 204, 21, 0.1)',
+                        bgcolor: isDark
+                          ? 'rgba(250, 204, 21, 0.2)'
+                          : 'rgba(250, 204, 21, 0.1)',
                         '&:hover': { bgcolor: '#facc15', color: '#000' },
                       }}
                     >
@@ -396,7 +327,9 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
             textAlign: 'center',
             borderRadius: '16px',
             border: '2px dashed',
-            borderColor: isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(2, 136, 209, 0.3)',
+            borderColor: isDark
+              ? 'rgba(250, 204, 21, 0.3)'
+              : 'rgba(2, 136, 209, 0.3)',
           }}
         >
           <UploadIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
@@ -418,7 +351,9 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
         PaperProps={{
           sx: {
             borderRadius: '20px',
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.98)',
+            backgroundColor: isDark
+              ? 'rgba(15, 23, 42, 0.95)'
+              : 'rgba(255, 255, 255, 0.98)',
           },
         }}
       >
@@ -429,14 +364,14 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
           </Typography>
 
           <Grid container spacing={2}>
-            {Object.entries(tiposDocumento).map(([key, label]) => (
+            {Object.entries(TIPOS_DOCUMENTO).map(([key, label]) => (
               <Grid size={{xs:12, sm:6}} key={key}>
                 <Button
                   fullWidth
                   component="label"
                   variant="outlined"
                   startIcon={<UploadIcon />}
-                  disabled={uploading}
+                  disabled={isSubiendo}
                   sx={{
                     borderRadius: '12px',
                     textTransform: 'none',
@@ -457,14 +392,14 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
             ))}
           </Grid>
 
-          {uploading && (
+          {isSubiendo && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
               <CircularProgress />
             </Box>
           )}
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setUploadDialogOpen(false)} disabled={uploading}>
+          <Button onClick={() => setUploadDialogOpen(false)} disabled={isSubiendo}>
             Cancelar
           </Button>
         </DialogActions>
@@ -477,7 +412,9 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
         PaperProps={{
           sx: {
             borderRadius: '20px',
-            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.98)',
+            backgroundColor: isDark
+              ? 'rgba(15, 23, 42, 0.95)'
+              : 'rgba(255, 255, 255, 0.98)',
           },
         }}
       >
@@ -485,13 +422,14 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
         <DialogContent>
           <Typography variant="body2">
             ¿Estás seguro de que deseas eliminar el documento{' '}
-            <strong>{documentoToDelete?.nombre_archivo}</strong>? Esta acción no se puede deshacer.
+            <strong>{documentoToDelete?.nombre_archivo}</strong>? Esta acción no se puede
+            deshacer.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
           <Button
             onClick={() => setDeleteDialogOpen(false)}
-            disabled={eliminarMutation.isPending}
+            disabled={isEliminando}
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Cancelar
@@ -500,10 +438,10 @@ export const DocumentosTab: React.FC<DocumentosTabProps> = ({ estudianteId, matr
             onClick={confirmDelete}
             color="error"
             variant="contained"
-            disabled={eliminarMutation.isPending}
+            disabled={isEliminando}
             sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '12px' }}
           >
-            {eliminarMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+            {isEliminando ? 'Eliminando...' : 'Eliminar'}
           </Button>
         </DialogActions>
       </Dialog>

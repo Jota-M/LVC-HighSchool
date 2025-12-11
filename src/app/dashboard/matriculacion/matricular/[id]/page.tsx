@@ -7,40 +7,27 @@ import {
   Paper,
   Typography,
   Button,
-  Grid,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormControlLabel,
-  Switch,
-  Alert,
-  Avatar,
-  Chip,
-  IconButton,
   Stepper,
   Step,
   StepLabel,
   useTheme,
   CircularProgress,
-  Card,
-  CardContent,
-  Divider,
-  SelectChangeEvent,
+  Alert,
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
   Save as SaveIcon,
-  Delete as DeleteIcon,
-  CloudUpload as UploadIcon,
+  NavigateNext as NextIcon,
+  NavigateBefore as PrevIcon,
 } from '@mui/icons-material';
 import { useRouter, useParams } from 'next/navigation';
 import { useMatriculacion, useDisponibilidadParalelo } from '@/hooks/useMatriculacion';
 import { useGestionAcademica } from '@/hooks/useRegistroCompleto';
 import { useEstudiante } from '@/hooks/useEstudiantes';
-import { TIPOS_DOCUMENTO_MATRICULA } from '@/types/matriculacionTypes';
-import { Paralelo } from '@/types/estudianteTypes';
+import { InformacionEstudianteStep } from '@/components/matriculacion/InformacionEstudianteStep';
+import { DatosMatriculaStep } from '@/components/matriculacion/DatosMatriculaStep';
+import { DocumentosMatriculaStep } from '@/components/matriculacion/DocumentosMatriculaStep';
+import { ConfirmacionMatriculaStep } from '@/components/matriculacion/ConfirmacionMatriculaStep';
 
 const steps = ['Información del Estudiante', 'Datos de Matrícula', 'Documentos', 'Confirmación'];
 
@@ -58,7 +45,7 @@ const FormularioMatriculacion: React.FC = () => {
   const estudianteId = Number(params.id);
 
   const [activeStep, setActiveStep] = useState(0);
-  const [paralelosDisponibles, setParalelosDisponibles] = useState<Paralelo[]>([]);
+  const [paralelosDisponibles, setParalelosDisponibles] = useState<any[]>([]);
   const [isLoadingParalelos, setIsLoadingParalelos] = useState(false);
 
   // Form state
@@ -81,7 +68,6 @@ const FormularioMatriculacion: React.FC = () => {
   const {
     periodos,
     periodoActivo,
-    grados,
     isLoadingPeriodos,
     obtenerTodosLosParalelos,
   } = useGestionAcademica();
@@ -95,7 +81,7 @@ const FormularioMatriculacion: React.FC = () => {
   // Establecer periodo activo por defecto
   useEffect(() => {
     if (periodoActivo && !formData.periodo_academico_id) {
-      setFormData(prev => ({ ...prev, periodo_academico_id: periodoActivo.id }));
+      setFormData((prev) => ({ ...prev, periodo_academico_id: periodoActivo.id }));
     }
   }, [periodoActivo, formData.periodo_academico_id]);
 
@@ -103,7 +89,7 @@ const FormularioMatriculacion: React.FC = () => {
   useEffect(() => {
     const cargarParalelos = async () => {
       if (!formData.periodo_academico_id) return;
-      
+
       setIsLoadingParalelos(true);
       try {
         const anioActual = new Date().getFullYear();
@@ -120,10 +106,9 @@ const FormularioMatriculacion: React.FC = () => {
   }, [formData.periodo_academico_id, obtenerTodosLosParalelos]);
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors(prev => {
+      setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[field];
         return newErrors;
@@ -131,7 +116,10 @@ const FormularioMatriculacion: React.FC = () => {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     // Validate current step
     if (activeStep === 1) {
       const newErrors: Record<string, string> = {};
@@ -149,23 +137,25 @@ const FormularioMatriculacion: React.FC = () => {
     setActiveStep((prev) => prev + 1);
   };
 
-  const handleBack = () => {
+  const handleBack = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
     setActiveStep((prev) => prev - 1);
   };
 
   const agregarDocumento = () => {
-    setDocumentos(prev => [
+    setDocumentos((prev) => [
       ...prev,
-      { tipo_documento: 'cedula_estudiante', file: null, observaciones: '' }
+      { tipo_documento: 'cedula_estudiante', file: null, observaciones: '' },
     ]);
   };
 
   const eliminarDocumento = (index: number) => {
-    setDocumentos(prev => prev.filter((_, i) => i !== index));
+    setDocumentos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const actualizarDocumento = (index: number, field: keyof DocumentoForm, value: any) => {
-    setDocumentos(prev => {
+    setDocumentos((prev) => {
       const newDocs = [...prev];
       newDocs[index] = { ...newDocs[index], [field]: value };
       return newDocs;
@@ -174,13 +164,19 @@ const FormularioMatriculacion: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+
+    // Solo enviar si estamos en el último paso
+    if (activeStep !== steps.length - 1) {
+      console.warn('Intento de submit antes del último paso');
+      return;
+    }
 
     if (!puedeMatricular) {
       alert('El paralelo no tiene capacidad disponible');
       return;
     }
 
-    // Preparar documentos
     const documentosArchivos = documentos
       .filter((doc) => doc.file !== null)
       .map((doc) => ({
@@ -221,8 +217,19 @@ const FormularioMatriculacion: React.FC = () => {
 
   if (isLoadingEstudiante) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <CircularProgress />
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+        }}
+      >
+        <CircularProgress
+          sx={{
+            color: isDark ? '#facc15' : '#0288d1',
+          }}
+        />
       </Box>
     );
   }
@@ -230,7 +237,9 @@ const FormularioMatriculacion: React.FC = () => {
   if (!estudiante) {
     return (
       <Container>
-        <Alert severity="error">Estudiante no encontrado</Alert>
+        <Alert severity="error" sx={{ borderRadius: '16px' }}>
+          Estudiante no encontrado
+        </Alert>
       </Container>
     );
   }
@@ -248,25 +257,41 @@ const FormularioMatriculacion: React.FC = () => {
           <Button
             startIcon={<BackIcon />}
             variant="outlined"
-            color='secondary'
             onClick={() => router.back()}
-            sx={{ mb: 2, textTransform: 'none' }}
+            sx={{
+              mb: 3,
+              textTransform: 'none',
+              borderRadius: '12px',
+              fontWeight: 600,
+              borderColor: isDark ? 'rgba(250, 204, 21, 0.5)' : 'rgba(2, 136, 209, 0.5)',
+              color: isDark ? '#facc15' : '#0288d1',
+              '&:hover': {
+                borderColor: isDark ? '#facc15' : '#0288d1',
+                backgroundColor: isDark
+                  ? 'rgba(250, 204, 21, 0.05)'
+                  : 'rgba(2, 136, 209, 0.05)',
+              },
+            }}
           >
             Volver
           </Button>
           <Typography
-            variant="h4"
+            variant="h3"
             sx={{
-              fontWeight: 700,
+              fontWeight: 800,
               background: isDark
                 ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
                 : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               mb: 1,
+              fontFamily: "'Roboto', sans-serif",
             }}
           >
             Matricular Estudiante
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+            Completa el proceso de matrícula siguiendo los pasos indicados
           </Typography>
         </Box>
 
@@ -274,479 +299,188 @@ const FormularioMatriculacion: React.FC = () => {
         <Paper
           elevation={0}
           sx={{
-            p: 3,
-            mb: 3,
+            p: 4,
+            mb: 4,
             borderRadius: '20px',
             backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
             backdropFilter: 'blur(20px)',
+            border: '2px solid',
+            borderColor: isDark
+              ? 'rgba(250, 204, 21, 0.2)'
+              : 'rgba(2, 136, 209, 0.2)',
           }}
         >
           <Stepper activeStep={activeStep} alternativeLabel>
             {steps.map((label) => (
               <Step key={label}>
-                <StepLabel>{label}</StepLabel>
+                <StepLabel
+                  sx={{
+                    '& .MuiStepLabel-label': {
+                      fontWeight: 600,
+                    },
+                    '& .MuiStepLabel-label.Mui-active': {
+                      color: isDark ? '#facc15' : '#0288d1',
+                    },
+                    '& .MuiStepIcon-root.Mui-active': {
+                      color: isDark ? '#facc15' : '#0288d1',
+                    },
+                    '& .MuiStepIcon-root.Mui-completed': {
+                      color: isDark ? '#facc15' : '#0288d1',
+                    },
+                  }}
+                >
+                  {label}
+                </StepLabel>
               </Step>
             ))}
           </Stepper>
         </Paper>
 
-        <form onSubmit={handleSubmit}>
+        {/* Content - SIN <form> aquí */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            borderRadius: '20px',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(20px)',
+            border: '2px solid',
+            borderColor: isDark
+              ? 'rgba(250, 204, 21, 0.2)'
+              : 'rgba(2, 136, 209, 0.2)',
+            minHeight: '500px',
+          }}
+        >
           {/* Step 0: Información del Estudiante */}
-          {activeStep === 0 && (
-            <Paper
-              elevation={0}
-              sx={{
-                p: 4,
-                borderRadius: '20px',
-                backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
-                backdropFilter: 'blur(20px)',
-              }}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
-                Información del Estudiante
-              </Typography>
-
-              {/* DEBUG: Info de matrícula actual */}
-              {estudiante.matriculas && estudiante.matriculas.length > 0 && (
-                <Alert severity="info" sx={{ mb: 3 }}>
-                  <strong>Última Matrícula:</strong> {estudiante.matriculas[estudiante.matriculas.length - 1].grado} - 
-                  {estudiante.matriculas[estudiante.matriculas.length - 1].periodo}
-                </Alert>
-              )}
-              {(!estudiante.matriculas || estudiante.matriculas.length === 0) && (
-                <Alert severity="warning" sx={{ mb: 3 }}>
-                  <strong>Sin matrículas previas registradas</strong>
-                </Alert>
-              )}
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
-                <Avatar
-                  src={estudiante.foto_url || undefined}
-                  sx={{ width: 80, height: 80 }}
-                >
-                  {estudiante.nombres.charAt(0)}
-                </Avatar>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    {estudiante.nombres} {estudiante.apellido_paterno} {estudiante.apellido_materno}
-                  </Typography>
-                  <Chip label={`Código: ${estudiante.codigo}`} size="small" sx={{ mr: 1 }} />
-                  {estudiante.ci && <Chip label={`CI: ${estudiante.ci}`} size="small" />}
-                </Box>
-              </Box>
-
-              <Divider sx={{ my: 3 }} />
-
-              <Grid container spacing={3}>
-                <Grid size={{xs:12, md:6}}>
-                  <Typography variant="body2" color="text.secondary">Fecha de Nacimiento</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {new Date(estudiante.fecha_nacimiento).toLocaleDateString('es-ES')}
-                  </Typography>
-                </Grid>
-                <Grid size={{xs:12, md:6}}>
-                  <Typography variant="body2" color="text.secondary">Teléfono</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {estudiante.telefono || 'No registrado'}
-                  </Typography>
-                </Grid>
-                <Grid size={{xs:12, md:6}}>
-                  <Typography variant="body2" color="text.secondary">Email</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {estudiante.email || 'No registrado'}
-                  </Typography>
-                </Grid>
-                <Grid size={{xs:12, md:6}}>
-                  <Typography variant="body2" color="text.secondary">Dirección</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                    {estudiante.direccion || 'No registrada'}
-                  </Typography>
-                </Grid>
-              </Grid>
-
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
-                <Button
-                  variant="contained"
-                  onClick={handleNext}
-                  sx={{
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    px: 4,
-                    background: isDark
-                      ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                      : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                    color: isDark ? '#000' : '#fff',
-                  }}
-                >
-                  Siguiente
-                </Button>
-              </Box>
-            </Paper>
-          )}
+          {activeStep === 0 && <InformacionEstudianteStep estudiante={estudiante} />}
 
           {/* Step 1: Datos de Matrícula */}
           {activeStep === 1 && (
-            <Paper
-              elevation={0}
-              sx={{
-                p: 4,
-                borderRadius: '20px',
-                backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
-                backdropFilter: 'blur(20px)',
-              }}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
-                Datos de Matrícula
-              </Typography>
-
-              {/* DEBUG: Info de carga de paralelos */}
-              {estudiante.matriculas && estudiante.matriculas.length > 0 && (
-                <Alert severity="info" sx={{ mb: 3 }}>
-                  <strong>Grado Previo:</strong> {estudiante.matriculas[estudiante.matriculas.length - 1].grado}
-                  <br />
-                  <strong>Paralelos disponibles:</strong> {paralelosDisponibles.length} encontrados
-                  {paralelosDisponibles.length > 0 && (
-                    <> para <strong>{paralelosDisponibles[0].grado_nombre}</strong></>
-                  )}
-                </Alert>
-              )}
-              {isLoadingParalelos && (
-                <Alert severity="info" sx={{ mb: 3 }}>
-                  Cargando paralelos...
-                </Alert>
-              )}
-
-              <Grid container spacing={3}>
-                {/* Periodo Académico */}
-                <Grid size={{xs:12,md:6}} >
-                  <FormControl fullWidth error={!!errors.periodo_academico_id}>
-                    <InputLabel>Periodo Académico *</InputLabel>
-                    <Select
-                      value={formData.periodo_academico_id || ''}
-                      onChange={(e) => handleInputChange('periodo_academico_id', e.target.value)}
-                      label="Periodo Académico *"
-                    >
-                      {periodos.map((periodo) => (
-                        <MenuItem key={periodo.id} value={periodo.id}>
-                          {periodo.nombre}
-                          {periodo.activo && <Chip label="ACTIVO" size="small" sx={{ ml: 1 }} />}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {errors.periodo_academico_id && (
-                      <Typography variant="caption" color="error">
-                        {errors.periodo_academico_id}
-                      </Typography>
-                    )}
-                  </FormControl>
-                </Grid>
-
-                {/* Paralelo */}
-                <Grid size={{xs:12, md:6}}>
-                  <FormControl fullWidth error={!!errors.paralelo_id} disabled={!formData.periodo_academico_id}>
-                    <InputLabel>Paralelo *</InputLabel>
-                    <Select
-                      value={formData.paralelo_id || ''}
-                      onChange={(e) => handleInputChange('paralelo_id', e.target.value)}
-                      label="Paralelo *"
-                    >
-                      {paralelosDisponibles.map((paralelo) => (
-                        <MenuItem key={paralelo.id} value={paralelo.id}>
-                          {paralelo.grado_nombre} - {paralelo.nombre} ({paralelo.turno_nombre})
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {errors.paralelo_id && (
-                      <Typography variant="caption" color="error">
-                        {errors.paralelo_id}
-                      </Typography>
-                    )}
-                  </FormControl>
-                </Grid>
-
-                {/* Disponibilidad */}
-                {disponibilidad && (
-                  <Grid size={{xs:12}}>
-                    <Alert severity={puedeMatricular ? 'success' : 'warning'}>
-                      Capacidad: {disponibilidad.capacidad.ocupada}/{disponibilidad.capacidad.maxima} - 
-                      Disponibles: {disponibilidad.capacidad.disponible} 
-                      ({disponibilidad.capacidad.porcentaje_ocupacion}% ocupado)
-                    </Alert>
-                  </Grid>
-                )}
-
-                {/* Es Repitente */}
-                <Grid size={{xs:12, md:6}}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formData.es_repitente}
-                        onChange={(e) => handleInputChange('es_repitente', e.target.checked)}
-                      />
-                    }
-                    label="Estudiante Repitente"
-                  />
-                </Grid>
-
-                {/* Es Becado */}
-                <Grid size={{xs:12, md:6}}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formData.es_becado}
-                        onChange={(e) => handleInputChange('es_becado', e.target.checked)}
-                      />
-                    }
-                    label="Estudiante Becado"
-                  />
-                </Grid>
-
-                {/* Campos de Beca (condicionales) */}
-                {formData.es_becado && (
-                  <>
-                    <Grid size={{xs:12, md:6}}>
-                      <TextField
-                        fullWidth
-                        type="number"
-                        label="Porcentaje de Beca (%)"
-                        value={formData.porcentaje_beca || ''}
-                        onChange={(e) => handleInputChange('porcentaje_beca', Number(e.target.value))}
-                        inputProps={{ min: 0, max: 100 }}
-                      />
-                    </Grid>
-                    <Grid size={{xs:12, md:6}}>
-                      <TextField
-                        fullWidth
-                        label="Tipo de Beca"
-                        value={formData.tipo_beca}
-                        onChange={(e) => handleInputChange('tipo_beca', e.target.value)}
-                      />
-                    </Grid>
-                  </>
-                )}
-
-                {/* Observaciones */}
-                <Grid size={{xs:12}}>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={3}
-                    label="Observaciones"
-                    value={formData.observaciones}
-                    onChange={(e) => handleInputChange('observaciones', e.target.value)}
-                  />
-                </Grid>
-              </Grid>
-
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-                <Button onClick={handleBack} sx={{ textTransform: 'none' }}>
-                  Atrás
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={handleNext}
-                  disabled={!puedeMatricular}
-                  sx={{
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    px: 4,
-                    background: isDark
-                      ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                      : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                    color: isDark ? '#000' : '#fff',
-                  }}
-                >
-                  Siguiente
-                </Button>
-              </Box>
-            </Paper>
+            <DatosMatriculaStep
+              formData={formData}
+              periodos={periodos}
+              paralelosDisponibles={paralelosDisponibles}
+              isLoadingParalelos={isLoadingParalelos}
+              disponibilidad={disponibilidad}
+              puedeMatricular={puedeMatricular}
+              errors={errors}
+              onChange={handleInputChange}
+            />
           )}
 
           {/* Step 2: Documentos */}
           {activeStep === 2 && (
-            <Paper
-              elevation={0}
-              sx={{
-                p: 4,
-                borderRadius: '20px',
-                backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
-                backdropFilter: 'blur(20px)',
-              }}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
-                Documentos de Matrícula
-              </Typography>
-
-              <Button
-                variant="outlined"
-                startIcon={<UploadIcon />}
-                onClick={agregarDocumento}
-                sx={{ mb: 3, textTransform: 'none' }}
-              >
-                Agregar Documento
-              </Button>
-
-              {documentos.map((doc, index) => (
-                <Card key={index} sx={{ mb: 2 }}>
-                  <CardContent>
-                    <Grid container spacing={2} alignItems="center">
-                      <Grid size={{xs:12, md:4}}>
-                        <FormControl fullWidth size="small">
-                          <InputLabel>Tipo de Documento</InputLabel>
-                          <Select
-                            value={doc.tipo_documento}
-                            onChange={(e) => actualizarDocumento(index, 'tipo_documento', e.target.value)}
-                            label="Tipo de Documento"
-                          >
-                            {TIPOS_DOCUMENTO_MATRICULA.map((tipo) => (
-                              <MenuItem key={tipo} value={tipo}>
-                                {tipo.replace(/_/g, ' ').toUpperCase()}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid size={{xs:12, md:4}}>
-                        <Button
-                          variant="outlined"
-                          component="label"
-                          fullWidth
-                          startIcon={<UploadIcon />}
-                        >
-                          {doc.file ? doc.file.name : 'Subir Archivo'}
-                          <input
-                            type="file"
-                            hidden
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) actualizarDocumento(index, 'file', file);
-                            }}
-                          />
-                        </Button>
-                      </Grid>
-                      <Grid size={{xs:12, md:3}}>
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label="Observaciones"
-                          value={doc.observaciones}
-                          onChange={(e) => actualizarDocumento(index, 'observaciones', e.target.value)}
-                        />
-                      </Grid>
-                      <Grid size={{xs:12, md:1}}>
-                        <IconButton onClick={() => eliminarDocumento(index)} color="error">
-                          <DeleteIcon />
-                        </IconButton>
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              ))}
-
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-                <Button onClick={handleBack} sx={{ textTransform: 'none' }}>
-                  Atrás
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={handleNext}
-                  sx={{
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    px: 4,
-                    background: isDark
-                      ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                      : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                    color: isDark ? '#000' : '#fff',
-                  }}
-                >
-                  Siguiente
-                </Button>
-              </Box>
-            </Paper>
+            <DocumentosMatriculaStep
+              documentos={documentos}
+              onAgregarDocumento={agregarDocumento}
+              onEliminarDocumento={eliminarDocumento}
+              onActualizarDocumento={actualizarDocumento}
+            />
           )}
 
           {/* Step 3: Confirmación */}
           {activeStep === 3 && (
-            <Paper
-              elevation={0}
+            <ConfirmacionMatriculaStep
+              estudiante={estudiante}
+              formData={formData}
+              periodos={periodos}
+              paralelosDisponibles={paralelosDisponibles}
+              documentos={documentos}
+            />
+          )}
+
+          {/* Navigation Buttons */}
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              mt: 4,
+              pt: 3,
+              borderTop: '2px solid',
+              borderColor: isDark
+                ? 'rgba(250, 204, 21, 0.1)'
+                : 'rgba(2, 136, 209, 0.1)',
+            }}
+          >
+            <Button
+              onClick={handleBack}
+              disabled={activeStep === 0}
+              startIcon={<PrevIcon />}
               sx={{
-                p: 4,
-                borderRadius: '20px',
-                backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
-                backdropFilter: 'blur(20px)',
+                textTransform: 'none',
+                borderRadius: '12px',
+                fontWeight: 600,
+                px: 4,
+                color: isDark ? '#facc15' : '#0288d1',
+                '&:hover': {
+                  backgroundColor: isDark
+                    ? 'rgba(250, 204, 21, 0.1)'
+                    : 'rgba(2, 136, 209, 0.1)',
+                },
               }}
             >
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
-                Confirmación
-              </Typography>
+              Atrás
+            </Button>
 
-              <Alert severity="info" sx={{ mb: 3 }}>
-                Por favor, revisa todos los datos antes de confirmar la matrícula.
-              </Alert>
-
-              {/* Resumen */}
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-                Resumen de Matrícula
-              </Typography>
-
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="body2" color="text.secondary">Estudiante:</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
-                  {estudiante.nombres} {estudiante.apellido_paterno}
-                </Typography>
-
-                <Typography variant="body2" color="text.secondary">Periodo:</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
-                  {periodos.find((p) => p.id === formData.periodo_academico_id)?.nombre}
-                </Typography>
-
-                <Typography variant="body2" color="text.secondary">Paralelo:</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
-                  {paralelosDisponibles.find((p) => p.id === formData.paralelo_id)?.nombre}
-                </Typography>
-
-                {formData.es_becado && (
-                  <>
-                    <Typography variant="body2" color="text.secondary">Beca:</Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
-                      {formData.porcentaje_beca}% - {formData.tipo_beca}
-                    </Typography>
-                  </>
-                )}
-
-                <Typography variant="body2" color="text.secondary">Documentos:</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                  {documentos.filter((d) => d.file).length} documento(s) adjunto(s)
-                </Typography>
-              </Box>
-
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-                <Button onClick={handleBack} sx={{ textTransform: 'none' }}>
-                  Atrás
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={isMatriculando}
-                  startIcon={isMatriculando ? <CircularProgress size={20} /> : <SaveIcon />}
-                  sx={{
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    px: 4,
+            {activeStep < steps.length - 1 ? (
+              <Button
+                variant="contained"
+                onClick={handleNext}
+                disabled={activeStep === 1 && !puedeMatricular}
+                endIcon={<NextIcon />}
+                sx={{
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  px: 4,
+                  py: 1.5,
+                  background: isDark
+                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                  color: isDark ? '#000' : '#fff',
+                  boxShadow: isDark
+                    ? '0 4px 14px rgba(250, 204, 21, 0.4)'
+                    : '0 4px 14px rgba(2, 136, 209, 0.4)',
+                  '&:hover': {
                     background: isDark
-                      ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                      : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                    color: isDark ? '#000' : '#fff',
-                  }}
-                >
-                  {isMatriculando ? 'Guardando...' : 'Confirmar Matrícula'}
-                </Button>
-              </Box>
-            </Paper>
-          )}
-        </form>
+                      ? 'linear-gradient(135deg, #eab308 0%, #d97706 100%)'
+                      : 'linear-gradient(135deg, #0277bd 0%, #01579b 100%)',
+                    boxShadow: isDark
+                      ? '0 6px 20px rgba(250, 204, 21, 0.5)'
+                      : '0 6px 20px rgba(2, 136, 209, 0.5)',
+                  },
+                }}
+              >
+                Siguiente
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSubmit}
+                variant="contained"
+                disabled={isMatriculando}
+                startIcon={isMatriculando ? <CircularProgress size={20} /> : <SaveIcon />}
+                sx={{
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  px: 4,
+                  py: 1.5,
+                  background: isDark
+                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                    : 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+                  color: '#fff',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                    boxShadow: '0 6px 20px rgba(16, 185, 129, 0.5)',
+                  },
+                }}
+              >
+                {isMatriculando ? 'Guardando...' : 'Confirmar Matrícula'}
+              </Button>
+            )}
+          </Box>
+        </Paper>
       </Container>
     </Box>
   );

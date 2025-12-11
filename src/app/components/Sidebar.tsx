@@ -390,7 +390,7 @@ const sections = [
         title: 'Preinscripciones',
         to: '/dashboard/preinscripciones',
         icon: <AppRegistrationIcon />,
-        roles: ['admin', 'super_admin', 'secretaria'],
+        permissions: ['preinscripciones.leer'], // ✅ CAMBIADO
         badge: 12,
       },
     ],
@@ -430,14 +430,14 @@ const sections = [
       {
         title: 'Matriculas',
         to: '/dashboard/matriculacion',
-        permissions: ['asignaciones.leer'],
+        permissions: ['matriculacion.leer'], // ✅ CAMBIADO
         icon: <AppRegistrationIcon />,
       },
       {
         title: 'Asignaciones',
         to: '/dashboard/plan-estudio',
         icon: <ContactsOutlinedIcon />,
-        permissions: ['asignaciones.leer'],
+        permissions: ['plan_estudio.leer'], // ✅ CAMBIADO
       },
       {
         title: 'Horarios',
@@ -501,31 +501,31 @@ const sections = [
     ],
   },
   {
-    label: 'Portal Profesores',
+    label: 'Portal Docentes', // ✅ CAMBIADO (era "Portal Profesores")
     items: [
       {
         title: 'Inicio',
-        to: '/dashboard/profesor/home',
+        to: '/dashboard/docente/home', // ✅ CAMBIADO (era profesor)
         icon: <HomeOutlinedIcon />,
-        roles: ['profesor'],
+        roles: ['docente'], // ✅ CAMBIADO (era profesor)
       },
       {
         title: 'Mis Clases',
-        to: '/dashboard/profesor/clases',
+        to: '/dashboard/docente/clases', // ✅ CAMBIADO (era profesor)
         icon: <ClassOutlinedIcon />,
-        roles: ['profesor'],
+        roles: ['docente'], // ✅ CAMBIADO (era profesor)
       },
       {
         title: 'Calificaciones',
-        to: '/dashboard/profesor/notas',
+        to: '/dashboard/docente/notas', // ✅ CAMBIADO (era profesor)
         icon: <GradeOutlinedIcon />,
-        roles: ['profesor'],
+        roles: ['docente'], // ✅ CAMBIADO (era profesor)
       },
       {
         title: 'Asistencia',
-        to: '/dashboard/profesor/asistencia',
+        to: '/dashboard/docente/asistencia', // ✅ CAMBIADO (era profesor)
         icon: <EventAvailableOutlinedIcon />,
-        roles: ['profesor'],
+        roles: ['docente'], // ✅ CAMBIADO (era profesor)
       },
     ],
   },

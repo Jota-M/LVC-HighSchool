@@ -1,49 +1,11 @@
 // hooks/useConversionPreinscripcion.ts
-import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import preinscripcionService from '@/services/preinscripcionService';
+import api from '@/lib/api';
 
 // =============================================
-// HELPER: Obtener token de cookies
-// =============================================
-const getTokenFromCookies = (): string | null => {
-  if (typeof document === 'undefined') return null;
-  
-  const token = document.cookie
-    .split('; ')
-    .find(row => row.startsWith('token='))
-    ?.split('=')[1];
-  
-  return token || null;
-};
-
-// =============================================
-// HELPER: Fetch con autenticación
-// =============================================
-const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-  const token = getTokenFromCookies();
-  
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...options.headers,
-    },
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Error desconocido' }));
-    throw new Error(error.message || `HTTP Error ${response.status}`);
-  }
-
-  return response.json();
-};
-
-// =============================================
-// 🆕 TIPOS ACTUALIZADOS
+// TIPOS
 // =============================================
 interface Periodo {
   id: number;
@@ -106,7 +68,6 @@ interface Preinscripcion {
   };
 }
 
-// 🆕 Tipo de credenciales
 interface Credenciales {
   username: string;
   password: string;
@@ -114,7 +75,6 @@ interface Credenciales {
   debe_cambiar_password: boolean;
 }
 
-// 🆕 Tipo de respuesta de conversión (ACTUALIZADO)
 interface ConversionResponse {
   success: boolean;
   message: string;
@@ -131,10 +91,8 @@ interface ConversionResponse {
       numero_matricula: string;
       estado: string;
     };
-    // 🆕 Campos opcionales para credenciales
     credenciales_estudiante?: Credenciales;
     credenciales_padre?: Credenciales;
-    // 🆕 Campo para documentos migrados
     documentos_migrados?: number;
   };
 }
@@ -155,7 +113,7 @@ export const useConversionPreinscripcion = (preinscripcionId: number) => {
     error: errorPreinscripcion,
   } = useQuery<Preinscripcion>({
     queryKey: ['preinscripcion', preinscripcionId],
-    queryFn: async (): Promise<Preinscripcion> => {
+    queryFn: async () => {
       const response = await preinscripcionService.obtenerPorId(preinscripcionId);
       return response as Preinscripcion;
     },
@@ -171,11 +129,8 @@ export const useConversionPreinscripcion = (preinscripcionId: number) => {
   } = useQuery<Periodo[]>({
     queryKey: ['periodos-academicos'],
     queryFn: async () => {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-      const response = await fetchWithAuth(`${API_URL}/periodo-academico`);
-      
-      const periodos = response.data?.periodos || response.periodos || response.data || response;
-      
+      const { data } = await api.get('/periodo-academico');
+      const periodos = data?.periodos || data || [];
       return Array.isArray(periodos) ? periodos : [];
     },
     staleTime: 1000 * 60 * 10,
@@ -190,11 +145,8 @@ export const useConversionPreinscripcion = (preinscripcionId: number) => {
   } = useQuery<Grado[]>({
     queryKey: ['grados'],
     queryFn: async () => {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-      const response = await fetchWithAuth(`${API_URL}/grado`);
-      
-      const grados = response.data?.grados || response.grados || response.data || response;
-      
+      const { data } = await api.get('/grado');
+      const grados = data?.grados || data || [];
       return Array.isArray(grados) ? grados : [];
     },
     staleTime: 1000 * 60 * 10,
@@ -209,10 +161,8 @@ export const useConversionPreinscripcion = (preinscripcionId: number) => {
   } = useQuery<Paralelo[]>({
     queryKey: ['paralelos-disponibles'],
     queryFn: async () => {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-      const response = await fetchWithAuth(`${API_URL}/paralelo`);
-      
-      const allParalelos = response.data?.paralelos || response.paralelos || response.data || response;
+      const { data } = await api.get('/paralelo');
+      const allParalelos = data?.paralelos || data || [];
       
       if (!Array.isArray(allParalelos)) {
         return [];
@@ -223,7 +173,9 @@ export const useConversionPreinscripcion = (preinscripcionId: number) => {
           ...p,
           estudiantes_actuales: parseInt(p.total_estudiantes) || 0,
           disponibles: p.capacidad_maxima - (parseInt(p.total_estudiantes) || 0),
-          porcentaje_ocupacion: Math.round(((parseInt(p.total_estudiantes) || 0) / p.capacidad_maxima) * 100),
+          porcentaje_ocupacion: Math.round(
+            ((parseInt(p.total_estudiantes) || 0) / p.capacidad_maxima) * 100
+          ),
         }))
         .filter((p: any) => p.disponibles > 0);
     },
@@ -231,10 +183,10 @@ export const useConversionPreinscripcion = (preinscripcionId: number) => {
   });
 
   // =============================================
-  // 🆕 MUTATION: Convertir a estudiante (ACTUALIZADO)
+  // MUTATION: Convertir a estudiante
   // =============================================
   const convertirMutation = useMutation<
-    ConversionResponse, // 🆕 Tipo de retorno actualizado
+    ConversionResponse,
     Error,
     { paralelo_id: number; periodo_academico_id: number }
   >({
@@ -245,7 +197,6 @@ export const useConversionPreinscripcion = (preinscripcionId: number) => {
       });
     },
     onSuccess: (data) => {
-      // 🆕 Mensaje mejorado con información de usuarios y documentos
       let mensaje = `¡Estudiante creado exitosamente! Código: ${data.data.estudiante.codigo}`;
       
       if (data.data.credenciales_estudiante) {
@@ -262,7 +213,7 @@ export const useConversionPreinscripcion = (preinscripcionId: number) => {
       
       enqueueSnackbar(mensaje, { 
         variant: 'success', 
-        autoHideDuration: 8000 // Más tiempo para leer
+        autoHideDuration: 8000,
       });
       
       // Invalidar queries relacionadas

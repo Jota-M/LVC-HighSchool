@@ -67,15 +67,40 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
   const isDark = theme.palette.mode === 'dark';
 
   const fieldStyle = {
-    '& .MuiInputBase-root': {
-      borderRadius: '12px',
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.9)',
+  width: '100%',
+
+  // Label
+  '& .MuiInputLabel-root': {
+    color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+    fontWeight: 500,
+    fontSize: '0.95rem',
+    '&.Mui-focused': {
+      color: isDark ? '#facc15' : '#0288d1',
     },
-    '& .MuiOutlinedInput-notchedOutline': {
-      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(1, 87, 155, 0.2)',
-      borderWidth: '2px',
+  },
+
+  // Caja del input (fondo)
+  '& .MuiInputBase-root': {
+    borderRadius: '12px',
+    
+    transition: '0.2s ease',
+    border: '1px solid transparent',
+
+    '&:hover': {
+      borderColor: isDark ? '#facc15' : '#0288d1',
     },
-  };
+
+    '&.Mui-focused': {
+      borderColor: isDark ? '#facc15' : '#0288d1',
+      boxShadow: `0 0 0 2px ${isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(2, 136, 209, 0.25)'}`,
+    },
+  },
+
+  // Texto dentro del input
+  '& .MuiInputBase-input': {
+    color: isDark ? '#fff' : '#000',
+  },
+};
 
   const sectionTitleStyle = {
     mb: 3,

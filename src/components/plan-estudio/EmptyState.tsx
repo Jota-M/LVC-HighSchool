@@ -5,7 +5,8 @@ import {
   School as SchoolIcon,
   MenuBook as BookIcon,
   Add as AddIcon,
-  TouchApp as TouchIcon
+  TouchApp as TouchIcon,
+  ArrowForward as ArrowIcon
 } from '@mui/icons-material';
 
 interface EmptyStateProps {
@@ -15,6 +16,7 @@ interface EmptyStateProps {
 
 const EmptyState: React.FC<EmptyStateProps> = ({ type, onAction }) => {
   const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
   const configs = {
     'no-grado': {
@@ -22,14 +24,18 @@ const EmptyState: React.FC<EmptyStateProps> = ({ type, onAction }) => {
       title: 'Selecciona un grado',
       description: 'Elige un grado del panel izquierdo para ver y gestionar su plan de estudios',
       actionText: null,
-      gradient: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
+      gradient: isDark
+        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+      color: isDark ? '#facc15' : '#0288d1',
     },
     'no-materias': {
       icon: BookIcon,
       title: 'Sin materias asignadas',
       description: 'Este grado aún no tiene materias en su plan de estudios. ¡Comienza agregando algunas!',
       actionText: 'Asignar primera materia',
-      gradient: `linear-gradient(135deg, ${theme.palette.success.main}, ${theme.palette.info.main})`
+      gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      color: '#10b981',
     }
   };
 
@@ -40,158 +46,192 @@ const EmptyState: React.FC<EmptyStateProps> = ({ type, onAction }) => {
     <Box
       sx={{
         height: '100%',
-        minHeight: 400,
+        minHeight: 450,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        p: 4,
+        p: 6,
         textAlign: 'center',
         position: 'relative',
         overflow: 'hidden'
       }}
     >
-      {/* Decorative background elements */}
+      {/* Decorative background elements mejorados */}
       <Box
         sx={{
           position: 'absolute',
-          top: '10%',
-          left: '10%',
-          width: 200,
-          height: 200,
+          top: '5%',
+          left: '5%',
+          width: 250,
+          height: 250,
           borderRadius: '50%',
-          background: alpha(theme.palette.primary.main, 0.03),
-          filter: 'blur(40px)',
-          animation: 'float 6s ease-in-out infinite',
+          background: alpha(config.color, 0.05),
+          filter: 'blur(50px)',
+          animation: 'float 8s ease-in-out infinite',
           '@keyframes float': {
-            '0%, 100%': { transform: 'translateY(0) scale(1)' },
-            '50%': { transform: 'translateY(-20px) scale(1.1)' }
+            '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+            '33%': { transform: 'translate(30px, -30px) scale(1.1)' },
+            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' }
           }
         }}
       />
       <Box
         sx={{
           position: 'absolute',
-          bottom: '15%',
-          right: '15%',
-          width: 150,
-          height: 150,
+          bottom: '10%',
+          right: '10%',
+          width: 200,
+          height: 200,
           borderRadius: '50%',
-          background: alpha(theme.palette.secondary.main, 0.03),
-          filter: 'blur(30px)',
-          animation: 'float 8s ease-in-out infinite reverse'
+          background: alpha(config.color, 0.04),
+          filter: 'blur(40px)',
+          animation: 'float 10s ease-in-out infinite reverse'
         }}
       />
 
-      {/* Icon container with animation */}
+      {/* Icon container mejorado */}
       <Box
         sx={{
           position: 'relative',
-          mb: 3,
-          animation: 'bounce 2s ease-in-out infinite',
+          mb: 4,
+          animation: 'bounce 3s ease-in-out infinite',
           '@keyframes bounce': {
             '0%, 100%': { transform: 'translateY(0)' },
-            '50%': { transform: 'translateY(-10px)' }
+            '50%': { transform: 'translateY(-15px)' }
           }
         }}
       >
         <Box
           sx={{
-            width: 120,
-            height: 120,
-            borderRadius: 4,
+            width: 140,
+            height: 140,
+            borderRadius: '24px',
             background: config.gradient,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.2)}`,
+            boxShadow: `0 24px 48px ${alpha(config.color, 0.3)}`,
             position: 'relative',
+            transform: 'rotate(-5deg)',
+            transition: 'transform 0.3s ease',
+            '&:hover': {
+              transform: 'rotate(0deg) scale(1.05)',
+            },
             '&::before': {
               content: '""',
               position: 'absolute',
-              inset: -3,
-              borderRadius: 5,
+              inset: -4,
+              borderRadius: '26px',
               background: config.gradient,
               opacity: 0.3,
-              filter: 'blur(10px)'
+              filter: 'blur(12px)',
+              zIndex: -1,
             }
           }}
         >
-          <Icon sx={{ fontSize: 56, color: 'white' }} />
+          <Icon sx={{ 
+            fontSize: 64, 
+            color: 'white',
+            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))',
+          }} />
         </Box>
 
-        {/* Floating indicator */}
+        {/* Floating indicator mejorado */}
         {type === 'no-grado' && (
           <Box
             sx={{
               position: 'absolute',
-              bottom: -10,
-              right: -10,
-              width: 40,
-              height: 40,
+              bottom: -15,
+              right: -15,
+              width: 56,
+              height: 56,
               borderRadius: '50%',
-              bgcolor: 'background.paper',
+              bgcolor: theme.palette.background.paper,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: `0 4px 12px ${alpha(theme.palette.common.black, 0.1)}`,
-              animation: 'pulse 1.5s ease-in-out infinite',
+              boxShadow: `0 8px 20px ${alpha(theme.palette.common.black, 0.15)}`,
+              border: `3px solid ${config.color}`,
+              animation: 'pulse 2s ease-in-out infinite',
               '@keyframes pulse': {
-                '0%, 100%': { transform: 'scale(1)' },
-                '50%': { transform: 'scale(1.1)' }
+                '0%, 100%': { transform: 'scale(1)', boxShadow: `0 8px 20px ${alpha(theme.palette.common.black, 0.15)}` },
+                '50%': { transform: 'scale(1.1)', boxShadow: `0 12px 28px ${alpha(config.color, 0.4)}` }
               }
             }}
           >
-            <TouchIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+            <TouchIcon sx={{ fontSize: 28, color: config.color }} />
           </Box>
         )}
       </Box>
 
-      {/* Text content */}
+      {/* Text content mejorado */}
       <Typography
-        variant="h5"
-        fontWeight="700"
+        variant="h4"
         sx={{
-          mb: 1,
+          fontWeight: 800,
+          mb: 2,
           background: config.gradient,
           backgroundClip: 'text',
           WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent'
+          WebkitTextFillColor: 'transparent',
+          textShadow: `0 0 40px ${alpha(config.color, 0.1)}`,
         }}
       >
         {config.title}
       </Typography>
 
       <Typography
+        variant="body1"
         color="text.secondary"
         sx={{
-          maxWidth: 350,
-          mb: 3,
-          lineHeight: 1.6
+          maxWidth: 400,
+          mb: 4,
+          lineHeight: 1.7,
+          fontWeight: 500,
         }}
       >
         {config.description}
       </Typography>
 
-      {/* Action button */}
+      {/* Action button mejorado */}
       {config.actionText && onAction && (
         <Button
           variant="contained"
           size="large"
-          startIcon={<AddIcon />}
+          endIcon={<ArrowIcon />}
           onClick={onAction}
           sx={{
-            borderRadius: 3,
-            px: 4,
-            py: 1.5,
+            borderRadius: '16px',
+            px: 5,
+            py: 2,
             textTransform: 'none',
-            fontWeight: 600,
+            fontWeight: 700,
+            fontSize: '1rem',
             background: config.gradient,
-            boxShadow: `0 8px 20px ${alpha(theme.palette.primary.main, 0.3)}`,
+            boxShadow: `0 12px 28px ${alpha(config.color, 0.35)}`,
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+              transition: 'left 0.5s',
+            },
             '&:hover': {
-              transform: 'translateY(-3px)',
-              boxShadow: `0 12px 28px ${alpha(theme.palette.primary.main, 0.4)}`
+              transform: 'translateY(-4px) scale(1.02)',
+              boxShadow: `0 16px 36px ${alpha(config.color, 0.45)}`,
+              '&::before': {
+                left: '100%',
+              }
+            },
+            '&:active': {
+              transform: 'translateY(-2px) scale(0.98)',
             }
           }}
         >
@@ -199,32 +239,66 @@ const EmptyState: React.FC<EmptyStateProps> = ({ type, onAction }) => {
         </Button>
       )}
 
-      {/* Helper dots decoration */}
+      {/* Helper dots decoration mejorada */}
       <Box
         sx={{
           display: 'flex',
-          gap: 1,
-          mt: 4,
-          opacity: 0.5
+          gap: 1.5,
+          mt: 5,
+          opacity: 0.4,
         }}
       >
         {[0, 1, 2].map((i) => (
           <Box
             key={i}
             sx={{
-              width: 8,
-              height: 8,
+              width: 10,
+              height: 10,
               borderRadius: '50%',
-              bgcolor: 'text.disabled',
-              animation: `dot 1.4s ease-in-out ${i * 0.2}s infinite`,
+              bgcolor: config.color,
+              animation: `dot 1.6s ease-in-out ${i * 0.2}s infinite`,
               '@keyframes dot': {
-                '0%, 80%, 100%': { transform: 'scale(1)', opacity: 0.4 },
-                '40%': { transform: 'scale(1.2)', opacity: 1 }
+                '0%, 80%, 100%': { 
+                  transform: 'scale(0.8)', 
+                  opacity: 0.3,
+                  boxShadow: 'none',
+                },
+                '40%': { 
+                  transform: 'scale(1.3)', 
+                  opacity: 1,
+                  boxShadow: `0 0 20px ${alpha(config.color, 0.6)}`,
+                }
               }
             }}
           />
         ))}
       </Box>
+
+      {/* Particle effect (decorativo) */}
+      {[...Array(6)].map((_, i) => (
+        <Box
+          key={i}
+          sx={{
+            position: 'absolute',
+            width: 4,
+            height: 4,
+            borderRadius: '50%',
+            bgcolor: config.color,
+            opacity: 0,
+            animation: `particle${i} ${4 + i}s ease-in-out infinite`,
+            [`@keyframes particle${i}`]: {
+              '0%, 100%': {
+                opacity: 0,
+                transform: `translate(0, 0) scale(0)`,
+              },
+              '50%': {
+                opacity: 0.6,
+                transform: `translate(${Math.cos(i * 60) * 100}px, ${Math.sin(i * 60) * 100}px) scale(1)`,
+              }
+            }
+          }}
+        />
+      ))}
     </Box>
   );
 };

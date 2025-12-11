@@ -13,7 +13,10 @@ import {
   Typography,
   Stack,
   Divider,
-  Grid
+  Grid,
+  useTheme,
+  alpha,
+  Avatar
 } from '@mui/material';
 import EmailIcon from '@mui/icons-material/Email';
 import PersonIcon from '@mui/icons-material/Person';
@@ -21,9 +24,12 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import SaveIcon from '@mui/icons-material/Save';
+import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import configuracionService, { Perfil } from '@/services/configuracionService';
 
 export default function PerfilTab() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -70,15 +76,29 @@ export default function PerfilTab() {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
-        <CircularProgress />
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
+        <CircularProgress 
+          sx={{ 
+            color: isDark ? '#facc15' : '#0288d1',
+            animationDuration: '0.8s'
+          }} 
+          size={50}
+        />
       </Box>
     );
   }
 
   if (!perfil) {
     return (
-      <Alert severity="error">No se pudo cargar la información del perfil</Alert>
+      <Alert 
+        severity="error"
+        sx={{
+          borderRadius: 2,
+          border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`
+        }}
+      >
+        No se pudo cargar la información del perfil
+      </Alert>
     );
   }
 
@@ -86,12 +106,128 @@ export default function PerfilTab() {
 
   return (
     <Stack spacing={3}>
-      {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
-      {success && <Alert severity="success" onClose={() => setSuccess(null)}>{success}</Alert>}
+      {error && (
+        <Alert 
+          severity="error" 
+          onClose={() => setError(null)}
+          sx={{
+            borderRadius: 2,
+            border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+            '& .MuiAlert-icon': {
+              color: theme.palette.error.main
+            }
+          }}
+        >
+          {error}
+        </Alert>
+      )}
+      
+      {success && (
+        <Alert 
+          severity="success" 
+          onClose={() => setSuccess(null)}
+          sx={{
+            borderRadius: 2,
+            border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
+            backgroundColor: isDark ? alpha('#facc15', 0.1) : alpha('#0288d1', 0.1),
+            '& .MuiAlert-icon': {
+              color: isDark ? '#facc15' : '#0288d1'
+            }
+          }}
+        >
+          {success}
+        </Alert>
+      )}
+
+      {/* Avatar y Nombre */}
+      <Card
+        sx={{
+          borderRadius: 3,
+          border: `1px solid ${isDark ? alpha('#facc15', 0.2) : alpha('#0288d1', 0.2)}`,
+          background: isDark
+            ? `linear-gradient(135deg, ${alpha('#facc15', 0.05)} 0%, ${alpha('#f59e0b', 0.05)} 100%)`
+            : `linear-gradient(135deg, ${alpha('#0288d1', 0.05)} 0%, ${alpha('#01579b', 0.05)} 100%)`,
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            boxShadow: isDark 
+              ? `0 8px 24px ${alpha('#facc15', 0.15)}`
+              : `0 8px 24px ${alpha('#0288d1', 0.15)}`,
+            transform: 'translateY(-2px)',
+          }
+        }}
+      >
+        <CardContent>
+          <Box display="flex" alignItems="center" gap={3}>
+            <Avatar
+              sx={{
+                width: 80,
+                height: 80,
+                fontSize: '2rem',
+                fontWeight: 700,
+                background: isDark
+                  ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                  : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                color: isDark ? '#000' : '#fff',
+                border: `3px solid ${isDark ? alpha('#facc15', 0.3) : alpha('#0288d1', 0.3)}`,
+              }}
+            >
+              {perfil.username.charAt(0).toUpperCase()}
+            </Avatar>
+            <Box flex={1}>
+              <Typography variant="h5" fontWeight={700} gutterBottom>
+                {perfil.username}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {perfil.email}
+              </Typography>
+            </Box>
+            {perfil.verificado && (
+              <Chip
+                icon={<VerifiedUserIcon />}
+                label="Verificado"
+                sx={{
+                  background: isDark
+                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                  color: isDark ? '#000' : '#fff',
+                  fontWeight: 600,
+                  '& .MuiChip-icon': {
+                    color: isDark ? '#000' : '#fff',
+                  }
+                }}
+              />
+            )}
+          </Box>
+        </CardContent>
+      </Card>
 
       {/* Información General */}
-      <Card>
-        <CardHeader title="Información General" subheader="Datos básicos de tu cuenta" />
+      <Card
+        sx={{
+          borderRadius: 3,
+          border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`,
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            boxShadow: isDark 
+              ? `0 8px 24px ${alpha('#facc15', 0.1)}`
+              : `0 8px 24px ${alpha('#0288d1', 0.1)}`,
+          }
+        }}
+      >
+        <CardHeader 
+          title={
+            <Typography variant="h6" fontWeight={700}>
+              Información General
+            </Typography>
+          }
+          subheader="Datos básicos de tu cuenta"
+          sx={{
+            background: isDark
+              ? alpha('#facc15', 0.05)
+              : alpha('#0288d1', 0.05),
+            borderBottom: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`
+          }}
+        />
         <CardContent>
           <Grid container spacing={3}>
             {/* Username */}
@@ -102,9 +238,15 @@ export default function PerfilTab() {
                 value={perfil.username}
                 disabled
                 InputProps={{
-                  startAdornment: <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                  startAdornment: <PersonIcon sx={{ mr: 1, color: isDark ? '#facc15' : '#0288d1' }} />
                 }}
                 helperText="El nombre de usuario no se puede cambiar"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    backgroundColor: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02),
+                  }
+                }}
               />
             </Grid>
 
@@ -117,7 +259,19 @@ export default function PerfilTab() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 InputProps={{
-                  startAdornment: <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                  startAdornment: <EmailIcon sx={{ mr: 1, color: isDark ? '#facc15' : '#0288d1' }} />
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: isDark ? '#facc15' : '#0288d1',
+                      borderWidth: 2,
+                    }
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': {
+                    color: isDark ? '#facc15' : '#0288d1',
+                  }
                 }}
               />
             </Grid>
@@ -130,6 +284,32 @@ export default function PerfilTab() {
                     startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
                     onClick={handleGuardar}
                     disabled={saving}
+                    sx={{
+                      borderRadius: 2,
+                      px: 3,
+                      py: 1.5,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      background: isDark
+                        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                      color: isDark ? '#000' : '#fff',
+                      boxShadow: isDark 
+                        ? `0 4px 14px ${alpha('#facc15', 0.4)}`
+                        : `0 4px 14px ${alpha('#0288d1', 0.4)}`,
+                      '&:hover': {
+                        background: isDark
+                          ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                          : 'linear-gradient(135deg, #01579b 0%, #014a7d 100%)',
+                        boxShadow: isDark 
+                          ? `0 6px 20px ${alpha('#facc15', 0.5)}`
+                          : `0 6px 20px ${alpha('#0288d1', 0.5)}`,
+                        transform: 'translateY(-2px)',
+                      },
+                      '&:disabled': {
+                        opacity: 0.6,
+                      }
+                    }}
                   >
                     Guardar Cambios
                   </Button>
@@ -141,52 +321,122 @@ export default function PerfilTab() {
       </Card>
 
       {/* Estado de la Cuenta */}
-      <Card>
-        <CardHeader title="Estado de la Cuenta" />
+      <Card
+        sx={{
+          borderRadius: 3,
+          border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`,
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            boxShadow: isDark 
+              ? `0 8px 24px ${alpha('#facc15', 0.1)}`
+              : `0 8px 24px ${alpha('#0288d1', 0.1)}`,
+          }
+        }}
+      >
+        <CardHeader 
+          title={
+            <Typography variant="h6" fontWeight={700}>
+              Estado de la Cuenta
+            </Typography>
+          }
+          sx={{
+            background: isDark
+              ? alpha('#facc15', 0.05)
+              : alpha('#0288d1', 0.05),
+            borderBottom: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`
+          }}
+        />
         <CardContent>
-          <Stack spacing={2}>
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Box display="flex" alignItems="center" gap={1}>
+          <Stack spacing={2.5}>
+            <Box 
+              display="flex" 
+              justifyContent="space-between" 
+              alignItems="center"
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                backgroundColor: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02),
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04),
+                }
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1.5}>
                 {perfil.activo ? (
-                  <CheckCircleIcon color="success" />
+                  <CheckCircleIcon sx={{ color: '#10b981', fontSize: 28 }} />
                 ) : (
-                  <CancelIcon color="error" />
+                  <CancelIcon sx={{ color: '#ef4444', fontSize: 28 }} />
                 )}
-                <Typography fontWeight={500}>Estado:</Typography>
+                <Typography fontWeight={600} fontSize="1.05rem">Estado:</Typography>
               </Box>
               <Chip
                 label={perfil.activo ? 'Activa' : 'Inactiva'}
-                color={perfil.activo ? 'success' : 'error'}
-                size="small"
+                sx={{
+                  backgroundColor: perfil.activo ? alpha('#10b981', 0.15) : alpha('#ef4444', 0.15),
+                  color: perfil.activo ? '#10b981' : '#ef4444',
+                  fontWeight: 600,
+                  border: `1px solid ${perfil.activo ? alpha('#10b981', 0.3) : alpha('#ef4444', 0.3)}`,
+                }}
               />
             </Box>
 
             <Divider />
 
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Box display="flex" alignItems="center" gap={1}>
+            <Box 
+              display="flex" 
+              justifyContent="space-between" 
+              alignItems="center"
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                backgroundColor: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02),
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04),
+                }
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1.5}>
                 {perfil.verificado ? (
-                  <CheckCircleIcon color="success" />
+                  <CheckCircleIcon sx={{ color: '#10b981', fontSize: 28 }} />
                 ) : (
-                  <CancelIcon color="warning" />
+                  <CancelIcon sx={{ color: '#f59e0b', fontSize: 28 }} />
                 )}
-                <Typography fontWeight={500}>Email Verificado:</Typography>
+                <Typography fontWeight={600} fontSize="1.05rem">Email Verificado:</Typography>
               </Box>
               <Chip
                 label={perfil.verificado ? 'Verificado' : 'Pendiente'}
-                color={perfil.verificado ? 'success' : 'warning'}
-                size="small"
+                sx={{
+                  backgroundColor: perfil.verificado ? alpha('#10b981', 0.15) : alpha('#f59e0b', 0.15),
+                  color: perfil.verificado ? '#10b981' : '#f59e0b',
+                  fontWeight: 600,
+                  border: `1px solid ${perfil.verificado ? alpha('#10b981', 0.3) : alpha('#f59e0b', 0.3)}`,
+                }}
               />
             </Box>
 
             <Divider />
 
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Box display="flex" alignItems="center" gap={1}>
-                <CalendarTodayIcon sx={{ color: 'text.secondary' }} />
-                <Typography fontWeight={500}>Último Acceso:</Typography>
+            <Box 
+              display="flex" 
+              justifyContent="space-between" 
+              alignItems="center"
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                backgroundColor: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02),
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04),
+                }
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1.5}>
+                <CalendarTodayIcon sx={{ color: isDark ? '#facc15' : '#0288d1', fontSize: 24 }} />
+                <Typography fontWeight={600} fontSize="1.05rem">Último Acceso:</Typography>
               </Box>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>
                 {perfil.ultimo_acceso
                   ? new Date(perfil.ultimo_acceso).toLocaleString('es-BO')
                   : 'N/A'}
@@ -195,12 +445,25 @@ export default function PerfilTab() {
 
             <Divider />
 
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Box display="flex" alignItems="center" gap={1}>
-                <CalendarTodayIcon sx={{ color: 'text.secondary' }} />
-                <Typography fontWeight={500}>Miembro Desde:</Typography>
+            <Box 
+              display="flex" 
+              justifyContent="space-between" 
+              alignItems="center"
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                backgroundColor: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02),
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04),
+                }
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1.5}>
+                <CalendarTodayIcon sx={{ color: isDark ? '#facc15' : '#0288d1', fontSize: 24 }} />
+                <Typography fontWeight={600} fontSize="1.05rem">Miembro Desde:</Typography>
               </Box>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>
                 {new Date(perfil.created_at).toLocaleDateString('es-BO')}
               </Typography>
             </Box>
@@ -209,20 +472,57 @@ export default function PerfilTab() {
       </Card>
 
       {/* Roles */}
-      <Card>
+      <Card
+        sx={{
+          borderRadius: 3,
+          border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`,
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            boxShadow: isDark 
+              ? `0 8px 24px ${alpha('#facc15', 0.1)}`
+              : `0 8px 24px ${alpha('#0288d1', 0.1)}`,
+          }
+        }}
+      >
         <CardHeader
-          title="Roles Asignados"
+          title={
+            <Typography variant="h6" fontWeight={700}>
+              Roles Asignados
+            </Typography>
+          }
           subheader="Los roles determinan tus permisos en el sistema"
+          sx={{
+            background: isDark
+              ? alpha('#facc15', 0.05)
+              : alpha('#0288d1', 0.05),
+            borderBottom: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`
+          }}
         />
         <CardContent>
           {perfil.roles && perfil.roles.length > 0 ? (
-            <Box display="flex" flexWrap="wrap" gap={1}>
+            <Box display="flex" flexWrap="wrap" gap={1.5}>
               {perfil.roles.map((rol) => (
                 <Chip
                   key={rol.id}
                   label={rol.nombre}
-                  variant="outlined"
-                  color="primary"
+                  sx={{
+                    background: isDark
+                      ? `linear-gradient(135deg, ${alpha('#facc15', 0.2)} 0%, ${alpha('#f59e0b', 0.2)} 100%)`
+                      : `linear-gradient(135deg, ${alpha('#0288d1', 0.2)} 0%, ${alpha('#01579b', 0.2)} 100%)`,
+                    color: isDark ? '#facc15' : '#0288d1',
+                    fontWeight: 600,
+                    border: `1px solid ${isDark ? alpha('#facc15', 0.3) : alpha('#0288d1', 0.3)}`,
+                    px: 2,
+                    py: 2.5,
+                    fontSize: '0.9rem',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: isDark 
+                        ? `0 4px 12px ${alpha('#facc15', 0.3)}`
+                        : `0 4px 12px ${alpha('#0288d1', 0.3)}`,
+                    }
+                  }}
                 />
               ))}
             </Box>

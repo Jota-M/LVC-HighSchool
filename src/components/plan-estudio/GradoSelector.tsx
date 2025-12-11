@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
   Box, Typography, alpha, useTheme, Collapse, Skeleton,
-  InputBase, IconButton, Tooltip, Badge
+  InputBase, IconButton, Tooltip, Badge, Paper, Zoom
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -19,13 +19,14 @@ interface GradoSelectorProps {
   gradoSeleccionado: Grado | null;
   onSelectGrado: (grado: Grado) => void;
   loading: boolean;
-  materiasCount?: Record<number, number>; // gradoId -> cantidad materias
+  materiasCount?: Record<number, number>;
 }
 
 const GradoSelector: React.FC<GradoSelectorProps> = ({
   niveles, grados, gradoSeleccionado, onSelectGrado, loading, materiasCount = {}
 }) => {
   const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [expandedNiveles, setExpandedNiveles] = useState<number[]>(niveles.map(n => n.id));
   const [search, setSearch] = useState('');
 
@@ -47,11 +48,11 @@ const GradoSelector: React.FC<GradoSelectorProps> = ({
   // Colores para niveles
   const getNivelColor = (index: number) => {
     const colors = [
-      theme.palette.primary.main,
-      theme.palette.secondary.main,
-      theme.palette.success.main,
-      theme.palette.warning.main,
-      theme.palette.info.main
+      isDark ? '#facc15' : '#0288d1',
+      '#10b981',
+      '#f59e0b',
+      '#8b5cf6',
+      '#ec4899'
     ];
     return colors[index % colors.length];
   };
@@ -61,9 +62,9 @@ const GradoSelector: React.FC<GradoSelectorProps> = ({
       <Box sx={{ p: 2 }}>
         {[1, 2, 3].map(i => (
           <Box key={i} sx={{ mb: 2 }}>
-            <Skeleton variant="rounded" height={50} sx={{ mb: 1 }} />
-            <Skeleton variant="rounded" height={40} sx={{ ml: 2 }} />
-            <Skeleton variant="rounded" height={40} sx={{ ml: 2, mt: 1 }} />
+            <Skeleton variant="rounded" height={56} sx={{ mb: 1, borderRadius: '12px' }} />
+            <Skeleton variant="rounded" height={48} sx={{ ml: 2, borderRadius: '10px' }} />
+            <Skeleton variant="rounded" height={48} sx={{ ml: 2, mt: 1, borderRadius: '10px' }} />
           </Box>
         ))}
       </Box>
@@ -71,71 +72,94 @@ const GradoSelector: React.FC<GradoSelectorProps> = ({
   }
 
   return (
-    <Box sx={{
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      bgcolor: 'background.paper',
-      borderRadius: 3,
-      overflow: 'hidden',
-      border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-      boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.05)}`
-    }}>
+    <Paper
+      elevation={0}
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRadius: '24px',
+        overflow: 'hidden',
+        background: isDark
+          ? alpha('#1e293b', 0.8)
+          : alpha('#ffffff', 0.9),
+        backdropFilter: 'blur(20px)',
+        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+        boxShadow: `0 8px 24px ${alpha(theme.palette.common.black, 0.08)}`,
+      }}
+    >
       {/* Header */}
       <Box sx={{
-        p: 2.5,
-        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
+        p: 3,
+        background: isDark
+          ? `linear-gradient(135deg, ${alpha('#facc15', 0.15)} 0%, ${alpha('#f59e0b', 0.05)} 100%)`
+          : `linear-gradient(135deg, ${alpha('#0288d1', 0.15)} 0%, ${alpha('#01579b', 0.05)} 100%)`,
         borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
           <Box sx={{
-            width: 40,
-            height: 40,
-            borderRadius: 2,
-            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            width: 48,
+            height: 48,
+            borderRadius: '12px',
+            background: isDark
+              ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+              : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            boxShadow: `0 4px 12px ${alpha(isDark ? '#facc15' : '#0288d1', 0.3)}`,
           }}>
-            <SchoolIcon sx={{ color: 'white', fontSize: 22 }} />
+            <SchoolIcon sx={{ color: isDark ? '#000' : 'white', fontSize: 24 }} />
           </Box>
-          <Box>
-            <Typography variant="h6" fontWeight="700">Grados</Typography>
-            <Typography variant="caption" color="text.secondary">
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              Grados
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
               {grados.length} grados disponibles
             </Typography>
           </Box>
         </Box>
 
         {/* Buscador */}
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          bgcolor: alpha(theme.palette.common.black, 0.04),
-          borderRadius: 2,
-          px: 1.5,
-          py: 0.5,
-          transition: 'all 0.2s',
-          '&:focus-within': {
-            bgcolor: 'background.paper',
-            boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`
-          }
-        }}>
+        <Paper
+          elevation={0}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            bgcolor: isDark 
+              ? alpha('#000', 0.2)
+              : alpha('#000', 0.03),
+            borderRadius: '12px',
+            px: 2,
+            py: 1,
+            transition: 'all 0.3s ease',
+            border: `2px solid transparent`,
+            '&:focus-within': {
+              bgcolor: theme.palette.background.paper,
+              borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.5),
+              boxShadow: `0 0 0 3px ${alpha(isDark ? '#facc15' : '#0288d1', 0.1)}`,
+            }
+          }}
+        >
           <SearchIcon sx={{ color: 'text.secondary', fontSize: 20, mr: 1 }} />
           <InputBase
             placeholder="Buscar grado..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            sx={{ flex: 1, fontSize: '0.875rem' }}
+            sx={{ flex: 1, fontSize: '0.875rem', fontWeight: 500 }}
           />
-        </Box>
+        </Paper>
       </Box>
 
       {/* Lista de niveles y grados */}
-      <Box sx={{ flex: 1, overflow: 'auto', p: 1.5 }}>
+      <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
         {gradosPorNivel.length === 0 ? (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="text.secondary">No se encontraron grados</Typography>
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <SchoolIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2, opacity: 0.3 }} />
+            <Typography color="text.secondary" sx={{ fontWeight: 500 }}>
+              No se encontraron grados
+            </Typography>
           </Box>
         ) : (
           gradosPorNivel.map((nivel, nivelIndex) => {
@@ -143,32 +167,38 @@ const GradoSelector: React.FC<GradoSelectorProps> = ({
             const isExpanded = expandedNiveles.includes(nivel.id);
 
             return (
-              <Box key={nivel.id} sx={{ mb: 1.5 }}>
+              <Box key={nivel.id} sx={{ mb: 2 }}>
                 {/* Nivel Header */}
                 <Box
                   onClick={() => toggleNivel(nivel.id)}
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 1.5,
-                    p: 1.5,
-                    borderRadius: 2,
+                    gap: 2,
+                    p: 2,
+                    borderRadius: '12px',
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    bgcolor: alpha(nivelColor, 0.08),
+                    transition: 'all 0.3s ease',
+                    background: isDark
+                      ? alpha(nivelColor, 0.12)
+                      : alpha(nivelColor, 0.08),
+                    border: `2px solid ${alpha(nivelColor, 0.2)}`,
                     '&:hover': {
-                      bgcolor: alpha(nivelColor, 0.12)
+                      background: alpha(nivelColor, 0.15),
+                      borderColor: alpha(nivelColor, 0.4),
+                      transform: 'translateX(4px)',
                     }
                   }}
                 >
                   <Box sx={{
-                    width: 8,
-                    height: 32,
-                    borderRadius: 1,
-                    bgcolor: nivelColor
+                    width: 6,
+                    height: 40,
+                    borderRadius: '3px',
+                    bgcolor: nivelColor,
+                    boxShadow: `0 0 12px ${alpha(nivelColor, 0.4)}`,
                   }} />
                   
-                  <Typography variant="subtitle2" fontWeight="700" sx={{ flex: 1 }}>
+                  <Typography variant="subtitle1" sx={{ flex: 1, fontWeight: 700 }}>
                     {nivel.nombre}
                   </Typography>
                   
@@ -176,121 +206,139 @@ const GradoSelector: React.FC<GradoSelectorProps> = ({
                     badgeContent={nivel.grados.length}
                     sx={{
                       '& .MuiBadge-badge': {
-                        bgcolor: alpha(nivelColor, 0.2),
-                        color: nivelColor,
-                        fontWeight: 700
+                        bgcolor: nivelColor,
+                        color: isDark ? '#000' : '#fff',
+                        fontWeight: 700,
+                        fontSize: '0.7rem',
+                        minWidth: 22,
+                        height: 22,
+                        borderRadius: '11px',
                       }
                     }}
                   />
                   
                   <ExpandIcon
                     sx={{
-                      fontSize: 20,
-                      color: 'text.secondary',
+                      fontSize: 24,
+                      color: nivelColor,
                       transform: isExpanded ? 'rotate(180deg)' : 'none',
-                      transition: 'transform 0.2s'
+                      transition: 'transform 0.3s ease'
                     }}
                   />
                 </Box>
 
                 {/* Grados del nivel */}
                 <Collapse in={isExpanded}>
-                  <Box sx={{ pt: 1, pl: 1 }}>
-                    {nivel.grados.map(grado => {
+                  <Box sx={{ pt: 1.5, pl: 1 }}>
+                    {nivel.grados.map((grado, index) => {
                       const isSelected = gradoSeleccionado?.id === grado.id;
                       const cantMaterias = materiasCount[grado.id] || 0;
 
                       return (
-                        <Box
+                        <Zoom 
                           key={grado.id}
-                          onClick={() => onSelectGrado(grado)}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1.5,
-                            p: 1.5,
-                            mb: 0.5,
-                            borderRadius: 2,
-                            cursor: 'pointer',
-                            position: 'relative',
-                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                            bgcolor: isSelected ? alpha(nivelColor, 0.12) : 'transparent',
-                            border: isSelected 
-                              ? `2px solid ${alpha(nivelColor, 0.5)}` 
-                              : '2px solid transparent',
-                            transform: isSelected ? 'scale(1.02)' : 'none',
-                            '&:hover': {
-                              bgcolor: alpha(nivelColor, 0.08),
-                              transform: 'translateX(4px)'
-                            },
-                            '&::before': isSelected ? {
-                              content: '""',
-                              position: 'absolute',
-                              left: 0,
-                              top: '50%',
-                              transform: 'translateY(-50%)',
-                              width: 4,
-                              height: '70%',
-                              borderRadius: 2,
-                              bgcolor: nivelColor
-                            } : {}
-                          }}
+                          in={isExpanded}
+                          style={{ transitionDelay: `${index * 50}ms` }}
                         >
-                          {/* Icono o indicador de selección */}
-                          <Box sx={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: '50%',
-                            bgcolor: isSelected ? nivelColor : alpha(nivelColor, 0.1),
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s'
-                          }}>
-                            {isSelected ? (
-                              <CheckIcon sx={{ color: 'white', fontSize: 18 }} />
-                            ) : (
-                              <BookIcon sx={{ color: nivelColor, fontSize: 18 }} />
-                            )}
-                          </Box>
+                          <Box
+                            onClick={() => onSelectGrado(grado)}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 2,
+                              p: 2,
+                              mb: 1,
+                              borderRadius: '12px',
+                              cursor: 'pointer',
+                              position: 'relative',
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              background: isSelected 
+                                ? alpha(nivelColor, 0.15)
+                                : 'transparent',
+                              border: isSelected 
+                                ? `2px solid ${nivelColor}` 
+                                : `2px solid transparent`,
+                              transform: isSelected ? 'scale(1.02)' : 'none',
+                              '&:hover': {
+                                background: alpha(nivelColor, 0.1),
+                                transform: 'translateX(8px) scale(1.01)',
+                                borderColor: alpha(nivelColor, 0.3),
+                              },
+                              '&::before': isSelected ? {
+                                content: '""',
+                                position: 'absolute',
+                                left: 0,
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                width: 4,
+                                height: '60%',
+                                borderRadius: '2px',
+                                bgcolor: nivelColor,
+                                boxShadow: `0 0 12px ${alpha(nivelColor, 0.6)}`,
+                              } : {}
+                            }}
+                          >
+                            {/* Icono o indicador de selección */}
+                            <Box sx={{
+                              width: 44,
+                              height: 44,
+                              borderRadius: '10px',
+                              bgcolor: isSelected ? nivelColor : alpha(nivelColor, 0.15),
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.3s ease',
+                              boxShadow: isSelected 
+                                ? `0 4px 12px ${alpha(nivelColor, 0.4)}`
+                                : 'none',
+                            }}>
+                              {isSelected ? (
+                                <CheckIcon sx={{ color: isDark ? '#000' : 'white', fontSize: 20 }} />
+                              ) : (
+                                <BookIcon sx={{ color: nivelColor, fontSize: 20 }} />
+                              )}
+                            </Box>
 
-                          {/* Info del grado */}
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography
-                              variant="body2"
-                              fontWeight={isSelected ? 700 : 500}
-                              sx={{
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
-                              }}
-                            >
-                              {grado.nombre}
-                            </Typography>
-                            {grado.codigo && (
-                              <Typography variant="caption" color="text.secondary">
-                                {grado.codigo}
+                            {/* Info del grado */}
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Typography
+                                variant="body1"
+                                sx={{
+                                  fontWeight: isSelected ? 700 : 600,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  mb: 0.25,
+                                }}
+                              >
+                                {grado.nombre}
                               </Typography>
+                              {grado.codigo && (
+                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                  {grado.codigo}
+                                </Typography>
+                              )}
+                            </Box>
+
+                            {/* Contador de materias */}
+                            {cantMaterias > 0 && (
+                              <Tooltip title={`${cantMaterias} materias asignadas`}>
+                                <Box sx={{
+                                  px: 1.5,
+                                  py: 0.5,
+                                  borderRadius: '8px',
+                                  bgcolor: alpha('#10b981', 0.15),
+                                  color: '#10b981',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  border: `1px solid ${alpha('#10b981', 0.3)}`,
+                                }}>
+                                  {cantMaterias}
+                                </Box>
+                              </Tooltip>
                             )}
                           </Box>
-
-                          {/* Contador de materias */}
-                          {cantMaterias > 0 && (
-                            <Tooltip title={`${cantMaterias} materias asignadas`}>
-                              <Box sx={{
-                                px: 1,
-                                py: 0.25,
-                                borderRadius: 1,
-                                bgcolor: alpha(theme.palette.success.main, 0.1),
-                                color: theme.palette.success.main,
-                                fontSize: '0.7rem',
-                                fontWeight: 700
-                              }}>
-                                {cantMaterias}
-                              </Box>
-                            </Tooltip>
-                          )}
-                        </Box>
+                        </Zoom>
                       );
                     })}
                   </Box>
@@ -300,7 +348,7 @@ const GradoSelector: React.FC<GradoSelectorProps> = ({
           })
         )}
       </Box>
-    </Box>
+    </Paper>
   );
 };
 

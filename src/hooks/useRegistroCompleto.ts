@@ -110,22 +110,19 @@ export const useGestionAcademica = () => {
   // ✅ NUEVO: Query para obtener TODOS los paralelos de un periodo/año
   const obtenerTodosLosParalelos = useCallback(async (anio: number) => {
     try {
-      console.log('🔍 Obteniendo todos los paralelos del año:', anio);
-      const todosLosParalelos = [];
+      console.log('🔍 Obteniendo TODOS los paralelos del año:', anio);
       
-      for (const grado of grados) {
-        const paralelos = await gestionAcademicaService.obtenerParalelos(grado.id, anio);
-        todosLosParalelos.push(...paralelos);
-      }
+      // ✨ UNA SOLA PETICIÓN en lugar de 14
+      const paralelos = await gestionAcademicaService.obtenerTodosLosParalelos(anio);
       
-      console.log('✅ Total paralelos cargados:', todosLosParalelos.length);
-      return todosLosParalelos;
+      console.log('✅ Total paralelos cargados:', paralelos.length);
+      return paralelos;
     } catch (error: any) {
       console.error('❌ Error al cargar paralelos:', error);
       enqueueSnackbar('Error al cargar paralelos', { variant: 'error' });
       return [];
     }
-  }, [grados, enqueueSnackbar]);
+  }, [enqueueSnackbar]);
 
   // ✅ MEMOIZADO: Paralelos (dinámicos por grado)
   const obtenerParalelos = useCallback(async (gradoId: number, anio?: number) => {

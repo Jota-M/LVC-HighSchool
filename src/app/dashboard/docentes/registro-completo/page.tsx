@@ -22,7 +22,9 @@ import {
   Card,
   CardContent,
   Alert,
+  IconButton
 } from '@mui/material';
+import { BorderColor, CameraAlt as CameraIcon } from '@mui/icons-material';
 import {
   ArrowBack as BackIcon,
   Save as SaveIcon,
@@ -35,6 +37,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import docenteService from '@/services/docenteService';
+
 import {
   CrearDocenteDTO,
   GENEROS,
@@ -252,6 +255,41 @@ export const RegistroCompletoDocente: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+  const fieldStyle = {
+  width: '100%',
+
+  // Label
+  '& .MuiInputLabel-root': {
+    color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+    fontWeight: 500,
+    fontSize: '0.95rem',
+    '&.Mui-focused': {
+      color: isDark ? '#facc15' : '#0288d1',
+    },
+  },
+
+  // Caja del input (fondo)
+  '& .MuiInputBase-root': {
+    borderRadius: '12px',
+    
+    transition: '0.2s ease',
+    border: '1px solid transparent',
+
+    '&:hover': {
+      borderColor: isDark ? '#facc15' : '#0288d1',
+    },
+
+    '&.Mui-focused': {
+      borderColor: isDark ? '#facc15' : '#0288d1',
+      boxShadow: `0 0 0 2px ${isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(2, 136, 209, 0.25)'}`,
+    },
+  },
+
+  // Texto dentro del input
+  '& .MuiInputBase-input': {
+    color: isDark ? '#fff' : '#000',
+  },
+};
 
   // =============================================
   // RENDER DE PASOS
@@ -262,57 +300,57 @@ export const RegistroCompletoDocente: React.FC = () => {
         return (
           <Grid container spacing={3}>
             {/* Foto */}
-            <Grid item xs={12} md={4}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Avatar
-                  src={fotoPreview}
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+              <Box sx={{ position: 'relative' }}>
+                <Box
                   sx={{
-                    width: 150,
-                    height: 150,
-                    margin: '0 auto',
-                    mb: 2,
-                    border: `4px solid ${isDark ? '#facc15' : '#0288d1'}`,
+                    width: 120,
+                    height: 120,
+                    borderRadius: '50%',
+                    border: '4px solid',
+                    borderColor: isDark ? '#facc15' : '#0288d1',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'rgba(0,0,0,0.05)',
                   }}
                 >
-                  <PersonIcon sx={{ fontSize: 80 }} />
-                </Avatar>
-                <input
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  id="foto-upload"
-                  type="file"
-                  onChange={handleFotoChange}
-                />
-                <label htmlFor="foto-upload">
-                  <Button
-                    variant="outlined"
-                    component="span"
-                    startIcon={<PhotoIcon />}
-                    fullWidth
-                    sx={{ mb: 1 }}
-                  >
-                    Subir Foto
-                  </Button>
-                </label>
-                {fotoPreview && (
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={handleRemoveFoto}
-                    fullWidth
-                    size="small"
-                  >
-                    Quitar Foto
-                  </Button>
-                )}
+                  {fotoPreview ? (
+                    <img
+                      src={fotoPreview}
+                      alt="Preview"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <CameraIcon sx={{ fontSize: 48, color: 'gray' }} />
+                  )}
+                </Box>
+                <IconButton
+                  component="label"
+                  sx={{
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                    backgroundColor: isDark ? '#facc15' : '#0288d1',
+                    color: isDark ? '#000' : '#fff',
+                    '&:hover': {
+                      backgroundColor: isDark ? '#eab308' : '#0277bd',
+                    },
+                  }}
+                >
+                  <CameraIcon />
+                  <input type="file" accept="image/*" onChange={handleFotoChange} hidden />
+                </IconButton>
               </Box>
-            </Grid>
+            </Box>
 
             {/* Datos Personales */}
-            <Grid item xs={12} md={8}>
+            <Grid size={{xs:12, md:8}}>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6}}>
                   <TextField
+                    sx={fieldStyle}
                     fullWidth
                     required
                     label="Nombres"
@@ -320,8 +358,9 @@ export const RegistroCompletoDocente: React.FC = () => {
                     onChange={(e) => handleInputChange('nombres', e.target.value)}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6}}>
                   <TextField
+                    sx={fieldStyle}
                     fullWidth
                     required
                     label="Apellido Paterno"
@@ -329,16 +368,18 @@ export const RegistroCompletoDocente: React.FC = () => {
                     onChange={(e) => handleInputChange('apellido_paterno', e.target.value)}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6}}>
                   <TextField
+                    sx={fieldStyle}
                     fullWidth
                     label="Apellido Materno"
                     value={formData.docente.apellido_materno}
                     onChange={(e) => handleInputChange('apellido_materno', e.target.value)}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6}}>
                   <TextField
+                    sx={fieldStyle}
                     fullWidth
                     required
                     label="CI"
@@ -346,8 +387,9 @@ export const RegistroCompletoDocente: React.FC = () => {
                     onChange={(e) => handleInputChange('ci', e.target.value)}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6}}>
                   <TextField
+                    sx={fieldStyle}
                     fullWidth
                     type="date"
                     label="Fecha de Nacimiento"
@@ -356,8 +398,9 @@ export const RegistroCompletoDocente: React.FC = () => {
                     InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6}}>
                   <TextField
+                    sx={fieldStyle}
                     fullWidth
                     select
                     label="Género"
@@ -371,24 +414,27 @@ export const RegistroCompletoDocente: React.FC = () => {
                     ))}
                   </TextField>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6}}>
                   <TextField
+                    sx={fieldStyle}
                     fullWidth
                     label="Teléfono"
                     value={formData.docente.telefono}
                     onChange={(e) => handleInputChange('telefono', e.target.value)}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6}}>
                   <TextField
+                    sx={fieldStyle}
                     fullWidth
                     label="Celular"
                     value={formData.docente.celular}
                     onChange={(e) => handleInputChange('celular', e.target.value)}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs:12}}>
                   <TextField
+                    sx={fieldStyle}
                     fullWidth
                     label="Email"
                     type="email"
@@ -396,8 +442,9 @@ export const RegistroCompletoDocente: React.FC = () => {
                     onChange={(e) => handleInputChange('email', e.target.value)}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs:12}}>
                   <TextField
+                    sx={fieldStyle}
                     fullWidth
                     label="Dirección"
                     multiline
@@ -414,30 +461,33 @@ export const RegistroCompletoDocente: React.FC = () => {
       case 1:
         return (
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={{xs:12}}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
                 Formación Académica
               </Typography>
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs:12, sm:6}}>
               <TextField
+                sx={fieldStyle}
                 fullWidth
                 label="Título Profesional"
                 value={formData.docente.titulo_profesional}
                 onChange={(e) => handleInputChange('titulo_profesional', e.target.value)}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs:12, sm:6}}>
               <TextField
+                sx={fieldStyle}
                 fullWidth
                 label="Título de Postgrado"
                 value={formData.docente.titulo_postgrado}
                 onChange={(e) => handleInputChange('titulo_postgrado', e.target.value)}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs:12, sm:6}}>
               <TextField
+                sx={fieldStyle}
                 fullWidth
                 select
                 label="Nivel de Formación"
@@ -451,16 +501,18 @@ export const RegistroCompletoDocente: React.FC = () => {
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs:12, sm:6}}>
               <TextField
+                sx={fieldStyle}
                 fullWidth
                 label="Especialidad"
                 value={formData.docente.especialidad}
                 onChange={(e) => handleInputChange('especialidad', e.target.value)}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs:12, sm:6}}>
               <TextField
+                sx={fieldStyle}
                 fullWidth
                 type="number"
                 label="Años de Experiencia"
@@ -469,14 +521,15 @@ export const RegistroCompletoDocente: React.FC = () => {
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{xs:12}}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 700, mt: 2 }}>
                 Información Contractual
               </Typography>
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs:12, sm:6}}>
               <TextField
+                sx={fieldStyle}
                 fullWidth
                 select
                 label="Tipo de Contrato"
@@ -490,8 +543,9 @@ export const RegistroCompletoDocente: React.FC = () => {
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs:12, sm:6}}>
               <TextField
+                sx={fieldStyle}
                 fullWidth
                 type="date"
                 label="Fecha de Contratación"
@@ -500,8 +554,9 @@ export const RegistroCompletoDocente: React.FC = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs:12, sm:6}}>
               <TextField
+                sx={fieldStyle}
                 fullWidth
                 type="number"
                 label="Salario Mensual (Bs.)"
@@ -509,8 +564,9 @@ export const RegistroCompletoDocente: React.FC = () => {
                 onChange={(e) => handleInputChange('salario_mensual', parseFloat(e.target.value) || 0)}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs:12, sm:6}}>
               <TextField
+                sx={fieldStyle}
                 fullWidth
                 label="Número de Cuenta"
                 value={formData.docente.numero_cuenta}
@@ -518,13 +574,13 @@ export const RegistroCompletoDocente: React.FC = () => {
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{xs:12}}>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 700, mt: 2 }}>
                 Curriculum Vitae (CV)
               </Typography>
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{xs:12}}>
               <Box
                 sx={{
                   border: `2px dashed ${isDark ? alpha('#fff', 0.2) : alpha('#000', 0.2)}`,
@@ -579,7 +635,7 @@ export const RegistroCompletoDocente: React.FC = () => {
       case 2:
         return (
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={{xs:12}}>
               <Card
                 sx={{
                   backgroundColor: isDark ? alpha('#facc15', 0.1) : alpha('#0288d1', 0.1),
@@ -616,14 +672,15 @@ export const RegistroCompletoDocente: React.FC = () => {
 
             {formData.crear_usuario && (
               <>
-                <Grid item xs={12}>
+                <Grid size={{xs:12}}>
                   <Alert severity="info" sx={{ borderRadius: '12px' }}>
                     Si dejas los campos vacíos, se generarán automáticamente username y contraseña.
                   </Alert>
                 </Grid>
 
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6}}>
                   <TextField
+                    sx={fieldStyle}
                     fullWidth
                     label="Username (opcional)"
                     value={formData.credenciales?.username || ''}
@@ -631,8 +688,9 @@ export const RegistroCompletoDocente: React.FC = () => {
                     helperText="Se generará automáticamente si se deja vacío"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs:12, sm:6}}>
                   <TextField
+                    sx={fieldStyle}
                     fullWidth
                     type="password"
                     label="Contraseña (opcional)"
@@ -641,8 +699,9 @@ export const RegistroCompletoDocente: React.FC = () => {
                     helperText="Se generará automáticamente si se deja vacía"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs:12}}>
                   <TextField
+                    sx={fieldStyle}
                     fullWidth
                     type="email"
                     label="Email de acceso (opcional)"
@@ -654,7 +713,7 @@ export const RegistroCompletoDocente: React.FC = () => {
               </>
             )}
 
-            <Grid item xs={12}>
+            <Grid size={{xs:12}}>
               <Alert severity="success" icon={<SchoolIcon />} sx={{ borderRadius: '12px', mt: 2 }}>
                 <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
                   ¿Necesitas asignar materias al docente?
@@ -674,7 +733,7 @@ export const RegistroCompletoDocente: React.FC = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', py: 4, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }}>
+    <Box sx={{ minHeight: '100vh', py: 4}}>
       <Container maxWidth="lg">
         {/* Header */}
         <Box sx={{ mb: 4 }}>
@@ -721,7 +780,7 @@ export const RegistroCompletoDocente: React.FC = () => {
             p: 3,
             mb: 4,
             borderRadius: '20px',
-            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+             backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
           }}
         >
           <Stepper activeStep={activeStep}>
@@ -738,7 +797,7 @@ export const RegistroCompletoDocente: React.FC = () => {
           sx={{
             p: 4,
             borderRadius: '20px',
-            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
             minHeight: '500px',
           }}
         >
@@ -751,6 +810,7 @@ export const RegistroCompletoDocente: React.FC = () => {
             disabled={activeStep === 0}
             onClick={handleBack}
             variant="outlined"
+            color='success'
             size="large"
             sx={{ borderRadius: '12px', px: 4 }}
           >

@@ -188,10 +188,8 @@ export interface RetiroMatricula {
 export const TIPOS_DOCUMENTO_MATRICULA = [
   'cedula_estudiante',
   'certificado_nacimiento',
+  'certificado_nacimiento_Padre',
   'libreta_notas',
-  'certificado_medico',
-  'comprobante_domicilio',
-  'foto_carnet',
   'otro',
 ] as const;
 

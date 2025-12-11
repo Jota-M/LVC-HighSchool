@@ -16,13 +16,17 @@ import {
   MenuItem,
   Alert,
   CircularProgress,
-  keyframes
+  keyframes,
+  ToggleButtonGroup,
+  ToggleButton,
+  alpha
 } from '@mui/material';
 import {
   PersonAdd as MatricularIcon,
   List as ListIcon,
   Assessment as StatsIcon,
-  Refresh as RefreshIcon,
+  ViewModule as ViewModuleIcon,
+  TableRows as TableRowsIcon,
 } from '@mui/icons-material';
 import { School as SchoolIcon } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
@@ -46,11 +50,17 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
   );
 };
 
+const bounce = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+`;
+
 export const Matriculacion: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
   const isDark = theme.palette.mode === 'dark';
   const [activeTab, setActiveTab] = useState(0);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState<number | null>(null);
 
   // Hooks de gestión académica
@@ -101,22 +111,22 @@ export const Matriculacion: React.FC = () => {
   const handleVerMatricula = (matriculaId: number) => {
     router.push(`/dashboard/matriculacion/${matriculaId}`);
   };
-const bounce = keyframes`
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-`;
+
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        py: 4,
-      }}
-    >
+    <Box sx={{ minHeight: '100vh', py: 4 }}>
       <Container maxWidth="xl">
         {/* Header */}
         <Fade in timeout={500}>
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: { xs: 'flex-start', md: 'center' },
+              flexDirection: { xs: 'column', md: 'row' },
+              gap: 2,
+              mb: 3 
+            }}>
+              {/* IZQUIERDA: TÍTULO */}
               <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <SchoolIcon
@@ -126,115 +136,228 @@ const bounce = keyframes`
                       animation: `${bounce} 1.5s infinite`,
                     }}
                   />
-                <Typography
-                variant="h1"
-                sx={{
-                  fontSize: {xs: '1.5rem', sm: '2rem', md: '2.5rem'},
-                  fontWeight: 800,
-                  background: isDark
-                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  animation: 'fadeIn 1s ease-out',
-                  '@keyframes fadeIn': {
-                    from: { opacity: 0, transform: 'translateY(-10px)' },
-                    to: { opacity: 1, transform: 'translateY(0)' },
-                  },
-                }}
-              >
-                Matriculación de Estudiantes
-              </Typography>
-              </Box>
-                <Typography variant="body1" color="text.secondary">
-                  Gestiona las matrículas de estudiantes por periodo académico
+                  <Typography
+                    variant="h1"
+                    sx={{
+                      fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                      fontWeight: 800,
+                      background: isDark
+                        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      animation: 'fadeIn 1s ease-out',
+                      '@keyframes fadeIn': {
+                        from: { opacity: 0, transform: 'translateY(-10px)' },
+                        to: { opacity: 1, transform: 'translateY(0)' },
+                      },
+                    }}
+                  >
+                    Matriculación de Estudiantes
+                  </Typography>
+                </Box>
+                <Typography 
+                  variant="body1" 
+                  color="text.secondary"
+                  sx={{
+                    fontWeight: 500,
+                    letterSpacing: 0.3,
+                    animation: 'fadeInText 1.2s ease-out',
+                    '@keyframes fadeInText': {
+                      from: { opacity: 0, transform: 'translateY(5px)' },
+                      to: { opacity: 1, transform: 'translateY(0)' },
+                    },
+                  }}
+                >
+                  Gestiona las matrículas de estudiantes por periodo académico.
                 </Typography>
               </Box>
 
-              {/* Selector de periodo */}
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <FormControl
-                  sx={{
-                    minWidth: 300,
-                    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
-                    borderRadius: '12px',
-                    backdropFilter: 'blur(20px)',
-                  }}
+              {/* DERECHA: SELECTOR DE PERIODO */}
+              <FormControl
+                sx={{
+                  minWidth: { xs: '100%', md: 300 },
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: isDark ? '#facc15' : '#0288d1',
+                    }
+                  }
+                }}
+              >
+                <InputLabel sx={{
+                  '&.Mui-focused': {
+                    color: isDark ? '#facc15' : '#0288d1',
+                  }
+                }}>Periodo Académico</InputLabel>
+                <Select
+                  value={periodoSeleccionado || ''}
+                  onChange={(e) => setPeriodoSeleccionado(e.target.value as number)}
+                  label="Periodo Académico"
+                  disabled={isLoadingPeriodos}
                 >
-                  <InputLabel>Periodo Académico</InputLabel>
-                  <Select
-                    value={periodoSeleccionado || ''}
-                    onChange={(e) => setPeriodoSeleccionado(e.target.value as number)}
-                    label="Periodo Académico"
-                    disabled={isLoadingPeriodos}
-                  >
-                    {periodos.map((periodo) => (
-                      <MenuItem key={periodo.id} value={periodo.id}>
-                        {periodo.nombre}
-                        {periodo.activo && (
-                          <Typography
-                            component="span"
-                            sx={{
-                              ml: 1,
-                              px: 1,
-                              py: 0.5,
-                              borderRadius: '8px',
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              backgroundColor: isDark ? '#facc15' : '#0288d1',
-                              color: isDark ? '#000' : '#fff',
-                            }}
-                          >
-                            ACTIVO
-                          </Typography>
-                        )}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
+                  {periodos.map((periodo) => (
+                    <MenuItem key={periodo.id} value={periodo.id}>
+                      {periodo.nombre}
+                      {periodo.activo && (
+                        <Typography
+                          component="span"
+                          sx={{
+                            ml: 1,
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: '8px',
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            backgroundColor: isDark ? '#facc15' : '#0288d1',
+                            color: isDark ? '#000' : '#fff',
+                          }}
+                        >
+                          ACTIVO
+                        </Typography>
+                      )}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Box>
 
             {/* Alerta si no hay periodo seleccionado */}
             {!periodoSeleccionado && !isLoadingPeriodos && (
-              <Alert severity="info" sx={{ mb: 3, borderRadius: '12px' }}>
+              <Alert 
+                severity="info" 
+                sx={{ 
+                  mb: 3, 
+                  borderRadius: 2,
+                  backgroundColor: isDark ? alpha('#facc15', 0.1) : alpha('#0288d1', 0.1),
+                  color: isDark ? '#facc15' : '#0288d1',
+                  '& .MuiAlert-icon': {
+                    color: isDark ? '#facc15' : '#0288d1',
+                  }
+                }}
+              >
                 Selecciona un periodo académico para comenzar
               </Alert>
             )}
 
-            {/* Tabs */}
+            {/* Tabs con Slider en Mobile y Toggle */}
             {periodoSeleccionado && (
-              <Tabs
-                value={activeTab}
-                onChange={handleTabChange}
-                sx={{
-                  background: isDark
-                  ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                  : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                borderRadius: '16px',
-                p: 1,
-                backdropFilter: 'blur(20px)',
-                '& .MuiTab-root': {
-                  borderRadius: '12px',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  minHeight: 48,
-                  color: isDark ? '#000' : '#fff', // color de tabs no seleccionados
-                },
-                '& .Mui-selected': {
-                  color: isDark ? '#fff' : '#fff', // color del tab seleccionado
-                },
-                '& .MuiTabs-indicator': {
-                  backgroundColor: isDark ? '#fff' : '#fff', // indicador
-                  height: 3,
-                  borderRadius: '3px 3px 0 0',
-                  },
-                }}
-              >
-                <Tab icon={<MatricularIcon />} iconPosition="start" label="Estudiantes Elegibles" />
-                <Tab icon={<ListIcon />} iconPosition="start" label="Matrículas Actuales" />
-                <Tab icon={<StatsIcon />} iconPosition="start" label="Estadísticas" />
-              </Tabs>
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                gap: 2,
+                flexWrap: { xs: 'wrap', md: 'nowrap' }
+              }}>
+                {/* Tabs con scroll horizontal en mobile */}
+                <Box
+  sx={{
+    flex: 1,
+    overflow: "hidden",
+    borderRadius: "16px",
+    background: isDark
+      ? "linear-gradient(135deg, #facc15 0%, #f59e0b 100%)"
+      : "linear-gradient(135deg, #0288d1 0%, #01579b 100%)",
+    p: { xs: 0.5, md: 1 }, // 🔥 Menos padding en mobile
+  }}
+>
+  <Tabs
+    value={activeTab}
+    onChange={handleTabChange}
+    variant="scrollable"
+    scrollButtons="auto"
+    allowScrollButtonsMobile
+    sx={{
+      minHeight: { xs: 36, md: 48 }, // 🔥 Más pequeño en mobile
+
+      "& .MuiTabs-scrollButtons": {
+        color: isDark ? "#000" : "#fff",
+        "&.Mui-disabled": { opacity: 0.3 },
+      },
+
+      "& .MuiTab-root": {
+        borderRadius: "10px",
+        textTransform: "none",
+        fontWeight: 600,
+        minHeight: { xs: 36, md: 48 }, // 🔥 Tabs más compactos
+        fontSize: { xs: "0.7rem", md: "1rem" }, // 🔥 Texto más pequeño en mobile
+        px: { xs: 1.2, md: 3 }, // 🔥 Menos espacio horizontal
+        color: isDark ? "#000" : "#fff",
+        whiteSpace: "nowrap",
+      },
+
+      "& .Mui-selected": {
+        color: "#fff",
+      },
+
+      "& .MuiTabs-indicator": {
+        backgroundColor: "#fff",
+        height: { xs: 2, md: 3 }, // 🔥 Indicador más delgado en mobile
+        borderRadius: "3px 3px 0 0",
+      },
+    }}
+  >
+    <Tab
+      icon={<MatricularIcon sx={{ fontSize: { xs: 16, md: 24 } }} />} // 🔥 Ícono más chiquito
+      iconPosition="start"
+      label="Elegibles"
+    />
+
+    <Tab
+      icon={<ListIcon sx={{ fontSize: { xs: 16, md: 24 } }} />}
+      iconPosition="start"
+      label="Matrículas"
+    />
+
+    <Tab
+      icon={<StatsIcon sx={{ fontSize: { xs: 16, md: 24 } }} />}
+      iconPosition="start"
+      label="Estadísticas"
+    />
+  </Tabs>
+</Box>
+
+
+                {/* Toggle View Mode - Solo en tabs 0 y 1 */}
+                {(activeTab === 0 || activeTab === 1) && (
+                  <ToggleButtonGroup
+                    value={viewMode}
+                    exclusive
+                    onChange={(e, newMode) => newMode && setViewMode(newMode)}
+                    size="small"
+                    sx={{
+                      bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.03),
+                      borderRadius: { xs: 8, md: 12 },
+                      flexShrink: 0,
+                      '& .MuiToggleButton-root': {
+                        border: 'none',
+                        borderRadius: { xs: 8, md: 10 },
+                        px: { xs: 1.5, md: 2.5 },
+                        py: { xs: 0.8, md: 1.5 },
+                        fontWeight: 600,
+                        textTransform: 'none',
+                        fontSize: { xs: '0.7rem', md: '0.9rem' },
+                        '&.Mui-selected': {
+                          bgcolor: isDark ? '#facc15' : '#0288d1',
+                          color: isDark ? '#000' : '#fff',
+                          '&:hover': {
+                            bgcolor: isDark ? '#f59e0b' : '#01579b',
+                          },
+                        },
+                      },
+                    }}
+                  >
+                    <ToggleButton value="cards">
+                      <ViewModuleIcon sx={{ mr: { xs: 0.5, md: 1 }, fontSize: { xs: 16, md: 20 } }} />
+                      Cards
+                    </ToggleButton>
+                    <ToggleButton value="table">
+                      <TableRowsIcon sx={{ mr: { xs: 0.5, md: 1 }, fontSize: { xs: 16, md: 20 } }} />
+                      Tabla
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                )}
+              </Box>
             )}
           </Box>
         </Fade>
@@ -242,7 +365,7 @@ const bounce = keyframes`
         {/* Loading State */}
         {(isLoadingPeriodos || isLoadingPeriodoActivo) && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-            <CircularProgress />
+            <CircularProgress sx={{ color: isDark ? '#facc15' : '#0288d1' }} />
           </Box>
         )}
 
@@ -262,6 +385,7 @@ const bounce = keyframes`
                     onRowsPerPageChange={(limit) => actualizarFiltrosElegibles({ limit, page: 1 })}
                     onSearch={(search) => actualizarFiltrosElegibles({ search, page: 1 })}
                     onMatricular={handleMatricular}
+                    viewMode={viewMode}
                   />
                 </Box>
               </Fade>
@@ -280,6 +404,7 @@ const bounce = keyframes`
                     onRowsPerPageChange={(limit) => actualizarFiltrosMatriculas({ limit, page: 1 })}
                     onSearch={(search) => actualizarFiltrosMatriculas({ search, page: 1 })}
                     onView={handleVerMatricula}
+                    viewMode={viewMode}
                   />
                 </Box>
               </Fade>

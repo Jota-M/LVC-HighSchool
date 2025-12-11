@@ -293,6 +293,13 @@ export const gestionAcademicaService = {
   },
 
   // ✅ CORREGIDO: Obtener paralelos
+  obtenerTodosLosParalelos: async (anio: number, activo: boolean = true) => {
+    const response = await api.get('/paralelo/todos', {
+      params: { anio, activo }
+    });
+    return response.data.data.paralelos;
+  },
+
   async obtenerParalelos(gradoId: number, anio?: number): Promise<Paralelo[]> {
     try {
       const params: any = { 

@@ -13,7 +13,7 @@ import {
   RetiroMatricula,
 } from '@/types/matriculacionTypes';
 
-export const matriculacionService = {
+class MatriculacionService {
   // =============================================
   // CONSULTAS
   // =============================================
@@ -30,20 +30,14 @@ export const matriculacionService = {
       incluir_con_matricula?: boolean;
     } = {}
   ): Promise<EstudiantesElegiblesResponse> {
-    const params = new URLSearchParams({
-      periodo_academico_id: periodoAcademicoId.toString(),
+    const { data } = await api.get('/matriculacion/estudiantes-elegibles', {
+      params: {
+        periodo_academico_id: periodoAcademicoId,
+        ...filters,
+      },
     });
-
-    if (filters.page) params.append('page', filters.page.toString());
-    if (filters.limit) params.append('limit', filters.limit.toString());
-    if (filters.search) params.append('search', filters.search);
-    if (filters.incluir_con_matricula !== undefined) {
-      params.append('incluir_con_matricula', filters.incluir_con_matricula.toString());
-    }
-
-    const response = await api.get(`/matriculacion/estudiantes-elegibles?${params}`);
-    return response.data.data;
-  },
+    return data.data;
+  }
 
   /**
    * Verificar disponibilidad de paralelo
@@ -52,14 +46,14 @@ export const matriculacionService = {
     paraleloId: number,
     periodoAcademicoId: number
   ): Promise<DisponibilidadParalelo> {
-    const response = await api.get('/matriculacion/verificar-disponibilidad', {
+    const { data } = await api.get('/matriculacion/verificar-disponibilidad', {
       params: {
         paralelo_id: paraleloId,
         periodo_academico_id: periodoAcademicoId,
       },
     });
-    return response.data.data;
-  },
+    return data.data;
+  }
 
   /**
    * Obtener matrículas por periodo
@@ -68,27 +62,19 @@ export const matriculacionService = {
     periodoAcademicoId: number,
     filters: Omit<MatriculasFilters, 'periodo_academico_id'> = {}
   ): Promise<MatriculasResponse> {
-    const params = new URLSearchParams();
-
-    if (filters.page) params.append('page', filters.page.toString());
-    if (filters.limit) params.append('limit', filters.limit.toString());
-    if (filters.search) params.append('search', filters.search);
-    if (filters.paralelo_id) params.append('paralelo_id', filters.paralelo_id.toString());
-    if (filters.grado_id) params.append('grado_id', filters.grado_id.toString());
-    if (filters.nivel_academico_id) params.append('nivel_academico_id', filters.nivel_academico_id.toString());
-    if (filters.estado) params.append('estado', filters.estado);
-
-    const response = await api.get(`/matriculacion/periodo/${periodoAcademicoId}?${params}`);
-    return response.data.data;
-  },
+    const { data } = await api.get(`/matriculacion/periodo/${periodoAcademicoId}`, {
+      params: filters,
+    });
+    return data.data;
+  }
 
   /**
    * Obtener estadísticas de matrícula
    */
   async obtenerEstadisticas(periodoAcademicoId: number): Promise<EstadisticasMatricula> {
-    const response = await api.get(`/matriculacion/estadisticas/${periodoAcademicoId}`);
-    return response.data.data;
-  },
+    const { data } = await api.get(`/matriculacion/estadisticas/${periodoAcademicoId}`);
+    return data.data;
+  }
 
   // =============================================
   // ACCIONES
@@ -103,10 +89,10 @@ export const matriculacionService = {
   ): Promise<MatriculacionResponse> {
     const formData = new FormData();
 
-    // 1. Datos de matrícula (JSON)
+    // 1. Datos de matrícula (JSON) - FormData requiere stringify
     formData.append('matricula', JSON.stringify(data.matricula));
 
-    // 2. Metadata de documentos (JSON)
+    // 2. Metadata de documentos (JSON) - FormData requiere stringify
     if (data.documentos && data.documentos.length > 0) {
       formData.append('documentos', JSON.stringify(data.documentos));
     }
@@ -118,12 +104,16 @@ export const matriculacionService = {
       });
     }
 
-    const response = await api.post(`/matriculacion/matricular/${estudianteId}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const { data: response } = await api.post(
+      `/matriculacion/matricular/${estudianteId}`, 
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }
+    );
 
-    return response.data;
-  },
+    return response;
+  }
 
   /**
    * Re-matricular estudiante (sin documentos)
@@ -132,9 +122,9 @@ export const matriculacionService = {
     estudianteId: number,
     data: RematriculacionData
   ): Promise<MatriculacionResponse> {
-    const response = await api.post(`/matriculacion/rematricular/${estudianteId}`, data);
-    return response.data;
-  },
+    const { data: response } = await api.post(`/matriculacion/rematricular/${estudianteId}`, data);
+    return response;
+  }
 
   /**
    * Actualizar matrícula
@@ -143,9 +133,9 @@ export const matriculacionService = {
     matriculaId: number,
     data: MatriculaUpdate
   ): Promise<MatriculacionResponse> {
-    const response = await api.put(`/matriculacion/${matriculaId}`, data);
-    return response.data;
-  },
+    const { data: response } = await api.put(`/matriculacion/${matriculaId}`, data);
+    return response;
+  }
 
   /**
    * Retirar matrícula
@@ -154,12 +144,12 @@ export const matriculacionService = {
     matriculaId: number,
     data: RetiroMatricula
   ): Promise<MatriculacionResponse> {
-    const response = await api.patch(`/matriculacion/${matriculaId}/retirar`, data);
-    return response.data;
-  },
+    const { data: response } = await api.patch(`/matriculacion/${matriculaId}/retirar`, data);
+    return response;
+  }
 
   // =============================================
-  // 📄 FUNCIONES DE PDF - NUEVAS
+  // 📄 FUNCIONES DE PDF
   // =============================================
 
   /**
@@ -169,7 +159,7 @@ export const matriculacionService = {
   async descargarPDF(matriculaId: number): Promise<void> {
     try {
       const response = await api.get(`/matricula/${matriculaId}/pdf`, {
-        responseType: 'blob', // ⚠️ IMPORTANTE: recibir como blob
+        responseType: 'blob',
       });
 
       // Crear URL temporal del blob
@@ -202,27 +192,15 @@ export const matriculacionService = {
       console.error('Error al descargar PDF:', error);
       throw error;
     }
-  },
+  }
 
   /**
    * Ver PDF en el navegador (nueva pestaña)
    * Abre el PDF en línea sin descargarlo
    */
   verPDFPreview(matriculaId: number): void {
-    // Obtener el token de autenticación
-    const token = localStorage.getItem('token'); // o sessionStorage, según tu implementación
-    
-    // Construir URL con token
-    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-    const url = `${baseURL}/matricula/${matriculaId}/pdf/preview`;
-
-    // Abrir en nueva pestaña con token en header (si es necesario)
-    // Opción 1: Si tu API acepta token en URL (menos seguro pero funcional)
-    // window.open(`${url}?token=${token}`, '_blank');
-
-    // Opción 2: Mejor opción - crear un iframe temporal o usar fetch + blob URL
     this.abrirPDFEnNuevaPestaña(matriculaId);
-  },
+  }
 
   /**
    * Método auxiliar para abrir PDF con autenticación
@@ -251,24 +229,22 @@ export const matriculacionService = {
       console.error('Error al abrir PDF:', error);
       throw error;
     }
-  },
+  }
 
   /**
    * Obtener URL del PDF para preview
-   * (Alternativa si prefieres manejar la URL directamente)
+   * Nota: Esta URL requiere autenticación mediante el header que api ya maneja
    */
   getPDFUrl(matriculaId: number): string {
-    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-    return `${baseURL}/matricula/${matriculaId}/pdf`;
-  },
+    return `/matricula/${matriculaId}/pdf`;
+  }
 
   /**
    * Obtener URL del PDF preview
    */
   getPDFPreviewUrl(matriculaId: number): string {
-    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-    return `${baseURL}/matricula/${matriculaId}/pdf/preview`;
-  },
-};
+    return `/matricula/${matriculaId}/pdf/preview`;
+  }
+}
 
-export default matriculacionService;
+export default new MatriculacionService();

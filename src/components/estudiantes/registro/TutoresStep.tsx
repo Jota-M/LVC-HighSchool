@@ -157,8 +157,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
   // Texto dentro del input
   '& .MuiInputBase-input': {
     color: isDark ? '#fff' : '#000',
-    padding: '10px 14px',
-    fontSize: '0.95rem',
   },
 };
 
@@ -249,7 +247,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
             <Grid size={{xs:12, md:6}} >
               <TextField
                 fullWidth
-                size="small"
                 label="Nombres"
                 value={tutor.nombres}
                 onChange={(e) => handleTutorChange(index, 'nombres', e.target.value)}
@@ -260,7 +257,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
             <Grid size={{xs:12, md:3}} >
               <TextField
                 fullWidth
-                size="small"
                 label="Apellido Paterno"
                 value={tutor.apellido_paterno}
                 onChange={(e) => handleTutorChange(index, 'apellido_paterno', e.target.value)}
@@ -271,7 +267,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
             <Grid size={{xs:12, md:3}}>
               <TextField
                 fullWidth
-                size="small"
                 label="Apellido Materno"
                 value={tutor.apellido_materno}
                 onChange={(e) => handleTutorChange(index, 'apellido_materno', e.target.value)}
@@ -296,14 +291,13 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
                 value={tutor.fecha_nacimiento}
                 onChange={(date) => handleTutorChange(index, 'fecha_nacimiento', date)}
                 sx={fieldStyle}
-                slotProps={{ textField: { fullWidth: true, size: 'small' } }}
+                slotProps={{ textField: { fullWidth: true} }}
               />
             </Grid>
             <Grid size={{xs:12, md:3}}>
               <TextField
                 select
                 fullWidth
-                size="small"
                 label="Parentesco"
                 value={tutor.parentesco}
                 onChange={(e) => handleTutorChange(index, 'parentesco', e.target.value)}
@@ -319,7 +313,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
             <Grid size={{xs:12, md:3}}>
               <TextField
                 fullWidth
-                size="small"
                 label="Teléfono"
                 value={tutor.telefono}
                 onChange={(e) => handleTutorChange(index, 'telefono', e.target.value)}
@@ -330,7 +323,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
             <Grid size={{xs:12, md:3}}>
               <TextField
                 fullWidth
-                size="small"
                 label="Celular"
                 value={tutor.celular}
                 onChange={(e) => handleTutorChange(index, 'celular', e.target.value)}
@@ -340,7 +332,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
             <Grid size={{xs:12, md:3}}>
               <TextField
                 fullWidth
-                size="small"
                 label="Email"
                 type="email"
                 value={tutor.email}
@@ -351,7 +342,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
             <Grid size={{xs:12, md:6}}>
               <TextField
                 fullWidth
-                size="small"
                 label="Ocupación"
                 value={tutor.ocupacion}
                 onChange={(e) => handleTutorChange(index, 'ocupacion', e.target.value)}
@@ -362,7 +352,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
             <Grid size={{xs:12, md:6}}>
               <TextField
                 fullWidth
-                size="small"
                 label="Lugar de Trabajo"
                 value={tutor.lugar_trabajo}
                 onChange={(e) => handleTutorChange(index, 'lugar_trabajo', e.target.value)}
@@ -372,7 +361,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
             <Grid size={{xs:12, md:4}}>
               <TextField
                 fullWidth
-                size="small"
                 label="Teléfono de Trabajo"
                 value={tutor.telefono_trabajo}
                 onChange={(e) => handleTutorChange(index, 'telefono_trabajo', e.target.value)}
@@ -383,7 +371,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
               <TextField
                 select
                 fullWidth
-                size="small"
                 label="Estado Civil"
                 value={tutor.estado_civil}
                 onChange={(e) => handleTutorChange(index, 'estado_civil', e.target.value)}
@@ -400,7 +387,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
               <TextField
                 select
                 fullWidth
-                size="small"
                 label="Nivel de Educación"
                 value={tutor.nivel_educacion}
                 onChange={(e) => handleTutorChange(index, 'nivel_educacion', e.target.value)}
@@ -417,7 +403,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
             <Grid size={{xs:12}}>
               <TextField
                 fullWidth
-                size="small"
                 label="Dirección"
                 value={tutor.direccion}
                 onChange={(e) => handleTutorChange(index, 'direccion', e.target.value)}
@@ -428,7 +413,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
             <Grid size={{xs:12, md:3}}>
               <TextField
                 fullWidth
-                size="small"
                 type="number"
                 label="Prioridad de Contacto"
                 value={tutor.prioridad_contacto}
@@ -452,7 +436,7 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
             </Grid>
           </Grid>
 
-          <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          {/* <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
             <FormControlLabel
               control={
                 <Switch
@@ -508,7 +492,7 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
               }
               label="Recibe notificaciones"
             />
-          </Box>
+          </Box> */}
         </Paper>
       ))}
     </Box>
