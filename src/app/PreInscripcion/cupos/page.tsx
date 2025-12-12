@@ -157,7 +157,9 @@ function Header() {
   };
 
   return (
-    <Box sx={{ width: "100%", position: "relative", overflow: "hidden" }}>
+    <Box sx={{ width: "100%", position: "relative", overflow: "hidden", background: isDark
+          ? 'linear-gradient(135deg, #090B26 0%, #000000 100%)'
+          : 'linear-gradient(135deg, #fdfcfb 0%, #e0e7ff 100%)', }}>
       <Navbar />
 
       <Container maxWidth="xl" sx={{ position: "relative", zIndex: 1, pt: { xs: 12, md: 18 } }}>

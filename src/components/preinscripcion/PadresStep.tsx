@@ -66,41 +66,58 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
+  // Validaciones en tiempo real
+  const handleNameInput = (field: string, value: string) => {
+    const namePattern = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/;
+    if (namePattern.test(value) || value === '') {
+      onChange(field, value);
+    }
+  };
+
+  const handlePhoneInput = (field: string, value: string) => {
+    const phonePattern = /^[0-9\s\-\(\)\+]*$/;
+    if (phonePattern.test(value) || value === '') {
+      onChange(field, value);
+    }
+  };
+
+  const handleEmailInput = (field: string, value: string) => {
+    onChange(field, value.toLowerCase().trim());
+  };
+
+  const handleCIInput = (field: string, value: string) => {
+    const ciPattern = /^[0-9A-Za-z]*$/;
+    if ((ciPattern.test(value) && value.length <= 12) || value === '') {
+      onChange(field, value.toUpperCase());
+    }
+  };
+
   const fieldStyle = {
-  width: '100%',
-
-  // Label
-  '& .MuiInputLabel-root': {
-    color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
-    fontWeight: 500,
-    fontSize: '0.95rem',
-    '&.Mui-focused': {
-      color: isDark ? '#facc15' : '#0288d1',
+    width: '100%',
+    '& .MuiInputLabel-root': {
+      color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+      fontWeight: 500,
+      fontSize: '0.95rem',
+      '&.Mui-focused': {
+        color: isDark ? '#facc15' : '#0288d1',
+      },
     },
-  },
-
-  // Caja del input (fondo)
-  '& .MuiInputBase-root': {
-    borderRadius: '12px',
-    
-    transition: '0.2s ease',
-    border: '1px solid transparent',
-
-    '&:hover': {
-      borderColor: isDark ? '#facc15' : '#0288d1',
+    '& .MuiInputBase-root': {
+      borderRadius: '12px',
+      transition: '0.2s ease',
+      border: '1px solid transparent',
+      '&:hover': {
+        borderColor: isDark ? '#facc15' : '#0288d1',
+      },
+      '&.Mui-focused': {
+        borderColor: isDark ? '#facc15' : '#0288d1',
+        boxShadow: `0 0 0 2px ${isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(2, 136, 209, 0.25)'}`,
+      },
     },
-
-    '&.Mui-focused': {
-      borderColor: isDark ? '#facc15' : '#0288d1',
-      boxShadow: `0 0 0 2px ${isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(2, 136, 209, 0.25)'}`,
+    '& .MuiInputBase-input': {
+      color: isDark ? '#fff' : '#000',
     },
-  },
-
-  // Texto dentro del input
-  '& .MuiInputBase-input': {
-    color: isDark ? '#fff' : '#000',
-  },
-};
+  };
 
   const sectionTitleStyle = {
     mb: 3,
@@ -121,7 +138,7 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
   return (
     <Box sx={{ gap: 4, display: 'flex', flexDirection: 'column' }}>
       <Box sx={sectionTitleStyle}>
-        <PeopleIcon sx={{ fontSize: 32 }} />
+        <PeopleIcon sx={{ fontSize: 32, color: isDark ? '#facc15' : '#0288d1' }} />
         Información del Tutor/Representante
       </Box>
 
@@ -132,7 +149,7 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
             fullWidth
             label="Nombres *"
             value={data.nombres}
-            onChange={(e) => onChange('nombres', e.target.value)}
+            onChange={(e) => handleNameInput('nombres', e.target.value)}
             error={!!errors.nombres_rep}
             helperText={errors.nombres_rep}
             sx={fieldStyle}
@@ -143,7 +160,7 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
             fullWidth
             label="Apellido Paterno *"
             value={data.apellido_paterno}
-            onChange={(e) => onChange('apellido_paterno', e.target.value)}
+            onChange={(e) => handleNameInput('apellido_paterno', e.target.value)}
             error={!!errors.apellido_paterno_rep}
             helperText={errors.apellido_paterno_rep}
             sx={fieldStyle}
@@ -154,7 +171,7 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
             fullWidth
             label="Apellido Materno"
             value={data.apellido_materno}
-            onChange={(e) => onChange('apellido_materno', e.target.value)}
+            onChange={(e) => handleNameInput('apellido_materno', e.target.value)}
             sx={fieldStyle}
           />
         </Grid>
@@ -163,9 +180,10 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
             fullWidth
             label="Cédula de Identidad *"
             value={data.ci}
-            onChange={(e) => onChange('ci', e.target.value)}
+            onChange={(e) => handleCIInput('ci', e.target.value)}
             error={!!errors.ci_rep}
             helperText={errors.ci_rep}
+            inputProps={{ maxLength: 12 }}
             sx={fieldStyle}
           />
         </Grid>
@@ -218,7 +236,7 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
               fullWidth
               label="Especificar Parentesco *"
               value={data.otro_parentesco || ''}
-              onChange={(e) => onChange('otro_parentesco', e.target.value)}
+              onChange={(e) => handleNameInput('otro_parentesco', e.target.value)}
               placeholder="Ej: Hermano, Primo, etc."
               sx={fieldStyle}
             />
@@ -255,7 +273,8 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
             fullWidth
             label="Teléfono de Trabajo"
             value={data.telefono_trabajo}
-            onChange={(e) => onChange('telefono_trabajo', e.target.value)}
+            onChange={(e) => handlePhoneInput('telefono_trabajo', e.target.value)}
+            inputProps={{ maxLength: 20 }}
             sx={fieldStyle}
           />
         </Grid>
@@ -302,7 +321,9 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
           value={data.vive_con_estudiante ? 'SI' : 'NO'}
           exclusive
           onChange={(e, newValue) => {
-            if (newValue !== null) onChange('vive_con_estudiante', newValue === 'SI');
+            if (newValue !== null) {
+              onChange('vive_con_estudiante', newValue === 'SI');
+            }
           }}
           fullWidth
           sx={{
@@ -311,15 +332,10 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
               fontSize: '1rem',
               fontWeight: 600,
               borderRadius: '12px',
-              border: '2px solid',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(1, 87, 155, 0.2)',
+              textTransform: 'none',
               '&.Mui-selected': {
-                backgroundColor: isDark ? '#f59e0b' : '#fbbf24',
-                color: isDark ? '#000' : '#78350f',
-                borderColor: isDark ? '#f59e0b' : '#fbbf24',
-                '&:hover': {
-                  backgroundColor: isDark ? '#ea980b' : '#f59e0b',
-                },
+                backgroundColor: isDark ? '#facc15' : '#0288d1',
+                color: isDark ? '#000' : '#fff',
               },
             },
           }}
@@ -340,9 +356,10 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
             fullWidth
             label="Teléfono *"
             value={data.telefono}
-            onChange={(e) => onChange('telefono', e.target.value)}
+            onChange={(e) => handlePhoneInput('telefono', e.target.value)}
             error={!!errors.telefono_rep}
             helperText={errors.telefono_rep}
+            inputProps={{ maxLength: 20 }}
             sx={fieldStyle}
           />
         </Grid>
@@ -351,7 +368,8 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
             fullWidth
             label="Celular"
             value={data.celular}
-            onChange={(e) => onChange('celular', e.target.value)}
+            onChange={(e) => handlePhoneInput('celular', e.target.value)}
+            inputProps={{ maxLength: 20 }}
             sx={fieldStyle}
           />
         </Grid>
@@ -360,7 +378,7 @@ export default function PadresStep({ data, errors, onChange }: PadresStepProps) 
             fullWidth
             label="Correo Electrónico"
             value={data.email}
-            onChange={(e) => onChange('email', e.target.value)}
+            onChange={(e) => handleEmailInput('email', e.target.value)}
             type="email"
             sx={fieldStyle}
           />

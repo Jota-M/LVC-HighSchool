@@ -167,7 +167,7 @@ function MallaCurricularLanding() {
     {
       link: "/mallacurricular/inicial",
       init: "Initial",
-      imageurl: "/Nivels/Initiall.jpg",
+      imageurl: "/Nivels/Initial.jpg",
       title: "Educación Inicial",
       paragraph:
         "Primeros pasos en el aprendizaje con metodología lúdica, desarrollo psicomotor y formación en valores cristianos.",
@@ -178,7 +178,7 @@ function MallaCurricularLanding() {
     {
       link: "/mallacurricular/primaria",
       init: "Primary",
-      imageurl: "/Nivels/Primaryy.jpg",
+      imageurl: "/Nivels/Primary.jpg",
       title: "Educación Primaria",
       paragraph:
         "Formación académica sólida con énfasis en lectoescritura, matemáticas, ciencias y desarrollo del pensamiento crítico.",
@@ -189,7 +189,7 @@ function MallaCurricularLanding() {
     {
       link: "/mallacurricular/secundaria",
       init: "Secondary",
-      imageurl: "/Nivels/Secondary.jpg",
+      imageurl: "/Nivels/Secondaryy.jpg",
       title: "Educación Secundaria",
       paragraph:
         "Preparación integral para la educación superior con bachillerato en ciencias, liderazgo y servicio comunitario.",

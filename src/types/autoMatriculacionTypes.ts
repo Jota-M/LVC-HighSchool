@@ -1,4 +1,4 @@
-// types/autoMatriculacion.types.ts
+// types/autoMatriculacionTypes.ts
 
 export interface ValidacionCredenciales {
   codigo: string;
@@ -6,15 +6,20 @@ export interface ValidacionCredenciales {
 }
 
 export interface EstudianteValidado {
-  ci: string;
   id: number;
   codigo: string;
+  ci: string;
   nombres: string;
   apellido_paterno: string;
   apellido_materno: string | null;
   foto_url: string | null;
   email: string | null;
   telefono: string | null;
+  direccion: string | null;
+  zona: string | null;
+  ciudad: string | null;
+  contacto_emergencia: string | null;
+  telefono_emergencia: string | null;
 }
 
 export interface UltimaMatricula {
@@ -80,10 +85,47 @@ export interface OpcionesMatriculaResponse {
   };
 }
 
+// Nuevos tipos para actualizar datos
+export interface ActualizarDatosPayload {
+  codigo: string;
+  ci: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  zona?: string;
+  ciudad?: string;
+  contacto_emergencia?: string;
+  telefono_emergencia?: string;
+  foto?: File;
+}
+
+export interface ActualizarDatosResponse {
+  success: boolean;
+  message: string;
+  data: {
+    estudiante: EstudianteValidado;
+  };
+}
+
+// Tipos para documentos
+export interface DocumentoMatricula {
+  file: File;
+  tipo_documento: string;
+  observaciones?: string;
+}
+
+export interface DocumentoSubido {
+  id: number;
+  tipo_documento: string;
+  nombre_archivo: string;
+  url_archivo: string;
+}
+
 export interface AutoMatriculacionData {
   codigo: string;
   ci: string;
   paralelo_id: number;
+  documentos?: DocumentoMatricula[];
 }
 
 export interface AutoMatriculacionResponse {
@@ -99,5 +141,13 @@ export interface AutoMatriculacionResponse {
       paralelo_nombre: string;
       turno_nombre: string;
     };
+    documentos?: DocumentoSubido[];
   };
 }
+
+// Tipos de documentos permitidos
+export type TipoDocumento =
+  | 'certificado_nacimiento'
+  | 'fotocopia_ci'
+  | 'fotocopia_ci_tutor'
+  | 'otro';

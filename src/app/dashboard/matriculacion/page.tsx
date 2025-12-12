@@ -251,71 +251,71 @@ export const Matriculacion: React.FC = () => {
               }}>
                 {/* Tabs con scroll horizontal en mobile */}
                 <Box
-  sx={{
-    flex: 1,
-    overflow: "hidden",
-    borderRadius: "16px",
-    background: isDark
-      ? "linear-gradient(135deg, #facc15 0%, #f59e0b 100%)"
-      : "linear-gradient(135deg, #0288d1 0%, #01579b 100%)",
-    p: { xs: 0.5, md: 1 }, // 🔥 Menos padding en mobile
-  }}
->
-  <Tabs
-    value={activeTab}
-    onChange={handleTabChange}
-    variant="scrollable"
-    scrollButtons="auto"
-    allowScrollButtonsMobile
-    sx={{
-      minHeight: { xs: 36, md: 48 }, // 🔥 Más pequeño en mobile
+                  sx={{
+                    flex: 1,
+                    overflow: "hidden",
+                    borderRadius: "16px",
+                    background: isDark
+                      ? "linear-gradient(135deg, #facc15 0%, #f59e0b 100%)"
+                      : "linear-gradient(135deg, #0288d1 0%, #01579b 100%)",
+                    p: { xs: 0.5, md: 1 }, // 🔥 Menos padding en mobile
+                  }}
+                >
+                  <Tabs
+                    value={activeTab}
+                    onChange={handleTabChange}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
+                    sx={{
+                      minHeight: { xs: 36, md: 48 }, // 🔥 Más pequeño en mobile
 
-      "& .MuiTabs-scrollButtons": {
-        color: isDark ? "#000" : "#fff",
-        "&.Mui-disabled": { opacity: 0.3 },
-      },
+                      "& .MuiTabs-scrollButtons": {
+                        color: isDark ? "#000" : "#fff",
+                        "&.Mui-disabled": { opacity: 0.3 },
+                      },
 
-      "& .MuiTab-root": {
-        borderRadius: "10px",
-        textTransform: "none",
-        fontWeight: 600,
-        minHeight: { xs: 36, md: 48 }, // 🔥 Tabs más compactos
-        fontSize: { xs: "0.7rem", md: "1rem" }, // 🔥 Texto más pequeño en mobile
-        px: { xs: 1.2, md: 3 }, // 🔥 Menos espacio horizontal
-        color: isDark ? "#000" : "#fff",
-        whiteSpace: "nowrap",
-      },
+                      "& .MuiTab-root": {
+                        borderRadius: "10px",
+                        textTransform: "none",
+                        fontWeight: 600,
+                        minHeight: { xs: 36, md: 48 }, // 🔥 Tabs más compactos
+                        fontSize: { xs: "0.7rem", md: "1rem" }, // 🔥 Texto más pequeño en mobile
+                        px: { xs: 1.2, md: 3 }, // 🔥 Menos espacio horizontal
+                        color: isDark ? "#000" : "#fff",
+                        whiteSpace: "nowrap",
+                      },
 
-      "& .Mui-selected": {
-        color: "#fff",
-      },
+                      "& .Mui-selected": {
+                        color: "#fff",
+                      },
 
-      "& .MuiTabs-indicator": {
-        backgroundColor: "#fff",
-        height: { xs: 2, md: 3 }, // 🔥 Indicador más delgado en mobile
-        borderRadius: "3px 3px 0 0",
-      },
-    }}
-  >
-    <Tab
-      icon={<MatricularIcon sx={{ fontSize: { xs: 16, md: 24 } }} />} // 🔥 Ícono más chiquito
-      iconPosition="start"
-      label="Elegibles"
-    />
+                      "& .MuiTabs-indicator": {
+                        backgroundColor: "#fff",
+                        height: { xs: 2, md: 3 }, // 🔥 Indicador más delgado en mobile
+                        borderRadius: "3px 3px 0 0",
+                      },
+                    }}
+                  >
+                    <Tab
+                      icon={<MatricularIcon sx={{ fontSize: { xs: 16, md: 24 } }} />} // 🔥 Ícono más chiquito
+                      iconPosition="start"
+                      label="Elegibles"
+                    />
 
-    <Tab
-      icon={<ListIcon sx={{ fontSize: { xs: 16, md: 24 } }} />}
-      iconPosition="start"
-      label="Matrículas"
-    />
+                    <Tab
+                      icon={<ListIcon sx={{ fontSize: { xs: 16, md: 24 } }} />}
+                      iconPosition="start"
+                      label="Matrículas"
+                    />
 
-    <Tab
-      icon={<StatsIcon sx={{ fontSize: { xs: 16, md: 24 } }} />}
-      iconPosition="start"
-      label="Estadísticas"
-    />
-  </Tabs>
-</Box>
+                    <Tab
+                      icon={<StatsIcon sx={{ fontSize: { xs: 16, md: 24 } }} />}
+                      iconPosition="start"
+                      label="Estadísticas"
+                    />
+                  </Tabs>
+                </Box>
 
 
                 {/* Toggle View Mode - Solo en tabs 0 y 1 */}

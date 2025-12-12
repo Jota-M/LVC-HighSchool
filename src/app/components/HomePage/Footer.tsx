@@ -1,92 +1,206 @@
 'use client'
 import React from 'react';
-import { Box, Grid, Typography, Link, IconButton, Divider, } from '@mui/material';
-import {Facebook,Instagram,YouTube,LocationOn,Phone,Email,AccessTime,Favorite,} from '@mui/icons-material';
+import { Box, Grid, Typography, Link, IconButton, Divider, Container } from '@mui/material';
+import { Facebook, Instagram, YouTube, LocationOn, Phone, Email, AccessTime, Favorite, ArrowForward } from '@mui/icons-material';
 
 function Footer() {
   return (
-    <Box component="footer" sx={{ bgcolor: '#0f172a', color: 'white', pt: 8, pb: 4, px: { xs: 2, md: 8 } }}>
-      <Grid container spacing={2} justifyContent="space-between">
-        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 4 }} offset={{ lg: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Favorite sx={{ fontSize: 40, color: '#38bdf8', mr: 1 }} />
-            <Box>
-              <Typography variant="subtitle1">Unidad Educativa Particular Cristiana</Typography>
-              <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#38bdf8' }}>
-                La Voz de Cristo
-              </Typography>
+    <Box component="footer" sx={{ bgcolor: '#0f172a', color: 'white', pt: 10, pb: 4, position: 'relative', overflow: 'hidden' }}>
+      {/* Decorative gradient overlay */}
+      <Box sx={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '100%',
+        background: 'radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.1) 0%, transparent 50%)',
+        pointerEvents: 'none'
+      }} />
+      
+      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
+        <Grid container spacing={4}>
+          {/* Columna 1 - Información principal */}
+          <Grid size={{xs:12, md:4}}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+              <Favorite sx={{ fontSize: 48, color: '#38bdf8', mr: 1.5 }} />
+              <Box>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                  Unidad Educativa Particular Cristiana
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: '#38bdf8', lineHeight: 1.2 }}>
+                  La Voz de Cristo
+                </Typography>
+              </Box>
             </Box>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <LocationOn sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2">
-              Avenida Argentina Nro 200 entre Calle Trujillo y Luis Espinal <br /> Potosí, Bolivia
+            
+            <Typography variant="body2" sx={{ mb: 3, color: 'rgba(255,255,255,0.7)', lineHeight: 1.7 }}>
+              Formando líderes con valores cristianos, excelencia académica y compromiso con la comunidad.
             </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Phone sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2">+591 69624189 • 76162425 • 68420862</Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Email sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2">lavozdecristohighschool@gmail.com</Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <AccessTime sx={{ mr: 1, fontSize: 20 }} />
-            <Typography variant="body2">Lun - Vie: 1:30 PM - 6:30 PM</Typography>
-          </Box>
+
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <IconButton 
+                sx={{ 
+                  bgcolor: '#1877f2', 
+                  color: 'white', 
+                  '&:hover': { bgcolor: '#166fe5', transform: 'translateY(-2px)' },
+                  transition: 'all 0.3s'
+                }}
+              >
+                <Facebook />
+              </IconButton>
+              <IconButton 
+                sx={{ 
+                  background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                  color: 'white', 
+                  '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(225,48,108,0.4)' },
+                  transition: 'all 0.3s'
+                }}
+              >
+                <Instagram />
+              </IconButton>
+              <IconButton 
+                sx={{ 
+                  bgcolor: '#ff0000', 
+                  color: 'white', 
+                  '&:hover': { bgcolor: '#cc0000', transform: 'translateY(-2px)' },
+                  transition: 'all 0.3s'
+                }}
+              >
+                <YouTube />
+              </IconButton>
+            </Box>
+          </Grid>
+
+          {/* Columna 2 - Enlaces rápidos */}
+          <Grid size={{xs:12, sm:6, md:2.5}}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, position: 'relative', display: 'inline-block' }}>
+              Enlaces Rápidos
+              <Box sx={{ position: 'absolute', bottom: -8, left: 0, width: 40, height: 3, bgcolor: '#38bdf8', borderRadius: 2 }} />
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              {['Inicio', 'Nosotros', 'Niveles Educativos', 'Galería', 'Noticias', 'Contacto'].map((item) => (
+                <Link 
+                  key={item}
+                  href="#" 
+                  underline="none" 
+                  sx={{ 
+                    color: 'rgba(255,255,255,0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    transition: 'all 0.3s',
+                    '&:hover': { 
+                      color: '#38bdf8',
+                      transform: 'translateX(4px)'
+                    }
+                  }}
+                >
+                  <Box sx={{ width: 4, height: 4, bgcolor: 'currentColor', borderRadius: '50%' }} />
+                  {item}
+                </Link>
+              ))}
+            </Box>
+          </Grid>
+
+          {/* Columna 3 - Admisiones destacadas */}
+          <Grid size={{xs:12, sm:6, md:2.5}}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, position: 'relative', display: 'inline-block' }}>
+              Admisiones
+              <Box sx={{ position: 'absolute', bottom: -8, left: 0, width: 40, height: 3, bgcolor: '#38bdf8', borderRadius: 2 }} />
+            </Typography>
+            <Box sx={{ 
+              bgcolor: 'rgba(56, 189, 248, 0.1)', 
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              borderRadius: 2, 
+              p: 2.5,
+              transition: 'all 0.3s',
+              '&:hover': {
+                bgcolor: 'rgba(56, 189, 248, 0.15)',
+                borderColor: 'rgba(56, 189, 248, 0.5)',
+                transform: 'translateY(-4px)',
+                boxShadow: '0 8px 24px rgba(56, 189, 248, 0.2)'
+              }
+            }}>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: '#38bdf8', mb: 1 }}>
+                2026
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.8)' }}>
+                ¡Inscripciones abiertas!
+              </Typography>
+              <Link 
+                href="#" 
+                sx={{ 
+                  color: '#38bdf8', 
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  textDecoration: 'none',
+                  '&:hover': {
+                    gap: 1
+                  },
+                  transition: 'gap 0.3s'
+                }}
+              >
+                Más información
+                <ArrowForward sx={{ fontSize: 18 }} />
+              </Link>
+            </Box>
+          </Grid>
+
+          {/* Columna 4 - Contacto */}
+          <Grid size={{xs:12, sm:6, md:2.5}}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, position: 'relative', display: 'inline-block' }}>
+              Contacto
+              <Box sx={{ position: 'absolute', bottom: -8, left: 0, width: 40, height: 3, bgcolor: '#38bdf8', borderRadius: 2 }} />
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 1.5 }}>
+                <LocationOn sx={{ fontSize: 20, color: '#38bdf8', flexShrink: 0, mt: 0.3 }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
+                  Av. Argentina Nro 200 entre Calle Trujillo y Luis Espinal, Potosí, Bolivia
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1.5 }}>
+                <Phone sx={{ fontSize: 20, color: '#38bdf8', flexShrink: 0 }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                  +591 69624189<br />76162425 • 68420862
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1.5 }}>
+                <Email sx={{ fontSize: 20, color: '#38bdf8', flexShrink: 0 }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', wordBreak: 'break-word' }}>
+                  lavozdecristohighschool@gmail.com
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1.5 }}>
+                <AccessTime sx={{ fontSize: 20, color: '#38bdf8', flexShrink: 0 }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                  Lun - Vie<br />1:30 PM - 6:30 PM
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
         </Grid>
 
-        {/* Columna 2 - Enlaces rápidos */}
-        <Grid size={{ xs: 12, md: 4, lg: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-            Enlaces Rápidos
+        {/* Divider mejorado */}
+        <Divider sx={{ my: 5, bgcolor: 'rgba(56, 189, 248, 0.2)' }} />
+        
+        {/* Footer bottom */}
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+            © 2026 Unidad Educativa Particular Cristiana La Voz de Cristo. Todos los derechos reservados.
           </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Link href="#" underline="hover" color="inherit">Inicio</Link>
-            <Link href="#" underline="hover" color="inherit">Nosotros</Link>
-            <Link href="#" underline="hover" color="inherit">Niveles Educativos</Link>
-            <Link href="#" underline="hover" sx={{ color: '#38bdf8' }}>Admisiones 2026</Link>
-            <Link href="#" underline="hover" color="inherit">Galería</Link>
-            <Link href="#" underline="hover" color="inherit">Noticias</Link>
-            <Link href="#" underline="hover" color="inherit">Contacto</Link>
-          </Box>
-        </Grid>
-
-        {/* Columna 3 - Síguenos */}
-        <Grid size={{ xs: 12, md: 4, lg: 4 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-            Síguenos
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-            <IconButton sx={{ bgcolor: '#1d4ed8', color: 'white', '&:hover': { bgcolor: '#2563eb' } }}>
-              <Facebook />
-            </IconButton>
-            <IconButton sx={{ bgcolor: '#db2777', color: 'white', '&:hover': { bgcolor: '#be185d' } }}>
-              <Instagram />
-            </IconButton>
-            <IconButton sx={{ bgcolor: '#dc2626', color: 'white', '&:hover': { bgcolor: '#b91c1c' } }}>
-              <YouTube />
-            </IconButton>
-          </Box>
-
-          {/* Mapa / Ubicación */}
-          <Box sx={{ bgcolor: '#1e293b', borderRadius: 2, p: 2, textAlign: 'center' }}>
-            <Typography variant="body2" gutterBottom>
-              Nuestra Ubicación
-            </Typography>
-            <Link href="#" underline="hover" sx={{ color: '#38bdf8', fontWeight: 'bold' }}>
-              Ver ubicación completa
+          <Box sx={{ display: 'flex', gap: 3 }}>
+            <Link href="#" underline="hover" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', '&:hover': { color: '#38bdf8' } }}>
+              Privacidad
+            </Link>
+            <Link href="#" underline="hover" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', '&:hover': { color: '#38bdf8' } }}>
+              Términos
             </Link>
           </Box>
-        </Grid>
-      </Grid>
-
-      {/* Divider y Derechos */}
-      <Divider sx={{ my: 4, bgcolor: 'rgba(255,255,255,0.1)' }} />
-      <Typography variant="body2" align="center" sx={{ color: 'gray.400' }}>
-        © 2026 Unidad Educativa Particular Cristiana La Voz de Cristo. Todos los derechos reservados.
-      </Typography>
+        </Box>
+      </Container>
     </Box>
   );
 }

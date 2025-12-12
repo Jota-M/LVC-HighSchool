@@ -17,7 +17,6 @@ import PersonIcon from '@mui/icons-material/Person';
 import SchoolIcon from '@mui/icons-material/School';
 import HomeIcon from '@mui/icons-material/Home';
 import { PreEstudianteForm, ErroresFormulario } from '@/types/preinscripcionTypes';
-import Header from '../../app/login/Header';
 
 interface EstudianteStepProps {
   data: PreEstudianteForm;
@@ -57,41 +56,62 @@ export default function EstudianteStep({ data, errors, onChange }: EstudianteSte
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
+  // Validaciones en tiempo real
+  const handleTextInput = (field: string, value: string, pattern: RegExp) => {
+    if (pattern.test(value) || value === '') {
+      onChange(field, value);
+    }
+  };
+
+  const handleNameInput = (field: string, value: string) => {
+    const namePattern = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/;
+    handleTextInput(field, value, namePattern);
+  };
+
+  const handlePhoneInput = (field: string, value: string) => {
+    const phonePattern = /^[0-9\s\-\(\)\+]*$/;
+    if (phonePattern.test(value) || value === '') {
+      onChange(field, value);
+    }
+  };
+
+  const handleEmailInput = (field: string, value: string) => {
+    onChange(field, value.toLowerCase().trim());
+  };
+
+  const handleCIInput = (field: string, value: string) => {
+    const ciPattern = /^[0-9A-Za-z]*$/;
+    if ((ciPattern.test(value) && value.length <= 12) || value === '') {
+      onChange(field, value.toUpperCase());
+    }
+  };
+
   const fieldStyle = {
-  width: '100%',
-
-  // Label
-  '& .MuiInputLabel-root': {
-    color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
-    fontWeight: 500,
-    fontSize: '0.95rem',
-    '&.Mui-focused': {
-      color: isDark ? '#facc15' : '#0288d1',
+    width: '100%',
+    '& .MuiInputLabel-root': {
+      color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+      fontWeight: 500,
+      fontSize: '0.95rem',
+      '&.Mui-focused': {
+        color: isDark ? '#facc15' : '#0288d1',
+      },
     },
-  },
-
-  // Caja del input (fondo)
-  '& .MuiInputBase-root': {
-    borderRadius: '12px',
-    
-    transition: '0.2s ease',
-    border: '1px solid transparent',
-
-    '&:hover': {
-      borderColor: isDark ? '#facc15' : '#0288d1',
+    '& .MuiInputBase-root': {
+      borderRadius: '12px',
+      transition: '0.2s ease',
+      border: '1px solid transparent',
+      '&:hover': {
+        borderColor: isDark ? '#facc15' : '#0288d1',
+      },
+      '&.Mui-focused': {
+        borderColor: isDark ? '#facc15' : '#0288d1',
+        boxShadow: `0 0 0 2px ${isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(2, 136, 209, 0.25)'}`,
+      },
     },
-
-    '&.Mui-focused': {
-      borderColor: isDark ? '#facc15' : '#0288d1',
-      boxShadow: `0 0 0 2px ${isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(2, 136, 209, 0.25)'}`,
+    '& .MuiInputBase-input': {
+      color: isDark ? '#fff' : '#000',
     },
-  },
-
-  // Texto dentro del input
-  '& .MuiInputBase-input': {
-    color: isDark ? '#fff' : '#000',
-  },
-};
+  };
 
   const sectionTitleStyle = {
     mb: 3,
@@ -113,7 +133,7 @@ export default function EstudianteStep({ data, errors, onChange }: EstudianteSte
       {/* Información Personal */}
       <Box>
         <Box sx={sectionTitleStyle}>
-          <PersonIcon sx={{ fontSize: 32 }} />
+          <PersonIcon sx={{ fontSize: 32, color: isDark ? '#facc15' : '#0288d1' }} />
           Información Personal del Estudiante
         </Box>
 
@@ -123,7 +143,7 @@ export default function EstudianteStep({ data, errors, onChange }: EstudianteSte
               fullWidth
               label="Nombres *"
               value={data.nombres}
-              onChange={(e) => onChange('nombres', e.target.value)}
+              onChange={(e) => handleNameInput('nombres', e.target.value)}
               error={!!errors.nombres}
               helperText={errors.nombres}
               sx={fieldStyle}
@@ -134,7 +154,7 @@ export default function EstudianteStep({ data, errors, onChange }: EstudianteSte
               fullWidth
               label="Apellido Paterno *"
               value={data.apellido_paterno}
-              onChange={(e) => onChange('apellido_paterno', e.target.value)}
+              onChange={(e) => handleNameInput('apellido_paterno', e.target.value)}
               error={!!errors.apellido_paterno}
               helperText={errors.apellido_paterno}
               sx={fieldStyle}
@@ -145,7 +165,7 @@ export default function EstudianteStep({ data, errors, onChange }: EstudianteSte
               fullWidth
               label="Apellido Materno"
               value={data.apellido_materno}
-              onChange={(e) => onChange('apellido_materno', e.target.value)}
+              onChange={(e) => handleNameInput('apellido_materno', e.target.value)}
               sx={fieldStyle}
             />
           </Grid>
@@ -154,35 +174,8 @@ export default function EstudianteStep({ data, errors, onChange }: EstudianteSte
               fullWidth
               label="Cédula de Identidad"
               value={data.ci}
-              onChange={(e) => onChange('ci', e.target.value)}
-              sx={fieldStyle}
-            />
-          </Grid>
-
-          <Grid size={{xs:12, md:4}}>
-            <TextField
-              fullWidth
-              label="Lugar de Nacimiento"
-              value={data.lugar_nacimiento}
-              onChange={(e) => onChange('lugar_nacimiento', e.target.value)}
-              sx={fieldStyle}
-            />
-          </Grid>
-          <Grid size={{xs:12, md:6}}>
-            <TextField
-              fullWidth
-              label="Contacto de Emergencia"
-              value={data.contacto_emergencia}
-              onChange={(e) => onChange('contacto_emergencia', e.target.value)}
-              sx={fieldStyle}
-            />
-          </Grid>
-          <Grid size={{xs:12, md:6}}>
-            <TextField
-              fullWidth
-              label="Teléfono de Emergencia"
-              value={data.telefono_emergencia}
-              onChange={(e) => onChange('telefono_emergencia', e.target.value)}
+              onChange={(e) => handleCIInput('ci', e.target.value)}
+              inputProps={{ maxLength: 12 }}
               sx={fieldStyle}
             />
           </Grid>
@@ -220,6 +213,35 @@ export default function EstudianteStep({ data, errors, onChange }: EstudianteSte
               ))}
             </TextField>
           </Grid>
+
+          <Grid size={{xs:12, md:4}}>
+            <TextField
+              fullWidth
+              label="Lugar de Nacimiento"
+              value={data.lugar_nacimiento}
+              onChange={(e) => handleNameInput('lugar_nacimiento', e.target.value)}
+              sx={fieldStyle}
+            />
+          </Grid>
+          <Grid size={{xs:12, md:6}}>
+            <TextField
+              fullWidth
+              label="Contacto de Emergencia"
+              value={data.contacto_emergencia}
+              onChange={(e) => handleNameInput('contacto_emergencia', e.target.value)}
+              sx={fieldStyle}
+            />
+          </Grid>
+          <Grid size={{xs:12, md:6}}>
+            <TextField
+              fullWidth
+              label="Teléfono de Emergencia"
+              value={data.telefono_emergencia}
+              onChange={(e) => handlePhoneInput('telefono_emergencia', e.target.value)}
+              inputProps={{ maxLength: 20 }}
+              sx={fieldStyle}
+            />
+          </Grid>
         </Grid>
       </Box>
 
@@ -228,12 +250,12 @@ export default function EstudianteStep({ data, errors, onChange }: EstudianteSte
       {/* Información Académica */}
       <Box>
         <Box sx={sectionTitleStyle}>
-          <SchoolIcon sx={{ fontSize: 32 }} />
+          <SchoolIcon sx={{ fontSize: 32, color: isDark ? '#facc15' : '#0288d1' }} />
           Información Académica
         </Box>
 
         <Grid container spacing={3}>
-          <Grid size={{xs:12}} >
+          <Grid size={{xs:12}}>
             <TextField
               fullWidth
               label="Unidad Educativa de Procedencia"
@@ -335,8 +357,11 @@ export default function EstudianteStep({ data, errors, onChange }: EstudianteSte
               exclusive
               onChange={(e, newValue) => {
                 if (newValue !== null) {
-                  onChange('tiene_discapacidad', newValue === 'SI');
-                  if (newValue === 'NO') onChange('tipo_discapacidad', '');
+                  const hasDiscapacidad = newValue === 'SI';
+                  onChange('tiene_discapacidad', hasDiscapacidad);
+                  if (!hasDiscapacidad) {
+                    onChange('tipo_discapacidad', '');
+                  }
                 }
               }}
               fullWidth
@@ -367,6 +392,7 @@ export default function EstudianteStep({ data, errors, onChange }: EstudianteSte
                 label="Describa la discapacidad"
                 value={data.tipo_discapacidad}
                 onChange={(e) => onChange('tipo_discapacidad', e.target.value)}
+                inputProps={{ maxLength: 500 }}
                 sx={fieldStyle}
               />
             </Grid>
@@ -379,7 +405,7 @@ export default function EstudianteStep({ data, errors, onChange }: EstudianteSte
       {/* Información de Contacto */}
       <Box>
         <Box sx={sectionTitleStyle}>
-          <HomeIcon sx={{ fontSize: 32 }} />
+          <HomeIcon sx={{ fontSize: 32, color: isDark ? '#facc15' : '#0288d1' }} />
           Información de Contacto
         </Box>
 
@@ -407,25 +433,26 @@ export default function EstudianteStep({ data, errors, onChange }: EstudianteSte
               fullWidth
               label="Ciudad"
               value={data.ciudad}
-              onChange={(e) => onChange('ciudad', e.target.value)}
+              onChange={(e) => handleNameInput('ciudad', e.target.value)}
               sx={fieldStyle}
             />
           </Grid>
-          <Grid size={{xs:12, md:4}}  >
+          <Grid size={{xs:12, md:4}}>
             <TextField
               fullWidth
               label="Teléfono"
               value={data.telefono}
-              onChange={(e) => onChange('telefono', e.target.value)}
+              onChange={(e) => handlePhoneInput('telefono', e.target.value)}
+              inputProps={{ maxLength: 20 }}
               sx={fieldStyle}
             />
           </Grid>
-          <Grid size={{xs:12, md:4}}  >
+          <Grid size={{xs:12, md:4}}>
             <TextField
               fullWidth
               label="Correo Electrónico"
               value={data.email}
-              onChange={(e) => onChange('email', e.target.value)}
+              onChange={(e) => handleEmailInput('email', e.target.value)}
               type="email"
               sx={fieldStyle}
             />

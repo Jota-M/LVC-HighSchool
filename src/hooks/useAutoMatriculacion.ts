@@ -7,6 +7,7 @@ import {
   ValidacionCredenciales,
   ValidacionResponse,
   AutoMatriculacionData,
+  ActualizarDatosPayload,
 } from '@/types/autoMatriculacionTypes';
 
 export const useAutoMatriculacion = () => {
@@ -21,7 +22,6 @@ export const useAutoMatriculacion = () => {
     mutationFn: (creds: ValidacionCredenciales) =>
       autoMatriculacionService.validarEstudiante(creds),
     onSuccess: (response, variables) => {
-      // ✅ CORREGIDO: Guardar credenciales completas para usar en queries posteriores
       setCredenciales({ codigo: variables.codigo, ci: variables.ci });
       setDatosEstudiante(response.data);
       enqueueSnackbar(response.message || 'Estudiante validado correctamente', {
@@ -48,10 +48,40 @@ export const useAutoMatriculacion = () => {
     queryFn: () =>
       autoMatriculacionService.obtenerOpciones(
         credenciales!.codigo,
-        credenciales!.ci // ✅ Ahora usa el CI guardado
+        credenciales!.ci
       ),
     enabled: !!credenciales?.codigo && !!credenciales?.ci && !!datosEstudiante,
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // =============================================
+  // MUTATION: Actualizar datos del estudiante
+  // =============================================
+  const actualizarDatosMutation = useMutation({
+    mutationFn: (payload: ActualizarDatosPayload) =>
+      autoMatriculacionService.actualizarDatos(payload),
+    onSuccess: (response) => {
+      // Actualizar datos locales
+      if (datosEstudiante) {
+        setDatosEstudiante({
+          ...datosEstudiante,
+          estudiante: {
+            ...datosEstudiante.estudiante,
+            ...response.data.estudiante,
+          },
+        });
+      }
+      enqueueSnackbar(
+        response.message || 'Datos actualizados correctamente',
+        { variant: 'success' }
+      );
+    },
+    onError: (error: any) => {
+      enqueueSnackbar(
+        error.response?.data?.message || 'Error al actualizar datos',
+        { variant: 'error' }
+      );
+    },
   });
 
   // =============================================
@@ -88,11 +118,13 @@ export const useAutoMatriculacion = () => {
   return {
     // Acciones
     validar: validarMutation.mutate,
+    actualizarDatos: actualizarDatosMutation.mutate,
     matricular: matricularMutation.mutate,
     resetear,
 
     // Estados
     isValidando: validarMutation.isPending,
+    isActualizando: actualizarDatosMutation.isPending,
     isMatriculando: matricularMutation.isPending,
     isLoadingOpciones,
 
@@ -103,6 +135,7 @@ export const useAutoMatriculacion = () => {
 
     // Errores
     errorValidacion: validarMutation.error,
+    errorActualizacion: actualizarDatosMutation.error,
     errorOpciones,
     errorMatriculacion: matricularMutation.error,
   };

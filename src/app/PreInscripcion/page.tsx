@@ -91,7 +91,9 @@ function Header() {
       id="Header"
       sx={{
         width: "100%",
-        bgcolor: "background.default",
+        background: isDark
+          ? 'linear-gradient(135deg, #090B26 0%, #000000 100%)'
+          : 'linear-gradient(135deg, #fdfcfb 0%, #e0e7ff 100%)',
         color: "text.primary",
         pt: { xs: 10, md: 15, lg: 12 },
         position: "relative",
