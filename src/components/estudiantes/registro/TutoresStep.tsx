@@ -287,6 +287,7 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
             </Grid>
             <Grid size={{xs:12, md:3}}>
               <DatePicker
+                format="DD/MM/YYYY"
                 label="Fecha de Nacimiento"
                 value={tutor.fecha_nacimiento}
                 onChange={(date) => handleTutorChange(index, 'fecha_nacimiento', date)}

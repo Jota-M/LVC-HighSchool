@@ -9,6 +9,7 @@ import {
   Divider,
   useTheme,
   Avatar,
+  Alert,
 } from '@mui/material';
 
 import {
@@ -18,36 +19,61 @@ import {
   UploadFile as UploadIcon,
   VpnKey as KeyIcon,
   CheckCircle as CheckIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
 import { Dayjs } from 'dayjs';
+import {
+  ModoRegistro,
+  PadreEncontrado,
+  CredencialesUsuario,
+  MatriculaCreate,
+  EstudianteCreate,
+  TutorCreate,
+} from '@/types/estudianteTypes';
+
+// Tipos con Dayjs para el formulario
+type EstudianteFormData = Omit<EstudianteCreate, 'fecha_nacimiento'> & {
+  fecha_nacimiento: Dayjs | null;
+};
+
+type TutorFormData = Omit<TutorCreate, 'fecha_nacimiento'> & {
+  fecha_nacimiento: Dayjs | null;
+};
 
 interface ConfirmacionStepProps {
-  estudiante: any;
-  foto: File | null;
-  tutores: any[];
+  modo: ModoRegistro;
+  estudiantes: EstudianteFormData[];
+  fotos: (File | null)[];
+  tutores: TutorFormData[];
+  padreExistente: PadreEncontrado | null;
   crearUsuarioEstudiante: boolean;
   crearUsuariosTutores: boolean;
-  credencialesEstudiante: any;
-  credencialesTutores: any[];
+  credencialesEstudiantes: CredencialesUsuario[];
+  credencialesTutores: CredencialesUsuario[];
   incluirMatricula: boolean;
-  matricula: any;
+  matriculas: MatriculaCreate[];
   documentos: any[];
 }
 
 export const ConfirmacionStep: React.FC<ConfirmacionStepProps> = ({
-  estudiante,
-  foto,
+  modo,
+  estudiantes,
+  fotos,
   tutores,
+  padreExistente,
   crearUsuarioEstudiante,
   crearUsuariosTutores,
-  credencialesEstudiante,
+  credencialesEstudiantes,
   credencialesTutores,
   incluirMatricula,
-  matricula,
+  matriculas,
   documentos,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+
+  const esMultiple = modo === 'multiple';
+  const esExistente = modo === 'existente';
 
   const paperStyle = {
     p: 3,
@@ -93,71 +119,92 @@ export const ConfirmacionStep: React.FC<ConfirmacionStepProps> = ({
         <Typography variant="body1" color="text.secondary">
           Verifica que todos los datos sean correctos antes de enviar
         </Typography>
+        <Chip
+          label={`Modo: ${modo.toUpperCase()}`}
+          color="primary"
+          sx={{ mt: 2, fontWeight: 700, fontSize: '0.9rem' }}
+        />
       </Box>
 
       <Divider sx={{ mb: 4 }} />
 
-      {/* Estudiante */}
+      {/* Estudiantes */}
       <Paper elevation={0} sx={paperStyle}>
         <Box sx={sectionTitle}>
           <PersonIcon sx={{ fontSize: 28 }} />
           <Typography variant="h6" fontWeight={700}>
-            Información del Estudiante
+            Estudiante{esMultiple ? 's' : ''} ({estudiantes.length})
           </Typography>
         </Box>
 
-        {foto && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-            <Avatar
-              src={URL.createObjectURL(foto)}
-              sx={{
-                width: 100,
-                height: 100,
-                border: '3px solid',
-                borderColor: isDark ? '#facc15' : '#0288d1',
-              }}
-            />
-          </Box>
-        )}
+        {estudiantes.map((estudiante, index) => (
+          <Box
+            key={index}
+            sx={{
+              mb: index < estudiantes.length - 1 ? 3 : 0,
+              pb: index < estudiantes.length - 1 ? 3 : 0,
+              borderBottom: index < estudiantes.length - 1 ? '1px solid' : 'none',
+              borderColor: 'divider',
+            }}
+          >
+            {esMultiple && (
+              <Typography variant="subtitle1" fontWeight={700} mb={2}>
+                Estudiante #{index + 1}
+              </Typography>
+            )}
 
-        <Grid container spacing={2}>
-          <Grid size={{xs:12, md:6}} >
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-              Nombre Completo
-            </Typography>
-            <Typography fontWeight={600}>
-              {estudiante.nombres} {estudiante.apellido_paterno} {estudiante.apellido_materno}
-            </Typography>
-          </Grid>
-          <Grid size={{xs:12, md:3}} >
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-              CI
-            </Typography>
-            <Typography fontWeight={600}>{estudiante.ci || 'No especificado'}</Typography>
-          </Grid>
-          <Grid size={{xs:12, md:3}} >
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-              Fecha de Nacimiento
-            </Typography>
-            <Typography fontWeight={600}>
-              {estudiante.fecha_nacimiento
-                ? (estudiante.fecha_nacimiento as Dayjs).format('DD/MM/YYYY')
-                : 'No especificado'}
-            </Typography>
-          </Grid>
-          <Grid size={{xs:12, md:3}} >
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-              Género
-            </Typography>
-            <Typography fontWeight={600}>{estudiante.genero || 'No especificado'}</Typography>
-          </Grid>
-          <Grid size={{xs:12, md:3}} >
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-              Dirección
-            </Typography>
-            <Typography fontWeight={600}>{estudiante.direccion || 'No especificado'}</Typography>
-          </Grid>
-        </Grid>
+            {fotos[index] && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                <Avatar
+                  src={URL.createObjectURL(fotos[index]!)}
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    border: '3px solid',
+                    borderColor: isDark ? '#facc15' : '#0288d1',
+                  }}
+                />
+              </Box>
+            )}
+
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  Nombre Completo
+                </Typography>
+                <Typography fontWeight={600}>
+                  {estudiante.nombres} {estudiante.apellido_paterno} {estudiante.apellido_materno}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  CI
+                </Typography>
+                <Typography fontWeight={600}>{estudiante.ci || 'No especificado'}</Typography>
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  Fecha de Nacimiento
+                </Typography>
+                <Typography fontWeight={600}>
+                  {estudiante.fecha_nacimiento ? estudiante.fecha_nacimiento.format('DD/MM/YYYY') : 'No especificado'}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 12, md: 3 }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  Género
+                </Typography>
+                <Typography fontWeight={600}>{estudiante.genero || 'No especificado'}</Typography>
+              </Grid>
+              <Grid size={{ xs: 12, md: 9 }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  Dirección
+                </Typography>
+                <Typography fontWeight={600}>{estudiante.direccion || 'No especificado'}</Typography>
+              </Grid>
+            </Grid>
+          </Box>
+        ))}
       </Paper>
 
       {/* Tutores */}
@@ -165,51 +212,107 @@ export const ConfirmacionStep: React.FC<ConfirmacionStepProps> = ({
         <Box sx={sectionTitle}>
           <PeopleIcon sx={{ fontSize: 28 }} />
           <Typography variant="h6" fontWeight={700}>
-            Tutores / Padres de Familia ({tutores.length})
+            {esExistente ? 'Tutor/Padre (Existente)' : `Tutores / Padres de Familia (${tutores.length})`}
           </Typography>
         </Box>
 
-        {tutores.map((tutor, index) => (
+        {esExistente && padreExistente ? (
+          // MODO EXISTENTE: mostrar padre existente
           <Box
-            key={index}
             sx={{
-              mb: 3,
-              pb: 3,
-              borderBottom: index < tutores.length - 1 ? '1px solid' : 'none',
-              borderColor: 'divider',
+              p: 3,
+              backgroundColor: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.05)',
+              borderRadius: '12px',
+              border: '1px solid #10b981',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Typography variant="subtitle1" fontWeight={700}>
-                Tutor #{index + 1}
-              </Typography>
-              {tutor.es_tutor_principal && <Chip label="Principal" size="small" color="primary" />}
-            </Box>
-
+            <Chip label="Padre Existente" color="success" size="small" sx={{ mb: 2 }} />
             <Grid container spacing={2}>
-              <Grid size={{xs:12, md:6}} >
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="caption" color="text.secondary" fontWeight={600}>
                   Nombre Completo
                 </Typography>
                 <Typography fontWeight={600}>
-                  {tutor.nombres} {tutor.apellido_paterno} {tutor.apellido_materno}
+                  {padreExistente.nombres} {padreExistente.apellido_paterno} {padreExistente.apellido_materno}
                 </Typography>
               </Grid>
-              <Grid size={{xs:12, md:3}} >
+              <Grid size={{ xs: 12, md: 3 }}>
                 <Typography variant="caption" color="text.secondary" fontWeight={600}>
                   CI
                 </Typography>
-                <Typography fontWeight={600}>{tutor.ci}</Typography>
+                <Typography fontWeight={600}>{padreExistente.ci}</Typography>
               </Grid>
-              <Grid size={{xs:12, md:3}} >
+              <Grid size={{ xs: 12, md: 3 }}>
                 <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                  Parentesco
+                  Teléfono
                 </Typography>
-                <Typography fontWeight={600}>{tutor.parentesco || 'No especificado'}</Typography>
+                <Typography fontWeight={600}>{padreExistente.telefono || 'No especificado'}</Typography>
               </Grid>
             </Grid>
+
+            {padreExistente.hijos && padreExistente.hijos.length > 0 && (
+              <Box mt={2}>
+                <Typography variant="body2" fontWeight={600} mb={1}>
+                  Otros hijos matriculados:
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {padreExistente.hijos.map((hijo) => (
+                    <Chip
+                      key={hijo.id}
+                      label={`${hijo.nombres} ${hijo.apellido_paterno}`}
+                      size="small"
+                      variant="outlined"
+                      color="success"
+                    />
+                  ))}
+                </Box>
+              </Box>
+            )}
           </Box>
-        ))}
+        ) : (
+          // MODO NUEVO/MULTIPLE: mostrar tutores nuevos
+          tutores.map((tutor, index) => (
+            <Box
+              key={index}
+              sx={{
+                mb: 3,
+                pb: 3,
+                borderBottom: index < tutores.length - 1 ? '1px solid' : 'none',
+                borderColor: 'divider',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Typography variant="subtitle1" fontWeight={700}>
+                  Tutor #{index + 1}
+                </Typography>
+                {index === 0 && <Chip label="Principal" size="small" color="primary" />}
+              </Box>
+
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    Nombre Completo
+                  </Typography>
+                  <Typography fontWeight={600}>
+                    {tutor.nombres} {tutor.apellido_paterno} {tutor.apellido_materno}
+                  </Typography>
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    CI
+                  </Typography>
+                  <Typography fontWeight={600}>{tutor.ci}</Typography>
+                </Grid>
+                <Grid size={{ xs: 12, md: 3 }}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    Parentesco
+                  </Typography>
+                  <Typography fontWeight={600}>{tutor.parentesco || 'No especificado'}</Typography>
+                </Grid>
+              </Grid>
+            </Box>
+          ))
+        )}
       </Paper>
 
       {/* Usuarios */}
@@ -223,31 +326,55 @@ export const ConfirmacionStep: React.FC<ConfirmacionStepProps> = ({
           </Box>
 
           {crearUsuarioEstudiante && (
-            <Box sx={{ mb: 2, p: 2, backgroundColor: 'rgba(16, 185, 129, 0.05)', borderRadius: '8px' }}>
-              <Typography variant="subtitle2" fontWeight={700} mb={1}>
-                Usuario del Estudiante
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={2}>
+                Usuario{esMultiple ? 's' : ''} de Estudiante{esMultiple ? 's' : ''}
               </Typography>
-              <Typography variant="body2">
-                Username: {credencialesEstudiante.username || '(Se generará automáticamente)'}
-              </Typography>
+              {estudiantes.map((est, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    mb: 2,
+                    p: 2,
+                    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                    borderRadius: '8px',
+                    border: '1px solid #10b981',
+                  }}
+                >
+                  <Typography variant="body2" fontWeight={600}>
+                    {esMultiple && `#${index + 1} - `}
+                    {est.nombres} {est.apellido_paterno}
+                  </Typography>
+                  <Typography variant="caption">
+                    Username:{' '}
+                    {credencialesEstudiantes[index]?.username || '(Se generará automáticamente)'}
+                  </Typography>
+                </Box>
+              ))}
             </Box>
           )}
 
-          {crearUsuariosTutores && (
+          {crearUsuariosTutores && !esExistente && (
             <Box>
-              <Typography variant="subtitle2" fontWeight={700} mb={1}>
+              <Typography variant="subtitle2" fontWeight={700} mb={2}>
                 Usuarios de Tutores
               </Typography>
-              {credencialesTutores.map((cred, index) => (
+              {tutores.map((tutor, index) => (
                 <Box
                   key={index}
-                  sx={{ mb: 1, p: 2, backgroundColor: 'rgba(59, 130, 246, 0.05)', borderRadius: '8px' }}
+                  sx={{
+                    mb: 1,
+                    p: 2,
+                    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                  }}
                 >
                   <Typography variant="body2" fontWeight={600}>
-                    Tutor #{index + 1}: {tutores[index]?.nombres}
+                    Tutor #{index + 1}: {tutor.nombres} {tutor.apellido_paterno}
                   </Typography>
                   <Typography variant="caption">
-                    Username: {cred.username || '(Se generará automáticamente)'}
+                    Username: {credencialesTutores[index]?.username || '(Se generará automáticamente)'}
                   </Typography>
                 </Box>
               ))}
@@ -262,12 +389,15 @@ export const ConfirmacionStep: React.FC<ConfirmacionStepProps> = ({
           <Box sx={sectionTitle}>
             <SchoolIcon sx={{ fontSize: 28 }} />
             <Typography variant="h6" fontWeight={700}>
-              Matrícula
+              Matrícula{esMultiple ? 's' : ''}
             </Typography>
           </Box>
-          <Typography variant="body2">
-            ✓ Se creará matrícula automáticamente
-          </Typography>
+          <Alert severity="success" icon={<CheckIcon />}>
+            <Typography variant="body2">
+              ✓ Se {esMultiple ? 'crearán' : 'creará'} {esMultiple ? matriculas.length : '1'} matrícula
+              {esMultiple ? 's' : ''} automáticamente
+            </Typography>
+          </Alert>
         </Paper>
       )}
 
@@ -283,7 +413,7 @@ export const ConfirmacionStep: React.FC<ConfirmacionStepProps> = ({
         {documentos.length > 0 ? (
           <Grid container spacing={2}>
             {documentos.map((doc, index) => (
-              <Grid size={{xs:12, md:6}} key={index}>
+              <Grid size={{ xs: 12, md: 6 }} key={index}>
                 <Box
                   sx={{
                     display: 'flex',
@@ -300,9 +430,7 @@ export const ConfirmacionStep: React.FC<ConfirmacionStepProps> = ({
                     <Typography variant="body2" fontWeight={600}>
                       {doc.file.name}
                     </Typography>
-                    <Typography variant="caption">
-                      {(doc.file.size / 1024 / 1024).toFixed(2)} MB
-                    </Typography>
+                    <Typography variant="caption">{(doc.file.size / 1024 / 1024).toFixed(2)} MB</Typography>
                   </Box>
                 </Box>
               </Grid>
@@ -314,6 +442,25 @@ export const ConfirmacionStep: React.FC<ConfirmacionStepProps> = ({
           </Typography>
         )}
       </Paper>
+
+      {/* Alert final */}
+      <Alert
+        severity="info"
+        icon={<InfoIcon />}
+        sx={{
+          borderRadius: '16px',
+          border: '2px solid rgba(59, 130, 246, 0.3)',
+        }}
+      >
+        <Typography variant="body2">
+          <strong>📋 Resumen:</strong> Se {esMultiple ? 'registrarán' : 'registrará'}{' '}
+          <strong>{estudiantes.length}</strong> estudiante{esMultiple ? 's' : ''},{' '}
+          <strong>{esExistente ? '0' : tutores.length}</strong> tutor{!esExistente && tutores.length > 1 ? 'es' : ''}{' '}
+          nuevo{!esExistente && tutores.length > 1 ? 's' : ''}, y{' '}
+          <strong>{incluirMatricula ? (esMultiple ? matriculas.length : '1') : '0'}</strong> matrícula
+          {esMultiple && incluirMatricula ? 's' : ''}.
+        </Typography>
+      </Alert>
     </Box>
   );
 };

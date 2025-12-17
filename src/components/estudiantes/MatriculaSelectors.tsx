@@ -34,6 +34,7 @@ interface MatriculaSelectorsProps {
   onChange: (data: Partial<MatriculaCreate>) => void;
   incluirMatricula: boolean;
   onToggleIncluir: (incluir: boolean) => void;
+  hideToggle?: boolean; // Nueva prop opcional
 }
 
 export const MatriculaSelectors: React.FC<MatriculaSelectorsProps> = ({
@@ -41,6 +42,7 @@ export const MatriculaSelectors: React.FC<MatriculaSelectorsProps> = ({
   onChange,
   incluirMatricula,
   onToggleIncluir,
+  hideToggle = false, // Default false
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -140,38 +142,40 @@ export const MatriculaSelectors: React.FC<MatriculaSelectorsProps> = ({
 
   return (
     <Box>
-      {/* Toggle para incluir matrícula */}
-      <Box 
-        sx={{ 
-          p: 3, 
-          backgroundColor: isDark ? 'rgba(250, 204, 21, 0.05)' : 'rgba(2, 136, 209, 0.05)',
-          borderRadius: '16px',
-          border: isDark ? '2px solid rgba(250, 204, 21, 0.2)' : '2px solid rgba(2, 136, 209, 0.2)',
-          mb: 3,
-        }}
-      >
-        <FormControlLabel
-          control={
-            <Switch
-              checked={incluirMatricula}
-              onChange={(e) => onToggleIncluir(e.target.checked)}
-            />
-          }
-          label={
-            <Typography fontWeight={700} sx={{ fontSize: '1.1rem', color: isDark ? '#facc15' : '#0288d1' }}>
-              Matricular al estudiante ahora
-            </Typography>
-          }
-        />
-        <Typography variant="body2" sx={{ mt: 1, color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(1,87,155,0.7)' }}>
-          Si no incluyes la matrícula ahora, deberás hacerlo después desde el módulo de matrículas.
-        </Typography>
-      </Box>
+      {/* Toggle para incluir matrícula - Solo si NO está oculto */}
+      {!hideToggle && (
+        <Box 
+          sx={{ 
+            p: 3, 
+            backgroundColor: isDark ? 'rgba(250, 204, 21, 0.05)' : 'rgba(2, 136, 209, 0.05)',
+            borderRadius: '16px',
+            border: isDark ? '2px solid rgba(250, 204, 21, 0.2)' : '2px solid rgba(2, 136, 209, 0.2)',
+            mb: 3,
+          }}
+        >
+          <FormControlLabel
+            control={
+              <Switch
+                checked={incluirMatricula}
+                onChange={(e) => onToggleIncluir(e.target.checked)}
+              />
+            }
+            label={
+              <Typography fontWeight={700} sx={{ fontSize: '1.1rem', color: isDark ? '#facc15' : '#0288d1' }}>
+                Matricular al estudiante ahora
+              </Typography>
+            }
+          />
+          <Typography variant="body2" sx={{ mt: 1, color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(1,87,155,0.7)' }}>
+            Si no incluyes la matrícula ahora, deberás hacerlo después desde el módulo de matrículas.
+          </Typography>
+        </Box>
+      )}
 
       {incluirMatricula && (
         <>
           <Stack spacing={3}>
-            {/* Periodo Académico - ESTILO PREINSCRIPCIÓN */}
+            {/* Periodo Académico */}
             <Box>
               <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                 <CalendarTodayIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
@@ -210,7 +214,7 @@ export const MatriculaSelectors: React.FC<MatriculaSelectorsProps> = ({
               </TextField>
             </Box>
 
-            {/* Filtrar por Grado - ESTILO PREINSCRIPCIÓN */}
+            {/* Filtrar por Grado */}
             <Box>
               <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                 <FilterListIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
@@ -246,7 +250,7 @@ export const MatriculaSelectors: React.FC<MatriculaSelectorsProps> = ({
               </TextField>
             </Box>
 
-            {/* Paralelo - ESTILO PREINSCRIPCIÓN */}
+            {/* Paralelo */}
             <Box>
               <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                 <GroupsIcon sx={{ fontSize: 20, color: 'text.secondary' }} />

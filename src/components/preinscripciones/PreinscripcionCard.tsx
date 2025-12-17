@@ -1,6 +1,6 @@
 // src/app/dashboard/preinscripciones/components/PreinscripcionCard.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -16,6 +16,11 @@ import {
   Tooltip,
   Zoom,
   useTheme,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
 } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import SchoolIcon from '@mui/icons-material/School';
@@ -24,8 +29,11 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import TableChartIcon from '@mui/icons-material/TableChart';
 import { Preinscripcion } from '../../types/preinscripcioonTypes';
 import { getEstadoConfig, getGradoLabel, getIniciales, formatearFecha } from '../../utils/preinscripcionUtils';
+import { useReportes } from '@/hooks/useReportes';
 
 interface PreinscripcionCardProps {
   preinscripcion: Preinscripcion;
@@ -41,7 +49,28 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
   const theme = useTheme();
   const config = getEstadoConfig(preinscripcion.estado);
   const iniciales = getIniciales(preinscripcion.estudiante_nombre);
+  const { generarReportePreInscripcionIndividual, isGenerating } = useReportes();
   
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleGenerarReporte = (formato: 'pdf' | 'excel') => {
+    generarReportePreInscripcionIndividual({
+      id: preinscripcion.id,
+      formato,
+    });
+    handleMenuClose();
+  };
+
   return (
     <Zoom in timeout={500}>
       <Card
@@ -72,11 +101,10 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               badgeContent={
                 <Avatar sx={{ width: 20, height: 20, bgcolor: config.color }}>
-                    {React.cloneElement(config.icon as React.ReactElement<any>, {
-                        sx: { fontSize: 14 },
-                    })}
+                  {React.cloneElement(config.icon as React.ReactElement<any>, {
+                    sx: { fontSize: 14 },
+                  })}
                 </Avatar>
-
               }
             >
               <Avatar 
@@ -110,7 +138,12 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
               />
             </Box>
             
-            <IconButton size="small">
+            {/* ✅ BOTÓN DE MENÚ */}
+            <IconButton 
+              size="small" 
+              onClick={handleMenuOpen}
+              disabled={isGenerating}
+            >
               <MoreVertIcon />
             </IconButton>
           </Stack>
@@ -178,6 +211,55 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
             </IconButton>
           </Tooltip>
         </CardActions>
+
+        {/* ✅ MENÚ CON OPCIONES DE REPORTE */}
+        <Menu
+          anchorEl={anchorEl}
+          open={openMenu}
+          onClose={handleMenuClose}
+          onClick={(e) => e.stopPropagation()}
+          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+          PaperProps={{
+            sx: {
+              borderRadius: '12px',
+              minWidth: 180,
+              mt: 1,
+            },
+          }}
+        >
+          <MenuItem onClick={() => onRevisar(preinscripcion.id)}>
+            <ListItemIcon>
+              <VisibilityIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Ver detalles</ListItemText>
+          </MenuItem>
+
+          <Divider sx={{ my: 0.5 }} />
+
+          <MenuItem onClick={() => handleGenerarReporte('pdf')}>
+            <ListItemIcon>
+              <PictureAsPdfIcon fontSize="small" sx={{ color: '#dc2626' }} />
+            </ListItemIcon>
+            <ListItemText>Descargar PDF</ListItemText>
+          </MenuItem>
+
+          <MenuItem onClick={() => handleGenerarReporte('excel')}>
+            <ListItemIcon>
+              <TableChartIcon fontSize="small" sx={{ color: '#107C41' }} />
+            </ListItemIcon>
+            <ListItemText>Descargar Excel</ListItemText>
+          </MenuItem>
+
+          <Divider sx={{ my: 0.5 }} />
+
+          <MenuItem onClick={() => { handleMenuClose(); onEliminar(preinscripcion.id); }}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" color="error" />
+            </ListItemIcon>
+            <ListItemText sx={{ color: 'error.main' }}>Eliminar</ListItemText>
+          </MenuItem>
+        </Menu>
       </Card>
     </Zoom>
   );

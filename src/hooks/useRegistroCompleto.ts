@@ -5,24 +5,39 @@ import { RegistroCompleto, RegistroCompletoResponse } from '@/types/estudianteTy
 import { registroCompletoService, gestionAcademicaService } from '@/services/estudiantesService';
 import { useSnackbar } from 'notistack';
 
+// =============================================
+// HOOK: Registro Completo (3 modos)
+// =============================================
+
 export const useRegistroCompleto = () => {
   const queryClient = useQueryClient();
   const { enqueueSnackbar } = useSnackbar();
   const [credencialesGeneradas, setCredencialesGeneradas] = useState<RegistroCompletoResponse['data'] | null>(null);
 
   const registrarMutation = useMutation({
-    mutationFn: (data: RegistroCompleto) => registroCompletoService.registrar(data),
+    mutationFn: (data: RegistroCompleto) => {
+      console.log('🚀 Hook: Iniciando registro con modo:', data.modo);
+      return registroCompletoService.registrar(data);
+    },
     onSuccess: (response) => {
+      console.log('✅ Hook: Registro exitoso', response);
+      
+      // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['estudiantes'] });
-      if (response.data.credenciales_estudiante || response.data.credenciales_tutores) {
+      queryClient.invalidateQueries({ queryKey: ['tutores'] });
+      
+      // Guardar credenciales si existen
+      if (response.data.credenciales_estudiantes || response.data.credenciales_tutores) {
         setCredencialesGeneradas(response.data);
       }
+      
       enqueueSnackbar(response.message || 'Registro completado exitosamente', { 
         variant: 'success',
         autoHideDuration: 5000,
       });
     },
     onError: (error: Error) => {
+      console.error('❌ Hook: Error en registro', error);
       enqueueSnackbar(error.message || 'Error en el registro completo', { 
         variant: 'error',
         autoHideDuration: 8000,
@@ -30,7 +45,9 @@ export const useRegistroCompleto = () => {
     },
   });
 
-  const limpiarCredenciales = () => setCredencialesGeneradas(null);
+  const limpiarCredenciales = useCallback(() => {
+    setCredencialesGeneradas(null);
+  }, []);
 
   return {
     registrar: registrarMutation.mutate,
@@ -42,12 +59,38 @@ export const useRegistroCompleto = () => {
 };
 
 // =============================================
-// HOOK: Gestión Académica (para selectores)
+// HOOK: Búsqueda de Padre/Tutor
 // =============================================
+
+export const useBuscarPadre = () => {
+  const { enqueueSnackbar } = useSnackbar();
+
+  const buscarMutation = useMutation({
+    mutationFn: (ci: string) => registroCompletoService.buscarPadrePorCI(ci),
+    onError: (error: Error) => {
+      enqueueSnackbar(error.message || 'Error al buscar padre/tutor', { 
+        variant: 'error' 
+      });
+    },
+  });
+
+  return {
+    buscarPadre: buscarMutation.mutate,
+    isBuscando: buscarMutation.isPending,
+    padre: buscarMutation.data?.data.padre || null,
+    encontrado: buscarMutation.data?.data.encontrado || false,
+    error: buscarMutation.error,
+  };
+};
+
+// =============================================
+// HOOK: Gestión Académica
+// =============================================
+
 export const useGestionAcademica = () => {
   const { enqueueSnackbar } = useSnackbar();
 
-  // ✅ PERIODOS - SIN initialData
+  // PERIODOS
   const { 
     data: periodos = [], 
     isLoading: isLoadingPeriodos,
@@ -61,12 +104,12 @@ export const useGestionAcademica = () => {
       return Array.isArray(resultado) ? resultado : [];
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
-    gcTime: 1000 * 60 * 10,   // 10 minutos (antes cacheTime)
+    gcTime: 1000 * 60 * 10,   // 10 minutos
     refetchOnWindowFocus: false,
     retry: 2,
   });
 
-  // ✅ PERIODO ACTIVO
+  // PERIODO ACTIVO
   const { 
     data: periodoActivo,
     isLoading: isLoadingPeriodoActivo 
@@ -84,7 +127,7 @@ export const useGestionAcademica = () => {
     retry: 2,
   });
 
-  // ✅ GRADOS - SIN initialData
+  // GRADOS
   const { 
     data: grados = [], 
     isLoading: isLoadingGrados,
@@ -103,18 +146,33 @@ export const useGestionAcademica = () => {
     retry: 2,
   });
 
+  // NIVELES
+  const { 
+    data: niveles = [], 
+    isLoading: isLoadingNiveles,
+  } = useQuery({
+    queryKey: ['niveles-academicos'],
+    queryFn: async () => {
+      console.log('🔄 Fetching NIVELES...');
+      const resultado = await gestionAcademicaService.obtenerNiveles();
+      console.log('✅ Niveles obtenidos:', resultado);
+      return Array.isArray(resultado) ? resultado : [];
+    },
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+    retry: 2,
+  });
+
   // Log de errores
   if (errorPeriodos) console.error('❌ Error periodos:', errorPeriodos);
   if (errorGrados) console.error('❌ Error grados:', errorGrados);
 
-  // ✅ NUEVO: Query para obtener TODOS los paralelos de un periodo/año
+  // Obtener todos los paralelos de un año
   const obtenerTodosLosParalelos = useCallback(async (anio: number) => {
     try {
       console.log('🔍 Obteniendo TODOS los paralelos del año:', anio);
-      
-      // ✨ UNA SOLA PETICIÓN en lugar de 14
       const paralelos = await gestionAcademicaService.obtenerTodosLosParalelos(anio);
-      
       console.log('✅ Total paralelos cargados:', paralelos.length);
       return paralelos;
     } catch (error: any) {
@@ -124,7 +182,7 @@ export const useGestionAcademica = () => {
     }
   }, [enqueueSnackbar]);
 
-  // ✅ MEMOIZADO: Paralelos (dinámicos por grado)
+  // Obtener paralelos por grado
   const obtenerParalelos = useCallback(async (gradoId: number, anio?: number) => {
     try {
       return await gestionAcademicaService.obtenerParalelos(gradoId, anio);
@@ -134,7 +192,7 @@ export const useGestionAcademica = () => {
     }
   }, [enqueueSnackbar]);
 
-  // ✅ MEMOIZADO: Verificar capacidad
+  // Verificar capacidad de paralelo
   const verificarCapacidad = useCallback(async (paraleloId: number, periodoId: number) => {
     try {
       return await gestionAcademicaService.verificarCapacidad(paraleloId, periodoId);
@@ -148,9 +206,11 @@ export const useGestionAcademica = () => {
     periodos: periodos || [],
     periodoActivo,
     grados: grados || [],
+    niveles: niveles || [],
     isLoadingPeriodos,
     isLoadingPeriodoActivo,
     isLoadingGrados,
+    isLoadingNiveles,
     obtenerParalelos,
     obtenerTodosLosParalelos,
     verificarCapacidad,

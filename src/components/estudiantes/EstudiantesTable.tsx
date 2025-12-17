@@ -23,7 +23,6 @@ import {
   Badge,
   Fade,
   Paper,
-  InputLabel,
 } from '@mui/material';
 import {
   DataGrid,
@@ -43,7 +42,9 @@ import {
   Person as PersonIcon,
   Badge as BadgeIcon,
   Wc as WcIcon,
+  Assessment as ReportIcon,
 } from '@mui/icons-material';
+import { BotonReporteIndividual } from './BotonReporteIndividual';
 import { Estudiante } from '@/types/estudianteTypes';
 import { gestionAcademicaService } from '@/services/estudiantesService';
 
@@ -280,21 +281,21 @@ export const EstudiantesCardView: React.FC<EstudiantesCardViewProps> = ({
       ),
     },
     {
-  field: 'edad',
-  headerName: 'Edad',
-  width: 80,
-  headerAlign: 'center',
-  align: 'center',
-  valueGetter: (value: any, row: Estudiante) => calculateAge(row.fecha_nacimiento),
-  renderCell: (params: GridRenderCellParams) => (
-    <Chip
-      icon={<CakeIcon sx={{ fontSize: 14 }} />}
-      label={`${params.value} años`}
-      size="small"
-      sx={{ fontWeight: 600 }}
-    />
-  ),
-},
+      field: 'edad',
+      headerName: 'Edad',
+      width: 80,
+      headerAlign: 'center',
+      align: 'center',
+      valueGetter: (value: any, row: Estudiante) => calculateAge(row.fecha_nacimiento),
+      renderCell: (params: GridRenderCellParams) => (
+        <Chip
+          icon={<CakeIcon sx={{ fontSize: 14 }} />}
+          label={`${params.value} años`}
+          size="small"
+          sx={{ fontWeight: 600 }}
+        />
+      ),
+    },
     {
       field: 'genero',
       headerName: 'Género',
@@ -686,6 +687,55 @@ export const EstudiantesCardView: React.FC<EstudiantesCardViewProps> = ({
                           color: isDark ? '#facc15' : '#0288d1',
                         }}
                       />
+
+                      {/* Botones de acción directos */}
+                      <Box sx={{ 
+                        display: 'flex', 
+                        gap: 1, 
+                        justifyContent: 'center',
+                        mb: 2 
+                      }}>
+                        <Tooltip title="Ver detalles">
+                          <IconButton 
+                            size="small" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onView(estudiante);
+                            }}
+                            sx={{
+                              backgroundColor: alpha(isDark ? '#facc15' : '#0288d1', 0.1),
+                              '&:hover': {
+                                backgroundColor: alpha(isDark ? '#facc15' : '#0288d1', 0.2),
+                              },
+                            }}
+                          >
+                            <ViewIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Editar">
+                          <IconButton 
+                            size="small" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEdit(estudiante);
+                            }}
+                            sx={{
+                              backgroundColor: alpha(isDark ? '#facc15' : '#0288d1', 0.1),
+                              '&:hover': {
+                                backgroundColor: alpha(isDark ? '#facc15' : '#0288d1', 0.2),
+                              },
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+
+                        {/* Botón de reporte directo */}
+                        <Box onClick={(e) => e.stopPropagation()}>
+                          <BotonReporteIndividual estudiante={estudiante} />
+                        </Box>
+                      </Box>
 
                       {/* Información adicional */}
                       <Box sx={{ 
