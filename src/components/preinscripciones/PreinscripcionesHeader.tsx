@@ -1,26 +1,72 @@
-// src/app/dashboard/preinscripciones/components/PreinscripcionesHeader.tsx
+// src/components/preinscripciones/PreinscripcionesHeader.tsx
 
 import React from 'react';
-import { Box, Typography, Stack, Button, IconButton, Tooltip, Fade } from '@mui/material';
+import { 
+  Box, 
+  Typography, 
+  Stack, 
+  Button, 
+  IconButton, 
+  Tooltip, 
+  Fade,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+} from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import AddIcon from '@mui/icons-material/Add';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import TableChartIcon from '@mui/icons-material/TableChart';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 interface PreinscripcionesHeaderProps {
   onRefresh: () => void;
   onExport: () => void;
+  onExportPDF?: () => void;
   onNew?: () => void;
 }
 
 export const PreinscripcionesHeader: React.FC<PreinscripcionesHeaderProps> = ({
   onRefresh,
   onExport,
+  onExportPDF,
   onNew,
 }) => {
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleExportExcel = () => {
+    handleMenuClose();
+    onExport();
+  };
+
+  const handleExportPDF = () => {
+    handleMenuClose();
+    if (onExportPDF) {
+      onExportPDF();
+    }
+  };
+
   return (
     <Fade in timeout={600}>
       <Box mb={4}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
+        <Stack 
+          direction="row" 
+          alignItems="center" 
+          justifyContent="space-between" 
+          flexWrap="wrap" 
+          gap={2}
+        >
           <Box>
             <Typography
               variant="h3"
@@ -52,9 +98,10 @@ export const PreinscripcionesHeader: React.FC<PreinscripcionesHeaderProps> = ({
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
+
             <Tooltip title="Exportar">
               <IconButton 
-                onClick={onExport}
+                onClick={handleMenuOpen}
                 sx={{ 
                   bgcolor: 'primary.main',
                   color: '#fff',
@@ -64,6 +111,20 @@ export const PreinscripcionesHeader: React.FC<PreinscripcionesHeaderProps> = ({
                 <CloudDownloadIcon />
               </IconButton>
             </Tooltip>
+
+            <Tooltip title="Gestionar Cupos">
+              <IconButton 
+                onClick={() => window.location.href = '/dashboard/cupos'}
+                sx={{ 
+                  bgcolor: 'info.main',
+                  color: '#fff',
+                  '&:hover': { bgcolor: 'info.dark' }
+                }}
+              >
+                <SettingsIcon />
+              </IconButton>
+            </Tooltip>
+
             {onNew && (
               <Button
                 variant="contained"
@@ -82,6 +143,52 @@ export const PreinscripcionesHeader: React.FC<PreinscripcionesHeaderProps> = ({
             )}
           </Stack>
         </Stack>
+
+        {/* MENÚ DE EXPORTACIÓN */}
+        <Menu
+          anchorEl={anchorEl}
+          open={openMenu}
+          onClose={handleMenuClose}
+          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+          PaperProps={{
+            sx: {
+              borderRadius: '12px',
+              minWidth: 200,
+              mt: 1,
+            },
+          }}
+        >
+          <MenuItem onClick={handleExportExcel}>
+            <ListItemIcon>
+              <TableChartIcon fontSize="small" sx={{ color: '#107C41' }} />
+            </ListItemIcon>
+            <ListItemText>
+              <Typography variant="body2" fontWeight={600}>
+                Exportar a Excel
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Descarga archivo .xlsx
+              </Typography>
+            </ListItemText>
+          </MenuItem>
+
+          {onExportPDF && (
+            <MenuItem onClick={handleExportPDF}>
+              <ListItemIcon>
+                <PictureAsPdfIcon fontSize="small" sx={{ color: '#dc2626' }} />
+              </ListItemIcon>
+              <ListItemText>
+                <Typography variant="body2" fontWeight={600}>
+                  Exportar a PDF
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Descarga archivo .pdf
+                </Typography>
+              </ListItemText>
+            </MenuItem>
+          )}
+        </Menu>
       </Box>
     </Fade>
   );

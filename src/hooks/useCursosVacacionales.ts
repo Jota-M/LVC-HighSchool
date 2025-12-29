@@ -173,7 +173,7 @@ export const useCursosVacacionales = (filters?: CursoVacacionalFilters) => {
 
   const actualizarMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: CursoVacacionalUpdate }) =>
-      cursoVacacionalService.cursos.actualizar(id, data),
+      cursoVacacionalService.cursos.actualizar(id, data as any),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cursos-vacacionales'] });
       enqueueSnackbar('Curso actualizado exitosamente', { variant: 'success' });

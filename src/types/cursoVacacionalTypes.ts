@@ -43,7 +43,7 @@ export interface PeriodoVacacionalCreate {
 export interface PeriodoVacacionalUpdate extends Partial<PeriodoVacacionalCreate> {}
 
 // ============================================
-// CURSO VACACIONAL
+// CURSO VACACIONAL (CON FOTO)
 // ============================================
 export interface CursoVacacional {
   id: number;
@@ -55,7 +55,7 @@ export interface CursoVacacional {
   descripcion: string | null;
   fecha_inicio: string;
   fecha_fin: string;
-  dias_semana: string | null; // "Lunes,Miércoles,Viernes"
+  dias_semana: string | null;
   hora_inicio: string | null;
   hora_fin: string | null;
   cupos_totales: number;
@@ -65,6 +65,11 @@ export interface CursoVacacional {
   aula: string | null;
   requisitos: string | null;
   activo: boolean;
+  
+  // ⬇️ NUEVOS CAMPOS DE FOTO
+  foto_url: string | null;
+  foto_public_id: string | null;
+  
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -99,6 +104,11 @@ export interface CursoVacacionalCreate {
 }
 
 export interface CursoVacacionalUpdate extends Partial<Omit<CursoVacacionalCreate, 'periodo_vacacional_id'>> {}
+
+// ⬇️ NUEVO: Formulario con foto
+export interface FormCursoVacacional extends CursoVacacionalCreate {
+  foto?: File;
+}
 
 // ============================================
 // INSCRIPCION VACACIONAL
@@ -313,10 +323,6 @@ export interface IngresosPorCurso {
 // ============================================
 export interface FormInscripcionPublica extends InscripcionVacacionalCreate {
   comprobante?: File;
-}
-
-export interface FormCursoVacacional extends CursoVacacionalCreate {
-  // Extensiones para el formulario
 }
 
 export interface FormPeriodoVacacional extends PeriodoVacacionalCreate {

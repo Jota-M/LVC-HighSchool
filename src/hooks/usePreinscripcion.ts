@@ -12,6 +12,15 @@ import type {
 import { preinscripcionService } from '@/services/preinscripcionService';
 
 // =============================================
+// 🆕 NUEVO: Interfaz para datos de preinscripción
+// =============================================
+export interface PreInscripcionInfo {
+  periodo_academico_id: number | null;
+  grado_id: number | null;
+  turno_id: number | null;
+}
+
+// =============================================
 // ESTADOS INICIALES
 // =============================================
 const estadoInicialEstudiante = (): PreEstudianteForm => ({
@@ -19,6 +28,7 @@ const estadoInicialEstudiante = (): PreEstudianteForm => ({
   apellido_paterno: '',
   apellido_materno: '',
   ci: '',
+  rude: '',
   fecha_nacimiento: null,
   lugar_nacimiento: '',
   genero: '',
@@ -28,14 +38,13 @@ const estadoInicialEstudiante = (): PreEstudianteForm => ({
   telefono: '',
   email: '',
   contacto_emergencia: '',
-  telefono_emergencia: '',
   tiene_discapacidad: false,
   tipo_discapacidad: '',
   institucion_procedencia: '',
   ultimo_grado_cursado: '',
-  grado_solicitado: '',
+  grado_solicitado: '',     // ✅ Texto (ej: "PRE-K")
   repite_grado: false,
-  turno_solicitado: '',
+  turno_solicitado: '',     // ✅ Texto (ej: "TARDE")
 });
 
 const estadoInicialTutor = (): PreTutorForm => ({
@@ -68,19 +77,24 @@ const estadoInicialDocumentos = () => ({
   libreta_notas: null,
 });
 
+// 🆕 Estado inicial para preinscripcion_info
+const estadoInicialPreInscripcionInfo = (): PreInscripcionInfo => ({
+  periodo_academico_id: null,
+  grado_id: null,
+  turno_id: null,
+});
+
 export function usePreinscripcion() {
   // =============================================
-  // 🆕 ESTADOS PARA MODO MÚLTIPLE
+  // ESTADOS PARA MODO MÚLTIPLE
   // =============================================
   const [etapa, setEtapa] = useState<'seleccion_modo' | 'formulario'>('seleccion_modo');
   const [modo, setModo] = useState<ModoRegistro>('nuevo');
   const [padreExistente, setPadreExistente] = useState<any>(null);
   
-  // Array de estudiantes
   const [estudiantes, setEstudiantes] = useState<PreEstudianteForm[]>([estadoInicialEstudiante()]);
   const [estudianteActivo, setEstudianteActivo] = useState(0);
   
-  // Documentos por estudiante
   const [documentosEstudiantes, setDocumentosEstudiantes] = useState<{
     [key: number]: {
       foto_estudiante: File | null;
@@ -91,6 +105,11 @@ export function usePreinscripcion() {
   }>({
     0: estadoInicialDocumentos(),
   });
+
+  // 🆕 Estado para IDs de preinscripción
+  const [preinscripcionInfo, setPreinscripcionInfo] = useState<PreInscripcionInfo>(
+    estadoInicialPreInscripcionInfo()
+  );
 
   // =============================================
   // ESTADOS ORIGINALES
@@ -146,6 +165,7 @@ export function usePreinscripcion() {
     setRepresentante(estadoInicialTutor());
     setDocumentosEstudiantes({ 0: estadoInicialDocumentos() });
     setDocumentosRepresentante({ cedula_representante: null });
+    setPreinscripcionInfo(estadoInicialPreInscripcionInfo()); // 🆕 Limpiar
     setErrors({});
   };
 
@@ -212,6 +232,14 @@ export function usePreinscripcion() {
     }
   };
 
+  // 🆕 Handler para actualizar preinscripcion_info
+  const updatePreinscripcionInfo = (field: keyof PreInscripcionInfo, value: number | null) => {
+    setPreinscripcionInfo(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
   // =============================================
   // VALIDACIONES
   // =============================================
@@ -220,12 +248,24 @@ export function usePreinscripcion() {
     const estudianteActual = estudiantes[estudianteActivo];
 
     if (paso === 0) {
+      // Validaciones existentes
       if (!estudianteActual.nombres) nuevosErrores.nombres = 'Campo requerido';
       if (!estudianteActual.apellido_paterno) nuevosErrores.apellido_paterno = 'Campo requerido';
       if (!estudianteActual.fecha_nacimiento) nuevosErrores.fecha_nacimiento = 'Campo requerido';
       if (!estudianteActual.genero) nuevosErrores.genero = 'Campo requerido';
       if (!estudianteActual.grado_solicitado) nuevosErrores.grado_solicitado = 'Campo requerido';
       if (!estudianteActual.turno_solicitado) nuevosErrores.turno_solicitado = 'Campo requerido';
+
+      // 🆕 Validar que se hayan seleccionado los IDs
+      if (!preinscripcionInfo.periodo_academico_id) {
+        nuevosErrores.periodo_academico = 'Debe seleccionar un periodo académico';
+      }
+      if (!preinscripcionInfo.grado_id) {
+        nuevosErrores.grado = 'Debe seleccionar el ID del grado';
+      }
+      if (!preinscripcionInfo.turno_id) {
+        nuevosErrores.turno = 'Debe seleccionar el ID del turno';
+      }
     }
 
     if (paso === 1 && modo !== 'padre_existente') {
@@ -266,98 +306,136 @@ export function usePreinscripcion() {
   };
 
   // =============================================
-  // ENVÍO (usando preinscripcionService)
+  // ENVÍO (✅ ACTUALIZADO CON preinscripcion_info)
   // =============================================
   const handleSubmit = async () => {
-    if (!validarPaso(activeStep)) return;
+  if (!validarPaso(activeStep)) return;
 
-    setIsSubmitting(true);
+  // Validar IDs
+  if (!preinscripcionInfo.periodo_academico_id || 
+      !preinscripcionInfo.grado_id || 
+      !preinscripcionInfo.turno_id) {
+    alert('Error: Faltan datos de período académico, grado o turno.');
+    return;
+  }
 
-    try {
-      // ✅ Modo simple: usar servicio original
-      if (modo === 'nuevo' && estudiantes.length === 1) {
-        const estudianteData = {
-          ...estudiantes[0],
-          fecha_nacimiento: estudiantes[0].fecha_nacimiento
-            ? estudiantes[0].fecha_nacimiento.format('YYYY-MM-DD')
-            : '',
-        };
+  setIsSubmitting(true);
 
+  try {
+    // ✅ MODO SIMPLE: Usar FormData en lugar de preinscripcionService.crear
+    if (modo === 'nuevo' && estudiantes.length === 1) {
+      const estudianteData = {
+        ...estudiantes[0],
+        rude: estudiantes[0].rude || '',
+        fecha_nacimiento: estudiantes[0].fecha_nacimiento
+          ? estudiantes[0].fecha_nacimiento.format('YYYY-MM-DD')
+          : '',
+      };
+
+      const representanteData = {
+        ...representante,
+        fecha_nacimiento: representante.fecha_nacimiento
+          ? representante.fecha_nacimiento.format('YYYY-MM-DD')
+          : null,
+      };
+
+      const docs = documentosEstudiantes[0];
+      
+      // ✅ CREAR FormData (igual que en modo múltiple)
+      const formData = new FormData();
+      
+      // Agregar datos como JSON strings
+      formData.append('estudiante', JSON.stringify(estudianteData));
+      formData.append('representante', JSON.stringify(representanteData));
+      formData.append('preinscripcion_info', JSON.stringify({
+        periodo_academico_id: preinscripcionInfo.periodo_academico_id,
+        grado_id: preinscripcionInfo.grado_id,
+        turno_id: preinscripcionInfo.turno_id,
+      }));
+      
+      // ✅ Agregar archivos del estudiante
+      if (docs.foto_estudiante) {
+        formData.append('foto_estudiante', docs.foto_estudiante);
+      }
+      if (docs.cedula_estudiante) {
+        formData.append('cedula_estudiante', docs.cedula_estudiante);
+      }
+      if (docs.certificado_nacimiento) {
+        formData.append('certificado_nacimiento', docs.certificado_nacimiento);
+      }
+      if (docs.libreta_notas) {
+        formData.append('libreta_notas', docs.libreta_notas);
+      }
+      
+      // ✅ Agregar documento del representante
+      if (documentosRepresentante.cedula_representante) {
+        formData.append('cedula_representante', documentosRepresentante.cedula_representante);
+      }
+      
+      // ✅ Enviar con api.post directamente
+      const { default: api } = await import('@/lib/api');
+      await api.post('/preinscripcion', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+    } else {
+      // ✅ Modo múltiple o padre existente (ya está correcto)
+      const formData = new FormData();
+
+      formData.append('modo', modo);
+      if (padreExistente) {
+        formData.append('padre_id', padreExistente.id.toString());
+      }
+
+      formData.append('preinscripcion_info', JSON.stringify({
+        periodo_academico_id: preinscripcionInfo.periodo_academico_id,
+        grado_id: preinscripcionInfo.grado_id,
+        turno_id: preinscripcionInfo.turno_id,
+      }));
+
+      const estudiantesData = estudiantes.map((est) => ({
+        ...est,
+        rude: est.rude || '',
+        fecha_nacimiento: est.fecha_nacimiento ? est.fecha_nacimiento.format('YYYY-MM-DD') : '',
+      }));
+      formData.append('estudiantes', JSON.stringify(estudiantesData));
+
+      if (modo !== 'padre_existente') {
         const representanteData = {
           ...representante,
           fecha_nacimiento: representante.fecha_nacimiento
             ? representante.fecha_nacimiento.format('YYYY-MM-DD')
             : null,
         };
+        formData.append('representante', JSON.stringify(representanteData));
 
-        const docs = documentosEstudiantes[0];
-        
-        await preinscripcionService.crear(
-          {
-            estudiante: estudianteData,
-            representante: representanteData,
-          },
-          {
-            foto_estudiante: docs.foto_estudiante || undefined,
-            cedula_estudiante: docs.cedula_estudiante || undefined,
-            certificado_nacimiento: docs.certificado_nacimiento || undefined,
-            libreta_notas: docs.libreta_notas || undefined,
-            cedula_representante: documentosRepresentante.cedula_representante || undefined,
-          }
-        );
-
-      } else {
-        // ✅ Modo múltiple o padre existente: usar endpoint múltiple
-        const formData = new FormData();
-
-        formData.append('modo', modo);
-        if (padreExistente) {
-          formData.append('padre_id', padreExistente.id.toString());
+        if (documentosRepresentante.cedula_representante) {
+          formData.append('cedula_representante', documentosRepresentante.cedula_representante);
         }
-
-        const estudiantesData = estudiantes.map((est) => ({
-          ...est,
-          fecha_nacimiento: est.fecha_nacimiento ? est.fecha_nacimiento.format('YYYY-MM-DD') : '',
-        }));
-        formData.append('estudiantes', JSON.stringify(estudiantesData));
-
-        if (modo !== 'padre_existente') {
-          const representanteData = {
-            ...representante,
-            fecha_nacimiento: representante.fecha_nacimiento
-              ? representante.fecha_nacimiento.format('YYYY-MM-DD')
-              : null,
-          };
-          formData.append('representante', JSON.stringify(representanteData));
-
-          if (documentosRepresentante.cedula_representante) {
-            formData.append('cedula_representante', documentosRepresentante.cedula_representante);
-          }
-        }
-
-        estudiantes.forEach((_, index) => {
-          const docs = documentosEstudiantes[index];
-          if (docs.foto_estudiante) formData.append(`foto_estudiante_${index}`, docs.foto_estudiante);
-          if (docs.cedula_estudiante) formData.append(`cedula_estudiante_${index}`, docs.cedula_estudiante);
-          if (docs.certificado_nacimiento) formData.append(`certificado_nacimiento_${index}`, docs.certificado_nacimiento);
-          if (docs.libreta_notas) formData.append(`libreta_notas_${index}`, docs.libreta_notas);
-        });
-
-        // ✅ Usar axios a través de api
-        const { default: api } = await import('@/lib/api');
-        await api.post('/preinscripcion/multiple', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
       }
 
-      setIsSuccess(true);
-    } catch (error: any) {
-      console.error('Error al enviar:', error);
-      alert(error.message || 'Error al enviar la preinscripción');
-    } finally {
-      setIsSubmitting(false);
+      estudiantes.forEach((_, index) => {
+        const docs = documentosEstudiantes[index];
+        if (docs.foto_estudiante) formData.append(`foto_estudiante_${index}`, docs.foto_estudiante);
+        if (docs.cedula_estudiante) formData.append(`cedula_estudiante_${index}`, docs.cedula_estudiante);
+        if (docs.certificado_nacimiento) formData.append(`certificado_nacimiento_${index}`, docs.certificado_nacimiento);
+        if (docs.libreta_notas) formData.append(`libreta_notas_${index}`, docs.libreta_notas);
+      });
+
+      const { default: api } = await import('@/lib/api');
+      await api.post('/preinscripcion/multiple', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
     }
-  };
+
+    setIsSuccess(true);
+  } catch (error: any) {
+    console.error('Error al enviar:', error);
+    alert(error.message || 'Error al enviar la preinscripción');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // =============================================
   // LIMPIAR FORMULARIO
@@ -369,6 +447,7 @@ export function usePreinscripcion() {
       setRepresentante(estadoInicialTutor());
       setDocumentosEstudiantes({ 0: estadoInicialDocumentos() });
       setDocumentosRepresentante({ cedula_representante: null });
+      setPreinscripcionInfo(estadoInicialPreInscripcionInfo()); // 🆕 Limpiar
       setActiveStep(0);
       setErrors({});
     }
@@ -391,6 +470,10 @@ export function usePreinscripcion() {
     setEstudianteActivo,
     agregarEstudiante,
     eliminarEstudiante,
+
+    // 🆕 Preinscripción info
+    preinscripcionInfo,
+    updatePreinscripcionInfo,
 
     // Compatibilidad
     formData: {

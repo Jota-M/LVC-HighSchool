@@ -10,32 +10,36 @@ import {
   ConvertirEstudianteRequest,
   ConvertirEstudianteResponse,
   BuscarPadreResponse,
+  VerificarDisponibilidadResponse,
+  PreInscripcionMultipleResponse,
 } from '@/types/preinscripcionTypes';
 
 export const preinscripcionService = {
   /**
-   * Crear una nueva preinscripción
+   * Crear una nueva preinscripción (simple)
    */
   async crear(
-    data: PreInscripcionDTO,
-    archivos: {
-      foto_estudiante?: File;
-      cedula_estudiante?: File;
-      certificado_nacimiento?: File;
-      libreta_notas?: File;
-      cedula_representante?: File;
-    }
-  ): Promise<PreInscripcionResponse> {
+data: PreInscripcionDTO, p0: { estudiante: { rude: string; fecha_nacimiento: string; nombres: string; apellido_paterno: string; apellido_materno: string; ci: string; lugar_nacimiento: string; genero: string; direccion: string; zona: string; ciudad: string; telefono: string; email: string; contacto_emergencia: string; tiene_discapacidad: boolean; tipo_discapacidad: string; institucion_procedencia: string; ultimo_grado_cursado: string; grado_solicitado: string; repite_grado: boolean; turno_solicitado: string; }; representante: { fecha_nacimiento: string | null; otro_parentesco: string; tipo_representante: string; nombres: string; apellido_paterno: string; apellido_materno: string; ci: string; genero: string; parentesco: string; telefono: string; celular: string; email: string; direccion: string; ocupacion: string; lugar_trabajo: string; telefono_trabajo: string; estado_civil: string; nivel_educacion: string; vive_con_estudiante: boolean; es_tutor_principal: boolean; }; preinscripcion_info: { periodo_academico_id: number; grado_id: number; turno_id: number; }; }, archivos: {
+  foto_estudiante?: File;
+  cedula_estudiante?: File;
+  certificado_nacimiento?: File;
+  libreta_notas?: File;
+  cedula_representante?: File;
+}  ): Promise<PreInscripcionResponse> {
     try {
       const formData = new FormData();
       
       formData.append('estudiante', JSON.stringify(data.estudiante));
       formData.append('representante', JSON.stringify(data.representante));
       
+      // 🆕 Info de preinscripción (cupos)
+      if (data.preinscripcion_info) {
+        formData.append('preinscripcion_info', JSON.stringify(data.preinscripcion_info));
+      }
+      
       if (archivos.foto_estudiante) {
         formData.append('foto_estudiante', archivos.foto_estudiante);
       }
-      
       if (archivos.cedula_estudiante) {
         formData.append('cedula_estudiante', archivos.cedula_estudiante);
       }
@@ -80,6 +84,32 @@ export const preinscripcionService = {
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message || 'Error al buscar padre'
+      );
+    }
+  },
+
+  /**
+   * 🆕 Verificar disponibilidad de cupos
+   */
+  async verificarDisponibilidad(
+    grado_id: number,
+    turno_id: number,
+    periodo_academico_id: number
+  ): Promise<VerificarDisponibilidadResponse> {
+    try {
+      const params = new URLSearchParams({
+        grado_id: grado_id.toString(),
+        turno_id: turno_id.toString(),
+        periodo_academico_id: periodo_academico_id.toString(),
+      });
+
+      const response = await api.get<VerificarDisponibilidadResponse>(
+        `/cupos/disponibilidad?${params}`
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || 'Error al verificar disponibilidad'
       );
     }
   },
@@ -200,6 +230,7 @@ export const preinscripcionService = {
       apellido_paterno: string;
       apellido_materno?: string;
       ci?: string;
+      rude?: string; // 🆕
       fecha_nacimiento?: string;
       lugar_nacimiento?: string;
       genero?: string;
@@ -209,7 +240,7 @@ export const preinscripcionService = {
       telefono?: string;
       email?: string;
       contacto_emergencia?: string;
-      telefono_emergencia?: string;
+      // telefono_emergencia eliminado ❌
     }
   ): Promise<any> {
     try {

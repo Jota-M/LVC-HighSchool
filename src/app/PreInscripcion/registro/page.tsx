@@ -48,19 +48,23 @@ export default function PreinscripcionPage() {
   const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
 
   const {
-    // 🆕 Estados de modo
+    // Estados de modo
     etapa,
     modo,
     padreExistente,
     handleModoSeleccionado,
     volverSeleccionModo,
 
-    // 🆕 Múltiples estudiantes
+    // Múltiples estudiantes
     estudiantes,
     estudianteActivo,
     setEstudianteActivo,
     agregarEstudiante,
     eliminarEstudiante,
+
+    // 🆕 Preinscripción info
+    preinscripcionInfo,
+    updatePreinscripcionInfo,
 
     // Estados originales
     formData,
@@ -86,7 +90,7 @@ export default function PreinscripcionPage() {
 
   const handleCloseSuccess = () => {
     setShowSuccessDialog(false);
-    window.location.reload(); // Reiniciar formulario
+    window.location.reload();
   };
 
   // =============================================
@@ -100,6 +104,8 @@ export default function PreinscripcionPage() {
             data={formData.estudiante}
             errors={errors}
             onChange={updateEstudiante}
+            preinscripcionInfo={preinscripcionInfo} // 🆕
+            onPreinscripcionInfoChange={updatePreinscripcionInfo} // 🆕
           />
         );
       case 1:
@@ -278,7 +284,7 @@ export default function PreinscripcionPage() {
               {/* Stepper */}
               <FormStepper activeStep={activeStep} />
 
-              {/* 🆕 Selector de estudiante (solo en modo múltiple) */}
+              {/* Selector de estudiante (solo en modo múltiple) */}
               {modo === 'multiple' && activeStep < 3 && (
                 <Box sx={{ mb: 3, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
                   {estudiantes.map((_, index) => (

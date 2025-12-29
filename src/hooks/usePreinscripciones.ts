@@ -1,6 +1,6 @@
-// src/app/dashboard/preinscripciones/hooks/usePreinscripciones.ts
+// src/hooks/usePreinscripciones.ts
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import preinscripcionService from '../services/preinscripcionnService';
 import { 
   Preinscripcion, 
@@ -20,54 +20,111 @@ interface UsePreinscripcionesReturn {
   setSearchTerm: (term: string) => void;
   setEstadoFilter: (estado: string) => void;
   setGradoFilter: (grado: string) => void;
+  setTurnoFilter: (turno: string) => void; // 🆕
+  setPeriodoFilter: (periodo: string) => void; // 🆕
+  setConCupoFilter: (conCupo: string) => void; // 🆕
   fetchPreinscripciones: () => Promise<void>;
   deletePreinscripcion: (id: number) => Promise<void>;
-  changeEstado: (id: number, estado: EstadoPreinscripcion) => Promise<void>;
+  changeEstado: (id: number, estado: EstadoPreinscripcion, observaciones?: string) => Promise<void>;
   exportToExcel: () => Promise<void>;
+  exportToPDF: () => Promise<void>; // 🆕
 }
 
 export const usePreinscripciones = (): UsePreinscripcionesReturn => {
   const [preinscripciones, setPreinscripciones] = useState<Preinscripcion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
   const [filters, setFiltersState] = useState<PreinscripcionFilters>({
     searchTerm: '',
     estadoFilter: 'todos',
     gradoFilter: 'todos',
+    turnoFilter: 'todos', // 🆕
+    periodoFilter: 'todos', // 🆕
+    conCupoFilter: 'todos', // 🆕
   });
 
-  // Calcular estadísticas
-  const stats: PreinscripcionStats = {
-    total: preinscripciones.length,
-    pendientes: preinscripciones.filter(p => 
+  // =============================================
+  // CALCULAR ESTADÍSTICAS (ACTUALIZADO)
+  // =============================================
+  const stats: PreinscripcionStats = useMemo(() => {
+    const total = preinscripciones.length;
+    
+    const pendientes = preinscripciones.filter(p => 
       ['iniciada', 'datos_completos', 'documentos_pendientes', 'en_revision']
         .includes(p.estado?.toLowerCase() || '')
-    ).length,
-    aprobadas: preinscripciones.filter(p => 
+    ).length;
+    
+    const aprobadas = preinscripciones.filter(p => 
       ['aprobada', 'documentos_aprobados'].includes(p.estado?.toLowerCase() || '')
-    ).length,
-    rechazadas: preinscripciones.filter(p => 
+    ).length;
+    
+    const rechazadas = preinscripciones.filter(p => 
       p.estado?.toLowerCase() === 'rechazada'
-    ).length,
-  };
+    ).length;
+    
+    const convertidas = preinscripciones.filter(p =>
+      p.estado?.toLowerCase() === 'convertida'
+    ).length;
+    
+    // 🆕 Stats de cupos
+    const con_cupo_asignado = preinscripciones.filter(p => 
+      p.tiene_cupo_asignado === true
+    ).length;
+    
+    const sin_cupo_asignado = total - con_cupo_asignado;
+    
+    return {
+      total,
+      pendientes,
+      aprobadas,
+      rechazadas,
+      convertidas,
+      con_cupo_asignado,
+      sin_cupo_asignado,
+    };
+  }, [preinscripciones]);
 
-  // Aplicar filtros
-  const filteredPreinscripciones = preinscripciones.filter(p => {
-    const matchSearch = filters.searchTerm === '' || 
-      p.estudiante_nombre?.toLowerCase().includes(filters.searchTerm.toLowerCase()) || 
-      p.estudiante_ci?.includes(filters.searchTerm) ||
-      p.codigo_inscripcion?.toLowerCase().includes(filters.searchTerm.toLowerCase());
-    
-    const matchEstado = filters.estadoFilter === 'todos' || 
-      p.estado?.toLowerCase() === filters.estadoFilter.toLowerCase();
-    
-    const matchGrado = filters.gradoFilter === 'todos' || 
-      p.grado_solicitado === filters.gradoFilter;
-    
-    return matchSearch && matchEstado && matchGrado;
-  });
+  // =============================================
+  // APLICAR FILTROS (ACTUALIZADO)
+  // =============================================
+  const filteredPreinscripciones = useMemo(() => {
+    return preinscripciones.filter(p => {
+      // Búsqueda por texto
+      const matchSearch = filters.searchTerm === '' || 
+        p.estudiante_nombre?.toLowerCase().includes(filters.searchTerm.toLowerCase()) || 
+        p.estudiante_ci?.includes(filters.searchTerm) ||
+        p.codigo_inscripcion?.toLowerCase().includes(filters.searchTerm.toLowerCase());
+      
+      // Filtro por estado
+      const matchEstado = filters.estadoFilter === 'todos' || 
+        p.estado?.toLowerCase() === filters.estadoFilter.toLowerCase();
+      
+      // Filtro por grado
+      const matchGrado = filters.gradoFilter === 'todos' || 
+        p.grado_solicitado === filters.gradoFilter ||
+        p.grado_nombre === filters.gradoFilter;
+      
+      // 🆕 Filtro por turno
+      const matchTurno = filters.turnoFilter === 'todos' ||
+        p.turno_nombre === filters.turnoFilter;
+      
+      // 🆕 Filtro por periodo
+      const matchPeriodo = filters.periodoFilter === 'todos' ||
+        p.periodo_nombre === filters.periodoFilter;
+      
+      // 🆕 Filtro por cupo
+      const matchCupo = filters.conCupoFilter === 'todos' ||
+        (filters.conCupoFilter === 'con_cupo' && p.tiene_cupo_asignado) ||
+        (filters.conCupoFilter === 'sin_cupo' && !p.tiene_cupo_asignado);
+      
+      return matchSearch && matchEstado && matchGrado && matchTurno && matchPeriodo && matchCupo;
+    });
+  }, [preinscripciones, filters]);
 
-  // Obtener preinscripciones
+  // =============================================
+  // OBTENER PREINSCRIPCIONES
+  // =============================================
   const fetchPreinscripciones = useCallback(async () => {
     try {
       setLoading(true);
@@ -80,13 +137,15 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al cargar las preinscripciones';
       setError(message);
-      console.error('Error al cargar preinscripciones:', err);
+      console.error('❌ Error al cargar preinscripciones:', err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Eliminar preinscripción
+  // =============================================
+  // ELIMINAR PREINSCRIPCIÓN (LIBERA CUPO)
+  // =============================================
   const deletePreinscripcion = useCallback(async (id: number) => {
     try {
       await preinscripcionService.eliminarPreinscripcion(id);
@@ -97,10 +156,16 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
     }
   }, [fetchPreinscripciones]);
 
-  // Cambiar estado
-  const changeEstado = useCallback(async (id: number, estado: EstadoPreinscripcion) => {
+  // =============================================
+  // CAMBIAR ESTADO
+  // =============================================
+  const changeEstado = useCallback(async (
+    id: number, 
+    estado: EstadoPreinscripcion,
+    observaciones?: string
+  ) => {
     try {
-      await preinscripcionService.cambiarEstado(id, estado);
+      await preinscripcionService.cambiarEstado(id, { estado, observaciones });
       await fetchPreinscripciones();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al cambiar estado';
@@ -108,15 +173,19 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
     }
   }, [fetchPreinscripciones]);
 
-  // Exportar a Excel
+  // =============================================
+  // EXPORTAR A EXCEL
+  // =============================================
   const exportToExcel = useCallback(async () => {
     try {
       const blob = await preinscripcionService.exportarExcel({
         estado: filters.estadoFilter !== 'todos' ? filters.estadoFilter : undefined,
         grado: filters.gradoFilter !== 'todos' ? filters.gradoFilter : undefined,
+        turno: filters.turnoFilter !== 'todos' ? filters.turnoFilter : undefined,
+        periodo: filters.periodoFilter !== 'todos' ? filters.periodoFilter : undefined,
+        formato: 'excel',
       });
 
-      // Crear URL del blob y descargar
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -131,7 +200,36 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
     }
   }, [filters]);
 
-  // Actualizar filtros
+  // =============================================
+  // 🆕 EXPORTAR A PDF
+  // =============================================
+  const exportToPDF = useCallback(async () => {
+    try {
+      const blob = await preinscripcionService.exportarPDF({
+        estado: filters.estadoFilter !== 'todos' ? filters.estadoFilter : undefined,
+        grado: filters.gradoFilter !== 'todos' ? filters.gradoFilter : undefined,
+        turno: filters.turnoFilter !== 'todos' ? filters.turnoFilter : undefined,
+        periodo: filters.periodoFilter !== 'todos' ? filters.periodoFilter : undefined,
+        formato: 'pdf',
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `preinscripciones_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al exportar PDF';
+      throw new Error(message);
+    }
+  }, [filters]);
+
+  // =============================================
+  // ACTUALIZAR FILTROS
+  // =============================================
   const setFilters = useCallback((newFilters: Partial<PreinscripcionFilters>) => {
     setFiltersState(prev => ({ ...prev, ...newFilters }));
   }, []);
@@ -148,7 +246,22 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
     setFiltersState(prev => ({ ...prev, gradoFilter: grado }));
   }, []);
 
-  // Cargar datos al montar
+  // 🆕 Nuevos setters
+  const setTurnoFilter = useCallback((turno: string) => {
+    setFiltersState(prev => ({ ...prev, turnoFilter: turno }));
+  }, []);
+
+  const setPeriodoFilter = useCallback((periodo: string) => {
+    setFiltersState(prev => ({ ...prev, periodoFilter: periodo }));
+  }, []);
+
+  const setConCupoFilter = useCallback((conCupo: string) => {
+    setFiltersState(prev => ({ ...prev, conCupoFilter: conCupo }));
+  }, []);
+
+  // =============================================
+  // CARGAR DATOS AL MONTAR
+  // =============================================
   useEffect(() => {
     fetchPreinscripciones();
   }, [fetchPreinscripciones]);
@@ -164,9 +277,13 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
     setSearchTerm,
     setEstadoFilter,
     setGradoFilter,
+    setTurnoFilter,
+    setPeriodoFilter,
+    setConCupoFilter,
     fetchPreinscripciones,
     deletePreinscripcion,
     changeEstado,
     exportToExcel,
+    exportToPDF,
   };
 };

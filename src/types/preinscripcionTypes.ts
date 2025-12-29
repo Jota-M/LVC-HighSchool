@@ -1,8 +1,49 @@
-// types/preinscripcion.types.ts
+// types/preinscripcionTypes.ts
 import { Dayjs } from 'dayjs';
 
 // =============================================
-// INTERFACES BASE (mantener las existentes)
+// 🆕 INTERFACES PARA CUPOS
+// =============================================
+
+export interface CupoPreinscripcion {
+  id: number;
+  periodo_academico_id: number;
+  grado_id: number;
+  turno_id: number;
+  cupos_totales: number;
+  cupos_ocupados: number;
+  cupos_disponibles: number;
+  activo: boolean;
+  observaciones: string | null;
+  created_at: string;
+  updated_at: string;
+  
+  periodo_nombre?: string;
+  grado_nombre?: string;
+  turno_nombre?: string;
+  nivel_academico_nombre?: string;
+  porcentaje_ocupacion?: number;
+}
+
+export interface VerificarDisponibilidadResponse {
+  success: boolean;
+  data: {
+    tiene_cupos: boolean;
+    cupo: CupoPreinscripcion | null;
+  };
+}
+
+// =============================================
+// 🆕 INTERFAZ PARA PREINSCRIPCIÓN INFO
+// =============================================
+export interface PreInscripcionInfo {
+  periodo_academico_id: number | null;
+  grado_id: number | null;
+  turno_id: number | null;
+}
+
+// =============================================
+// INTERFACES BASE
 // =============================================
 
 export interface PreInscripcion {
@@ -12,6 +53,8 @@ export interface PreInscripcion {
   nivel_academico_id: number | null;
   grado_id: number | null;
   turno_preferido_id: number | null;
+  cupo_preinscripcion_id: number | null;
+  tiene_cupo_asignado: boolean;
   estado: EstadoPreInscripcion;
   fecha_inicio: string;
   fecha_limite: string | null;
@@ -33,6 +76,9 @@ export interface PreInscripcion {
   grado_solicitado?: string;
   tutor_nombre?: string;
   tutor_telefono?: string;
+  grado_nombre?: string;
+  turno_nombre?: string;
+  cupos_disponibles?: number;
 }
 
 export type EstadoPreInscripcion = 
@@ -58,6 +104,7 @@ export interface PreEstudiante {
   apellido_materno: string | null;
   fecha_nacimiento: string;
   ci: string | null;
+  rude: string | null;
   lugar_nacimiento: string | null;
   genero: 'masculino' | 'femenino' | 'otro' | null;
   direccion: string | null;
@@ -67,7 +114,6 @@ export interface PreEstudiante {
   email: string | null;
   foto_url: string | null;
   contacto_emergencia: string | null;
-  telefono_emergencia: string | null;
   tiene_discapacidad: boolean;
   tipo_discapacidad: string | null;
   institucion_procedencia: string | null;
@@ -140,85 +186,15 @@ export type TipoDocumentoPreInscripcion =
   | 'otro';
 
 // =============================================
-// 🆕 NUEVAS INTERFACES PARA MEJORAS
+// INTERFACES PARA FORMULARIOS
 // =============================================
-
-// Modo de registro
-export type ModoRegistro = 'nuevo' | 'padre_existente' | 'multiple';
-
-// Búsqueda de padre existente
-export interface BuscarPadreRequest {
-  ci: string;
-}
-
-export interface BuscarPadreResponse {
-  success: boolean;
-  data?: {
-    encontrado: boolean;
-    padre?: {
-      id: number;
-      nombres: string;
-      apellido_paterno: string;
-      apellido_materno: string | null;
-      ci: string;
-      telefono: string;
-      celular: string | null;
-      email: string | null;
-      direccion: string | null;
-      ocupacion: string | null;
-      tiene_hijos_matriculados: boolean;
-      hijos?: Array<{
-        id: number;
-        nombres: string;
-        apellido_paterno: string;
-        grado_actual: string;
-        paralelo: string;
-      }>;
-    };
-  };
-  message?: string;
-}
-
-// 🆕 Formulario con múltiples estudiantes
-export interface PreInscripcionMultipleFormData {
-  modo: ModoRegistro;
-  padre_id?: number; // Solo si modo === 'padre_existente'
-  representante: PreTutorForm;
-  estudiantes: PreEstudianteForm[]; // ✅ Array de estudiantes
-  documentos_estudiantes: {
-    [estudianteIndex: number]: {
-      foto_estudiante: File | null;
-      cedula_estudiante: File | null;
-      certificado_nacimiento: File | null;
-      libreta_notas: File | null;
-    };
-  };
-  documentos_representante: {
-    cedula_representante: File | null;
-  };
-}
-
-// =============================================
-// INTERFACES PARA FORMULARIOS (mantener existentes y agregar nuevas)
-// =============================================
-
-export interface PreInscripcionFormData {
-  estudiante: PreEstudianteForm;
-  representante: PreTutorForm;
-  documentos: {
-    foto_estudiante: File | null;
-    cedula_estudiante: File | null;
-    certificado_nacimiento: File | null;
-    libreta_notas: File | null;
-    cedula_representante: File | null;
-  };
-}
 
 export interface PreEstudianteForm {
   nombres: string;
   apellido_paterno: string;
   apellido_materno: string;
   ci: string;
+  rude: string;
   fecha_nacimiento: Dayjs | null;
   lugar_nacimiento: string;
   genero: string;
@@ -228,14 +204,13 @@ export interface PreEstudianteForm {
   telefono: string;
   email: string;
   contacto_emergencia: string;
-  telefono_emergencia: string;
   tiene_discapacidad: boolean;
   tipo_discapacidad: string;
   institucion_procedencia: string;
   ultimo_grado_cursado: string;
-  grado_solicitado: string;
+  grado_solicitado: string; // ✅ Texto legible (ej: "PRE-K")
   repite_grado: boolean;
-  turno_solicitado: string;
+  turno_solicitado: string; // ✅ Texto legible (ej: "MAÑANA")
 }
 
 export interface PreTutorForm {
@@ -261,9 +236,158 @@ export interface PreTutorForm {
   es_tutor_principal: boolean;
 }
 
+export interface PreInscripcionFormData {
+  estudiante: PreEstudianteForm;
+  representante: PreTutorForm;
+  documentos: {
+    foto_estudiante: File | null;
+    cedula_estudiante: File | null;
+    certificado_nacimiento: File | null;
+    libreta_notas: File | null;
+    cedula_representante: File | null;
+  };
+  // 🆕 IMPORTANTE: Ahora es parte del formData
+  preinscripcion_info: PreInscripcionInfo;
+}
+
 // =============================================
-// 🆕 INTERFACES PARA API CON MÚLTIPLES ESTUDIANTES
+// 🆕 MODO MÚLTIPLE
 // =============================================
+
+export type ModoRegistro = 'nuevo' | 'padre_existente' | 'multiple';
+
+export interface BuscarPadreRequest {
+  ci: string;
+}
+
+export interface BuscarPadreResponse {
+  success: boolean;
+  data?: {
+    encontrado: boolean;
+    padre?: {
+      id: number;
+      nombres: string;
+      apellido_paterno: string;
+      apellido_materno: string | null;
+      ci: string;
+      telefono: string;
+      celular: string | null;
+      email: string | null;
+      direccion: string | null;
+      ocupacion: string | null;
+      lugar_trabajo: string | null;
+      tiene_hijos_matriculados: boolean;
+      hijos?: Array<{
+        id: number;
+        nombres: string;
+        apellido_paterno: string;
+        codigo: string;
+        grado_actual: string;
+        paralelo: string;
+      }>;
+    };
+    mensaje?: string;
+  };
+  message?: string;
+}
+
+export interface PreInscripcionMultipleFormData {
+  modo: ModoRegistro;
+  padre_id?: number;
+  representante: PreTutorForm;
+  estudiantes: PreEstudianteForm[];
+  documentos_estudiantes: {
+    [estudianteIndex: number]: {
+      foto_estudiante: File | null;
+      cedula_estudiante: File | null;
+      certificado_nacimiento: File | null;
+      libreta_notas: File | null;
+    };
+  };
+  documentos_representante: {
+    cedula_representante: File | null;
+  };
+  // 🆕 Info de preinscripción compartida
+  preinscripcion_info: PreInscripcionInfo;
+}
+
+// =============================================
+// INTERFACES PARA API
+// =============================================
+
+export interface PreInscripcionDTO {
+  estudiante: {
+    nombres: string;
+    apellido_paterno: string;
+    apellido_materno: string;
+    ci: string;
+    rude: string;
+    fecha_nacimiento: string;
+    lugar_nacimiento: string;
+    genero: string;
+    direccion: string;
+    zona: string;
+    ciudad: string;
+    telefono: string;
+    email: string;
+    contacto_emergencia: string;
+    tiene_discapacidad: boolean;
+    tipo_discapacidad: string;
+    institucion_procedencia: string;
+    ultimo_grado_cursado: string;
+    grado_solicitado: string; // ✅ Texto para referencia
+    repite_grado: boolean;
+    turno_solicitado: string; // ✅ Texto para referencia
+  };
+  representante: {
+    tipo_representante: string;
+    nombres: string;
+    apellido_paterno: string;
+    apellido_materno: string;
+    ci: string;
+    fecha_nacimiento: string | null;
+    genero: string;
+    parentesco: string;
+    telefono: string;
+    celular: string;
+    email: string;
+    direccion: string;
+    ocupacion: string;
+    lugar_trabajo: string;
+    telefono_trabajo: string;
+    estado_civil: string;
+    nivel_educacion: string;
+    vive_con_estudiante: boolean;
+    es_tutor_principal: boolean;
+  };
+  // 🆕 CRÍTICO: IDs numéricos para el backend (REQUERIDO)
+  preinscripcion_info: {
+    periodo_academico_id: number; // ✅ Requerido, no puede ser null
+    grado_id: number;             // ✅ Requerido, no puede ser null
+    turno_id: number;             // ✅ Requerido, no puede ser null
+  };
+}
+
+// 🆕 Interfaz separada para el estado interno del formulario (permite null)
+export interface PreInscripcionFormState extends Omit<PreInscripcionDTO, 'preinscripcion_info'> {
+  preinscripcion_info: PreInscripcionInfo; // ← Esta permite null
+}
+
+export interface PreInscripcionResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    preinscripcion: {
+      id: number;
+      codigo_inscripcion: string;
+      estado: EstadoPreInscripcion;
+      foto_url: string | null;
+      cupo_asignado?: boolean;
+      mensaje_cupo?: string;
+    };
+  };
+  error?: string;
+}
 
 export interface PreInscripcionMultipleDTO {
   modo: ModoRegistro;
@@ -294,6 +418,7 @@ export interface PreInscripcionMultipleDTO {
     apellido_paterno: string;
     apellido_materno: string;
     ci: string;
+    rude: string;
     fecha_nacimiento: string;
     lugar_nacimiento: string;
     genero: string;
@@ -303,7 +428,6 @@ export interface PreInscripcionMultipleDTO {
     telefono: string;
     email: string;
     contacto_emergencia: string;
-    telefono_emergencia: string;
     tiene_discapacidad: boolean;
     tipo_discapacidad: string;
     institucion_procedencia: string;
@@ -312,6 +436,12 @@ export interface PreInscripcionMultipleDTO {
     repite_grado: boolean;
     turno_solicitado: string;
   }>;
+  // 🆕 Info de preinscripción
+  preinscripcion_info: {
+    periodo_academico_id: number;
+    grado_id: number;
+    turno_id: number;
+  };
 }
 
 export interface PreInscripcionMultipleResponse {
@@ -326,71 +456,8 @@ export interface PreInscripcionMultipleResponse {
       estudiante_nombres: string;
     }>;
     total_creadas: number;
-  };
-  error?: string;
-}
-
-// =============================================
-// INTERFACES PARA API (mantener existentes)
-// =============================================
-
-export interface PreInscripcionDTO {
-  estudiante: {
-    nombres: string;
-    apellido_paterno: string;
-    apellido_materno: string;
-    ci: string;
-    fecha_nacimiento: string;
-    lugar_nacimiento: string;
-    genero: string;
-    direccion: string;
-    zona: string;
-    ciudad: string;
-    telefono: string;
-    email: string;
-    contacto_emergencia: string;
-    telefono_emergencia: string;
-    tiene_discapacidad: boolean;
-    tipo_discapacidad: string;
-    institucion_procedencia: string;
-    ultimo_grado_cursado: string;
-    grado_solicitado: string;
-    repite_grado: boolean;
-    turno_solicitado: string;
-  };
-  representante: {
-    tipo_representante: string;
-    nombres: string;
-    apellido_paterno: string;
-    apellido_materno: string;
-    ci: string;
-    fecha_nacimiento: string | null;
-    genero: string;
-    parentesco: string;
-    telefono: string;
-    celular: string;
-    email: string;
-    direccion: string;
-    ocupacion: string;
-    lugar_trabajo: string;
-    telefono_trabajo: string;
-    estado_civil: string;
-    nivel_educacion: string;
-    vive_con_estudiante: boolean;
-    es_tutor_principal: boolean;
-  };
-}
-
-export interface PreInscripcionResponse {
-  success: boolean;
-  message: string;
-  data?: {
-    preinscripcion: {
-      id: number;
-      codigo_inscripcion: string;
-      estado: EstadoPreInscripcion;
-      foto_url: string | null;
-    };
+    padre_id: number;
+    cedula_compartida?: boolean;
   };
   error?: string;
 }
@@ -399,14 +466,32 @@ export interface PreInscripcionDetalle {
   id: number;
   codigo_inscripcion: string;
   estado: EstadoPreInscripcion;
+  periodo_academico_id: number | null;
+  nivel_academico_id: number | null;
+  grado_id: number | null;
+  turno_preferido_id: number | null;
+  cupo_preinscripcion_id: number | null;
+  tiene_cupo_asignado: boolean;
   fecha_inicio: string;
   fecha_aprobacion: string | null;
   fecha_conversion: string | null;
+  created_at?: string;
+  updated_at?: string;
   observaciones: string | null;
   motivo_rechazo: string | null;
+  aprobada_por?: number | null;
+  convertida_por?: number | null;
+  estudiante_id?: number | null;
+  matricula_id?: number | null;
+  grado_nombre?: string;
+  turno_nombre?: string;
+  periodo_nombre?: string;
+  cupos_totales?: number;
+  cupos_disponibles?: number;
   estudiante: PreEstudiante;
   tutor: PreTutor;
   documentos: PreDocumento[];
+  cupo?: CupoPreinscripcion;
 }
 
 export interface PreInscripcionesResponse {
@@ -448,12 +533,26 @@ export interface ConvertirEstudianteResponse {
       codigo: string;
       nombres: string;
       apellidos: string;
+      foto_url?: string;
     };
     matricula: {
       id: number;
       numero_matricula: string;
       estado: string;
     };
+    credenciales_estudiante?: {
+      username: string;
+      password: string;
+      email: string;
+      debe_cambiar_password: boolean;
+    };
+    credenciales_padre?: {
+      username: string;
+      password: string;
+      email: string;
+      debe_cambiar_password: boolean;
+    };
+    documentos_migrados?: number;
   };
 }
 
@@ -468,7 +567,7 @@ export interface ErroresFormulario {
 }
 
 // =============================================
-// CONSTANTES (mantener existentes)
+// CONSTANTES
 // =============================================
 
 export const ESTADOS_PREINSCRIPCION: Record<EstadoPreInscripcion, { label: string; color: string }> = {
@@ -516,15 +615,7 @@ export const TIPOS_REPRESENTANTE = [
   { value: 'Tutor Legal', label: 'Tutor Legal' },
 ];
 
-export const PARENTESCOS = [
-  { value: 'padre', label: 'Padre' },
-  { value: 'madre', label: 'Madre' },
-  { value: 'tutor', label: 'Tutor' },
-  { value: 'abuelo', label: 'Abuelo' },
-  { value: 'abuela', label: 'Abuela' },
-  { value: 'tio', label: 'Tío' },
-  { value: 'tia', label: 'Tía' },
-  { value: 'hermano', label: 'Hermano' },
-  { value: 'hermana', label: 'Hermana' },
-  { value: 'otro', label: 'Otro' },
+export const TURNOS_SOLICITADOS = [
+  { value: 'MAÑANA', label: 'Mañana' },
+  { value: 'TARDE', label: 'Tarde' },
 ];

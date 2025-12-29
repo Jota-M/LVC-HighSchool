@@ -1,17 +1,16 @@
 // hooks/usePreinscripcionDetalle.ts
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSnackbar } from 'notistack';
 import preinscripcionService from '@/services/preinscripcionService';
 import { PreInscripcionDetalle, EstadoPreInscripcion } from '@/types/preinscripcionTypes';
 
 export const usePreinscripcionDetalle = (id: string | string[]) => {
   const router = useRouter();
-  const { enqueueSnackbar } = useSnackbar();
-
-  const [loading, setLoading] = useState(true);
   const [preinscripcion, setPreinscripcion] = useState<PreInscripcionDetalle | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   
   // Estados de los pasos
   const [activeStep, setActiveStep] = useState(0);
@@ -20,44 +19,16 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
   const [notasDecisionFinal, setNotasDecisionFinal] = useState('');
   const [decisionFinal, setDecisionFinal] = useState<EstadoPreInscripcion | ''>('');
 
-  // Estados de acciones
-  const [saving, setSaving] = useState(false);
-  const [converting, setConverting] = useState(false);
+  // 🆕 Estados para cupos
+  const [cuposDisponibles, setCuposDisponibles] = useState<any[]>([]);
+  const [cupoSeleccionado, setCupoSeleccionado] = useState<number | null>(null);
+  const [verificandoCupo, setVerificandoCupo] = useState(false);
 
-  // ==========================================
-  // CARGAR DATOS
-  // ==========================================
-  const fetchPreinscripcion = async () => {
-    try {
-      setLoading(true);
-      const preId = Array.isArray(id) ? id[0] : id;
-      const data = await preinscripcionService.obtenerPorId(parseInt(preId));
-      setPreinscripcion(data);
-      setError(null);
-
-      // Determinar paso según estado
-      const estadoPaso = determinarPasoSegunEstado(data.estado);
-      setActiveStep(estadoPaso);
-
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al cargar datos';
-      setError(message);
-      enqueueSnackbar(message, { variant: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (id) {
-      fetchPreinscripcion();
-    }
-  }, [id]);
-
-  // ==========================================
+  // =============================================
   // DETERMINAR PASO SEGÚN ESTADO
-  // ==========================================
+  // =============================================
   const determinarPasoSegunEstado = (estado: EstadoPreInscripcion): number => {
+    const estadoLower = estado?.toLowerCase();
     const mapeo: Record<string, number> = {
       'datos_completos': 0,
       'documentos_pendientes': 0,
@@ -69,132 +40,214 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
       'aprobada': 3,
       'rechazada': 3,
     };
-    return mapeo[estado] || 0;
+    return mapeo[estadoLower] || 0;
   };
 
-  // ==========================================
-  // CAMBIAR ESTADO
-  // ==========================================
-  const cambiarEstado = async (nuevoEstado: EstadoPreInscripcion, observaciones?: string) => {
-    if (!preinscripcion) return;
-
+  // =============================================
+  // CARGAR PREINSCRIPCIÓN
+  // =============================================
+  const fetchPreinscripcion = useCallback(async () => {
     try {
-      setSaving(true);
-      await preinscripcionService.cambiarEstado(
-        preinscripcion.id,
-        { estado: nuevoEstado, observaciones }
-      );
+      setLoading(true);
+      setError(null);
       
-      enqueueSnackbar('Estado actualizado correctamente', { variant: 'success' });
-      await fetchPreinscripcion(); // Recargar datos
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al cambiar estado';
-      enqueueSnackbar(message, { variant: 'error' });
+      const preId = Array.isArray(id) ? id[0] : id;
+      const data = await preinscripcionService.obtenerPorId(parseInt(preId));
+      setPreinscripcion(data);
+      
+      // Determinar paso activo según el estado
+      const estadoPaso = determinarPasoSegunEstado(data.estado);
+      setActiveStep(estadoPaso);
+      
+      // 🆕 Si ya tiene cupo asignado, establecerlo
+      if (data.cupo_preinscripcion_id) {
+        setCupoSeleccionado(data.cupo_preinscripcion_id);
+      }
+      
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar la preinscripción');
+      console.error('Error:', err);
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
-  };
+  }, [id]);
 
-  // ==========================================
-  // APROBAR DOCUMENTOS (Paso 1)
-  // ==========================================
-  const aprobarDocumentos = async () => {
-    await cambiarEstado('documentos_aprobados', notasDocumentos);
-    setActiveStep(1);
-  };
+  useEffect(() => {
+    if (id) {
+      fetchPreinscripcion();
+    }
+  }, [id, fetchPreinscripcion]);
 
-  // ==========================================
-  // APROBAR DATOS (Paso 2)
-  // ==========================================
-  const aprobarDatos = async () => {
-    await cambiarEstado('entrevista_pendiente', notasVerificacionDatos);
-    setActiveStep(2); // Ir a agendar entrevista
-  };
-
-  // ==========================================
-  // CONFIRMAR DECISIÓN FINAL (Paso 3)
-  // ==========================================
-  const confirmarDecision = async () => {
-    if (!decisionFinal) {
-      enqueueSnackbar('Debes seleccionar una decisión', { variant: 'warning' });
+  // =============================================
+  // 🆕 VERIFICAR CUPOS DISPONIBLES
+  // =============================================
+  const verificarCuposDisponibles = useCallback(async () => {
+    if (!preinscripcion?.grado_id || !preinscripcion?.turno_preferido_id || !preinscripcion?.periodo_academico_id) {
       return;
     }
 
-    await cambiarEstado(decisionFinal as EstadoPreInscripcion, notasDecisionFinal);
-    
-    enqueueSnackbar(
-      `Decisión confirmada: ${decisionFinal === 'aprobada' ? 'APROBADA' : 'RECHAZADA'}`,
-      { variant: decisionFinal === 'aprobada' ? 'success' : 'info' }
-    );
+    try {
+      setVerificandoCupo(true);
+      
+      const response = await preinscripcionService.verificarDisponibilidad(
+        preinscripcion.grado_id,
+        preinscripcion.turno_preferido_id,
+        preinscripcion.periodo_academico_id
+      );
 
-    // Si fue aprobada, redirigir a conversión
-    if (decisionFinal === 'aprobada') {
-      setTimeout(() => {
-        router.push(`/dashboard/preinscripciones/convertir/${preinscripcion?.id}`);
-      }, 2000);
-    } else {
-      setTimeout(() => {
-        router.push('/dashboard/preinscripciones');
-      }, 2000);
+      if (response.data?.tiene_cupos && response.data?.cupo) {
+        setCuposDisponibles([response.data.cupo]);
+        
+        // Si no tiene cupo asignado, seleccionar automáticamente el disponible
+        if (!preinscripcion.tiene_cupo_asignado) {
+          setCupoSeleccionado(response.data.cupo.id);
+        }
+      } else {
+        setCuposDisponibles([]);
+      }
+    } catch (err: any) {
+      console.error('Error al verificar cupos:', err);
+    } finally {
+      setVerificandoCupo(false);
     }
-  };
+  }, [preinscripcion]);
 
-  // ==========================================
-  // CONVERTIR A ESTUDIANTE OFICIAL
-  // ==========================================
-  const convertirAEstudiante = async (paralelo_id: number, periodo_academico_id: number) => {
+  useEffect(() => {
+    if (preinscripcion && activeStep === 3) {
+      verificarCuposDisponibles();
+    }
+  }, [preinscripcion, activeStep, verificarCuposDisponibles]);
+
+  // =============================================
+  // CAMBIAR ESTADO
+  // =============================================
+  const cambiarEstado = useCallback(async (
+    nuevoEstado: EstadoPreInscripcion,
+    observaciones?: string
+  ) => {
     if (!preinscripcion) return;
 
     try {
-      setConverting(true);
-      const resultado = await preinscripcionService.convertirAEstudiante(
-        preinscripcion.id,
-        { paralelo_id, periodo_academico_id }
-      );
-
-      enqueueSnackbar(
-        `¡Estudiante creado! Código: ${resultado.data.estudiante.codigo}`,
-        { variant: 'success' }
-      );
-
-      setTimeout(() => {
-        router.push('/dashboard/estudiantes');
-      }, 3000);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al convertir';
-      enqueueSnackbar(message, { variant: 'error' });
-    } finally {
-      setConverting(false);
+      await preinscripcionService.cambiarEstado(preinscripcion.id, {
+        estado: nuevoEstado,
+        observaciones,
+      });
+      
+      await fetchPreinscripcion();
+    } catch (err: any) {
+      throw new Error(err.message || 'Error al cambiar estado');
     }
-  };
+  }, [preinscripcion, fetchPreinscripcion]);
 
-  // ==========================================
+  // =============================================
+  // APROBAR DOCUMENTOS
+  // =============================================
+  const aprobarDocumentos = useCallback(async () => {
+    setSaving(true);
+    try {
+      await cambiarEstado('documentos_aprobados', notasDocumentos);
+      setActiveStep(1);
+    } catch (err: any) {
+      alert(err.message || 'Error al aprobar documentos');
+    } finally {
+      setSaving(false);
+    }
+  }, [notasDocumentos, cambiarEstado]);
+
+  // =============================================
+  // SOLICITAR CORRECCIÓN DE DOCUMENTOS
+  // =============================================
+  const solicitarDocumentos = useCallback(async (observaciones: string) => {
+    setSaving(true);
+    try {
+      await cambiarEstado('documentos_pendientes', observaciones);
+      alert('✅ Se ha solicitado corrección de documentos. Se notificará al padre de familia.');
+      await fetchPreinscripcion();
+    } catch (err: any) {
+      alert(err.message || 'Error al solicitar documentos');
+    } finally {
+      setSaving(false);
+    }
+  }, [cambiarEstado, fetchPreinscripcion]);
+
+  // =============================================
+  // APROBAR DATOS PERSONALES
+  // =============================================
+  const aprobarDatos = useCallback(async () => {
+    setSaving(true);
+    try {
+      await cambiarEstado('entrevista_pendiente', notasVerificacionDatos);
+      setActiveStep(2);
+    } catch (err: any) {
+      alert(err.message || 'Error al aprobar datos');
+    } finally {
+      setSaving(false);
+    }
+  }, [notasVerificacionDatos, cambiarEstado]);
+
+  // =============================================
   // RECHAZAR PREINSCRIPCIÓN
-  // ==========================================
-  const rechazar = async (motivo: string) => {
-    await cambiarEstado('rechazada', motivo);
-    
-    setTimeout(() => {
-      router.push('/dashboard/preinscripciones');
-    }, 2000);
-  };
+  // =============================================
+  const rechazar = useCallback(async (motivo: string) => {
+    if (!confirm('¿Está seguro de rechazar esta preinscripción? Esto liberará el cupo asignado.')) {
+      return;
+    }
 
-  // ==========================================
-  // SOLICITAR DOCUMENTOS ADICIONALES
-  // ==========================================
-  const solicitarDocumentos = async (observaciones: string) => {
-    await cambiarEstado('documentos_pendientes', observaciones);
-    
-    enqueueSnackbar('Se ha solicitado documentación adicional', { variant: 'info' });
-  };
+    setSaving(true);
+    try {
+      await cambiarEstado('rechazada', motivo);
+      alert('❌ Preinscripción rechazada. Se ha liberado el cupo y notificado al padre.');
+      router.push('/dashboard/preinscripciones');
+    } catch (err: any) {
+      alert(err.message || 'Error al rechazar');
+    } finally {
+      setSaving(false);
+    }
+  }, [cambiarEstado, router]);
+
+  // =============================================
+  // 🆕 CONFIRMAR DECISIÓN FINAL (CON CUPO)
+  // =============================================
+  const confirmarDecision = useCallback(async () => {
+    if (!decisionFinal) {
+      alert('⚠️ Debe seleccionar una decisión final');
+      return;
+    }
+
+    if (decisionFinal === 'aprobada' && !preinscripcion?.tiene_cupo_asignado && cuposDisponibles.length === 0) {
+      alert('⚠️ No hay cupos disponibles. No se puede aprobar sin un cupo asignado.');
+      return;
+    }
+
+    if (!confirm(`¿Confirmar decisión: ${decisionFinal.toUpperCase()}?`)) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await cambiarEstado(decisionFinal, notasDecisionFinal);
+      
+      if (decisionFinal === 'aprobada') {
+        alert('✅ Preinscripción APROBADA. Cupo asignado correctamente. Se ha notificado al padre.');
+      } else if (decisionFinal === 'rechazada') {
+        alert('❌ Preinscripción RECHAZADA. Cupo liberado. Se ha notificado al padre.');
+      } else {
+        alert('📋 Se ha solicitado información adicional.');
+      }
+      
+      router.push('/dashboard/preinscripciones');
+    } catch (err: any) {
+      alert(err.message || 'Error al confirmar decisión');
+    } finally {
+      setSaving(false);
+    }
+  }, [decisionFinal, preinscripcion, cuposDisponibles, notasDecisionFinal, cambiarEstado, router]);
 
   return {
-    // Datos
     preinscripcion,
     loading,
     error,
-    
-    // Estados de paso
+    saving,
     activeStep,
     setActiveStep,
     
@@ -205,21 +258,25 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
     setNotasVerificacionDatos,
     notasDecisionFinal,
     setNotasDecisionFinal,
+    
+    // Decisión final
     decisionFinal,
     setDecisionFinal,
     
+    // 🆕 Cupos
+    cuposDisponibles,
+    cupoSeleccionado,
+    setCupoSeleccionado,
+    verificandoCupo,
+    verificarCuposDisponibles,
+    
     // Acciones
     aprobarDocumentos,
-    aprobarDatos,
-    confirmarDecision,
-    convertirAEstudiante,
-    rechazar,
     solicitarDocumentos,
+    aprobarDatos,
     cambiarEstado,
+    rechazar,
+    confirmarDecision,
     fetchPreinscripcion,
-    
-    // Estados de carga
-    saving,
-    converting,
   };
 };

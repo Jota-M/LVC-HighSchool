@@ -28,6 +28,7 @@ import {
   LinearProgress,
   Switch,
   FormControlLabel,
+  Avatar,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -36,11 +37,11 @@ import {
   Search as SearchIcon,
   CheckCircle,
   Cancel,
+  Image as ImageIcon,
 } from '@mui/icons-material';
 import { CursoVacacional } from '@/types/cursoVacacionalTypes';
 import { usePeriodosVacacionales } from '@/hooks/useCursosVacacionales';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 interface CursosTableProps {
   cursos: CursoVacacional[];
@@ -78,7 +79,6 @@ export const CursosTable: React.FC<CursosTableProps> = ({
   const [activoFilter, setActivoFilter] = useState<string>('todos');
   const [conCupos, setConCupos] = useState(false);
 
-  // Obtener periodos para el filtro
   const { periodos } = usePeriodosVacacionales({ activo: true });
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,7 +122,7 @@ export const CursosTable: React.FC<CursosTableProps> = ({
 
   const formatFecha = (fecha: string) => {
     try {
-      return format(new Date(fecha), 'd/MM/yyyy HH:mm');
+      return format(new Date(fecha), 'd/MM/yyyy');
     } catch {
       return fecha;
     }
@@ -149,7 +149,6 @@ export const CursosTable: React.FC<CursosTableProps> = ({
       {/* Filtros */}
       <Box sx={{ p: 3 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          {/* Búsqueda */}
           <TextField
             fullWidth
             placeholder="Buscar por nombre o código..."
@@ -169,7 +168,6 @@ export const CursosTable: React.FC<CursosTableProps> = ({
             }}
           />
 
-          {/* Filtro Periodo */}
           <FormControl sx={{ minWidth: 200 }}>
             <InputLabel>Periodo</InputLabel>
             <Select
@@ -187,7 +185,6 @@ export const CursosTable: React.FC<CursosTableProps> = ({
             </Select>
           </FormControl>
 
-          {/* Filtro Estado */}
           <FormControl sx={{ minWidth: 150 }}>
             <InputLabel>Estado</InputLabel>
             <Select
@@ -202,7 +199,6 @@ export const CursosTable: React.FC<CursosTableProps> = ({
             </Select>
           </FormControl>
 
-          {/* Switch Con Cupos */}
           <FormControlLabel
             control={
               <Switch
@@ -226,6 +222,7 @@ export const CursosTable: React.FC<CursosTableProps> = ({
                 bgcolor: isDark ? alpha('#facc15', 0.1) : alpha('#0288d1', 0.1),
               }}
             >
+              <TableCell sx={{ fontWeight: 700 }}>Foto</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Curso</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Periodo</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Fechas</TableCell>
@@ -242,6 +239,7 @@ export const CursosTable: React.FC<CursosTableProps> = ({
             {isLoading ? (
               [...Array(rowsPerPage)].map((_, index) => (
                 <TableRow key={index}>
+                  <TableCell><Skeleton variant="circular" width={40} height={40} /></TableCell>
                   <TableCell><Skeleton /></TableCell>
                   <TableCell><Skeleton /></TableCell>
                   <TableCell><Skeleton /></TableCell>
@@ -254,7 +252,7 @@ export const CursosTable: React.FC<CursosTableProps> = ({
               ))
             ) : cursos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
                   <Typography color="text.secondary">
                     No se encontraron cursos
                   </Typography>
@@ -274,6 +272,24 @@ export const CursosTable: React.FC<CursosTableProps> = ({
                       },
                     }}
                   >
+                    {/* ⬇️ COLUMNA DE FOTO */}
+                    <TableCell>
+                      <Avatar
+                        src={curso.foto_url || undefined}
+                        alt={curso.nombre}
+                        sx={{
+                          width: 50,
+                          height: 50,
+                          borderRadius: '12px',
+                          bgcolor: curso.foto_url ? 'transparent' : alpha(isDark ? '#facc15' : '#0288d1', 0.1),
+                          color: isDark ? '#facc15' : '#0288d1',
+                        }}
+                        variant="rounded"
+                      >
+                        {!curso.foto_url && <ImageIcon />}
+                      </Avatar>
+                    </TableCell>
+
                     <TableCell>
                       <Box>
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>

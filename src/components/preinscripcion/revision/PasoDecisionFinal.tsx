@@ -18,6 +18,7 @@ import {
   AlertTitle,
   useTheme,
   alpha,
+  CircularProgress,
 } from '@mui/material';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -28,6 +29,9 @@ import SendIcon from '@mui/icons-material/Send';
 import DownloadIcon from '@mui/icons-material/Download';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import EventBusyIcon from '@mui/icons-material/EventBusy';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { PreInscripcionDetalle, EstadoPreInscripcion } from '@/types/preinscripcionTypes';
 
 interface PasoDecisionFinalProps {
@@ -39,7 +43,14 @@ interface PasoDecisionFinalProps {
   confirmarDecision: () => Promise<void>;
   setActiveStep: (step: number) => void;
   saving: boolean;
+  
+  // 🆕 Props de cupos
+  cuposDisponibles: any[];
+  cupoSeleccionado: number | null;
+  setCupoSeleccionado: (id: number | null) => void;
+  verificandoCupo: boolean;
 }
+
 
 export default function PasoDecisionFinal({
   preinscripcion,
@@ -50,6 +61,10 @@ export default function PasoDecisionFinal({
   confirmarDecision,
   setActiveStep,
   saving,
+  cuposDisponibles,
+  cupoSeleccionado,
+  setCupoSeleccionado,
+  verificandoCupo,
 }: PasoDecisionFinalProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -154,6 +169,8 @@ export default function PasoDecisionFinal({
       '50%': { opacity: 0.8 },
     },
   };
+  const cupoInfo = cuposDisponibles[0];
+  const tieneCupoAsignado = preinscripcion.tiene_cupo_asignado;
 
   return (
     <>
@@ -357,6 +374,190 @@ export default function PasoDecisionFinal({
           </Grid>
         </CardContent>
       </Card>
+
+      {/* 🆕 SECCIÓN DE CUPO (mostrar solo si decide aprobar) */}
+      {decisionFinal === 'aprobada' && (
+        <Card sx={{ ...cardStyle, mb: 3 }}>
+          <CardContent sx={{ p: 3 }}>
+            <Box display="flex" alignItems="center" gap={2} mb={3}>
+              <EventAvailableIcon
+                sx={{
+                  fontSize: 28,
+                  color: isDark ? '#6ee7b7' : '#10b981',
+                }}
+              />
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 700,
+                  color: isDark ? '#fff' : 'text.primary',
+                }}
+              >
+                Asignación de Cupo
+              </Typography>
+            </Box>
+
+            {verificandoCupo ? (
+              <Box textAlign="center" py={3}>
+                <CircularProgress size={40} />
+                <Typography variant="body2" color="text.secondary" mt={2}>
+                  Verificando disponibilidad de cupos...
+                </Typography>
+              </Box>
+            ) : tieneCupoAsignado ? (
+              <Alert 
+                severity="success" 
+                sx={{ 
+                  borderRadius: 2,
+                  bgcolor: isDark ? alpha('#10b981', 0.15) : alpha('#10b981', 0.1),
+                  border: '2px solid',
+                  borderColor: isDark ? alpha('#10b981', 0.3) : '#10b981',
+                }}
+              >
+                <AlertTitle sx={{ fontWeight: 600 }}>
+                  ✅ Cupo Ya Asignado
+                </AlertTitle>
+                <Typography variant="body2">
+                  Esta preinscripción ya tiene un cupo asignado desde su creación.
+                </Typography>
+                {cupoInfo && (
+                  <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    <Chip 
+                      label={`Grado: ${cupoInfo.grado_nombre}`} 
+                      size="small"
+                      sx={{ bgcolor: alpha('#10b981', 0.2), color: isDark ? '#6ee7b7' : '#065f46' }}
+                    />
+                    <Chip 
+                      label={`Turno: ${cupoInfo.turno_nombre}`} 
+                      size="small"
+                      sx={{ bgcolor: alpha('#10b981', 0.2), color: isDark ? '#6ee7b7' : '#065f46' }}
+                    />
+                    <Chip 
+                      label={`Disponibles: ${cupoInfo.cupos_disponibles}/${cupoInfo.cupos_totales}`} 
+                      size="small"
+                      sx={{ bgcolor: alpha('#10b981', 0.2), color: isDark ? '#6ee7b7' : '#065f46' }}
+                    />
+                  </Box>
+                )}
+              </Alert>
+            ) : cuposDisponibles.length > 0 && cupoInfo ? (
+              <>
+                <Alert 
+                  severity="info" 
+                  sx={{ 
+                    mb: 2,
+                    borderRadius: 2,
+                    bgcolor: isDark ? alpha('#3b82f6', 0.15) : alpha('#3b82f6', 0.1),
+                  }}
+                >
+                  <AlertTitle sx={{ fontWeight: 600 }}>
+                    Cupo Disponible
+                  </AlertTitle>
+                  <Typography variant="body2">
+                    Se ha encontrado un cupo disponible que se asignará automáticamente al aprobar.
+                  </Typography>
+                </Alert>
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    borderRadius: 3,
+                    bgcolor: isDark ? alpha('#10b981', 0.1) : alpha('#10b981', 0.05),
+                    border: '2px solid',
+                    borderColor: isDark ? alpha('#10b981', 0.3) : '#10b981',
+                  }}
+                >
+                  <Grid container spacing={2}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                        Grado
+                      </Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 700, color: isDark ? '#6ee7b7' : '#065f46' }}>
+                        {cupoInfo.grado_nombre}
+                      </Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                        Turno
+                      </Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 700, color: isDark ? '#6ee7b7' : '#065f46' }}>
+                        {cupoInfo.turno_nombre}
+                      </Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                        Periodo
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                        {cupoInfo.periodo_nombre}
+                      </Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                        Disponibilidad
+                      </Typography>
+                      <Box display="flex" alignItems="center" gap={1} mt={0.5}>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={(cupoInfo.cupos_ocupados / cupoInfo.cupos_totales) * 100}
+                          sx={{ 
+                            flex: 1, 
+                            height: 8, 
+                            borderRadius: 2,
+                            bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#000', 0.1),
+                            '& .MuiLinearProgress-bar': {
+                              bgcolor: isDark ? '#6ee7b7' : '#10b981',
+                            }
+                          }}
+                        />
+                        <Typography variant="body2" fontWeight={600}>
+                          {cupoInfo.cupos_disponibles}/{cupoInfo.cupos_totales}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </>
+            ) : (
+              <Alert 
+                severity="warning" 
+                icon={<WarningAmberIcon />}
+                sx={{ 
+                  borderRadius: 2,
+                  bgcolor: isDark ? alpha('#f59e0b', 0.15) : alpha('#f59e0b', 0.1),
+                  border: '2px solid',
+                  borderColor: isDark ? alpha('#f59e0b', 0.3) : '#f59e0b',
+                }}
+              >
+                <AlertTitle sx={{ fontWeight: 600 }}>
+                  ⚠️ No Hay Cupos Disponibles
+                </AlertTitle>
+                <Typography variant="body2" mb={2}>
+                  No se encontraron cupos disponibles para este grado y turno. 
+                  No podrás aprobar la preinscripción sin un cupo asignado.
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => window.open('/dashboard/cupos', '_blank')}
+                  startIcon={<EventAvailableIcon />}
+                  sx={{
+                    borderColor: isDark ? '#fbbf24' : '#f59e0b',
+                    color: isDark ? '#fbbf24' : '#d97706',
+                    '&:hover': {
+                      bgcolor: isDark ? alpha('#f59e0b', 0.1) : alpha('#f59e0b', 0.05),
+                      borderColor: isDark ? '#fbbf24' : '#d97706',
+                    }
+                  }}
+                >
+                  Gestionar Cupos
+                </Button>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Información del Estudiante */}
       <Card sx={{ ...cardStyle, mb: 3 }}>

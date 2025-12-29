@@ -16,6 +16,8 @@ import GroupIcon from '@mui/icons-material/Group';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 
 // Hooks
 import { usePreinscripciones } from '../../../hooks/usePreinscripciones';
@@ -43,9 +45,13 @@ export default function PreinscripcionesPage() {
     setSearchTerm,
     setEstadoFilter,
     setGradoFilter,
+    setTurnoFilter,
+    setPeriodoFilter,
+    setConCupoFilter,
     fetchPreinscripciones,
     deletePreinscripcion,
     exportToExcel,
+    exportToPDF,
   } = usePreinscripciones();
 
   const showSnackbar = (message: string, severity: 'success' | 'error' = 'success') => {
@@ -53,7 +59,7 @@ export default function PreinscripcionesPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('¿Está seguro de eliminar esta preinscripción?')) return;
+    if (!window.confirm('¿Está seguro de eliminar esta preinscripción? Esto liberará el cupo asignado.')) return;
     
     try {
       await deletePreinscripcion(id);
@@ -70,6 +76,16 @@ export default function PreinscripcionesPage() {
       showSnackbar('Exportación exitosa', 'success');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al exportar';
+      showSnackbar(message, 'error');
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      await exportToPDF();
+      showSnackbar('PDF generado exitosamente', 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al generar PDF';
       showSnackbar(message, 'error');
     }
   };
@@ -119,11 +135,12 @@ export default function PreinscripcionesPage() {
       <PreinscripcionesHeader
         onRefresh={fetchPreinscripciones}
         onExport={handleExport}
+        onExportPDF={handleExportPDF}
         onNew={() => router.push('/dashboard/preinscripciones/nueva')}
       />
 
       {/* STATS */}
-      <Grid container spacing={3} mb={4}>
+      <Grid container spacing={3} mb={4 }>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Total Solicitudes"
@@ -164,6 +181,38 @@ export default function PreinscripcionesPage() {
             trend="-12%"
           />
         </Grid>
+
+        {/* 🆕 STATS DE CUPOS */}
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard
+            title="Con Cupo Asignado"
+            value={stats.con_cupo_asignado}
+            subtitle={`${stats.total > 0 ? ((stats.con_cupo_asignado / stats.total) * 100).toFixed(1) : 0}% del total`}
+            color="#43a047"
+            icon={<AssignmentTurnedInIcon sx={{ fontSize: 32 }} />}
+            trend="+10%"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard
+            title="Sin Cupo Asignado"
+            value={stats.sin_cupo_asignado}
+            subtitle="Requieren asignación"
+            color="#fb8c00"
+            icon={<EventAvailableIcon sx={{ fontSize: 32 }} />}
+            trend="-5%"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard
+            title="Convertidas"
+            value={stats.convertidas}
+            subtitle="Matriculadas"
+            color="#8bc34a"
+            icon={<CheckCircleIcon sx={{ fontSize: 32 }} />}
+            trend="+18%"
+          />
+        </Grid>
       </Grid>
 
       {/* FILTERS */}
@@ -174,6 +223,9 @@ export default function PreinscripcionesPage() {
           onSearchChange={setSearchTerm}
           onEstadoChange={setEstadoFilter}
           onGradoChange={setGradoFilter}
+          onTurnoChange={setTurnoFilter}
+          onPeriodoChange={setPeriodoFilter}
+          onConCupoChange={setConCupoFilter}
         />
       </Box>
 

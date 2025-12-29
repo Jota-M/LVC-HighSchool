@@ -1,8 +1,11 @@
-// components/preinscripcion/revision/RevisionLayout.tsx
+// components/preinscripcion/revision/RevisionLayout.tsx (Actualizado)
+
 'use client';
 import React from 'react';
-import { Box, Alert, AlertTitle, Typography, CircularProgress, Grid } from '@mui/material';
+import { Box, Alert, AlertTitle, Typography, CircularProgress, Grid, Chip } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import EventBusyIcon from '@mui/icons-material/EventBusy';
 import { usePreinscripcionDetalle } from '@/hooks/usePreinscripcionDetalle';
 import ProgresoStepper from './ProgresoStepper';
 import PasoDocumentos from './PasoDocumentos';
@@ -72,15 +75,49 @@ export default function RevisionLayout({ id }: RevisionLayoutProps) {
           },
         })}
       >
-        <AlertTitle sx={{ fontWeight: 700, fontSize: "1.2rem" }}>
+        <AlertTitle sx={{ fontWeight: 700, fontSize: "1.2rem", display: 'flex', alignItems: 'center', gap: 1 }}>
           ¡Revisión Iniciada Exitosamente!
+          
+          {/* 🆕 Indicador de Cupo */}
+          {preinscripcion.tiene_cupo_asignado && (
+            <Chip
+              icon={<EventAvailableIcon sx={{ fontSize: 16 }} />}
+              label="Cupo Asignado"
+              size="small"
+              sx={{
+                bgcolor: '#10b981',
+                color: '#fff',
+                fontWeight: 600,
+                ml: 1,
+              }}
+            />
+          )}
+          {!preinscripcion.tiene_cupo_asignado && (
+            <Chip
+              icon={<EventBusyIcon sx={{ fontSize: 16 }} />}
+              label="Sin Cupo"
+              size="small"
+              sx={{
+                bgcolor: '#f59e0b',
+                color: '#fff',
+                fontWeight: 600,
+                ml: 1,
+              }}
+            />
+          )}
         </AlertTitle>
         <Typography variant="body2">
           El proceso de evaluación de <b>{nombreCompleto}</b> ha comenzado. Se han
           enviado las notificaciones correspondientes.
         </Typography>
+        
+        {/* 🆕 Info de cupo */}
+        {preinscripcion.tiene_cupo_asignado && preinscripcion.grado_nombre && (
+          <Typography variant="caption" display="block" mt={1} sx={{ opacity: 0.9 }}>
+            📚 Cupo: {preinscripcion.grado_nombre} - {preinscripcion.turno_nombre || 'Sin turno'} ({preinscripcion.periodo_nombre || 'Sin periodo'})
+          </Typography>
+        )}
       </Alert>
-
 
       <Grid container spacing={3}>
         {/* Panel Izquierdo - Progreso */}
@@ -130,6 +167,12 @@ export default function RevisionLayout({ id }: RevisionLayoutProps) {
               confirmarDecision={hookData.confirmarDecision}
               setActiveStep={hookData.setActiveStep}
               saving={hookData.saving}
+              
+              
+              cuposDisponibles={hookData.cuposDisponibles}
+              cupoSeleccionado={hookData.cupoSeleccionado}
+              setCupoSeleccionado={hookData.setCupoSeleccionado}
+              verificandoCupo={hookData.verificandoCupo}
             />
           )}
         </Grid>

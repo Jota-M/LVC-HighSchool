@@ -8,6 +8,7 @@ import Footer from "./components/HomePage/Footer";
 import VerseSection from "./components/HomePage/Verse";
 import Landing from "./components/HomePage/Landing";
 import FloatingPreinscripcionButton from "./components/HomePage/FloatingPreinscripcionButton";
+import PromoModal, { usePromoModal } from "./components/HomePage/PromoModal"; // 👈 Importar
 
 const sectionStyle: React.CSSProperties = {
   opacity: 0,
@@ -17,6 +18,7 @@ const sectionStyle: React.CSSProperties = {
 
 function Page() {
   const sectionsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const { open, handleClose } = usePromoModal(); // 👈 Usar el hook
 
   useEffect(() => {
     // Parallax en el header
@@ -74,8 +76,10 @@ function Page() {
         <Contact />
       </div>
 
-      {/* 🟢 El botón flotante se renderiza en toda la página */}
       <FloatingPreinscripcionButton />
+
+
+      <PromoModal open={open} onClose={handleClose} />
 
       <Footer />
     </>

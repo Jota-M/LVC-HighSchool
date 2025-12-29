@@ -1,4 +1,4 @@
-// src/app/dashboard/preinscripciones/components/PreinscripcionCard.tsx
+// src/components/preinscripciones/PreinscripcionCard.tsx
 
 import React, { useState } from 'react';
 import {
@@ -31,15 +31,97 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import TableChartIcon from '@mui/icons-material/TableChart';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import EventBusyIcon from '@mui/icons-material/EventBusy';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { Preinscripcion } from '../../types/preinscripcioonTypes';
-import { getEstadoConfig, getGradoLabel, getIniciales, formatearFecha } from '../../utils/preinscripcionUtils';
-import { useReportes } from '@/hooks/useReportes';
 
 interface PreinscripcionCardProps {
   preinscripcion: Preinscripcion;
   onRevisar: (id: number) => void;
   onEliminar: (id: number) => void;
 }
+
+// Configuración de estados
+const getEstadoConfig = (estado: string) => {
+  const configs: any = {
+    iniciada: { 
+      label: 'Iniciada', 
+      color: '#757575', 
+      bgcolor: '#75757520',
+      icon: <CalendarTodayIcon />,
+    },
+    datos_completos: { 
+      label: 'Datos Completos', 
+      color: '#2196f3', 
+      bgcolor: '#2196f320',
+      icon: <CheckCircleIcon />,
+    },
+    documentos_pendientes: { 
+      label: 'Docs Pendientes', 
+      color: '#ff9800', 
+      bgcolor: '#ff980020',
+      icon: <EventBusyIcon />,
+    },
+    en_revision: { 
+      label: 'En Revisión', 
+      color: '#9c27b0', 
+      bgcolor: '#9c27b020',
+      icon: <VisibilityIcon />,
+    },
+    documentos_aprobados: { 
+      label: 'Docs Aprobados', 
+      color: '#00bcd4', 
+      bgcolor: '#00bcd420',
+      icon: <CheckCircleIcon />,
+    },
+    aprobada: { 
+      label: 'Aprobada', 
+      color: '#4caf50', 
+      bgcolor: '#4caf5020',
+      icon: <CheckCircleIcon />,
+    },
+    rechazada: { 
+      label: 'Rechazada', 
+      color: '#f44336', 
+      bgcolor: '#f4433620',
+      icon: <DeleteIcon />,
+    },
+    convertida: { 
+      label: 'Convertida', 
+      color: '#8bc34a', 
+      bgcolor: '#8bc34a20',
+      icon: <CheckCircleIcon />,
+    },
+  };
+  return configs[estado?.toLowerCase()] || configs.iniciada;
+};
+
+const getIniciales = (nombre: string) => {
+  if (!nombre) return '?';
+  const partes = nombre.trim().split(' ');
+  if (partes.length >= 2) {
+    return `${partes[0][0]}${partes[1][0]}`.toUpperCase();
+  }
+  return nombre.substring(0, 2).toUpperCase();
+};
+
+const formatearFecha = (fecha: string) => {
+  if (!fecha) return 'Sin fecha';
+  const date = new Date(fecha);
+  return date.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+const getGradoLabel = (grado: string) => {
+  if (!grado) return 'Sin grado';
+  return grado.replace(/_/g, ' ').replace(/PRIMARIA|SECUNDARIA/g, (match) => 
+    match === 'PRIMARIA' ? 'Prim.' : 'Sec.'
+  );
+};
 
 export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({ 
   preinscripcion, 
@@ -49,7 +131,6 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
   const theme = useTheme();
   const config = getEstadoConfig(preinscripcion.estado);
   const iniciales = getIniciales(preinscripcion.estudiante_nombre);
-  const { generarReportePreInscripcionIndividual, isGenerating } = useReportes();
   
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
@@ -63,14 +144,6 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
     setAnchorEl(null);
   };
 
-  const handleGenerarReporte = (formato: 'pdf' | 'excel') => {
-    generarReportePreInscripcionIndividual({
-      id: preinscripcion.id,
-      formato,
-    });
-    handleMenuClose();
-  };
-
   return (
     <Zoom in timeout={500}>
       <Card
@@ -82,6 +155,8 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
           background: theme.palette.mode === 'dark' 
             ? 'linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%)'
             : '#fff',
+          position: 'relative',
+          overflow: 'visible',
           '&:hover': {
             transform: 'translateY(-8px)',
             boxShadow: `0 20px 40px ${config.color}30`,
@@ -89,6 +164,67 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
           }
         }}
       >
+        {/* 🆕 INDICADOR DE CUPO */}
+        {preinscripcion.tiene_cupo_asignado && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: -8,
+              right: 12,
+              zIndex: 1,
+            }}
+          >
+            <Tooltip title="Cupo asignado" arrow>
+              <Chip
+                icon={<EventAvailableIcon sx={{ fontSize: 16 }} />}
+                label="Cupo OK"
+                size="small"
+                sx={{
+                  bgcolor: '#43a047',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '0.7rem',
+                  height: 24,
+                  boxShadow: '0 4px 8px rgba(67, 160, 71, 0.3)',
+                  '& .MuiChip-icon': {
+                    color: '#fff',
+                  }
+                }}
+              />
+            </Tooltip>
+          </Box>
+        )}
+
+        {!preinscripcion.tiene_cupo_asignado && preinscripcion.estado !== 'rechazada' && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: -8,
+              right: 12,
+              zIndex: 1,
+            }}
+          >
+            <Tooltip title="Sin cupo asignado" arrow>
+              <Chip
+                icon={<EventBusyIcon sx={{ fontSize: 16 }} />}
+                label="Sin cupo"
+                size="small"
+                sx={{
+                  bgcolor: '#fb8c00',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '0.7rem',
+                  height: 24,
+                  boxShadow: '0 4px 8px rgba(251, 140, 0, 0.3)',
+                  '& .MuiChip-icon': {
+                    color: '#fff',
+                  }
+                }}
+              />
+            </Tooltip>
+          </Box>
+        )}
+
         <Box sx={{ 
           height: 8, 
           background: `linear-gradient(90deg, ${config.color}, ${config.color}80)`,
@@ -138,11 +274,9 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
               />
             </Box>
             
-            {/* ✅ BOTÓN DE MENÚ */}
             <IconButton 
               size="small" 
               onClick={handleMenuOpen}
-              disabled={isGenerating}
             >
               <MoreVertIcon />
             </IconButton>
@@ -158,10 +292,19 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
             
             <Stack direction="row" alignItems="center" spacing={1.5}>
               <SchoolIcon sx={{ color: config.color, fontSize: 20 }} />
-              <Typography variant="body2" color="text.secondary">
-                {getGradoLabel(preinscripcion.grado_solicitado)}
+              <Typography variant="body2" color="text.secondary" noWrap>
+                {preinscripcion.grado_nombre || getGradoLabel(preinscripcion.grado_solicitado)}
               </Typography>
             </Stack>
+
+            {preinscripcion.turno_nombre && (
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                <EventAvailableIcon sx={{ color: config.color, fontSize: 20 }} />
+                <Typography variant="body2" color="text.secondary" noWrap>
+                  {preinscripcion.turno_nombre}
+                </Typography>
+              </Stack>
+            )}
             
             <Stack direction="row" alignItems="center" spacing={1.5}>
               <PhoneIcon sx={{ color: config.color, fontSize: 20 }} />
@@ -212,7 +355,7 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
           </Tooltip>
         </CardActions>
 
-        {/* ✅ MENÚ CON OPCIONES DE REPORTE */}
+        {/* MENÚ */}
         <Menu
           anchorEl={anchorEl}
           open={openMenu}
@@ -228,7 +371,7 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
             },
           }}
         >
-          <MenuItem onClick={() => onRevisar(preinscripcion.id)}>
+          <MenuItem onClick={() => { handleMenuClose(); onRevisar(preinscripcion.id); }}>
             <ListItemIcon>
               <VisibilityIcon fontSize="small" />
             </ListItemIcon>
@@ -237,14 +380,14 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
 
           <Divider sx={{ my: 0.5 }} />
 
-          <MenuItem onClick={() => handleGenerarReporte('pdf')}>
+          <MenuItem onClick={handleMenuClose}>
             <ListItemIcon>
               <PictureAsPdfIcon fontSize="small" sx={{ color: '#dc2626' }} />
             </ListItemIcon>
             <ListItemText>Descargar PDF</ListItemText>
           </MenuItem>
 
-          <MenuItem onClick={() => handleGenerarReporte('excel')}>
+          <MenuItem onClick={handleMenuClose}>
             <ListItemIcon>
               <TableChartIcon fontSize="small" sx={{ color: '#107C41' }} />
             </ListItemIcon>

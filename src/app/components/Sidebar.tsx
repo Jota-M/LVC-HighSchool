@@ -390,9 +390,15 @@ const sections = [
         title: 'Preinscripciones',
         to: '/dashboard/preinscripciones',
         icon: <AppRegistrationIcon />,
-        permissions: ['preinscripciones.leer'], // ✅ CAMBIADO
+        permissions: ['estudiantes.leer'], 
         badge: 12,
       },
+      {
+        title: 'Cursos Vacacionales',
+        to: '/dashboard/CursosVacacionales',
+        icon: <ContactsOutlinedIcon />,
+        permissions: ['estudiantes.leer'],
+      }
     ],
   },
   {

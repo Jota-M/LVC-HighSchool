@@ -24,6 +24,7 @@ import {
   ListItemText,
   Tabs,
   Tab,
+  CardMedia,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -36,9 +37,9 @@ import {
   Description,
   CheckCircle,
   Cancel,
-  TrendingUp,
   WbSunny,
   AcUnit,
+  Image as ImageIcon,
 } from '@mui/icons-material';
 import { useRouter, useParams } from 'next/navigation';
 import { useCursoVacacional } from '@/hooks/useCursosVacacionales';
@@ -46,7 +47,6 @@ import { useQuery } from '@tanstack/react-query';
 import cursoVacacionalService from '@/services/cursoVacacionalService';
 import { InscripcionVacacional } from '@/types/cursoVacacionalTypes';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -75,17 +75,14 @@ export const CursoDetalle: React.FC = () => {
   const cursoId = params?.id ? parseInt(params.id as string) : null;
   const [activeTab, setActiveTab] = useState(0);
 
-  // Hooks
   const { curso, isLoading } = useCursoVacacional(cursoId);
 
-  // Obtener estudiantes inscritos (solo ACTIVOS - los que están cursando)
   const { data: estudiantes, isLoading: loadingEstudiantes } = useQuery<InscripcionVacacional[]>({
     queryKey: ['estudiantes-curso', cursoId],
     queryFn: () => cursoVacacionalService.cursos.listarEstudiantes(cursoId!, 'activo'),
     enabled: !!cursoId,
   });
 
-  // Obtener todas las inscripciones para mostrar estadísticas
   const { data: todasInscripciones } = useQuery<InscripcionVacacional[]>({
     queryKey: ['todas-inscripciones-curso', cursoId],
     queryFn: async () => {
@@ -99,7 +96,7 @@ export const CursoDetalle: React.FC = () => {
   });
 
   const handleBack = () => {
-    router.push('/dashboard/cursos-vacacionales/cursos');
+    router.push('/dashboard/CursosVacacionales/cursos');
   };
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -107,15 +104,7 @@ export const CursoDetalle: React.FC = () => {
   };
 
   const handleVerInscripcion = (inscripcionId: number) => {
-    router.push(`/dashboard/cursos-vacacionales/inscripciones/${inscripcionId}`);
-  };
-
-  const formatFecha = (fecha: string) => {
-    try {
-      return format(new Date(fecha), "dd 'de' MMMM 'de' yyyy");
-    } catch {
-      return fecha;
-    }
+    router.push(`/dashboard/CursosVacacionales/inscripciones/${inscripcionId}`);
   };
 
   const formatFechaCorta = (fecha: string) => {
@@ -156,7 +145,6 @@ export const CursoDetalle: React.FC = () => {
   return (
     <Box sx={{ minHeight: '100vh', py: 4 }}>
       <Container maxWidth="lg">
-        {/* Header */}
         <Fade in timeout={500}>
           <Box sx={{ mb: 4 }}>
             <Button
@@ -199,7 +187,7 @@ export const CursoDetalle: React.FC = () => {
               </Typography>
             </Box>
 
-            {/* Info Card Header */}
+            {/* ⬇️ CARD CON FOTO DESTACADA */}
             <Card
               sx={{
                 borderRadius: '20px',
@@ -209,22 +197,40 @@ export const CursoDetalle: React.FC = () => {
                 backdropFilter: 'blur(20px)',
                 border: `2px solid ${alpha(isDark ? '#facc15' : '#0288d1', 0.3)}`,
                 mb: 3,
+                overflow: 'hidden',
               }}
             >
+              {/* FOTO DEL CURSO (Si existe) */}
+              {curso.foto_url && (
+                <CardMedia
+                  component="img"
+                  height="300"
+                  image={curso.foto_url}
+                  alt={curso.nombre}
+                  sx={{
+                    objectFit: 'cover',
+                    borderBottom: `2px solid ${alpha(isDark ? '#facc15' : '#0288d1', 0.3)}`,
+                  }}
+                />
+              )}
+
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
-                  <Avatar
-                    sx={{
-                      width: 80,
-                      height: 80,
-                      bgcolor: alpha(isDark ? '#facc15' : '#0288d1', 0.2),
-                      color: isDark ? '#facc15' : '#0288d1',
-                      fontSize: '2rem',
-                      fontWeight: 700,
-                    }}
-                  >
-                    <School fontSize="large" />
-                  </Avatar>
+                  {/* Avatar solo si NO hay foto */}
+                  {!curso.foto_url && (
+                    <Avatar
+                      sx={{
+                        width: 80,
+                        height: 80,
+                        bgcolor: alpha(isDark ? '#facc15' : '#0288d1', 0.2),
+                        color: isDark ? '#facc15' : '#0288d1',
+                        fontSize: '2rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      <School fontSize="large" />
+                    </Avatar>
+                  )}
 
                   <Box sx={{ flex: 1 }}>
                     <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
@@ -380,7 +386,7 @@ export const CursoDetalle: React.FC = () => {
         <TabPanel value={activeTab} index={0}>
           <Grid container spacing={3}>
             {/* Información del Curso */}
-            <Grid size={{xs:12, md:6}}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Card
                 sx={{
                   height: '100%',
@@ -464,7 +470,7 @@ export const CursoDetalle: React.FC = () => {
             </Grid>
 
             {/* Información del Periodo */}
-            <Grid size={{xs:12, md:6}}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Card
                 sx={{
                   height: '100%',
@@ -521,7 +527,7 @@ export const CursoDetalle: React.FC = () => {
             </Grid>
 
             {/* Horarios */}
-            <Grid size={{xs:12, md:6}}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Card
                 sx={{
                   height: '100%',
@@ -604,7 +610,7 @@ export const CursoDetalle: React.FC = () => {
             </Grid>
 
             {/* Costos y Cupos */}
-            <Grid size={{xs:12, md:6}}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Card
                 sx={{
                   height: '100%',
@@ -658,7 +664,7 @@ export const CursoDetalle: React.FC = () => {
                         </Typography>
                       </Box>
                       <Grid container spacing={2}>
-                        <Grid size={{xs:4}}>
+                        <Grid size={{ xs: 4 }}>
                           <Box sx={{ textAlign: 'center' }}>
                             <Typography variant="h5" sx={{ fontWeight: 700 }}>
                               {curso.cupos_totales}
@@ -668,7 +674,7 @@ export const CursoDetalle: React.FC = () => {
                             </Typography>
                           </Box>
                         </Grid>
-                        <Grid size={{xs:4}}>
+                        <Grid size={{ xs: 4 }}>
                           <Box sx={{ textAlign: 'center' }}>
                             <Typography variant="h5" sx={{ fontWeight: 700, color: ocupacionColor }}>
                               {curso.cupos_ocupados}
@@ -678,7 +684,7 @@ export const CursoDetalle: React.FC = () => {
                             </Typography>
                           </Box>
                         </Grid>
-                        <Grid size={{xs:4}}>
+                        <Grid size={{ xs: 4 }}>
                           <Box sx={{ textAlign: 'center' }}>
                             <Typography variant="h5" sx={{ fontWeight: 700, color: '#10b981' }}>
                               {curso.cupos_disponibles}

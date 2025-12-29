@@ -67,7 +67,7 @@ export default function ConfirmacionStep({ estudiante, representante, documentos
         </Box>
 
         <Grid container spacing={2}>
-          <Grid size={{xs:12, md:6}} >
+          <Grid size={{xs:12, md:6}}>
             <Typography {...labelStyle}>Nombre Completo</Typography>
             <Typography {...valueStyle}>
               {estudiante.nombres} {estudiante.apellido_paterno} {estudiante.apellido_materno}
@@ -77,7 +77,12 @@ export default function ConfirmacionStep({ estudiante, representante, documentos
             <Typography {...labelStyle}>Cédula de Identidad</Typography>
             <Typography {...valueStyle}>{estudiante.ci || 'No proporcionado'}</Typography>
           </Grid>
+          {/* 🆕 RUDE */}
           <Grid size={{xs:12, md:3}}>
+            <Typography {...labelStyle}>RUDE</Typography>
+            <Typography {...valueStyle}>{estudiante.rude || 'No proporcionado'}</Typography>
+          </Grid>
+          <Grid size={{xs:12, md:4}}>
             <Typography {...labelStyle}>Fecha de Nacimiento</Typography>
             <Typography {...valueStyle}>
               {estudiante.fecha_nacimiento ? estudiante.fecha_nacimiento.format('DD/MM/YYYY') : 'No proporcionado'}
@@ -87,10 +92,10 @@ export default function ConfirmacionStep({ estudiante, representante, documentos
             <Typography {...labelStyle}>Género</Typography>
             <Typography {...valueStyle}>{estudiante.genero || 'No proporcionado'}</Typography>
           </Grid>
-          {/* <Grid size={{xs:12, md:4}}>
-            <Typography {...labelStyle}>Nacionalidad</Typography>
-            <Typography {...valueStyle}>{estudiante.nacionalidad || 'No proporcionado'}</Typography>
-          </Grid> */}
+          <Grid size={{xs:12, md:4}}>
+            <Typography {...labelStyle}>Lugar de Nacimiento</Typography>
+            <Typography {...valueStyle}>{estudiante.lugar_nacimiento || 'No proporcionado'}</Typography>
+          </Grid>
           <Grid size={{xs:12, md:4}}>
             <Typography {...labelStyle}>Grado Solicitado</Typography>
             <Typography {...valueStyle}>{estudiante.grado_solicitado || 'No proporcionado'}</Typography>
@@ -100,9 +105,35 @@ export default function ConfirmacionStep({ estudiante, representante, documentos
             <Typography {...valueStyle}>{estudiante.turno_solicitado || 'No proporcionado'}</Typography>
           </Grid>
           <Grid size={{xs:12, md:4}}>
+            <Typography {...labelStyle}>¿Repite Grado?</Typography>
+            <Typography {...valueStyle}>{estudiante.repite_grado ? 'Sí' : 'No'}</Typography>
+          </Grid>
+          {estudiante.institucion_procedencia && (
+            <Grid size={{xs:12}}>
+              <Typography {...labelStyle}>Institución de Procedencia</Typography>
+              <Typography {...valueStyle}>{estudiante.institucion_procedencia}</Typography>
+            </Grid>
+          )}
+          <Grid size={{xs:12, md:6}}>
+            <Typography {...labelStyle}>Teléfono</Typography>
+            <Typography {...valueStyle}>{estudiante.telefono || 'No proporcionado'}</Typography>
+          </Grid>
+          <Grid size={{xs:12, md:6}}>
             <Typography {...labelStyle}>Correo Electrónico</Typography>
             <Typography {...valueStyle}>{estudiante.email || 'No proporcionado'}</Typography>
           </Grid>
+          {estudiante.contacto_emergencia && (
+            <Grid size={{xs:12}}>
+              <Typography {...labelStyle}>Contacto de Emergencia</Typography>
+              <Typography {...valueStyle}>{estudiante.contacto_emergencia}</Typography>
+            </Grid>
+          )}
+          {estudiante.tiene_discapacidad && (
+            <Grid size={{xs:12}}>
+              <Typography {...labelStyle}>Información de Discapacidad</Typography>
+              <Typography {...valueStyle}>{estudiante.tipo_discapacidad || 'No especificado'}</Typography>
+            </Grid>
+          )}
         </Grid>
       </Box>
 
@@ -125,25 +156,53 @@ export default function ConfirmacionStep({ estudiante, representante, documentos
             <Typography {...valueStyle}>{representante.ci}</Typography>
           </Grid>
           <Grid size={{xs:12, md:3}}>
-            <Typography {...labelStyle}>Tipo de Representante</Typography>
-            <Typography {...valueStyle}>{representante.tipo_representante}</Typography>
+            <Typography {...labelStyle}>Parentesco</Typography>
+            <Typography {...valueStyle}>{representante.parentesco || 'No especificado'}</Typography>
           </Grid>
+          {representante.tipo_representante && (
+            <Grid size={{xs:12, md:6}}>
+              <Typography {...labelStyle}>Tipo de Representante</Typography>
+              <Typography {...valueStyle}>{representante.tipo_representante}</Typography>
+            </Grid>
+          )}
           <Grid size={{xs:12, md:6}}>
-            <Typography {...labelStyle}>Profesión</Typography>
-            <Typography {...valueStyle}>{representante.ocupacion || 'No proporcionado'}</Typography>
+            <Typography {...labelStyle}>¿Vive con el estudiante?</Typography>
+            <Typography {...valueStyle}>{representante.vive_con_estudiante ? 'Sí' : 'No'}</Typography>
           </Grid>
-          <Grid size={{xs:12, md:6}}>
-            <Typography {...labelStyle}>Lugar de Trabajo</Typography>
-            <Typography {...valueStyle}>{representante.lugar_trabajo || 'No proporcionado'}</Typography>
-          </Grid>
+          {representante.ocupacion && (
+            <Grid size={{xs:12, md:6}}>
+              <Typography {...labelStyle}>Ocupación</Typography>
+              <Typography {...valueStyle}>{representante.ocupacion}</Typography>
+            </Grid>
+          )}
+          {representante.lugar_trabajo && (
+            <Grid size={{xs:12, md:6}}>
+              <Typography {...labelStyle}>Lugar de Trabajo</Typography>
+              <Typography {...valueStyle}>{representante.lugar_trabajo}</Typography>
+            </Grid>
+          )}
           <Grid size={{xs:12, md:6}}>
             <Typography {...labelStyle}>Teléfono</Typography>
             <Typography {...valueStyle}>{representante.telefono}</Typography>
           </Grid>
-          <Grid size={{xs:12, md:6}}>
-            <Typography {...labelStyle}>Correo Electrónico</Typography>
-            <Typography {...valueStyle}>{representante.email || 'No proporcionado'}</Typography>
-          </Grid>
+          {representante.celular && representante.celular !== representante.telefono && (
+            <Grid size={{xs:12, md:6}}>
+              <Typography {...labelStyle}>Celular</Typography>
+              <Typography {...valueStyle}>{representante.celular}</Typography>
+            </Grid>
+          )}
+          {representante.email && (
+            <Grid size={{xs:12, md:6}}>
+              <Typography {...labelStyle}>Correo Electrónico</Typography>
+              <Typography {...valueStyle}>{representante.email}</Typography>
+            </Grid>
+          )}
+          {representante.direccion && (
+            <Grid size={{xs:12}}>
+              <Typography {...labelStyle}>Dirección</Typography>
+              <Typography {...valueStyle}>{representante.direccion}</Typography>
+            </Grid>
+          )}
         </Grid>
       </Box>
 
@@ -159,6 +218,7 @@ export default function ConfirmacionStep({ estudiante, representante, documentos
             if (!file) return null;
 
             const labels: Record<string, string> = {
+              foto_estudiante: 'Foto del Estudiante',
               cedula_estudiante: 'Cédula del Estudiante',
               certificado_nacimiento: 'Certificado de Nacimiento',
               libreta_notas: 'Libreta de Notas',
@@ -179,9 +239,9 @@ export default function ConfirmacionStep({ estudiante, representante, documentos
                   }}
                 >
                   <CheckCircleOutlineIcon sx={{ color: '#10b981', fontSize: 24 }} />
-                  <Box>
+                  <Box sx={{ flex: 1, overflow: 'hidden' }}>
                     <Typography {...labelStyle}>{labels[key]}</Typography>
-                    <Typography {...valueStyle} sx={{ fontSize: '0.9rem' }}>
+                    <Typography {...valueStyle} sx={{ fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {file.name}
                     </Typography>
                   </Box>
@@ -196,19 +256,20 @@ export default function ConfirmacionStep({ estudiante, representante, documentos
       <Box
         sx={{
           backgroundColor: isDark ? 'rgba(16, 185, 129, 0.1)': 'rgba(16, 185, 129, 0.05)',
-            borderRadius: '16px',
-            p: 3,
-            border: '2px solid #10b981',
-            textAlign: 'center',
-            }}
-        ><Typography variant="h6" fontWeight={700} sx={{ mb: 2, color: '#10b981' }}>
-            ✅ Todo está listo
-            </Typography>
-        <Typography variant="body2" color="text.secondary">
-            Al hacer clic en "Enviar Preinscripción", tu solicitud será enviada a la institución.
-            Recibirás un correo de confirmación y nos pondremos en contacto contigo en breve.
+          borderRadius: '16px',
+          p: 3,
+          border: '2px solid #10b981',
+          textAlign: 'center',
+        }}
+      >
+        <Typography variant="h6" fontWeight={700} sx={{ mb: 2, color: '#10b981' }}>
+          ✅ Todo está listo
         </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Al hacer clic en "Enviar Preinscripción", tu solicitud será enviada a la institución.
+          Recibirás un correo de confirmación y nos pondremos en contacto contigo en breve.
+        </Typography>
+      </Box>
     </Box>
-</Box>
-);
+  );
 }

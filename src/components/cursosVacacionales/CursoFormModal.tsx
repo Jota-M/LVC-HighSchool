@@ -1,6 +1,6 @@
 // components/cursosVacacionales/CursoFormModal.tsx
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -17,9 +17,17 @@ import {
   Divider,
   Chip,
   Box,
+  IconButton,
+  Avatar,
+  alpha,
 } from '@mui/material';
+import {
+  CloudUpload,
+  Delete,
+  Image as ImageIcon,
+} from '@mui/icons-material';
 import { useCursosVacacionales, usePeriodosVacacionales } from '@/hooks/useCursosVacacionales';
-import { CursoVacacional, CursoVacacionalCreate } from '@/types/cursoVacacionalTypes';
+import { CursoVacacional, FormCursoVacacional } from '@/types/cursoVacacionalTypes';
 
 interface CursoFormModalProps {
   open: boolean;
@@ -34,6 +42,7 @@ interface FormErrors {
   fecha_fin?: string;
   cupos_totales?: string;
   costo?: string;
+  foto?: string;
 }
 
 const diasSemanaOpciones = [
@@ -55,6 +64,8 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
   const isDark = theme.palette.mode === 'dark';
   const { crear, actualizar, isCreating, isUpdating } = useCursosVacacionales();
   const { periodos } = usePeriodosVacacionales({ activo: true });
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Estados del formulario
   const [periodoVacacionalId, setPeriodoVacacionalId] = useState<number | ''>('');
@@ -72,6 +83,11 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
   const [requisitos, setRequisitos] = useState('');
   const [activo, setActivo] = useState(true);
   const [errors, setErrors] = useState<FormErrors>({});
+
+  // ⬇️ NUEVOS ESTADOS PARA FOTO
+  const [foto, setFoto] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [fotoActualUrl, setFotoActualUrl] = useState<string | null>(null);
 
   // Resetear formulario
   useEffect(() => {
@@ -91,6 +107,11 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
         setAula(curso.aula || '');
         setRequisitos(curso.requisitos || '');
         setActivo(curso.activo);
+        
+        // ⬇️ Cargar foto actual
+        setFotoActualUrl(curso.foto_url || null);
+        setFoto(null);
+        setFotoPreview(null);
       } else {
         // Resetear a valores por defecto
         setPeriodoVacacionalId('');
@@ -107,10 +128,53 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
         setAula('');
         setRequisitos('');
         setActivo(true);
+        setFoto(null);
+        setFotoPreview(null);
+        setFotoActualUrl(null);
       }
       setErrors({});
     }
   }, [curso, open]);
+
+  // ⬇️ MANEJAR SELECCIÓN DE FOTO
+  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setErrors((prev) => ({ ...prev, foto: 'Solo se permiten imágenes (jpg, png, gif, webp)' }));
+      return;
+    }
+
+    // Validar tamaño (5MB máximo)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      setErrors((prev) => ({ ...prev, foto: 'La imagen es muy grande (máximo 5MB)' }));
+      return;
+    }
+
+    // Todo bien
+    setErrors((prev) => ({ ...prev, foto: undefined }));
+    setFoto(file);
+
+    // Crear preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFotoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // ⬇️ ELIMINAR FOTO SELECCIONADA
+  const handleRemoverFoto = () => {
+    setFoto(null);
+    setFotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -154,7 +218,7 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
       return;
     }
 
-    const cursoData: CursoVacacionalCreate = {
+    const cursoData: FormCursoVacacional = {
       periodo_vacacional_id: periodoVacacionalId as number,
       nombre: nombre.trim(),
       codigo: codigo.trim() || undefined,
@@ -169,6 +233,7 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
       aula: aula.trim() || undefined,
       requisitos: requisitos.trim() || undefined,
       activo,
+      foto: foto || undefined, // ⬅️ Agregar foto
     };
 
     if (curso) {
@@ -218,14 +283,14 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
         <DialogContent>
           <Grid container spacing={3}>
             {/* Información Básica */}
-            <Grid size={{xs:12}}>
+            <Grid size={{ xs: 12 }}>
               <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: isDark ? '#facc15' : '#0288d1' }}>
                 Información Básica
               </Typography>
               <Divider sx={{ mb: 2 }} />
             </Grid>
 
-            <Grid size={{xs:12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 select
                 label="Periodo Vacacional"
@@ -250,7 +315,7 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
               </TextField>
             </Grid>
 
-            <Grid size={{xs:12, md:8}}>
+            <Grid size={{ xs: 12, md: 8 }}>
               <TextField
                 label="Nombre del Curso"
                 fullWidth
@@ -267,7 +332,7 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
               />
             </Grid>
 
-            <Grid size={{xs:12, md:4}}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 label="Código (Opcional)"
                 fullWidth
@@ -282,7 +347,7 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
               />
             </Grid>
 
-            <Grid size={{xs:12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 label="Descripción (Opcional)"
                 fullWidth
@@ -299,15 +364,148 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
               />
             </Grid>
 
+            {/* ⬇️ SECCIÓN DE FOTO */}
+            <Grid size={{ xs: 12 }}>
+              <Typography variant="subtitle2" sx={{ mb: 2, mt: 2, fontWeight: 600, color: isDark ? '#facc15' : '#0288d1' }}>
+                Foto del Curso (Opcional)
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid size={{ xs: 12 }}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* Preview de foto actual (al editar) */}
+                {curso && fotoActualUrl && !fotoPreview && (
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      width: 120,
+                      height: 120,
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      border: `2px solid ${alpha(isDark ? '#facc15' : '#0288d1', 0.3)}`,
+                    }}
+                  >
+                    <img
+                      src={fotoActualUrl}
+                      alt="Foto actual"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        bgcolor: 'rgba(0,0,0,0.7)',
+                        color: '#fff',
+                        p: 0.5,
+                        textAlign: 'center',
+                      }}
+                    >
+                      Foto actual
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Preview de nueva foto */}
+                {fotoPreview && (
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      width: 120,
+                      height: 120,
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      border: `2px solid ${isDark ? '#facc15' : '#0288d1'}`,
+                    }}
+                  >
+                    <img
+                      src={fotoPreview}
+                      alt="Preview"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={handleRemoverFoto}
+                      sx={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        bgcolor: 'rgba(239, 68, 68, 0.9)',
+                        color: '#fff',
+                        '&:hover': {
+                          bgcolor: 'rgba(239, 68, 68, 1)',
+                        },
+                      }}
+                    >
+                      <Delete fontSize="small" />
+                    </IconButton>
+                  </Box>
+                )}
+
+                {/* Botón para subir foto */}
+                <Box sx={{ flex: 1, minWidth: 200 }}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                    onChange={handleFotoChange}
+                    style={{ display: 'none' }}
+                    id="foto-upload"
+                  />
+                  <label htmlFor="foto-upload">
+                    <Button
+                      component="span"
+                      variant="outlined"
+                      startIcon={<CloudUpload />}
+                      fullWidth
+                      sx={{
+                        borderRadius: '12px',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        py: 1.5,
+                        borderColor: isDark ? '#facc15' : '#0288d1',
+                        color: isDark ? '#facc15' : '#0288d1',
+                        '&:hover': {
+                          borderColor: isDark ? '#f59e0b' : '#01579b',
+                          bgcolor: isDark ? alpha('#facc15', 0.1) : alpha('#0288d1', 0.1),
+                        },
+                      }}
+                    >
+                      {fotoPreview ? 'Cambiar Foto' : curso && fotoActualUrl ? 'Cambiar Foto' : 'Subir Foto'}
+                    </Button>
+                  </label>
+                  {errors.foto && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                      {errors.foto}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                    Máximo 5MB. Formatos: JPG, PNG, GIF, WEBP
+                  </Typography>
+                </Box>
+              </Box>
+            </Grid>
+
             {/* Fechas y Horarios */}
-            <Grid size={{xs:12}}>
+            <Grid size={{ xs: 12 }}>
               <Typography variant="subtitle2" sx={{ mb: 2, mt: 2, fontWeight: 600, color: isDark ? '#facc15' : '#0288d1' }}>
                 Fechas y Horarios
               </Typography>
               <Divider sx={{ mb: 2 }} />
             </Grid>
 
-            <Grid size={{xs:12, md:6}}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 type="date"
                 label="Fecha de Inicio"
@@ -325,7 +523,7 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
               />
             </Grid>
 
-            <Grid size={{xs:12, md:6}}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 type="date"
                 label="Fecha de Fin"
@@ -343,7 +541,7 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
               />
             </Grid>
 
-            <Grid size={{xs:12}}>
+            <Grid size={{ xs: 12 }}>
               <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
                 Días de la Semana (Opcional)
               </Typography>
@@ -367,7 +565,7 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
               </Box>
             </Grid>
 
-            <Grid size={{xs:12, md:6}}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 type="time"
                 label="Hora de Inicio (Opcional)"
@@ -383,7 +581,7 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
               />
             </Grid>
 
-            <Grid size={{xs:12, md:6}}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 type="time"
                 label="Hora de Fin (Opcional)"
@@ -400,14 +598,14 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
             </Grid>
 
             {/* Cupos y Costos */}
-            <Grid size={{xs:12}}>
+            <Grid size={{ xs: 12 }}>
               <Typography variant="subtitle2" sx={{ mb: 2, mt: 2, fontWeight: 600, color: isDark ? '#facc15' : '#0288d1' }}>
                 Cupos y Costos
               </Typography>
               <Divider sx={{ mb: 2 }} />
             </Grid>
 
-            <Grid size={{xs:12, md:6}}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 type="number"
                 label="Cupos Totales"
@@ -425,7 +623,7 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
               />
             </Grid>
 
-            <Grid size={{xs:12, md:6}}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 type="number"
                 label="Costo (Bs.)"
@@ -444,14 +642,14 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
             </Grid>
 
             {/* Información Adicional */}
-            <Grid size={{xs:12}}>
+            <Grid size={{ xs: 12 }}>
               <Typography variant="subtitle2" sx={{ mb: 2, mt: 2, fontWeight: 600, color: isDark ? '#facc15' : '#0288d1' }}>
                 Información Adicional
               </Typography>
               <Divider sx={{ mb: 2 }} />
             </Grid>
 
-            <Grid size={{xs:12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 label="Aula (Opcional)"
                 fullWidth
@@ -466,7 +664,7 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
               />
             </Grid>
 
-            <Grid size={{xs:12}}>
+            <Grid size={{ xs: 12 }}>
               <TextField
                 label="Requisitos (Opcional)"
                 fullWidth
@@ -484,7 +682,7 @@ export const CursoFormModal: React.FC<CursoFormModalProps> = ({
             </Grid>
 
             {/* Estado */}
-            <Grid size={{xs:12}}>
+            <Grid size={{ xs: 12 }}>
               <FormControlLabel
                 control={
                   <Switch
