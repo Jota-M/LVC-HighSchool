@@ -112,7 +112,7 @@ function InscripcionContent() {
   const { inscribirPublico, isInscribiendo } = useInscripcionesVacacionales();
 
   // Estados
-  const [activeStep, setActiveStep] = useState(esPaquete ? 0 : 1);
+    const [activeStep, setActiveStep] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [cursosSeleccionados, setCursosSeleccionados] = useState<number[]>([]);
   const [comprobante, setComprobante] = useState<File | null>(null);
