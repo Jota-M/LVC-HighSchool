@@ -1,5 +1,6 @@
+// app/cursos-vacacionales/inscripcion/page.tsx
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import {
   Box,
   Container,
@@ -8,20 +9,24 @@ import {
   Grid,
   Card,
   CardContent,
-  Paper,
   TextField,
-  MenuItem,
   Stepper,
   Step,
   StepLabel,
-  useTheme,
-  Skeleton,
+  Paper,
   Alert,
-  IconButton,
   Chip,
   Stack,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Divider,
+  useTheme,
   alpha,
+  IconButton,
+  CardMedia,
+  Skeleton,
   Avatar,
   List,
   ListItem,
@@ -30,30 +35,36 @@ import {
 } from "@mui/material";
 import {
   ArrowBack,
+  CheckCircle,
   School,
-  CalendarMonth,
-  AccessTime,
-  AttachMoney,
-  EventSeat,
-  LocationOn,
   Person,
   ContactPhone,
   Payment,
-  CheckCircle,
   CloudUpload,
   QrCode2,
   KeyboardArrowRight,
   Star,
-  Schedule,
+  CalendarMonth,
+  AccessTime,
+  Savings,
+  LocalOffer,
+  EventSeat,
+  AttachMoney,
+  LocationOn,
   Description,
   Phone,
   Email,
 } from "@mui/icons-material";
 import { keyframes } from "@mui/system";
-import { useRouter, useParams } from "next/navigation";
-import { useCursoPublico } from "@/hooks/useCursosVacacionales";
-import { useInscripcionPublica } from "@/hooks/useInscripcionPublica";
-import { FormInscripcionPublica } from "@/types/cursoVacacionalTypes";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSnackbar } from "notistack";
+import {
+  usePaqueteVacacional,
+  useCursosPublicos,
+  usePeriodoActivo,
+  useCursoPublico,
+  useInscripcionesVacacionales,
+} from "@/hooks/useCursosVacacionales";
 
 // Animaciones
 const fadeIn = keyframes`
@@ -66,44 +77,48 @@ const pulseQr = keyframes`
   50% { transform: scale(1.05); }
 `;
 
-const shimmer = keyframes`
-  0% { background-position: -1000px 0; }
-  100% { background-position: 1000px 0; }
-`;
-
-const steps = ["Datos del Estudiante", "Datos del Tutor", "Pago", "Confirmación"];
-
-export default function CursoDetallePage() {
+function InscripcionContent() {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
   const router = useRouter();
-  const params = useParams();
-  const cursoId = params?.id ? parseInt(params.id as string) : null;
+  const searchParams = useSearchParams();
+  const { enqueueSnackbar } = useSnackbar();
 
-  const { curso, isLoading } = useCursoPublico(cursoId);
-  const { inscribirPublico, isInscribiendo } = useInscripcionPublica();
+  // Detectar tipo de inscripción
+  const paqueteId = searchParams.get("paquete");
+  const cursoId = searchParams.get("curso");
+  const esPaquete = !!paqueteId;
+  const esIndividual = !!cursoId;
 
-  const [activeStep, setActiveStep] = useState(0);
+  // Hooks
+  const { paquete, isLoading: loadingPaquete } = usePaqueteVacacional(
+    paqueteId ? parseInt(paqueteId) : null
+  );
+  const { curso: cursoIndividual, isLoading: loadingCurso } = useCursoPublico(
+    cursoId ? parseInt(cursoId) : null
+  );
+  const { periodo } = usePeriodoActivo();
+  const { cursos, isLoading: loadingCursos } = useCursosPublicos(
+    periodo?.id && esPaquete
+      ? {
+          periodo_vacacional_id: periodo.id,
+          activo: true,
+          con_cupos: true,
+          limit: 100,
+        }
+      : {},
+    { enabled: !!periodo?.id && esPaquete }
+  );
+  const { inscribirPublico, isInscribiendo } = useInscripcionesVacacionales();
+
+  // Estados
+  const [activeStep, setActiveStep] = useState(esPaquete ? 0 : 1);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [cursosSeleccionados, setCursosSeleccionados] = useState<number[]>([]);
+  const [comprobante, setComprobante] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [formData, setFormData] = useState<{
-    nombres: string;
-    apellido_paterno: string;
-    apellido_materno: string;
-    fecha_nacimiento: string;
-    ci: string;
-    genero: "masculino" | "femenino" | "otro";
-    telefono: string;
-    email: string;
-    nombre_tutor: string;
-    telefono_tutor: string;
-    email_tutor: string;
-    parentesco_tutor: string;
-    monto_pagado: number;
-    numero_comprobante: string;
-    fecha_pago: string;
-  }>({
+  const [formData, setFormData] = useState({
     nombres: "",
     apellido_paterno: "",
     apellido_materno: "",
@@ -116,12 +131,51 @@ export default function CursoDetallePage() {
     telefono_tutor: "",
     email_tutor: "",
     parentesco_tutor: "padre",
-    monto_pagado: curso?.costo || 0,
+    monto_pagado: 0,
     numero_comprobante: "",
     fecha_pago: new Date().toISOString().split("T")[0],
   });
 
-  const [comprobante, setComprobante] = useState<File | null>(null);
+  // Si es individual, pre-seleccionar el curso
+  useEffect(() => {
+    if (esIndividual && cursoId) {
+      setCursosSeleccionados([parseInt(cursoId)]);
+    }
+  }, [esIndividual, cursoId]);
+
+  // Actualizar monto según el tipo
+  useEffect(() => {
+    if (esPaquete && paquete) {
+      setFormData((prev) => ({ ...prev, monto_pagado: paquete.precio }));
+    } else if (esIndividual && cursoIndividual) {
+      setFormData((prev) => ({ ...prev, monto_pagado: cursoIndividual.costo }));
+    }
+  }, [esPaquete, esIndividual, paquete, cursoIndividual]);
+
+  // Validar que se especificó paquete o curso
+  useEffect(() => {
+    if (!paqueteId && !cursoId) {
+      enqueueSnackbar("No se especificó paquete ni curso", { variant: "error" });
+      router.push("/cursos-vacacionales");
+    }
+  }, [paqueteId, cursoId, router, enqueueSnackbar]);
+
+  const handleCursoToggle = (cursoIdToggle: number) => {
+    setCursosSeleccionados((prev) => {
+      if (prev.includes(cursoIdToggle)) {
+        return prev.filter((id) => id !== cursoIdToggle);
+      } else {
+        if (paquete && prev.length >= paquete.cantidad_cursos) {
+          enqueueSnackbar(
+            `Solo puedes seleccionar ${paquete.cantidad_cursos} curso(s)`,
+            { variant: "warning" }
+          );
+          return prev;
+        }
+        return [...prev, cursoIdToggle];
+      }
+    });
+  };
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -145,20 +199,35 @@ export default function CursoDetallePage() {
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (step === 0) {
+    // Step 0: Selección de cursos (solo para paquetes)
+    if (step === 0 && esPaquete) {
+      if (!paquete) return false;
+      if (cursosSeleccionados.length !== paquete.cantidad_cursos) {
+        enqueueSnackbar(
+          `Debes seleccionar exactamente ${paquete.cantidad_cursos} curso(s)`,
+          { variant: "error" }
+        );
+        return false;
+      }
+    }
+
+    // Step 1: Datos del estudiante
+    if (step === 1) {
       if (!formData.nombres) newErrors.nombres = "Campo requerido";
       if (!formData.apellido_paterno) newErrors.apellido_paterno = "Campo requerido";
       if (!formData.fecha_nacimiento) newErrors.fecha_nacimiento = "Campo requerido";
     }
 
-    if (step === 1) {
+    // Step 2: Datos del tutor
+    if (step === 2) {
       if (!formData.nombre_tutor) newErrors.nombre_tutor = "Campo requerido";
       if (!formData.telefono_tutor) newErrors.telefono_tutor = "Campo requerido";
       else if (formData.telefono_tutor.length < 7)
         newErrors.telefono_tutor = "Mínimo 7 dígitos";
     }
 
-    if (step === 2) {
+    // Step 3: Pago
+    if (step === 3) {
       if (!formData.monto_pagado || formData.monto_pagado <= 0)
         newErrors.monto_pagado = "Monto inválido";
     }
@@ -178,66 +247,57 @@ export default function CursoDetallePage() {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(activeStep) || !curso) return;
-
-    const inscripcionData: FormInscripcionPublica = {
-      curso_vacacional_id: curso.id,
-      nombres: formData.nombres,
-      apellido_paterno: formData.apellido_paterno,
-      apellido_materno: formData.apellido_materno || undefined,
-      fecha_nacimiento: formData.fecha_nacimiento,
-      ci: formData.ci || undefined,
-      genero: formData.genero,
-      telefono: formData.telefono || undefined,
-      email: formData.email || undefined,
-      nombre_tutor: formData.nombre_tutor,
-      telefono_tutor: formData.telefono_tutor,
-      email_tutor: formData.email_tutor || undefined,
-      parentesco_tutor: formData.parentesco_tutor || undefined,
-      monto_pagado: Number(formData.monto_pagado),
-      numero_comprobante: formData.numero_comprobante || undefined,
-      fecha_pago: formData.fecha_pago || undefined,
-      comprobante: comprobante || undefined,
-    };
+    if (!validateStep(activeStep)) return;
 
     try {
-      await inscribirPublico(inscripcionData);
+      await inscribirPublico({
+        cursos: cursosSeleccionados,
+        paquete_id: paquete?.id || undefined,
+        nombres: formData.nombres,
+        apellido_paterno: formData.apellido_paterno,
+        apellido_materno: formData.apellido_materno || undefined,
+        fecha_nacimiento: formData.fecha_nacimiento,
+        ci: formData.ci || undefined,
+        genero: formData.genero as any,
+        telefono: formData.telefono || undefined,
+        email: formData.email || undefined,
+        nombre_tutor: formData.nombre_tutor,
+        telefono_tutor: formData.telefono_tutor,
+        email_tutor: formData.email_tutor || undefined,
+        parentesco_tutor: formData.parentesco_tutor || undefined,
+        monto_pagado: formData.monto_pagado,
+        numero_comprobante: formData.numero_comprobante || undefined,
+        fecha_pago: formData.fecha_pago || undefined,
+        observaciones: undefined,
+        comprobante: comprobante || undefined,
+      });
+
       setShowSuccess(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al inscribirse:", error);
     }
   };
 
-  if (isLoading) {
+  if (loadingPaquete || loadingCursos || loadingCurso) {
     return (
       <Container maxWidth="xl" sx={{ py: 8 }}>
-        <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 4, mb: 4 }} />
-        <Grid container spacing={4}>
-          <Grid size={{xs:12, md:8}}>
-            <Skeleton variant="rectangular" height={600} sx={{ borderRadius: 4 }} />
-          </Grid>
-          <Grid size={{xs:12, md:4}}>
-            <Skeleton variant="rectangular" height={600} sx={{ borderRadius: 4 }} />
-          </Grid>
-        </Grid>
+        <Skeleton variant="rectangular" height={600} sx={{ borderRadius: 4 }} />
       </Container>
     );
   }
 
-  if (!curso) {
+  if (esPaquete && !paquete) {
     return (
-      <Container maxWidth="lg" sx={{ py: 12, textAlign: "center" }}>
-        <Alert severity="error" sx={{ borderRadius: 3 }}>
-          No se encontró el curso solicitado
-        </Alert>
-        <Button
-          variant="contained"
-          startIcon={<ArrowBack />}
-          onClick={() => router.push("/cursos-vacacionales")}
-          sx={{ mt: 3 }}
-        >
-          Volver a Cursos
-        </Button>
+      <Container maxWidth="lg" sx={{ py: 8 }}>
+        <Alert severity="error">Paquete no encontrado</Alert>
+      </Container>
+    );
+  }
+
+  if (esIndividual && !cursoIndividual) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 8 }}>
+        <Alert severity="error">Curso no encontrado</Alert>
       </Container>
     );
   }
@@ -302,6 +362,19 @@ export default function CursoDetallePage() {
     );
   }
 
+  const cursosSeleccionadosData = esPaquete
+    ? cursos.filter((c) => cursosSeleccionados.includes(c.id))
+    : cursoIndividual
+    ? [cursoIndividual]
+    : [];
+
+  const cursoData = esIndividual ? cursoIndividual : null;
+
+  // Ajustar steps según el tipo
+  const steps = esPaquete
+    ? ["Seleccionar Cursos", "Datos del Estudiante", "Datos del Tutor", "Pago", "Confirmación"]
+    : ["Datos del Estudiante", "Datos del Tutor", "Pago", "Confirmación"];
+
   const textFieldStyle = {
     "& .MuiOutlinedInput-root": {
       borderRadius: 2,
@@ -348,10 +421,10 @@ export default function CursoDetallePage() {
           </Button>
 
           <Grid container spacing={4} alignItems="center">
-            <Grid size={{xs:12, md:8}}>
+            <Grid size={{xs:12, md:7}}>
               <Chip
-                icon={<Star />}
-                label="Curso Vacacional"
+                icon={esPaquete ? <Savings /> : <Star />}
+                label={esPaquete ? "Paquete Vacacional" : "Curso Vacacional"}
                 sx={{
                   mb: 2,
                   background: "linear-gradient(135deg, #facc15, #f59e0b)",
@@ -368,47 +441,54 @@ export default function CursoDetallePage() {
                   fontSize: { xs: "2rem", md: "3rem" },
                 }}
               >
-                {curso.nombre}
+                {esPaquete ? paquete?.nombre : cursoIndividual?.nombre}
               </Typography>
               <Typography variant="h6" sx={{ color: "rgba(255,255,255,0.9)", mb: 3 }}>
-                {curso.descripcion}
+                {esPaquete
+                  ? `Inscríbete en ${paquete?.cantidad_cursos} cursos y ahorra`
+                  : cursoIndividual?.descripcion}
               </Typography>
 
               <Stack direction="row" spacing={2} flexWrap="wrap">
-                <Chip
-                  icon={<EventSeat />}
-                  label={`${curso.cupos_disponibles} cupos disponibles`}
-                  sx={{
-                    background: curso.cupos_disponibles > 10
-                      ? alpha("#10b981", 0.9)
-                      : alpha("#f59e0b", 0.9),
-                    color: "#fff",
-                    fontWeight: 600,
-                  }}
-                />
-                {curso.dias_semana && (
-                  <Chip
-                    icon={<CalendarMonth />}
-                    label={curso.dias_semana}
-                    sx={{ background: alpha("#fff", 0.2), color: "#fff" }}
-                  />
-                )}
-                {curso.hora_inicio && (
-                  <Chip
-                    icon={<Schedule />}
-                    label={`${curso.hora_inicio} - ${curso.hora_fin}`}
-                    sx={{ background: alpha("#fff", 0.2), color: "#fff" }}
-                  />
+                {esIndividual && (
+                  <>
+                    <Chip
+                      icon={<EventSeat />}
+                      label={`${cursoIndividual?.cupos_disponibles} cupos disponibles`}
+                      sx={{
+                        background:
+                          cursoIndividual?.cupos_disponibles && cursoIndividual.cupos_disponibles > 10
+                            ? alpha("#10b981", 0.9)
+                            : alpha("#f59e0b", 0.9),
+                        color: "#fff",
+                        fontWeight: 600,
+                      }}
+                    />
+                    {cursoIndividual?.dias_semana && (
+                      <Chip
+                        icon={<CalendarMonth />}
+                        label={cursoIndividual?.dias_semana}
+                        sx={{ background: alpha("#fff", 0.2), color: "#fff" }}
+                      />
+                    )}
+                    {cursoIndividual?.hora_inicio && (
+                      <Chip
+                        icon={<AccessTime />}
+                        label={`${cursoIndividual.hora_inicio} - ${cursoIndividual.hora_fin}`}
+                        sx={{ background: alpha("#fff", 0.2), color: "#fff" }}
+                      />
+                    )}
+                  </>
                 )}
               </Stack>
             </Grid>
 
-            <Grid size={{xs:12, md:4}}>
-              {curso.foto_url ? (
+            <Grid size={{xs:12, md:5}}>
+              {esIndividual && cursoIndividual?.foto_url ? (
                 <Box
                   component="img"
-                  src={curso.foto_url}
-                  alt={curso.nombre}
+                  src={cursoIndividual.foto_url}
+                  alt={cursoIndividual.nombre}
                   sx={{
                     width: "100%",
                     height: 300,
@@ -425,10 +505,14 @@ export default function CursoDetallePage() {
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: 4,
-                    background: `linear-gradient(135deg, ${alpha("#1e3a8a", 0.3)}, ${alpha("#3b82f6", 0.3)})`,
+                    background: `linear-gradient(135deg, ${alpha(esPaquete ? "#facc15" : "#1e3a8a", 0.3)}, ${alpha(esPaquete ? "#f59e0b" : "#3b82f6", 0.3)})`,
                   }}
                 >
-                  <School sx={{ fontSize: 120, color: alpha("#fff", 0.3) }} />
+                  {esPaquete ? (
+                    <Savings sx={{ fontSize: 120, color: alpha("#fff", 0.3) }} />
+                  ) : (
+                    <School sx={{ fontSize: 120, color: alpha("#fff", 0.3) }} />
+                  )}
                 </Paper>
               )}
             </Grid>
@@ -453,10 +537,22 @@ export default function CursoDetallePage() {
                 Formulario de Inscripción
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                Completa todos los datos para inscribirte en este curso
+                Completa todos los datos para inscribirte
               </Typography>
 
-              <Stepper activeStep={activeStep} sx={{ mb: 5 }}>
+              <Stepper 
+                activeStep={activeStep} 
+                sx={{ 
+                  mb: 5,
+                  '& .MuiStepLabel-label': {
+                    display: { xs: 'none', sm: 'block' }
+                  },
+                  '& .MuiStepLabel-iconContainer': {
+                    pr: { xs: 0, sm: 1 }
+                  }
+                }}
+                orientation="horizontal"
+              >
                 {steps.map((label) => (
                   <Step key={label}>
                     <StepLabel>{label}</StepLabel>
@@ -465,8 +561,127 @@ export default function CursoDetallePage() {
               </Stepper>
 
               <Box sx={{ animation: `${fadeIn} 0.4s ease-out` }}>
-                {/* Paso 1: Datos del Estudiante */}
-                {activeStep === 0 && (
+                {/* Step 0: Selección de Cursos (solo paquetes) */}
+                {activeStep === 0 && esPaquete && (
+                  <Box>
+                    <Alert severity="info" icon={<School />} sx={{ mb: 4, borderRadius: 3 }}>
+                      Selecciona <strong>{paquete?.cantidad_cursos}</strong> curso(s) de los disponibles
+                      ({cursosSeleccionados.length}/{paquete?.cantidad_cursos} seleccionados)
+                    </Alert>
+
+                    <Grid container spacing={3}>
+                      {cursos.map((curso) => {
+                        const isSelected = cursosSeleccionados.includes(curso.id);
+                        const isDisabled =
+                          !isSelected &&
+                          cursosSeleccionados.length >= (paquete?.cantidad_cursos ?? 0);
+
+                        return (
+                          <Grid size={{xs:12, sm:6, md:4}} key={curso.id}>
+                            <Card
+                              sx={{
+                                height: "100%",
+                                position: "relative",
+                                cursor: isDisabled ? "not-allowed" : "pointer",
+                                opacity: isDisabled ? 0.5 : 1,
+                                border: isSelected
+                                  ? `3px solid ${alpha("#10b981", 0.8)}`
+                                  : `2px solid ${alpha("#000", 0.1)}`,
+                                borderRadius: 3,
+                                transition: "all 0.3s",
+                                "&:hover": {
+                                  transform: isDisabled ? "none" : "translateY(-4px)",
+                                  boxShadow: isDisabled
+                                    ? "none"
+                                    : `0 8px 24px ${alpha("#000", 0.15)}`,
+                                },
+                              }}
+                              onClick={() => !isDisabled && handleCursoToggle(curso.id)}
+                            >
+                              {isSelected && (
+                                <Chip
+                                  icon={<CheckCircle />}
+                                  label="Seleccionado"
+                                  color="success"
+                                  size="small"
+                                  sx={{
+                                    position: "absolute",
+                                    top: 12,
+                                    right: 12,
+                                    zIndex: 2,
+                                    fontWeight: 700,
+                                  }}
+                                />
+                              )}
+
+                              <Box
+                                sx={{
+                                  height: 160,
+                                  background: curso.foto_url
+                                    ? "transparent"
+                                    : `linear-gradient(135deg, ${isDark ? "#1e3a8a" : "#0369a1"}, ${isDark ? "#3b82f6" : "#0284c7"})`,
+                                  overflow: "hidden",
+                                }}
+                              >
+                                {curso.foto_url ? (
+                                  <CardMedia
+                                    component="img"
+                                    image={curso.foto_url}
+                                    alt={curso.nombre}
+                                    sx={{ height: "100%", objectFit: "cover" }}
+                                  />
+                                ) : (
+                                  <Box
+                                    sx={{
+                                      height: "100%",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
+                                  >
+                                    <School sx={{ fontSize: 80, color: alpha("#fff", 0.3) }} />
+                                  </Box>
+                                )}
+                              </Box>
+
+                              <CardContent>
+                                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                                  {curso.nombre}
+                                </Typography>
+
+                                <Stack spacing={1}>
+                                  {curso.dias_semana && (
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                      <CalendarMonth sx={{ fontSize: 18, color: "#3b82f6" }} />
+                                      <Typography variant="caption">{curso.dias_semana}</Typography>
+                                    </Stack>
+                                  )}
+                                  {curso.hora_inicio && (
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                      <AccessTime sx={{ fontSize: 18, color: "#10b981" }} />
+                                      <Typography variant="caption">
+                                        {curso.hora_inicio} - {curso.hora_fin}
+                                      </Typography>
+                                    </Stack>
+                                  )}
+                                  <Stack direction="row" spacing={1} alignItems="center">
+                                    <EventSeat sx={{ fontSize: 18, color: "#f59e0b" }} />
+                                    <Typography variant="caption">
+                                      {curso.cupos_disponibles} cupos disponibles
+                                    </Typography>
+                                  </Stack>
+                                </Stack>
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                        );
+                      })}
+                    </Grid>
+                  </Box>
+                )}
+
+                {/* Step 1: Datos del Estudiante */}
+                {((esPaquete && activeStep === 1) || (esIndividual && activeStep === 0)) && (
                   <Box>
                     <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
                       <Avatar sx={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)" }}>
@@ -580,8 +795,8 @@ export default function CursoDetallePage() {
                   </Box>
                 )}
 
-                {/* Paso 2: Datos del Tutor */}
-                {activeStep === 1 && (
+                {/* Step 2: Datos del Tutor */}
+                {((esPaquete && activeStep === 2) || (esIndividual && activeStep === 1)) && (
                   <Box>
                     <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
                       <Avatar sx={{ background: "linear-gradient(135deg, #10b981, #059669)" }}>
@@ -655,8 +870,8 @@ export default function CursoDetallePage() {
                   </Box>
                 )}
 
-                {/* Paso 3: Información de Pago */}
-                {activeStep === 2 && (
+                {/* Step 3: Información de Pago */}
+                {((esPaquete && activeStep === 3) || (esIndividual && activeStep === 2)) && (
                   <Box>
                     <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
                       <Avatar sx={{ background: "linear-gradient(135deg, #f59e0b, #d97706)" }}>
@@ -685,7 +900,12 @@ export default function CursoDetallePage() {
                           value={formData.monto_pagado}
                           onChange={(e) => handleChange("monto_pagado", parseFloat(e.target.value))}
                           error={!!errors.monto_pagado}
-                          helperText={errors.monto_pagado || `Monto del curso: Bs. ${curso.costo}`}
+                          helperText={
+                            errors.monto_pagado ||
+                            `Monto ${esPaquete ? "del paquete" : "del curso"}: Bs. ${
+                              esPaquete ? paquete?.precio : cursoIndividual?.costo
+                            }`
+                          }
                           sx={textFieldStyle}
                         />
                       </Grid>
@@ -712,7 +932,7 @@ export default function CursoDetallePage() {
                         />
                       </Grid>
 
-                      <Grid size={12}>
+                      <Grid size={{xs:12, md:6}}>
                         <Button
                           variant="outlined"
                           component="label"
@@ -752,8 +972,8 @@ export default function CursoDetallePage() {
                   </Box>
                 )}
 
-                {/* Paso 4: Confirmación */}
-                {activeStep === 3 && (
+                {/* Step 4: Confirmación */}
+                {((esPaquete && activeStep === 4) || (esIndividual && activeStep === 3)) && (
                   <Box>
                     <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
                       <Avatar sx={{ background: "linear-gradient(135deg, #ef4444, #dc2626)" }}>
@@ -770,6 +990,45 @@ export default function CursoDetallePage() {
                     </Stack>
 
                     <Stack spacing={3}>
+                      {/* Cursos Seleccionados */}
+                      {cursosSeleccionadosData.length > 0 && (
+                        <Paper
+                          sx={{
+                            p: 3,
+                            borderRadius: 2,
+                            background: isDark ? alpha("#6366f1", 0.1) : alpha("#e0e7ff", 1),
+                            border: `1px solid ${isDark ? alpha("#6366f1", 0.3) : "#c7d2fe"}`,
+                          }}
+                        >
+                          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+                            <School sx={{ color: "#6366f1" }} />
+                            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "#6366f1" }}>
+                              {esPaquete ? "Cursos Seleccionados" : "Curso"}
+                            </Typography>
+                          </Stack>
+                          <Stack spacing={1.5}>
+                            {cursosSeleccionadosData.map((curso) => (
+                              <Box
+                                key={curso.id}
+                                sx={{
+                                  p: 2,
+                                  background: isDark ? alpha("#fff", 0.05) : alpha("#fff", 0.8),
+                                  borderRadius: 2,
+                                }}
+                              >
+                                <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                  {curso.nombre}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {curso.dias_semana} • {curso.hora_inicio} - {curso.hora_fin}
+                                </Typography>
+                              </Box>
+                            ))}
+                          </Stack>
+                        </Paper>
+                      )}
+
+                      {/* Información del Estudiante */}
                       <Paper
                         sx={{
                           p: 3,
@@ -814,7 +1073,7 @@ export default function CursoDetallePage() {
                           <Grid size={{xs:12, md:6}}>
                             <Typography variant="body2" color="text.secondary">
                               Género
-                              </Typography>
+                            </Typography>
                             <Typography variant="body1" sx={{ fontWeight: 600 }}>
                               {formData.genero.charAt(0).toUpperCase() + formData.genero.slice(1)}
                             </Typography>
@@ -822,6 +1081,7 @@ export default function CursoDetallePage() {
                         </Grid>
                       </Paper>
 
+                      {/* Información del Tutor */}
                       <Paper
                         sx={{
                           p: 3,
@@ -858,7 +1118,8 @@ export default function CursoDetallePage() {
                               Parentesco
                             </Typography>
                             <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                              {formData.parentesco_tutor.charAt(0).toUpperCase() + formData.parentesco_tutor.slice(1)}
+                              {formData.parentesco_tutor.charAt(0).toUpperCase() +
+                                formData.parentesco_tutor.slice(1)}
                             </Typography>
                           </Grid>
                           {formData.email_tutor && (
@@ -874,6 +1135,7 @@ export default function CursoDetallePage() {
                         </Grid>
                       </Paper>
 
+                      {/* Información de Pago */}
                       <Paper
                         sx={{
                           p: 3,
@@ -951,7 +1213,7 @@ export default function CursoDetallePage() {
                   Atrás
                 </Button>
 
-                {activeStep < 3 ? (
+                {activeStep < steps.length - 1 ? (
                   <Button
                     variant="contained"
                     endIcon={<KeyboardArrowRight />}
@@ -989,10 +1251,10 @@ export default function CursoDetallePage() {
             </Paper>
           </Grid>
 
-          {/* Sidebar - Detalles del Curso y QR */}
+          {/* Sidebar - Detalles y QR */}
           <Grid size={{xs:12, md:4}}>
             <Stack spacing={3}>
-              {/* Resumen del Curso */}
+              {/* Resumen del Curso/Paquete */}
               <Paper
                 elevation={0}
                 sx={{
@@ -1004,7 +1266,7 @@ export default function CursoDetallePage() {
                 }}
               >
                 <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
-                  Detalles del Curso
+                  {esPaquete ? "Detalles del Paquete" : "Detalles del Curso"}
                 </Typography>
 
                 <Stack spacing={2}>
@@ -1012,73 +1274,96 @@ export default function CursoDetallePage() {
                     <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 1 }}>
                       <AttachMoney sx={{ color: "#f59e0b", fontSize: 24 }} />
                       <Typography variant="body2" color="text.secondary">
-                        Inversión
+                        {esPaquete ? "Total" : "Inversión"}
                       </Typography>
                     </Stack>
                     <Typography variant="h4" sx={{ fontWeight: 800, color: "#f59e0b" }}>
-                      Bs. {curso.costo}
+                      Bs. {esPaquete ? paquete?.precio : cursoIndividual?.costo}
                     </Typography>
+                    {esPaquete && (
+                      <Typography variant="caption" color="text.secondary">
+                        {paquete?.cantidad_cursos ?? 0} cursos • Bs. {(
+  (paquete?.precio ?? 0) / (paquete?.cantidad_cursos || 1)
+).toFixed(2)}
+
+                        c/u
+                      </Typography>
+                    )}
                   </Box>
 
                   <Divider />
 
-                  <List disablePadding>
-                    {curso.dias_semana && (
+                  {esIndividual && cursoData && (
+                    <List disablePadding>
+                      {cursoData.dias_semana && (
+                        <ListItem disablePadding sx={{ py: 1 }}>
+                          <ListItemIcon sx={{ minWidth: 40 }}>
+                            <CalendarMonth sx={{ color: "#3b82f6" }} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary="Días"
+                            secondary={cursoData.dias_semana}
+                            primaryTypographyProps={{ variant: "body2", color: "text.secondary" }}
+                            secondaryTypographyProps={{ variant: "body1", fontWeight: 600 }}
+                          />
+                        </ListItem>
+                      )}
+
+                      {cursoData.hora_inicio && (
+                        <ListItem disablePadding sx={{ py: 1 }}>
+                          <ListItemIcon sx={{ minWidth: 40 }}>
+                            <AccessTime sx={{ color: "#10b981" }} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary="Horario"
+                            secondary={`${cursoData.hora_inicio} - ${cursoData.hora_fin}`}
+                            primaryTypographyProps={{ variant: "body2", color: "text.secondary" }}
+                            secondaryTypographyProps={{ variant: "body1", fontWeight: 600 }}
+                          />
+                        </ListItem>
+                      )}
+
                       <ListItem disablePadding sx={{ py: 1 }}>
                         <ListItemIcon sx={{ minWidth: 40 }}>
-                          <CalendarMonth sx={{ color: "#3b82f6" }} />
+                          <EventSeat sx={{ color: "#f59e0b" }} />
                         </ListItemIcon>
                         <ListItemText
-                          primary="Días"
-                          secondary={curso.dias_semana}
+                          primary="Cupos Disponibles"
+                          secondary={`${cursoData.cupos_disponibles} de ${cursoData.cupos_totales}`}
                           primaryTypographyProps={{ variant: "body2", color: "text.secondary" }}
                           secondaryTypographyProps={{ variant: "body1", fontWeight: 600 }}
                         />
                       </ListItem>
-                    )}
 
-                    {curso.hora_inicio && (
-                      <ListItem disablePadding sx={{ py: 1 }}>
-                        <ListItemIcon sx={{ minWidth: 40 }}>
-                          <AccessTime sx={{ color: "#10b981" }} />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary="Horario"
-                          secondary={`${curso.hora_inicio} - ${curso.hora_fin}`}
-                          primaryTypographyProps={{ variant: "body2", color: "text.secondary" }}
-                          secondaryTypographyProps={{ variant: "body1", fontWeight: 600 }}
-                        />
-                      </ListItem>
-                    )}
+                      {cursoData.aula && (
+                        <ListItem disablePadding sx={{ py: 1 }}>
+                          <ListItemIcon sx={{ minWidth: 40 }}>
+                            <LocationOn sx={{ color: "#ef4444" }} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary="Aula"
+                            secondary={cursoData.aula}
+                            primaryTypographyProps={{ variant: "body2", color: "text.secondary" }}
+                            secondaryTypographyProps={{ variant: "body1", fontWeight: 600 }}
+                          />
+                        </ListItem>
+                      )}
+                    </List>
+                  )}
 
-                    <ListItem disablePadding sx={{ py: 1 }}>
-                      <ListItemIcon sx={{ minWidth: 40 }}>
-                        <EventSeat sx={{ color: "#f59e0b" }} />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary="Cupos Disponibles"
-                        secondary={`${curso.cupos_disponibles} de ${curso.cupos_totales}`}
-                        primaryTypographyProps={{ variant: "body2", color: "text.secondary" }}
-                        secondaryTypographyProps={{ variant: "body1", fontWeight: 600 }}
-                      />
-                    </ListItem>
+                  {esPaquete && (
+                    <Alert severity="success" icon={<LocalOffer />} sx={{ borderRadius: 2 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                        ¡Ahorro de Bs. {(
+  (250 * (paquete?.cantidad_cursos ?? 0)) -
+  (paquete?.precio ?? 0)
+).toFixed(2)}!
 
-                    {curso.aula && (
-                      <ListItem disablePadding sx={{ py: 1 }}>
-                        <ListItemIcon sx={{ minWidth: 40 }}>
-                          <LocationOn sx={{ color: "#ef4444" }} />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary="Aula"
-                          secondary={curso.aula}
-                          primaryTypographyProps={{ variant: "body2", color: "text.secondary" }}
-                          secondaryTypographyProps={{ variant: "body1", fontWeight: 600 }}
-                        />
-                      </ListItem>
-                    )}
-                  </List>
+                      </Typography>
+                    </Alert>
+                  )}
 
-                  {curso.requisitos && (
+                  {esIndividual && cursoData?.requisitos && (
                     <>
                       <Divider />
                       <Box>
@@ -1089,7 +1374,7 @@ export default function CursoDetallePage() {
                           </Typography>
                         </Stack>
                         <Typography variant="body2" sx={{ lineHeight: 1.7 }}>
-                          {curso.requisitos}
+                          {cursoData.requisitos}
                         </Typography>
                       </Box>
                     </>
@@ -1104,9 +1389,7 @@ export default function CursoDetallePage() {
                   p: 3,
                   borderRadius: 4,
                   border: `2px dashed ${isDark ? "#f59e0b" : "#d97706"}`,
-                  background: isDark
-                    ? alpha("#f59e0b", 0.05)
-                    : alpha("#fef3c7", 1),
+                  background: isDark ? alpha("#f59e0b", 0.05) : alpha("#fef3c7", 1),
                   textAlign: "center",
                 }}
               >
@@ -1136,7 +1419,7 @@ export default function CursoDetallePage() {
                     boxShadow: "0 8px 24px rgba(245, 158, 11, 0.3)",
                   }}
                 >
-                  <QrCode2 sx={{ fontSize: 180, color: "#0f172a" }} />
+                  <img src="/Qr.png" alt="QR de pago" style={{ width: "100%" }} />
                 </Box>
 
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -1190,9 +1473,7 @@ export default function CursoDetallePage() {
                   p: 3,
                   borderRadius: 4,
                   border: `1px solid ${isDark ? alpha("#fff", 0.1) : alpha("#000", 0.1)}`,
-                  background: isDark
-                    ? alpha("#3b82f6", 0.05)
-                    : alpha("#eff6ff", 1),
+                  background: isDark ? alpha("#3b82f6", 0.05) : alpha("#eff6ff", 1),
                 }}
               >
                 <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
@@ -1209,7 +1490,7 @@ export default function CursoDetallePage() {
                         Teléfono
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        +591 123 456 789
+                        +591 69624189
                       </Typography>
                     </Box>
                   </Stack>
@@ -1223,7 +1504,7 @@ export default function CursoDetallePage() {
                         Email
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        info@institucion.edu.bo
+                        lavozdecristochighschool@gmail.com
                       </Typography>
                     </Box>
                   </Stack>
@@ -1234,5 +1515,19 @@ export default function CursoDetallePage() {
         </Grid>
       </Container>
     </Box>
+  );
+}
+
+export default function InscripcionPage() {
+  return (
+    <Suspense
+      fallback={
+        <Container maxWidth="lg" sx={{ py: 8 }}>
+          <Skeleton variant="rectangular" height={600} sx={{ borderRadius: 4 }} />
+        </Container>
+      }
+    >
+      <InscripcionContent />
+    </Suspense>
   );
 }

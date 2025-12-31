@@ -72,7 +72,7 @@ export const InscripcionDetalle: React.FC = () => {
   const { verificarPago, cambiarEstado, isVerificandoPago, isCambiandoEstado } = useInscripcionesVacacionales();
 
   const handleBack = () => {
-    router.push('/dashboard/cursos-vacacionales/inscripciones');
+    router.push('/dashboard/CursosVacacionales/inscripciones');
   };
 
   const handleVerificarPago = () => {

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api-highschool.onrender.com',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api-highschool-1.onrender.com',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',

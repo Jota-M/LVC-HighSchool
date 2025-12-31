@@ -1,6 +1,19 @@
 // types/cursoVacacionalTypes.ts
 
 // ============================================
+// PAQUETE VACACIONAL (NUEVO)
+// ============================================
+export interface PaqueteVacacional {
+  id: number;
+  nombre: string;
+  cantidad_cursos: number;
+  precio: number;
+  activo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
 // PERIODO VACACIONAL
 // ============================================
 export interface PeriodoVacacional {
@@ -20,7 +33,6 @@ export interface PeriodoVacacional {
   updated_at: string;
   deleted_at: string | null;
   
-  // Agregados por backend
   total_cursos?: number;
   total_inscritos?: number;
   total_cupos?: number;
@@ -65,16 +77,12 @@ export interface CursoVacacional {
   aula: string | null;
   requisitos: string | null;
   activo: boolean;
-  
-  // ⬇️ NUEVOS CAMPOS DE FOTO
   foto_url: string | null;
   foto_public_id: string | null;
-  
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
   
-  // Joins
   periodo_nombre?: string;
   periodo_tipo?: string;
   periodo_fecha_inicio?: string;
@@ -105,13 +113,12 @@ export interface CursoVacacionalCreate {
 
 export interface CursoVacacionalUpdate extends Partial<Omit<CursoVacacionalCreate, 'periodo_vacacional_id'>> {}
 
-// ⬇️ NUEVO: Formulario con foto
 export interface FormCursoVacacional extends CursoVacacionalCreate {
   foto?: File;
 }
 
 // ============================================
-// INSCRIPCION VACACIONAL
+// INSCRIPCION VACACIONAL (CON PAQUETES)
 // ============================================
 export type EstadoInscripcionVacacional = 
   | 'pendiente' 
@@ -124,9 +131,10 @@ export type EstadoInscripcionVacacional =
 export interface InscripcionVacacional {
   id: number;
   codigo_inscripcion: string;
+  codigo_grupo: string | null; // NUEVO
+  paquete_id: number | null; // NUEVO
   curso_vacacional_id: number;
   
-  // Datos del estudiante
   nombres: string;
   apellido_paterno: string;
   apellido_materno: string | null;
@@ -136,13 +144,11 @@ export interface InscripcionVacacional {
   telefono: string | null;
   email: string | null;
   
-  // Datos del tutor
   nombre_tutor: string;
   telefono_tutor: string;
   email_tutor: string | null;
   parentesco_tutor: string | null;
   
-  // Pago
   monto_pagado: number;
   numero_comprobante: string | null;
   fecha_pago: string | null;
@@ -151,7 +157,6 @@ export interface InscripcionVacacional {
   verificado_por: number | null;
   fecha_verificacion: string | null;
   
-  // Estado
   estado: EstadoInscripcionVacacional;
   observaciones: string | null;
   motivo_rechazo: string | null;
@@ -160,7 +165,6 @@ export interface InscripcionVacacional {
   updated_at: string;
   deleted_at: string | null;
   
-  // Joins
   curso_nombre?: string;
   curso_codigo?: string;
   curso_costo?: number;
@@ -171,13 +175,17 @@ export interface InscripcionVacacional {
   curso_hora_fin?: string;
   periodo_nombre?: string;
   periodo_tipo?: string;
+  paquete_nombre?: string; // NUEVO
+  paquete_cantidad?: number; // NUEVO
+  paquete_precio?: number; // NUEVO
   verificado_por_username?: string;
 }
 
+// NUEVO: Para inscripciones con múltiples cursos
 export interface InscripcionVacacionalCreate {
-  curso_vacacional_id: number;
+  cursos: number[]; // Array de IDs de cursos
+  paquete_id?: number;
   
-  // Datos del estudiante
   nombres: string;
   apellido_paterno: string;
   apellido_materno?: string;
@@ -187,13 +195,11 @@ export interface InscripcionVacacionalCreate {
   telefono?: string;
   email?: string;
   
-  // Datos del tutor
   nombre_tutor: string;
   telefono_tutor: string;
   email_tutor?: string;
   parentesco_tutor?: string;
   
-  // Pago
   monto_pagado: number;
   numero_comprobante?: string;
   fecha_pago?: string;
@@ -246,6 +252,7 @@ export interface InscripcionVacacionalFilters {
   periodo_vacacional_id?: number;
   estado?: EstadoInscripcionVacacional;
   pago_verificado?: boolean;
+  codigo_grupo?: string; // NUEVO
 }
 
 // ============================================
@@ -281,6 +288,13 @@ export interface InscripcionesResponse {
   };
 }
 
+// NUEVO: Respuesta de inscripción grupal
+export interface InscripcionGrupalResponse {
+  codigo_grupo: string;
+  total_cursos: number;
+  inscripciones: InscripcionVacacional[];
+}
+
 // ============================================
 // ESTADISTICAS
 // ============================================
@@ -291,31 +305,8 @@ export interface EstadisticasPeriodo {
   activas: number;
   completadas: number;
   retiradas: number;
-  rechazadas: number;
-  pagos_verificados: number;
   total_ingresos: string;
-}
-
-export interface CursoPopular {
-  id: number;
-  nombre: string;
-  codigo: string | null;
-  cupos_totales: number;
-  cupos_ocupados: number;
-  cupos_disponibles: number;
-  costo: number;
-  total_inscripciones: number;
-  porcentaje_ocupacion: number;
-}
-
-export interface IngresosPorCurso {
-  id: number;
-  nombre: string;
-  codigo: string | null;
-  total_inscripciones: number;
-  pagos_verificados: number;
-  total_ingresos: string;
-  ingresos_verificados: string;
+  total_estudiantes: number; // NUEVO
 }
 
 // ============================================
@@ -325,9 +316,7 @@ export interface FormInscripcionPublica extends InscripcionVacacionalCreate {
   comprobante?: File;
 }
 
-export interface FormPeriodoVacacional extends PeriodoVacacionalCreate {
-  // Extensiones para el formulario
-}
+export interface FormPeriodoVacacional extends PeriodoVacacionalCreate {}
 
 // ============================================
 // ACCIONES

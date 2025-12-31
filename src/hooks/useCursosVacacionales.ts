@@ -4,14 +4,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 import cursoVacacionalService from '@/services/cursoVacacionalService';
 import {
+  PaqueteVacacional,
   PeriodoVacacional,
   PeriodoVacacionalCreate,
   PeriodoVacacionalUpdate,
   PeriodoVacacionalFilters,
   PeriodosResponse,
   CursoVacacional,
-  CursoVacacionalCreate,
-  CursoVacacionalUpdate,
   CursoVacacionalFilters,
   CursosResponse,
   InscripcionVacacional,
@@ -20,7 +19,43 @@ import {
   FormInscripcionPublica,
   CambiarEstadoInscripcion,
   EstadisticasPeriodo,
+  InscripcionGrupalResponse,
 } from '@/types/cursoVacacionalTypes';
+
+// =============================================
+// HOOK: Paquetes Vacacionales
+// =============================================
+export const usePaquetesVacacionales = () => {
+  const { data: paquetes, isLoading, error } = useQuery<PaqueteVacacional[]>({
+    queryKey: ['paquetes-vacacionales'],
+    queryFn: () => cursoVacacionalService.paquetes.listar(),
+    staleTime: 1000 * 60 * 10,
+  });
+
+  return {
+    paquetes: paquetes || [],
+    isLoading,
+    error,
+  };
+};
+
+// =============================================
+// HOOK: Paquete por ID
+// =============================================
+export const usePaqueteVacacional = (id: number | null) => {
+  const { data: paquete, isLoading, error } = useQuery<PaqueteVacacional>({
+    queryKey: ['paquete-vacacional', id],
+    queryFn: () => cursoVacacionalService.paquetes.obtenerPorId(id!),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 10,
+  });
+
+  return {
+    paquete,
+    isLoading,
+    error,
+  };
+};
 
 // =============================================
 // HOOK: Periodos Vacacionales
@@ -161,7 +196,7 @@ export const useCursosVacacionales = (filters?: CursoVacacionalFilters) => {
   });
 
   const crearMutation = useMutation({
-    mutationFn: (data: CursoVacacionalCreate) => cursoVacacionalService.cursos.crear(data),
+    mutationFn: (data: any) => cursoVacacionalService.cursos.crear(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cursos-vacacionales'] });
       enqueueSnackbar('Curso creado exitosamente', { variant: 'success' });
@@ -172,8 +207,8 @@ export const useCursosVacacionales = (filters?: CursoVacacionalFilters) => {
   });
 
   const actualizarMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: CursoVacacionalUpdate }) =>
-      cursoVacacionalService.cursos.actualizar(id, data as any),
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      cursoVacacionalService.cursos.actualizar(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cursos-vacacionales'] });
       enqueueSnackbar('Curso actualizado exitosamente', { variant: 'success' });
@@ -216,7 +251,7 @@ export const useCursosVacacionales = (filters?: CursoVacacionalFilters) => {
 };
 
 // =============================================
-// ✅ HOOK: Cursos Públicos - CORREGIDO
+// HOOK: Cursos Públicos
 // =============================================
 export const useCursosPublicos = (
   filters?: CursoVacacionalFilters,
@@ -224,10 +259,7 @@ export const useCursosPublicos = (
 ) => {
   const { data, isLoading, error, refetch } = useQuery<CursosResponse>({
     queryKey: ['cursos-publicos', filters],
-    queryFn: () => {
-      console.log('🔍 [PUBLIC HOOK] Filtros:', filters);
-      return cursoVacacionalService.cursos.listarPublico(filters || {});
-    },
+    queryFn: () => cursoVacacionalService.cursos.listarPublico(filters || {}),
     staleTime: 1000 * 60 * 5,
     enabled: options?.enabled !== undefined ? options.enabled : true,
   });
@@ -280,7 +312,7 @@ export const useCursoVacacional = (id: number | null) => {
 };
 
 // =============================================
-// HOOK: Inscripciones
+// HOOK: Inscripciones CORREGIDO
 // =============================================
 export const useInscripcionesVacacionales = (filters?: InscripcionVacacionalFilters) => {
   const queryClient = useQueryClient();
@@ -293,24 +325,49 @@ export const useInscripcionesVacacionales = (filters?: InscripcionVacacionalFilt
     staleTime: 1000 * 60 * 2,
   });
 
+  // CORREGIDO: Ahora recibe FormInscripcionPublica directamente
   const inscribirPublicoMutation = useMutation({
-    mutationFn: (data: FormInscripcionPublica) => cursoVacacionalService.inscripciones.inscribirPublico(data),
-    onSuccess: () => {
-      enqueueSnackbar('¡Inscripción exitosa! En breve recibirás confirmación', { variant: 'success' });
+    mutationFn: (data: FormInscripcionPublica) => {
+      // Validación antes de enviar
+      if (!data.cursos || !Array.isArray(data.cursos) || data.cursos.length === 0) {
+        throw new Error('Debe seleccionar al menos un curso');
+      }
+
+      // El servicio ya maneja la conversión a FormData
+      return cursoVacacionalService.inscripciones.inscribirPublico(data);
+    },
+    onSuccess: (data: InscripcionGrupalResponse) => {
+      enqueueSnackbar(
+        `¡Inscripción exitosa! ${data.total_cursos} curso(s) registrado(s). Código: ${data.codigo_grupo}`,
+        { variant: 'success', autoHideDuration: 5000 }
+      );
     },
     onError: (error: any) => {
-      enqueueSnackbar(error.response?.data?.message || 'Error al inscribirse', { variant: 'error' });
+      const mensaje = error.response?.data?.message || error.message || 'Error al inscribirse';
+      enqueueSnackbar(mensaje, { variant: 'error' });
     },
   });
 
   const inscribirMutation = useMutation({
-    mutationFn: (data: FormInscripcionPublica) => cursoVacacionalService.inscripciones.inscribir(data),
-    onSuccess: () => {
+    mutationFn: (data: FormInscripcionPublica) => {
+      // Validación antes de enviar
+      if (!data.cursos || !Array.isArray(data.cursos) || data.cursos.length === 0) {
+        throw new Error('Debe seleccionar al menos un curso');
+      }
+
+      return cursoVacacionalService.inscripciones.inscribir(data);
+    },
+    onSuccess: (data: InscripcionGrupalResponse) => {
       queryClient.invalidateQueries({ queryKey: ['inscripciones-vacacionales'] });
-      enqueueSnackbar('Inscripción creada exitosamente', { variant: 'success' });
+      queryClient.invalidateQueries({ queryKey: ['cursos-vacacionales'] });
+      enqueueSnackbar(
+        `Inscripción creada: ${data.total_cursos} curso(s). Código: ${data.codigo_grupo}`,
+        { variant: 'success', autoHideDuration: 5000 }
+      );
     },
     onError: (error: any) => {
-      enqueueSnackbar(error.response?.data?.message || 'Error al inscribir', { variant: 'error' });
+      const mensaje = error.response?.data?.message || error.message || 'Error al inscribir';
+      enqueueSnackbar(mensaje, { variant: 'error' });
     },
   });
 
@@ -341,6 +398,7 @@ export const useInscripcionesVacacionales = (filters?: InscripcionVacacionalFilt
     mutationFn: (id: number) => cursoVacacionalService.inscripciones.eliminar(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inscripciones-vacacionales'] });
+      queryClient.invalidateQueries({ queryKey: ['cursos-vacacionales'] });
       enqueueSnackbar('Inscripción eliminada exitosamente', { variant: 'success' });
     },
     onError: (error: any) => {
@@ -385,6 +443,25 @@ export const useInscripcionVacacional = (id: number | null) => {
 
   return {
     inscripcion,
+    isLoading,
+    error,
+    refetch,
+  };
+};
+
+// =============================================
+// HOOK: Inscripciones por Grupo
+// =============================================
+export const useInscripcionesPorGrupo = (codigo_grupo: string | null) => {
+  const { data: inscripciones, isLoading, error, refetch } = useQuery<InscripcionVacacional[]>({
+    queryKey: ['inscripciones-grupo', codigo_grupo],
+    queryFn: () => cursoVacacionalService.inscripciones.obtenerPorGrupo(codigo_grupo!),
+    enabled: !!codigo_grupo,
+    staleTime: 1000 * 60 * 2,
+  });
+
+  return {
+    inscripciones: inscripciones || [],
     isLoading,
     error,
     refetch,
