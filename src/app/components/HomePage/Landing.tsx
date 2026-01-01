@@ -13,11 +13,11 @@ function Landing() {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
 
-  // Animaciones mejoradas
+  // Animaciones simples para mobile, completas para desktop
   const fadeInUp = keyframes`
     from { 
       opacity: 0; 
-      transform: translateY(40px);
+      transform: translateY(30px);
     }
     to { 
       opacity: 1; 
@@ -25,20 +25,12 @@ function Landing() {
     }
   `;
 
-  const scaleIn = keyframes`
-    0% { 
-      opacity: 0; 
-      transform: scale(0.8);
-    }
-    50% {
-      transform: scale(1.05);
-    }
-    100% { 
-      opacity: 1; 
-      transform: scale(1);
-    }
+  const fadeIn = keyframes`
+    from { opacity: 0; }
+    to { opacity: 1; }
   `;
 
+  // Animaciones complejas solo para desktop
   const glowPulse = keyframes`
     0%, 100% {
       text-shadow: 
@@ -58,24 +50,6 @@ function Landing() {
     }
   `;
 
-  const bounceIn = keyframes`
-    0% {
-      opacity: 0;
-      transform: scale(0.3) translateY(-100px);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1.05);
-    }
-    70% {
-      transform: scale(0.95);
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-  `;
-
   const shimmer = keyframes`
     0% {
       background-position: -1000px 0;
@@ -85,13 +59,7 @@ function Landing() {
     }
   `;
 
-  const fadeIn = keyframes`
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  `;
-
   return (
-    
     <Box
       id="Inicio"
       sx={{
@@ -150,16 +118,17 @@ function Landing() {
                 fontSize: { xs: "1.2rem", sm: "1.8rem", md: "2.5rem", lg: "3rem" },
                 fontWeight: "900",
                 color: "#facc15",
-                animation: `${fadeInUp} 1s ease-out forwards`,
+                animation: `${fadeInUp} 0.6s ease-out forwards`,
                 textTransform: "uppercase",
                 letterSpacing: "0.05em",
                 lineHeight: 1.2,
                 mb: 1,
-                textShadow: `
-                  0 0 20px rgba(250, 204, 21, 0.4),
-                  0 5px 15px rgba(0, 0, 0, 0.5),
-                  0 10px 30px rgba(0, 0, 0, 0.3)
-                `,
+                textShadow: {
+                  xs: "0 2px 8px rgba(0, 0, 0, 0.5)",
+                  md: `0 0 20px rgba(250, 204, 21, 0.4),
+                       0 5px 15px rgba(0, 0, 0, 0.5),
+                       0 10px 30px rgba(0, 0, 0, 0.3)`
+                },
               }}
             >
               Educación Con
@@ -172,17 +141,21 @@ function Landing() {
                 fontSize: { xs: "2rem", sm: "2.8rem", md: "3.5rem", lg: "3rem" },
                 fontWeight: "900",
                 color: "#facc15",
-                animation: `${fadeInUp} 1s ease-out 0.2s forwards, ${glowPulse} 3s ease-in-out 1.5s infinite`,
+                animation: {
+                  xs: `${fadeInUp} 0.6s ease-out 0.15s forwards`,
+                  md: `${fadeInUp} 1s ease-out 0.2s forwards, ${glowPulse} 3s ease-in-out 1.5s infinite`
+                },
                 opacity: 0,
                 animationFillMode: "forwards",
                 textTransform: "uppercase",
                 letterSpacing: "0.05em",
                 lineHeight: 1.2,
-                textShadow: `
-                  0 0 20px rgba(250, 204, 21, 0.4),
-                  0 5px 15px rgba(0, 0, 0, 0.5),
-                  0 10px 30px rgba(0, 0, 0, 0.3)
-                `,
+                textShadow: {
+                  xs: "0 2px 8px rgba(0, 0, 0, 0.5)",
+                  md: `0 0 20px rgba(250, 204, 21, 0.4),
+                       0 5px 15px rgba(0, 0, 0, 0.5),
+                       0 10px 30px rgba(0, 0, 0, 0.3)`
+                },
               }}
             >
               Valores Cristianos
@@ -198,19 +171,17 @@ function Landing() {
                 fontSize: { xs: "1.8rem", sm: "2.5rem", md: "3.2rem", lg: "2.8rem" },
                 fontWeight: "400",
                 color: "#fff",
-                animation: `${bounceIn} 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.6s forwards`,
+                animation: {
+                  xs: `${fadeInUp} 0.6s ease-out 0.3s forwards`,
+                  md: `${fadeInUp} 0.8s ease-out 0.4s forwards`
+                },
                 opacity: 0,
                 animationFillMode: "forwards",
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
                 position: "relative",
                 display: "inline-block",
-                
-                background: "linear-gradient(135deg, #ffffff 0%, #e0f2ff 50%, #ffffff 100%)",
-                backgroundSize: "200% auto",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
+                textShadow: "0 2px 10px rgba(0, 0, 0, 0.3)",
                 
                 "&::before": {
                   content: '""',
@@ -223,6 +194,7 @@ function Landing() {
                   transform: "translateY(-50%) skewX(-10deg)",
                   zIndex: -1,
                   borderRadius: "8px",
+                  display: { xs: "none", md: "block" }
                 },
                 
                 "&::after": {
@@ -233,20 +205,25 @@ function Landing() {
                   width: "100%",
                   height: "4px",
                   background: "linear-gradient(90deg, transparent, #facc15, transparent)",
-                  animation: `${shimmer} 3s ease-in-out 2s infinite`,
+                  animation: {
+                    xs: "none",
+                    md: `${shimmer} 3s ease-in-out 2s infinite`
+                  },
+                  display: { xs: "none", md: "block" }
                 }
               }}
             >
               y Excelencia Académica
             </Typography>
           </Box>
+
           <Typography
             variant="h3"
             sx={{
               fontSize: { xs: "1rem", sm: "1.25rem", md: "1rem" },
               color: "rgba(255,255,255,0.95)",
               fontFamily: "'Montserrat', sans-serif",
-              animation: `${fadeIn} 1s ease forwards 1s`,
+              animation: `${fadeIn} 0.6s ease forwards 0.5s`,
               opacity: 0,
               animationFillMode: "forwards",
             }}
@@ -261,12 +238,13 @@ function Landing() {
               gap: 2,
               justifyContent: { xs: "center", md: "flex-start" },
               mt: 4,
-              animation: `${scaleIn} 0.8s ease forwards 1.3s`,
+              animation: `${fadeIn} 0.6s ease forwards 0.7s`,
               opacity: 0,
               animationFillMode: "forwards",
             }}
           >
             <Button
+            href="#Nosotros"
               variant="contained"
               sx={{
                 backgroundColor: "#facc15",
@@ -278,8 +256,11 @@ function Landing() {
                 boxShadow: "0px 4px 15px rgba(0,0,0,0.3)",
                 "&:hover": {
                   backgroundColor: "#f57f17",
-                  transform: "translateY(-3px)",
-                  boxShadow: "0px 8px 25px rgba(249, 168, 37, 0.4)",
+                  transform: { xs: "none", md: "translateY(-3px)" },
+                  boxShadow: {
+                    xs: "0px 4px 15px rgba(0,0,0,0.3)",
+                    md: "0px 8px 25px rgba(249, 168, 37, 0.4)"
+                  },
                 },
                 transition: "all 0.3s ease"
               }}
@@ -301,8 +282,11 @@ function Landing() {
                 "&:hover": {
                   backgroundColor: "#0277bd",
                   color: "#fff",
-                  transform: "translateY(-3px)",
-                  boxShadow: "0px 8px 25px rgba(2, 119, 189, 0.4)",
+                  transform: { xs: "none", md: "translateY(-3px)" },
+                  boxShadow: {
+                    xs: "none",
+                    md: "0px 8px 25px rgba(2, 119, 189, 0.4)"
+                  },
                 },
                 transition: "all 0.3s ease"
               }}

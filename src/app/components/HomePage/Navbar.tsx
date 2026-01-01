@@ -12,10 +12,21 @@ function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("Inicio");
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(false);
 
   const theme = useTheme();
   const colorMode = useContext(ColorModeContext);
   const isDark = theme.palette.mode === "dark";
+
+  useEffect(() => {
+    // Detectar si es mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -38,12 +49,15 @@ function Navbar() {
   }, []);
 
   useEffect(() => {
+    // Solo activar mousemove en desktop
+    if (isMobile) return;
+    
     const handleMouseMove = (e: { clientX: number; clientY: number; }) => {
       setMousePosition({ x: e.clientX, y: e.clientY });
     };
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
+  }, [isMobile]);
 
   const handleLogoClick = () => {
     if (window.location.pathname === "/") {
@@ -58,20 +72,19 @@ function Navbar() {
   return (
     <>
       <div
-  className={`fixed top-0 left-0 w-full z-[60] transition-all duration-700 ${
-    scrolled
-      ? isDark
-        ? "bg-gray-900/80 backdrop-blur-xl shadow-2xl shadow-blue-500/10 border-b border-blue-500/20"
-        : "bg-white/80 backdrop-blur-xl shadow-2xl shadow-blue-500/10 border-b border-blue-200/40"
-      : "bg-transparent"
-  }`}
-  style={{
-    animation: "slideDown 0.8s ease-out",
-  }}
->
-
-        {/* Gradient overlay efecto glassmorphism */}
-        {scrolled && (
+        className={`fixed top-0 left-0 w-full z-[60] transition-all duration-700 ${
+          scrolled
+            ? isDark
+              ? "bg-gray-900/95 backdrop-blur-xl shadow-2xl shadow-blue-500/10 border-b border-blue-500/20"
+              : "bg-white/95 backdrop-blur-xl shadow-2xl shadow-blue-500/10 border-b border-blue-200/40"
+            : "bg-transparent"
+        }`}
+        style={{
+          animation: isMobile ? "none" : "slideDown 0.8s ease-out",
+        }}
+      >
+        {/* Gradient overlay efecto glassmorphism - solo desktop */}
+        {scrolled && !isMobile && (
           <div
             className="absolute inset-0 pointer-events-none opacity-50"
             style={{
@@ -83,15 +96,18 @@ function Navbar() {
         )}
 
         <div className="container mx-auto flex justify-between items-center py-5 px-6 md:px-20 lg:px-32 relative z-10">
-          {/* Logo con efecto de brillo */}
-          <div className="relative group">
-            <div className="absolute -inset-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full opacity-0 group-hover:opacity-20 blur-xl transition-all duration-500" />
+          {/* Logo - efectos solo en desktop */}
+          <div className={`relative ${!isMobile ? "group" : ""}`}>
+            {!isMobile && (
+              <div className="absolute -inset-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full opacity-0 group-hover:opacity-20 blur-xl transition-all duration-500" />
+            )}
             <img
               src="/logo.png"
               alt="Logo"
-              className="w-20 cursor-pointer hover:scale-110 transition-all duration-500 drop-shadow-2xl relative z-10 hover:rotate-[5deg]"
+              className={`w-20 cursor-pointer relative z-10 ${
+                !isMobile ? "hover:scale-110 transition-all duration-500 drop-shadow-2xl hover:rotate-[5deg]" : ""
+              }`}
               onClick={handleLogoClick}
-              
             />
           </div>
 
@@ -121,7 +137,6 @@ function Navbar() {
                   }}
                 >
                   {item}
-                  {/* Underline animado con brillo */}
                   <span
                     className={`absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r ${
                       isDark
@@ -137,7 +152,6 @@ function Navbar() {
                     }}
                   />
                   
-                  {/* Efecto de partículas en hover */}
                   <span className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 group-hover:-top-10 transition-all duration-500">
                     <span className={`inline-block w-1 h-1 rounded-full ${isDark ? "bg-blue-400" : "bg-blue-600"}`} />
                   </span>
@@ -145,24 +159,7 @@ function Navbar() {
               );
             })}
 
-            {/* Botón Admisiones con animación de pulso */}
-            {/* <a
-              href="/PreInscripcion"
-              className="relative px-6 py-3 rounded-xl font-bold text-white overflow-hidden group shadow-2xl"
-              style={{
-                background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #3b82f6 100%)",
-                backgroundSize: "200% 100%",
-                animation: "gradientShift 3s ease infinite, fadeInDown 0.6s ease-out 0.4s both, pulse 2s ease-in-out infinite",
-              }}
-            >
-              <span className="relative z-10 flex items-center gap-2">
-                <span className="inline-block w-2 h-2 bg-green-400 rounded-full animate-ping absolute -left-1" />
-                Admisiones 2025
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-            </a> */}
-
-            {/* Botón Login con efecto neón */}
+            {/* Botón Login - solo desktop */}
             <a
               href="/login"
               className={`relative px-6 py-3 rounded-xl font-bold border-2 overflow-hidden group transition-all duration-500 hover:scale-110 ${
@@ -188,11 +185,13 @@ function Navbar() {
 
           {/* Controles derecha */}
           <div className="flex items-center gap-4">
-            <div className="relative group">
-              <div className={`absolute inset-0 ${isDark ? "bg-blue-500" : "bg-yellow-500"} rounded-full blur-md opacity-0 group-hover:opacity-50 transition-all duration-300`} />
+            <div className={`relative ${!isMobile ? "group" : ""}`}>
+              {!isMobile && (
+                <div className={`absolute inset-0 ${isDark ? "bg-blue-500" : "bg-yellow-500"} rounded-full blur-md opacity-0 group-hover:opacity-50 transition-all duration-300`} />
+              )}
               <IconButton
                 onClick={colorMode.toggleColorMode}
-                className="relative z-10 transition-all duration-500 hover:scale-110 hover:rotate-180"
+                className={`relative z-10 ${!isMobile ? "transition-all duration-500 hover:scale-110 hover:rotate-180" : ""}`}
                 sx={{
                   color: scrolled ? (isDark ? "#e5e7eb" : "#1f2937") : "#ffffff",
                   background: isDark
@@ -204,15 +203,12 @@ function Navbar() {
               </IconButton>
             </div>
 
-            {/* Ícono menú móvil con animación */}
+            {/* Ícono menú móvil - sin animaciones pesadas */}
             <div
-              className={`md:hidden cursor-pointer transition-all duration-300 hover:scale-110 hover:rotate-90 ${
+              className={`md:hidden cursor-pointer transition-transform duration-200 ${
                 scrolled ? (isDark ? "text-gray-200" : "text-gray-800") : "text-white"
               }`}
               onClick={() => setShowMobileMenu(true)}
-              style={{
-                filter: !scrolled ? "drop-shadow(0 0 10px rgba(59, 130, 246, 0.5))" : "none",
-              }}
             >
               <MenuIcon sx={{ width: 32, height: 32 }} />
             </div>
@@ -220,67 +216,46 @@ function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu con efecto de partículas */}
+      {/* Mobile Menu - Optimizado con fondo sólido */}
       <div
-        className={`fixed top-0 left-0 h-screen w-full z-[70] flex flex-col items-center justify-center transition-all duration-700 ${
+        className={`fixed top-0 left-0 h-screen w-full z-[70] flex flex-col items-center justify-center transition-all duration-500 ${
           isDark
-            ? "bg-gradient-to-br from-gray-900 via-blue-950 to-purple-950"
-            : "bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50"
+            ? "bg-gray-900"
+            : "bg-white"
         } ${
           showMobileMenu
             ? "translate-x-0 opacity-100"
             : "translate-x-full opacity-0 pointer-events-none"
         }`}
-        style={{
-          backgroundImage: isDark
-            ? "radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%)"
-            : "radial-gradient(circle at 20% 50%, rgba(147, 197, 253, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(196, 181, 253, 0.3) 0%, transparent 50%)",
-        }}
       >
-        {/* Botón cerrar mejorado */}
-        <div className="absolute top-6 right-6 group">
-          <div className={`absolute inset-0 ${isDark ? "bg-red-500" : "bg-red-600"} rounded-full blur-lg opacity-0 group-hover:opacity-40 transition-all duration-300`} />
+        {/* Botón cerrar - simplificado */}
+        <div className="absolute top-6 right-6">
           <CloseIcon
             onClick={() => setShowMobileMenu(false)}
-            className={`relative z-10 ${isDark ? "text-gray-200" : "text-gray-800"}`}
+            className={`${isDark ? "text-gray-200" : "text-gray-800"} transition-transform duration-300 hover:rotate-90`}
             sx={{
               width: 36,
               height: 36,
               cursor: "pointer",
-              transition: "transform 0.5s",
-              "&:hover": { transform: "rotate(90deg) scale(1.2)" },
             }}
           />
         </div>
 
         <ul
-          className={`flex flex-col items-center gap-8 text-2xl font-bold ${
+          className={`flex flex-col items-center gap-6 text-2xl font-bold ${
             isDark ? "text-gray-100" : "text-gray-900"
           }`}
         >
           {menuItems.map((item, index) => {
             const link = `#${item.replace(/\s+/g, "")}`;
             return (
-              <li
-                key={index}
-                className="relative group"
-                style={{
-                  animation: `fadeInUp 0.5s ease forwards, float 3s ease-in-out infinite`,
-                  animationDelay: `${index * 0.1 + 0.2}s, ${index * 0.3}s`,
-                }}
-              >
-                <div className={`absolute -inset-4 ${isDark ? "bg-blue-500" : "bg-blue-600"} rounded-lg opacity-0 group-hover:opacity-20 blur-xl transition-all duration-500`} />
+              <li key={index}>
                 <a
                   href={link}
                   onClick={() => setShowMobileMenu(false)}
-                  className={`relative z-10 transition-all duration-500 hover:scale-125 inline-block ${
+                  className={`transition-colors duration-300 ${
                     isDark ? "hover:text-blue-400" : "hover:text-blue-600"
                   }`}
-                  style={{
-                    textShadow: isDark
-                      ? "0 0 20px rgba(59, 130, 246, 0.5)"
-                      : "0 0 20px rgba(37, 99, 235, 0.3)",
-                  }}
                 >
                   {item}
                 </a>
@@ -288,113 +263,57 @@ function Navbar() {
             );
           })}
 
-          {/* Botón Admisiones mobile */}
-          <li style={{ animation: "fadeInUp 0.5s ease forwards", animationDelay: "0.7s" }}>
+          {/* Botón Admisiones mobile - simplificado */}
+          <li className="mt-4">
             <a
               href="/PreInscripcion"
               onClick={() => setShowMobileMenu(false)}
-              className="relative mt-6 inline-block px-8 py-4 rounded-2xl font-bold text-white overflow-hidden group shadow-2xl"
-              style={{
-                background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #3b82f6 100%)",
-                backgroundSize: "200% 100%",
-                animation: "gradientShift 3s ease infinite",
-                boxShadow: "0 10px 40px rgba(59, 130, 246, 0.4)",
-              }}
+              className="inline-block px-8 py-4 rounded-xl font-bold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg"
             >
-              <span className="relative z-10 flex items-center gap-2">
-                <span className="inline-block w-2 h-2 bg-green-400 rounded-full animate-ping" />
-                Admisiones 2025
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              Admisiones 2026
             </a>
           </li>
 
-          {/* Botón Login mobile */}
-          <li style={{ animation: "fadeInUp 0.5s ease forwards", animationDelay: "0.9s" }}>
+          {/* Botón Login mobile - simplificado */}
+          <li>
             <a
               href="/login"
               onClick={() => setShowMobileMenu(false)}
-              className={`relative inline-block border-2 px-8 py-4 rounded-2xl font-bold transition-all hover:scale-110 overflow-hidden group ${
+              className={`inline-block border-2 px-8 py-4 rounded-xl font-bold ${
                 isDark
-                  ? "border-yellow-400 text-yellow-400 hover:text-gray-900"
-                  : "border-yellow-500 text-yellow-600 hover:text-white"
+                  ? "border-yellow-400 text-yellow-400"
+                  : "border-yellow-500 text-yellow-600"
               }`}
-              style={{
-                boxShadow: isDark
-                  ? "0 10px 40px rgba(251, 191, 36, 0.3)"
-                  : "0 10px 40px rgba(234, 179, 8, 0.3)",
-              }}
             >
-              <span className="relative z-10">Login</span>
-              <div
-                className={`absolute inset-0 ${
-                  isDark ? "bg-yellow-400" : "bg-yellow-500"
-                } transform scale-0 group-hover:scale-100 transition-transform duration-500 rounded-2xl`}
-              />
+              Iniciar Sesión
             </a>
           </li>
         </ul>
       </div>
 
-      {/* Animaciones CSS avanzadas */}
+      {/* Animaciones CSS - solo para desktop */}
       <style jsx>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
+        @media (min-width: 768px) {
+          @keyframes fadeInDown {
+            from {
+              opacity: 0;
+              transform: translateY(-20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
           }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
 
-        @keyframes fadeInDown {
-          from {
-            opacity: 0;
-            transform: translateY(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes slideDown {
-          from {
-            transform: translateY(-100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-
-        @keyframes gradientShift {
-          0%, 100% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-        }
-
-        @keyframes pulse {
-          0%, 100% {
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
-          }
-          50% {
-            box-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
-          }
-        }
-
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-10px);
+          @keyframes slideDown {
+            from {
+              transform: translateY(-100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0);
+              opacity: 1;
+            }
           }
         }
       `}</style>
