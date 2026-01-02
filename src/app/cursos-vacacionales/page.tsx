@@ -1061,16 +1061,6 @@ export default function CursosVacacionalesPage() {
                                   p: 1.5,
                                 }}
                               >
-                                <Chip
-                                  icon={<EventSeat />}
-                                  label={`${curso.cupos_disponibles} cupos disponibles`}
-                                  size="small"
-                                  sx={{
-                                    background: alpha(cuposColor, 0.95),
-                                    color: "#fff",
-                                    fontWeight: 700,
-                                  }}
-                                />
                               </Box>
                             </Box>
 
@@ -1121,27 +1111,6 @@ export default function CursosVacacionalesPage() {
                                     </Typography>
                                   </Stack>
                                 )}
-
-                                <Stack direction="row" alignItems="center" spacing={1}>
-                                  <Group sx={{ color: "#f59e0b", fontSize: 20 }} />
-                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                    {curso.cupos_totales - curso.cupos_disponibles}/{curso.cupos_totales} inscritos
-                                  </Typography>
-                                </Stack>
-
-                                <LinearProgress 
-                                  variant="determinate" 
-                                  value={ocupacion} 
-                                  sx={{
-                                    height: 6,
-                                    borderRadius: 3,
-                                    backgroundColor: isDark ? alpha("#fff", 0.1) : alpha("#000", 0.05),
-                                    '& .MuiLinearProgress-bar': {
-                                      borderRadius: 3,
-                                      background: `linear-gradient(90deg, ${cuposColor}, ${alpha(cuposColor, 0.7)})`,
-                                    }
-                                  }}
-                                />
                               </Stack>
                             </CardContent>
 
