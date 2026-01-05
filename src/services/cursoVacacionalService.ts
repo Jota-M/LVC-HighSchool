@@ -214,79 +214,23 @@ export const cursosVacacionalesService = {
     return response.data.data;
   },
 };
-
 // =============================================
 // INSCRIPCIONES CORREGIDO
 // =============================================
 export const inscripcionesVacacionalesService = {
-  /**
-   * Inscripción pública (sin autenticación)
-   */
   async inscribirPublico(data: FormInscripcionPublica): Promise<InscripcionGrupalResponse> {
     const formData = new FormData();
 
-    // IMPORTANTE: Cursos como JSON string (array de números)
     if (!data.cursos || !Array.isArray(data.cursos) || data.cursos.length === 0) {
       throw new Error('Debe seleccionar al menos un curso');
     }
     formData.append('cursos', JSON.stringify(data.cursos));
 
-    // Paquete (opcional)
     if (data.paquete_id) {
       formData.append('paquete_id', data.paquete_id.toString());
     }
 
-    // Datos del estudiante (obligatorios)
-    formData.append('nombres', data.nombres);
-    formData.append('apellido_paterno', data.apellido_paterno);
-    formData.append('fecha_nacimiento', data.fecha_nacimiento);
-
-    // Datos del estudiante (opcionales)
-    if (data.apellido_materno) formData.append('apellido_materno', data.apellido_materno);
-    if (data.ci) formData.append('ci', data.ci);
-    if (data.genero) formData.append('genero', data.genero);
-    if (data.telefono) formData.append('telefono', data.telefono);
-    if (data.email) formData.append('email', data.email);
-
-    // Datos del tutor (obligatorios)
-    formData.append('nombre_tutor', data.nombre_tutor);
-    formData.append('telefono_tutor', data.telefono_tutor);
-
-    // Datos del tutor (opcionales)
-    if (data.email_tutor) formData.append('email_tutor', data.email_tutor);
-    if (data.parentesco_tutor) formData.append('parentesco_tutor', data.parentesco_tutor);
-
-    // Pago (obligatorio)
-    formData.append('monto_pagado', data.monto_pagado.toString());
-
-    // Pago (opcional)
-    if (data.numero_comprobante) formData.append('numero_comprobante', data.numero_comprobante);
-    if (data.fecha_pago) formData.append('fecha_pago', data.fecha_pago);
-    if (data.observaciones) formData.append('observaciones', data.observaciones);
-    if (data.comprobante) formData.append('comprobante', data.comprobante);
-
-    const response = await api.post('/cursos-vacacionales/publico/inscribir', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-
-    return response.data.data;
-  },
-
-  /**
-   * Inscripción con autenticación (admin)
-   */
-  async inscribir(data: FormInscripcionPublica): Promise<InscripcionGrupalResponse> {
-    const formData = new FormData();
-
-    // Validación
-    if (!data.cursos || !Array.isArray(data.cursos) || data.cursos.length === 0) {
-      throw new Error('Debe seleccionar al menos un curso');
-    }
-    formData.append('cursos', JSON.stringify(data.cursos));
-
-    if (data.paquete_id) formData.append('paquete_id', data.paquete_id.toString());
-
-    // Datos estudiante
+    // Datos del estudiante
     formData.append('nombres', data.nombres);
     formData.append('apellido_paterno', data.apellido_paterno);
     formData.append('fecha_nacimiento', data.fecha_nacimiento);
@@ -297,7 +241,7 @@ export const inscripcionesVacacionalesService = {
     if (data.telefono) formData.append('telefono', data.telefono);
     if (data.email) formData.append('email', data.email);
 
-    // Datos tutor
+    // Datos del tutor
     formData.append('nombre_tutor', data.nombre_tutor);
     formData.append('telefono_tutor', data.telefono_tutor);
     
@@ -307,10 +251,63 @@ export const inscripcionesVacacionalesService = {
     // Pago
     formData.append('monto_pagado', data.monto_pagado.toString());
     
+    // NUEVO: Método de pago
+    if (data.metodo_pago) {
+      formData.append('metodo_pago', data.metodo_pago);
+    }
+    
+    // Solo para transferencia/QR
     if (data.numero_comprobante) formData.append('numero_comprobante', data.numero_comprobante);
+    if (data.comprobante) formData.append('comprobante', data.comprobante);
+    
     if (data.fecha_pago) formData.append('fecha_pago', data.fecha_pago);
     if (data.observaciones) formData.append('observaciones', data.observaciones);
+    if (data.observaciones_pago) formData.append('observaciones_pago', data.observaciones_pago);
+
+    const response = await api.post('/cursos-vacacionales/publico/inscribir', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return response.data.data;
+  },
+
+  async inscribir(data: FormInscripcionPublica): Promise<InscripcionGrupalResponse> {
+    // Misma lógica que inscribirPublico, pero usa /inscripciones
+    const formData = new FormData();
+
+    if (!data.cursos || !Array.isArray(data.cursos) || data.cursos.length === 0) {
+      throw new Error('Debe seleccionar al menos un curso');
+    }
+    formData.append('cursos', JSON.stringify(data.cursos));
+
+    if (data.paquete_id) formData.append('paquete_id', data.paquete_id.toString());
+
+    formData.append('nombres', data.nombres);
+    formData.append('apellido_paterno', data.apellido_paterno);
+    formData.append('fecha_nacimiento', data.fecha_nacimiento);
+    
+    if (data.apellido_materno) formData.append('apellido_materno', data.apellido_materno);
+    if (data.ci) formData.append('ci', data.ci);
+    if (data.genero) formData.append('genero', data.genero);
+    if (data.telefono) formData.append('telefono', data.telefono);
+    if (data.email) formData.append('email', data.email);
+
+    formData.append('nombre_tutor', data.nombre_tutor);
+    formData.append('telefono_tutor', data.telefono_tutor);
+    
+    if (data.email_tutor) formData.append('email_tutor', data.email_tutor);
+    if (data.parentesco_tutor) formData.append('parentesco_tutor', data.parentesco_tutor);
+
+    formData.append('monto_pagado', data.monto_pagado.toString());
+    
+    // NUEVO: Método de pago
+    if (data.metodo_pago) formData.append('metodo_pago', data.metodo_pago);
+    
+    if (data.numero_comprobante) formData.append('numero_comprobante', data.numero_comprobante);
     if (data.comprobante) formData.append('comprobante', data.comprobante);
+    if (data.fecha_pago) formData.append('fecha_pago', data.fecha_pago);
+    if (data.observaciones) formData.append('observaciones', data.observaciones);
+    if (data.observaciones_pago) formData.append('observaciones_pago', data.observaciones_pago);
 
     const response = await api.post('/cursos-vacacionales/inscripciones', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -367,11 +364,87 @@ export const inscripcionesVacacionalesService = {
   async eliminar(id: number): Promise<void> {
     await api.delete(`/cursos-vacacionales/inscripciones/${id}`);
   },
+
 };
+export const inscripcionPDFService = {
+  /**
+   * Descarga el PDF del recibo de inscripción
+   */
+  async descargarPDF(inscripcionId: number): Promise<void> {
+    try {
+      const response = await api.get(
+        `/cursos-vacacionales/inscripciones/${inscripcionId}/pdf`,
+        {
+          responseType: 'blob',
+        }
+      );
+
+      // Extraer el nombre del archivo desde los headers
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `Recibo_Inscripcion_${inscripcionId}.pdf`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Crear un blob y descargarlo
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error al descargar PDF:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Abre el PDF en una nueva pestaña para preview
+   */
+  async previsualizarPDF(inscripcionId: number): Promise<void> {
+    try {
+      const response = await api.get(
+        `/cursos-vacacionales/inscripciones/${inscripcionId}/pdf/preview`,
+        {
+          responseType: 'blob',
+        }
+      );
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      
+      // Limpiar después de un tiempo
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 100);
+    } catch (error) {
+      console.error('Error al previsualizar PDF:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtiene la URL del PDF para mostrar en un iframe
+   */
+  getPDFUrl(inscripcionId: number): string {
+    return `/api/cursos-vacacionales/inscripciones/${inscripcionId}/pdf/preview`;
+  },
+};
+
 
 export default {
   paquetes: paquetesVacacionalesService,
   periodos: periodosVacacionalesService,
   cursos: cursosVacacionalesService,
   inscripciones: inscripcionesVacacionalesService,
+  pdf: inscripcionPDFService,
 };

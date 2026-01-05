@@ -23,6 +23,46 @@ import {
 } from '@/types/cursoVacacionalTypes';
 
 // =============================================
+// HOOK: Acciones PDF (NUEVO)
+// =============================================
+export const useInscripcionPDF = () => {
+  const { enqueueSnackbar } = useSnackbar();
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const descargarPDF = useCallback(async (inscripcionId: number) => {
+    try {
+      setIsDownloading(true);
+      await cursoVacacionalService.pdf.descargarPDF(inscripcionId);
+      enqueueSnackbar('PDF descargado exitosamente', { variant: 'success' });
+    } catch (error: any) {
+      enqueueSnackbar(
+        error.response?.data?.message || 'Error al descargar PDF',
+        { variant: 'error' }
+      );
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [enqueueSnackbar]);
+
+  const previsualizarPDF = useCallback(async (inscripcionId: number) => {
+    try {
+      await cursoVacacionalService.pdf.previsualizarPDF(inscripcionId);
+    } catch (error: any) {
+      enqueueSnackbar(
+        error.response?.data?.message || 'Error al previsualizar PDF',
+        { variant: 'error' }
+      );
+    }
+  }, [enqueueSnackbar]);
+
+  return {
+    descargarPDF,
+    previsualizarPDF,
+    isDownloading,
+  };
+};
+
+// =============================================
 // HOOK: Paquetes Vacacionales
 // =============================================
 export const usePaquetesVacacionales = () => {

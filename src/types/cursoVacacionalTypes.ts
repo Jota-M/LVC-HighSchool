@@ -120,6 +120,8 @@ export interface FormCursoVacacional extends CursoVacacionalCreate {
 // ============================================
 // INSCRIPCION VACACIONAL (CON PAQUETES)
 // ============================================
+export type MetodoPago = 'transferencia' | 'efectivo' | 'qr' | 'tarjeta';
+
 export type EstadoInscripcionVacacional = 
   | 'pendiente' 
   | 'pago_verificado' 
@@ -135,6 +137,10 @@ export interface InscripcionVacacional {
   paquete_id: number | null; // NUEVO
   curso_vacacional_id: number;
   
+  metodo_pago: MetodoPago;
+  recibo_interno: string | null;
+  observaciones_pago: string | null;
+
   nombres: string;
   apellido_paterno: string;
   apellido_materno: string | null;
@@ -201,9 +207,11 @@ export interface InscripcionVacacionalCreate {
   parentesco_tutor?: string;
   
   monto_pagado: number;
+  metodo_pago?: MetodoPago; // NUEVO
   numero_comprobante?: string;
   fecha_pago?: string;
   observaciones?: string;
+  observaciones_pago?: string; // NUEVO
 }
 
 export interface InscripcionVacacionalUpdate {
@@ -315,7 +323,9 @@ export interface EstadisticasPeriodo {
 export interface FormInscripcionPublica extends InscripcionVacacionalCreate {
   comprobante?: File;
 }
-
+export interface FormInscripcionPublica extends InscripcionVacacionalCreate {
+  comprobante?: File;
+}
 export interface FormPeriodoVacacional extends PeriodoVacacionalCreate {}
 
 // ============================================

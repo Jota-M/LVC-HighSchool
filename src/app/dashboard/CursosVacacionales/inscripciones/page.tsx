@@ -27,7 +27,8 @@ import {
 import { useRouter } from 'next/navigation';
 import { useInscripcionesVacacionales } from '@/hooks/useCursosVacacionales';
 import { InscripcionesTable } from '@/components/cursosVacacionales/InscripcionesTable';
-import { InscripcionFormModal } from '@/components/cursosVacacionales/InscripcionFormModal';
+// ✅ CAMBIADO: Importación del modal correcto
+import InscripcionFormModal from '@/components/cursosVacacionales/inscripcion/InscripcionModal';
 import { InscripcionVacacional } from '@/types/cursoVacacionalTypes';
 
 interface TabPanelProps {
@@ -332,7 +333,7 @@ export const Inscripciones: React.FC = () => {
         </TabPanel>
       </Container>
 
-      {/* Modal de Formulario */}
+      {/* Modal de Formulario - ✅ COMPONENTE CORRECTO */}
       <InscripcionFormModal open={formModalOpen} onClose={handleCloseFormModal} />
 
       {/* Dialog de confirmación de eliminación */}
