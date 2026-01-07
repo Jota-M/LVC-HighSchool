@@ -41,7 +41,7 @@ import {
   PictureAsPdf as PdfIcon,
   Download as DownloadIcon,
   Print as PrintIcon,
-  MoreVert as MoreVertIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 import { InscripcionVacacional, EstadoInscripcionVacacional } from '@/types/cursoVacacionalTypes';
 import { 
@@ -51,6 +51,7 @@ import {
   useInscripcionPDF 
 } from '@/hooks/useCursosVacacionales';
 import { format } from 'date-fns';
+import EditarInscripcionModal from './inscripcion/EditarInscripcionModal';
 
 interface InscripcionesTableProps {
   inscripciones: InscripcionVacacional[];
@@ -90,6 +91,10 @@ export const InscripcionesTable: React.FC<InscripcionesTableProps> = ({
   // Menú desplegable para PDF
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedInscripcion, setSelectedInscripcion] = useState<number | null>(null);
+
+  // ✅ Estados para el modal de edición
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [inscripcionToEdit, setInscripcionToEdit] = useState<InscripcionVacacional | null>(null);
 
   // Hooks
   const { periodos } = usePeriodosVacacionales({ activo: true });
@@ -178,6 +183,18 @@ export const InscripcionesTable: React.FC<InscripcionesTableProps> = ({
       previsualizarPDF(selectedInscripcion);
     }
     handleMenuClose();
+  };
+
+  // ✅ Manejo del modal de edición
+  const handleEditClick = (inscripcion: InscripcionVacacional, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setInscripcionToEdit(inscripcion);
+    setEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    setInscripcionToEdit(null);
   };
 
   const formatFecha = (fecha: string) => {
@@ -499,7 +516,7 @@ export const InscripcionesTable: React.FC<InscripcionesTableProps> = ({
                       </TableCell>
                       <TableCell align="right">
                         <Stack direction="row" spacing={1} justifyContent="flex-end">
-                          {/* ✅ BOTÓN PDF NUEVO */}
+                          {/* Botón PDF */}
                           <Tooltip title="Recibo PDF">
                             <IconButton
                               size="small"
@@ -515,6 +532,23 @@ export const InscripcionesTable: React.FC<InscripcionesTableProps> = ({
                             </IconButton>
                           </Tooltip>
                           
+                          {/* ✅ Botón Editar */}
+                          <Tooltip title="Editar inscripción">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleEditClick(inscripcion, e)}
+                              sx={{
+                                color: isDark ? '#facc15' : '#f59e0b',
+                                '&:hover': {
+                                  bgcolor: isDark ? alpha('#facc15', 0.1) : alpha('#f59e0b', 0.1),
+                                },
+                              }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          
+                          {/* Botón Ver detalles */}
                           <Tooltip title="Ver detalles">
                             <IconButton
                               size="small"
@@ -533,6 +567,7 @@ export const InscripcionesTable: React.FC<InscripcionesTableProps> = ({
                             </IconButton>
                           </Tooltip>
                           
+                          {/* Botón Eliminar */}
                           <Tooltip title="Eliminar">
                             <IconButton
                               size="small"
@@ -576,7 +611,7 @@ export const InscripcionesTable: React.FC<InscripcionesTableProps> = ({
         />
       </Card>
 
-      {/* ✅ MENÚ PDF DESPLEGABLE */}
+      {/* Menú PDF desplegable */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -610,6 +645,13 @@ export const InscripcionesTable: React.FC<InscripcionesTableProps> = ({
           Descargar PDF
         </MenuItem>
       </Menu>
+
+      {/* ✅ Modal de edición */}
+      <EditarInscripcionModal
+        open={editModalOpen}
+        onClose={handleCloseEditModal}
+        inscripcion={inscripcionToEdit}
+      />
     </>
   );
 };

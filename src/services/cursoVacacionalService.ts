@@ -18,6 +18,7 @@ import {
   FormInscripcionPublica,
   FormCursoVacacional,
   InscripcionGrupalResponse,
+  InscripcionVacacionalUpdate
 } from '@/types/cursoVacacionalTypes';
 
 // =============================================
@@ -346,10 +347,10 @@ export const inscripcionesVacacionalesService = {
     return response.data.data;
   },
 
-  async actualizar(id: number, data: any): Promise<InscripcionVacacional> {
-    const response = await api.put(`/cursos-vacacionales/inscripciones/${id}`, data);
-    return response.data.data;
-  },
+  async actualizar(id: number, data: InscripcionVacacionalUpdate): Promise<InscripcionVacacional> {
+  const response = await api.put(`/cursos-vacacionales/inscripciones/${id}`, data);
+  return response.data.data;
+},
 
   async verificarPago(id: number): Promise<InscripcionVacacional> {
     const response = await api.post(`/cursos-vacacionales/inscripciones/${id}/verificar-pago`);

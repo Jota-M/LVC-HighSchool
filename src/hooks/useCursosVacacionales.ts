@@ -20,6 +20,7 @@ import {
   CambiarEstadoInscripcion,
   EstadisticasPeriodo,
   InscripcionGrupalResponse,
+  InscripcionVacacionalUpdate
 } from '@/types/cursoVacacionalTypes';
 
 // =============================================
@@ -433,7 +434,22 @@ export const useInscripcionesVacacionales = (filters?: InscripcionVacacionalFilt
       enqueueSnackbar(error.response?.data?.message || 'Error al cambiar estado', { variant: 'error' });
     },
   });
-
+  const actualizarMutation = useMutation({
+  // ✅ CAMBIAR: InscripcionVacacional por InscripcionVacacionalUpdate
+  mutationFn: ({ id, data }: { id: number; data: InscripcionVacacionalUpdate }) =>
+    cursoVacacionalService.inscripciones.actualizar(id, data),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['inscripciones-vacacionales'] });
+    queryClient.invalidateQueries({ queryKey: ['inscripcion-vacacional'] });
+    enqueueSnackbar('Inscripción actualizada exitosamente', { variant: 'success' });
+  },
+  onError: (error: any) => {
+    enqueueSnackbar(
+      error.response?.data?.message || 'Error al actualizar inscripción',
+      { variant: 'error' }
+    );
+  },
+});
   const eliminarMutation = useMutation({
     mutationFn: (id: number) => cursoVacacionalService.inscripciones.eliminar(id),
     onSuccess: () => {
@@ -449,6 +465,7 @@ export const useInscripcionesVacacionales = (filters?: InscripcionVacacionalFilt
   const actualizarFiltros = useCallback((newFilters: Partial<InscripcionVacacionalFilters>) => {
     setLocalFilters((prev) => ({ ...prev, ...newFilters }));
   }, []);
+  
 
   return {
     inscripciones: data?.inscripciones || [],
@@ -467,6 +484,8 @@ export const useInscripcionesVacacionales = (filters?: InscripcionVacacionalFilt
     isVerificandoPago: verificarPagoMutation.isPending,
     isCambiandoEstado: cambiarEstadoMutation.isPending,
     isEliminando: eliminarMutation.isPending,
+    actualizar: actualizarMutation.mutate,
+    isUpdating: actualizarMutation.isPending,
   };
 };
 
