@@ -45,7 +45,7 @@ const Paralelos: React.FC = () => {
     actualizarParalelo,
     eliminarParalelo,
     estadisticas
-  } = useParalelos({ anio: anioActual });
+  } = useParalelos({ anio: 2025 });
 
   const handleOpenDialog = (paralelo: Paralelo | null = null) => {
     setEditingParalelo(paralelo);

@@ -92,7 +92,7 @@ const FormularioMatriculacion: React.FC = () => {
 
       setIsLoadingParalelos(true);
       try {
-        const anioActual = new Date().getFullYear();
+        const anioActual = 2025;
         const paralelos = await obtenerTodosLosParalelos(anioActual);
         setParalelosDisponibles(paralelos);
       } catch (error) {
