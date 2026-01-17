@@ -10,6 +10,7 @@ export type ModoRegistro = 'nuevo' | 'existente' | 'multiple';
 // ============================================
 
 export interface Estudiante {
+  rude: string;
   id: number;
   usuario_id: number | null;
   codigo: string;
@@ -39,12 +40,29 @@ export interface Estudiante {
   username?: string;
   usuario_email?: string;
   total_matriculas?: number;
+  
+  // ⚠️ CAMPOS OPCIONALES - Solo vienen del endpoint de matriculación
+  matricula_actual_id?: number | null;
+  matricula_estado?: string | null;
+  grado_actual?: string | null;
+  paralelo_actual?: string | null;
+  periodo_actual?: string | null;
+  turno_actual?: string | null;
+  ultima_matricula?: {
+    periodo: string;
+    grado: string;
+    paralelo: string;
+    estado: string;
+  } | null;
+  
+  // Relaciones completas (opcional)
   matriculas?: Matricula[];
   tutores?: Tutor[];
 }
 
 export interface EstudianteCreate {
   nombres: string;
+  rude: string;
   apellido_paterno: string;
   apellido_materno?: string;
   fecha_nacimiento: string;
@@ -57,7 +75,7 @@ export interface EstudianteCreate {
   telefono?: string;
   email?: string;
   contacto_emergencia?: string;
-  telefono_emergencia?: string;
+  // telefono_emergencia?: string;
   tiene_discapacidad?: boolean;
   tipo_discapacidad?: string;
   observaciones?: string;
@@ -99,11 +117,11 @@ export interface TutorCreate {
   email?: string;
   direccion?: string;
   ocupacion?: string;
-  lugar_trabajo?: string;
-  telefono_trabajo?: string;
+  // lugar_trabajo?: string;
+  // telefono_trabajo?: string;
   parentesco?: string;
   estado_civil?: string;
-  nivel_educacion?: string;
+  // nivel_educacion?: string;
   es_tutor_principal?: boolean;
   vive_con_estudiante?: boolean;
   autorizado_recoger?: boolean;

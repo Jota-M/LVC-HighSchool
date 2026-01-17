@@ -101,7 +101,7 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
           telefono: '',
           email: '',
           contacto_emergencia: '',
-          telefono_emergencia: '',
+          rude: '',
           tiene_discapacidad: false,
           tipo_discapacidad: '',
           observaciones: '',
@@ -335,6 +335,15 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
             </Grid>
             <Grid size={{ xs: 12, md: 3 }}>
               <TextField
+                fullWidth
+                label="R.U.D.E."
+                value={estudiante.rude}
+                onChange={(e) => handleEstudianteChange(index, 'rude', e.target.value)}
+                sx={fieldStyle}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <TextField
                 select
                 fullWidth
                 label="Género"
@@ -404,15 +413,6 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
                 label="Contacto de Emergencia"
                 value={estudiante.contacto_emergencia}
                 onChange={(e) => handleEstudianteChange(index, 'contacto_emergencia', e.target.value)}
-                sx={fieldStyle}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <TextField
-                fullWidth
-                label="Teléfono de Emergencia"
-                value={estudiante.telefono_emergencia}
-                onChange={(e) => handleEstudianteChange(index, 'telefono_emergencia', e.target.value)}
                 sx={fieldStyle}
               />
             </Grid>

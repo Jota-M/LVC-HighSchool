@@ -121,65 +121,147 @@ export const useConversionPreinscripcion = (preinscripcionId: number) => {
   });
 
   // =============================================
-  // QUERY: Obtener periodos académicos
+  // QUERY: Obtener periodos académicos - CORREGIDO
   // =============================================
   const {
     data: periodos,
     isLoading: loadingPeriodos,
+    error: errorPeriodos,
   } = useQuery<Periodo[]>({
     queryKey: ['periodos-academicos'],
     queryFn: async () => {
-      const { data } = await api.get('/periodo-academico');
-      const periodos = data?.periodos || data || [];
-      return Array.isArray(periodos) ? periodos : [];
+      try {
+        const response = await api.get('/periodo-academico');
+        console.log('📅 Response completa de periodos:', response);
+        console.log('📅 Response.data:', response.data);
+        
+        // Intentar diferentes estructuras de respuesta
+        let periodosData = null;
+        
+        if (response.data?.data?.periodos) {
+          periodosData = response.data.data.periodos;
+        } else if (response.data?.periodos) {
+          periodosData = response.data.periodos;
+        } else if (response.data?.data && Array.isArray(response.data.data)) {
+          periodosData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          periodosData = response.data;
+        }
+        
+        console.log('📅 Periodos extraídos:', periodosData);
+        
+        if (!Array.isArray(periodosData)) {
+          console.warn('⚠️ Periodos no es un array:', periodosData);
+          return [];
+        }
+        
+        return periodosData;
+      } catch (error) {
+        console.error('❌ Error al cargar periodos:', error);
+        return [];
+      }
     },
     staleTime: 1000 * 60 * 10,
+    retry: 2,
   });
 
   // =============================================
-  // QUERY: Obtener grados
+  // QUERY: Obtener grados - CORREGIDO
   // =============================================
   const {
     data: grados,
     isLoading: loadingGrados,
+    error: errorGrados,
   } = useQuery<Grado[]>({
     queryKey: ['grados'],
     queryFn: async () => {
-      const { data } = await api.get('/grado');
-      const grados = data?.grados || data || [];
-      return Array.isArray(grados) ? grados : [];
+      try {
+        const response = await api.get('/grado');
+        console.log('📚 Response de grados:', response.data);
+        
+        let gradosData = null;
+        
+        if (response.data?.data?.grados) {
+          gradosData = response.data.data.grados;
+        } else if (response.data?.grados) {
+          gradosData = response.data.grados;
+        } else if (response.data?.data && Array.isArray(response.data.data)) {
+          gradosData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          gradosData = response.data;
+        }
+        
+        console.log('📚 Grados extraídos:', gradosData);
+        
+        if (!Array.isArray(gradosData)) {
+          console.warn('⚠️ Grados no es un array:', gradosData);
+          return [];
+        }
+        
+        return gradosData;
+      } catch (error) {
+        console.error('❌ Error al cargar grados:', error);
+        return [];
+      }
     },
     staleTime: 1000 * 60 * 10,
+    retry: 2,
   });
 
   // =============================================
-  // QUERY: Obtener paralelos disponibles
+  // QUERY: Obtener paralelos disponibles - CORREGIDO
   // =============================================
   const {
     data: paralelos,
     isLoading: loadingParalelos,
+    error: errorParalelos,
   } = useQuery<Paralelo[]>({
     queryKey: ['paralelos-disponibles'],
     queryFn: async () => {
-      const { data } = await api.get('/paralelo');
-      const allParalelos = data?.paralelos || data || [];
-      
-      if (!Array.isArray(allParalelos)) {
+      try {
+        const response = await api.get('/paralelo');
+        console.log('👥 Response de paralelos:', response.data);
+        
+        let paralelosData = null;
+        
+        if (response.data?.data?.paralelos) {
+          paralelosData = response.data.data.paralelos;
+        } else if (response.data?.paralelos) {
+          paralelosData = response.data.paralelos;
+        } else if (response.data?.data && Array.isArray(response.data.data)) {
+          paralelosData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          paralelosData = response.data;
+        }
+        
+        console.log('👥 Paralelos extraídos:', paralelosData);
+        
+        if (!Array.isArray(paralelosData)) {
+          console.warn('⚠️ Paralelos no es un array:', paralelosData);
+          return [];
+        }
+        
+        const paralelosConDisponibilidad = paralelosData
+          .map((p: any) => ({
+            ...p,
+            estudiantes_actuales: parseInt(p.total_estudiantes) || 0,
+            disponibles: p.capacidad_maxima - (parseInt(p.total_estudiantes) || 0),
+            porcentaje_ocupacion: Math.round(
+              ((parseInt(p.total_estudiantes) || 0) / p.capacidad_maxima) * 100
+            ),
+          }))
+          .filter((p: any) => p.disponibles > 0);
+        
+        console.log('👥 Paralelos con disponibilidad:', paralelosConDisponibilidad);
+        
+        return paralelosConDisponibilidad;
+      } catch (error) {
+        console.error('❌ Error al cargar paralelos:', error);
         return [];
       }
-      
-      return allParalelos
-        .map((p: any) => ({
-          ...p,
-          estudiantes_actuales: parseInt(p.total_estudiantes) || 0,
-          disponibles: p.capacidad_maxima - (parseInt(p.total_estudiantes) || 0),
-          porcentaje_ocupacion: Math.round(
-            ((parseInt(p.total_estudiantes) || 0) / p.capacidad_maxima) * 100
-          ),
-        }))
-        .filter((p: any) => p.disponibles > 0);
     },
     staleTime: 1000 * 60 * 5,
+    retry: 2,
   });
 
   // =============================================
@@ -222,6 +304,7 @@ export const useConversionPreinscripcion = (preinscripcionId: number) => {
       queryClient.invalidateQueries({ queryKey: ['estudiantes'] });
     },
     onError: (error: any) => {
+      console.error('❌ Error en conversión:', error);
       enqueueSnackbar(
         error.message || 'Error al convertir preinscripción',
         { variant: 'error', autoHideDuration: 6000 }
@@ -235,6 +318,20 @@ export const useConversionPreinscripcion = (preinscripcionId: number) => {
   const periodosActivos = Array.isArray(periodos) 
     ? periodos.filter(p => p.activo) 
     : [];
+
+  // Debug de estados
+  console.log('🔍 Estado del Hook:', {
+    periodos,
+    periodosActivos,
+    grados,
+    paralelos,
+    loadingPeriodos,
+    loadingGrados,
+    loadingParalelos,
+    errorPeriodos,
+    errorGrados,
+    errorParalelos,
+  });
 
   return {
     // Datos principales
@@ -259,6 +356,9 @@ export const useConversionPreinscripcion = (preinscripcionId: number) => {
     
     // Errores
     error: errorPreinscripcion,
+    errorPeriodos,
+    errorGrados,
+    errorParalelos,
     errorConversion: convertirMutation.error,
   };
 };

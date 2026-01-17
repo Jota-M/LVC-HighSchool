@@ -34,11 +34,11 @@ interface Tutor {
   email: string;
   direccion: string;
   ocupacion: string;
-  lugar_trabajo: string;
-  telefono_trabajo: string;
+  // lugar_trabajo: string;
+  // telefono_trabajo: string;
   parentesco: string;
   estado_civil: string;
-  nivel_educacion: string;
+  // nivel_educacion: string;
   es_tutor_principal: boolean;
   vive_con_estudiante: boolean;
   autorizado_recoger: boolean;
@@ -102,11 +102,11 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
         email: '',
         direccion: '',
         ocupacion: '',
-        lugar_trabajo: '',
-        telefono_trabajo: '',
+        // lugar_trabajo: '',
+        // telefono_trabajo: '',
         parentesco: '',
         estado_civil: '',
-        nivel_educacion: '',
+        // nivel_educacion: '',
         es_tutor_principal: false,
         vive_con_estudiante: true,
         autorizado_recoger: true,
@@ -349,25 +349,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
                 sx={fieldStyle}
               />
             </Grid>
-
-            <Grid size={{xs:12, md:6}}>
-              <TextField
-                fullWidth
-                label="Lugar de Trabajo"
-                value={tutor.lugar_trabajo}
-                onChange={(e) => handleTutorChange(index, 'lugar_trabajo', e.target.value)}
-                sx={fieldStyle}
-              />
-            </Grid>
-            <Grid size={{xs:12, md:4}}>
-              <TextField
-                fullWidth
-                label="Teléfono de Trabajo"
-                value={tutor.telefono_trabajo}
-                onChange={(e) => handleTutorChange(index, 'telefono_trabajo', e.target.value)}
-                sx={fieldStyle}
-              />
-            </Grid>
             <Grid size={{xs:12, md:4}}>
               <TextField
                 select
@@ -384,24 +365,8 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
                 ))}
               </TextField>
             </Grid>
-            <Grid size={{xs:12, md:4}}>
-              <TextField
-                select
-                fullWidth
-                label="Nivel de Educación"
-                value={tutor.nivel_educacion}
-                onChange={(e) => handleTutorChange(index, 'nivel_educacion', e.target.value)}
-                sx={fieldStyle}
-              >
-                {nivelesEducacion.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
 
-            <Grid size={{xs:12}}>
+            <Grid size={{xs:12, md:8}}>
               <TextField
                 fullWidth
                 label="Dirección"

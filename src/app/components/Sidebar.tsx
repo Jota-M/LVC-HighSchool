@@ -25,6 +25,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 // Icons
+import CalculateIcon from '@mui/icons-material/Calculate';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
 import ContactsOutlinedIcon from '@mui/icons-material/ContactsOutlined';
@@ -436,8 +437,14 @@ const sections = [
       {
         title: 'Matriculas',
         to: '/dashboard/matriculacion',
-        permissions: ['matriculacion.leer'], // ✅ CAMBIADO
+        permissions: ['matriculacion.leer'],
         icon: <AppRegistrationIcon />,
+      },
+      {
+        title: 'Mensualidades',
+        to: '/dashboard/pagos',
+        icon: <CalculateIcon />,
+        permissions: ['materias.leer'],
       },
       {
         title: 'Asignaciones',

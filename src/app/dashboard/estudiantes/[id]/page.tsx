@@ -211,7 +211,9 @@ export const EstudianteDetalle: React.FC = () => {
                         />
                         {estudiante.usuario_id && (
                           <Chip label="Con usuario" size="small" color="info" />
+                          
                         )}
+                        <Chip label={estudiante.rude} size="small" color="info" />
                       </Box>
                     </Box>
                   </Box>
@@ -480,7 +482,7 @@ export const EstudianteDetalle: React.FC = () => {
                     </Grid>
 
                     {/* Emergencia */}
-                    {(estudiante.contacto_emergencia || estudiante.telefono_emergencia) && (
+                    {(estudiante.contacto_emergencia) && (
                       <Grid size={{xs:12}}>
                         <Alert
                           severity="warning"
@@ -491,7 +493,7 @@ export const EstudianteDetalle: React.FC = () => {
                             Contacto de Emergencia
                           </Typography>
                           <Typography variant="body2">
-                            {estudiante.contacto_emergencia} - {estudiante.telefono_emergencia}
+                            {estudiante.contacto_emergencia} 
                           </Typography>
                         </Alert>
                       </Grid>

@@ -72,7 +72,7 @@ export const EstudianteEditar: React.FC = () => {
     telefono: '',
     email: '',
     contacto_emergencia: '',
-    telefono_emergencia: '',
+    rude: '',
     tiene_discapacidad: false,
     tipo_discapacidad: '',
     observaciones: '',
@@ -101,7 +101,7 @@ export const EstudianteEditar: React.FC = () => {
         telefono: estudiante.telefono || '',
         email: estudiante.email || '',
         contacto_emergencia: estudiante.contacto_emergencia || '',
-        telefono_emergencia: estudiante.telefono_emergencia || '',
+        rude: estudiante.rude || '',
         tiene_discapacidad: estudiante.tiene_discapacidad || false,
         tipo_discapacidad: estudiante.tipo_discapacidad || '',
         observaciones: estudiante.observaciones || '',
@@ -483,9 +483,9 @@ export const EstudianteEditar: React.FC = () => {
                       <TextField
                         fullWidth
                         size="small"
-                        label="Teléfono de Emergencia"
-                        value={formData.telefono_emergencia}
-                        onChange={(e) => handleChange('telefono_emergencia', e.target.value)}
+                        label="R.U.D.E."
+                        value={formData.rude}
+                        onChange={(e) => handleChange('rude', e.target.value)}
                         sx={fieldStyle}
                       />
                     </Grid>
