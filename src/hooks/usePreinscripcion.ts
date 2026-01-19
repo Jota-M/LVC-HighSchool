@@ -275,16 +275,16 @@ export function usePreinscripcion() {
       if (!representante.telefono) nuevosErrores.telefono_rep = 'Campo requerido';
     }
 
-    if (paso === 2) {
-      const docs = documentosEstudiantes[estudianteActivo];
-      if (!docs.cedula_estudiante) nuevosErrores.cedula_estudiante = 'Documento requerido';
-      if (!docs.certificado_nacimiento) nuevosErrores.certificado_nacimiento = 'Documento requerido';
-      if (!docs.libreta_notas) nuevosErrores.libreta_notas = 'Documento requerido';
+    // if (paso === 2) {
+    //   const docs = documentosEstudiantes[estudianteActivo];
+    //   if (!docs.cedula_estudiante) nuevosErrores.cedula_estudiante = 'Documento requerido';
+    //   if (!docs.certificado_nacimiento) nuevosErrores.certificado_nacimiento = 'Documento requerido';
+    //   if (!docs.libreta_notas) nuevosErrores.libreta_notas = 'Documento requerido';
 
-      if (modo !== 'padre_existente' && !documentosRepresentante.cedula_representante) {
-        nuevosErrores.cedula_representante = 'Documento requerido';
-      }
-    }
+    //   if (modo !== 'padre_existente' && !documentosRepresentante.cedula_representante) {
+    //     nuevosErrores.cedula_representante = 'Documento requerido';
+    //   }
+    // }
 
     setErrors(nuevosErrores);
     return Object.keys(nuevosErrores).length === 0;

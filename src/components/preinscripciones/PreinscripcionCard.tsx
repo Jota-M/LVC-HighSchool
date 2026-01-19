@@ -34,7 +34,9 @@ import TableChartIcon from '@mui/icons-material/TableChart';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { Preinscripcion } from '../../types/preinscripcioonTypes';
+import { useRouter } from 'next/navigation';
 
 interface PreinscripcionCardProps {
   preinscripcion: Preinscripcion;
@@ -129,6 +131,7 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
   onEliminar 
 }) => {
   const theme = useTheme();
+  const router = useRouter();
   const config = getEstadoConfig(preinscripcion.estado);
   const iniciales = getIniciales(preinscripcion.estudiante_nombre);
   
@@ -142,6 +145,14 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
 
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  // 🆕 Verificar si puede convertir
+  const puedeConvertir = preinscripcion.estado === 'aprobada' && preinscripcion.tiene_cupo_asignado;
+
+  // 🆕 Ir a página de conversión
+  const handleConvertir = () => {
+    router.push(`/dashboard/preinscripciones/convertir/${preinscripcion.id}`);
   };
 
   return (
@@ -323,36 +334,78 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
         </CardContent>
 
         <CardActions sx={{ pt: 0, gap: 1, px: 2, pb: 2 }}>
-          <Button
-            fullWidth
-            variant="contained"
-            startIcon={<VisibilityIcon />}
-            onClick={() => onRevisar(preinscripcion.id)}
-            sx={{
-              borderRadius: 3,
-              textTransform: 'none',
-              fontWeight: 600,
-              background: `linear-gradient(135deg, ${config.color}, ${config.color}cc)`,
-              '&:hover': {
-                background: `linear-gradient(135deg, ${config.color}dd, ${config.color}aa)`,
-              }
-            }}
-          >
-            Revisar
-          </Button>
-          <Tooltip title="Eliminar">
-            <IconButton 
-              color="error" 
-              onClick={() => onEliminar(preinscripcion.id)}
-              sx={{ 
-                border: '2px solid',
-                borderColor: 'error.main',
-                '&:hover': { bgcolor: 'error.main', color: '#fff' }
-              }}
-            >
-              <DeleteIcon />
-            </IconButton>
-          </Tooltip>
+          {/* 🆕 BOTÓN CONVERTIR - Solo si está aprobada y tiene cupo */}
+          {puedeConvertir ? (
+            <>
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<PersonAddIcon />}
+                onClick={handleConvertir}
+                sx={{
+                  borderRadius: 3,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #059669, #047857)',
+                    transform: 'scale(1.02)',
+                  }
+                }}
+              >
+                Convertir
+              </Button>
+              <Tooltip title="Ver detalles">
+                <IconButton 
+                  onClick={() => onRevisar(preinscripcion.id)}
+                  sx={{ 
+                    border: '2px solid',
+                    borderColor: config.color,
+                    color: config.color,
+                    '&:hover': { 
+                      bgcolor: config.color, 
+                      color: '#fff' 
+                    }
+                  }}
+                >
+                  <VisibilityIcon />
+                </IconButton>
+              </Tooltip>
+            </>
+          ) : (
+            <>
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<VisibilityIcon />}
+                onClick={() => onRevisar(preinscripcion.id)}
+                sx={{
+                  borderRadius: 3,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  background: `linear-gradient(135deg, ${config.color}, ${config.color}cc)`,
+                  '&:hover': {
+                    background: `linear-gradient(135deg, ${config.color}dd, ${config.color}aa)`,
+                  }
+                }}
+              >
+                Revisar
+              </Button>
+              <Tooltip title="Eliminar">
+                <IconButton 
+                  color="error" 
+                  onClick={() => onEliminar(preinscripcion.id)}
+                  sx={{ 
+                    border: '2px solid',
+                    borderColor: 'error.main',
+                    '&:hover': { bgcolor: 'error.main', color: '#fff' }
+                  }}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
         </CardActions>
 
         {/* MENÚ */}
@@ -378,7 +431,16 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
             <ListItemText>Ver detalles</ListItemText>
           </MenuItem>
 
-          <Divider sx={{ my: 0.5 }} />
+          {/* 🆕 Opción de convertir en el menú */}
+          {puedeConvertir && [
+            <MenuItem key="convertir" onClick={() => { handleMenuClose(); handleConvertir(); }}>
+              <ListItemIcon>
+                <PersonAddIcon fontSize="small" sx={{ color: '#10b981' }} />
+              </ListItemIcon>
+              <ListItemText sx={{ color: '#10b981' }}>Convertir a estudiante</ListItemText>
+            </MenuItem>,
+            <Divider key="divider-convertir" sx={{ my: 0.5 }} />
+          ]}
 
           <MenuItem onClick={handleMenuClose}>
             <ListItemIcon>

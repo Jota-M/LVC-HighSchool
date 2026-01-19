@@ -84,7 +84,7 @@ export const MatriculaSelectors: React.FC<MatriculaSelectorsProps> = ({
 
       setIsLoadingParalelos(true);
       try {
-        const anio = periodoActivo?.anio || 2025;
+        const anio = periodoActivo?.anio || new Date().getFullYear();
         const data = await obtenerParalelos(gradoSeleccionado, anio);
         setParalelos(Array.isArray(data) ? data : []);
       } catch (error) {

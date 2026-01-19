@@ -21,7 +21,7 @@ interface DocumentosStepProps {
   documentos: PreInscripcionFormData['documentos'];
   errors: ErroresFormulario;
   onChange: (field: keyof PreInscripcionFormData['documentos'], file: File | null) => void;
-  modoRegistro?: 'nuevo' | 'padre_existente' | 'multiple'; // 🆕 Prop para saber el modo
+  modoRegistro?: 'nuevo' | 'padre_existente' | 'multiple'; 
 }
 
 interface PreviewFile {
@@ -35,19 +35,19 @@ const DOCUMENTOS_ESTUDIANTE = [
     field: 'cedula_estudiante' as const,
     label: 'Cédula de Identidad del Estudiante',
     descripcion: 'Fotocopia legible de ambas caras',
-    obligatorio: true,
+    obligatorio: false,
   },
   {
     field: 'certificado_nacimiento' as const,
     label: 'Certificado de Nacimiento',
     descripcion: 'Original o fotocopia legalizada',
-    obligatorio: true,
+    obligatorio: false,
   },
   {
     field: 'libreta_notas' as const,
     label: 'Libreta de Notas',
     descripcion: 'Del último año cursado',
-    obligatorio: true,
+    obligatorio: false,
   },
   {
     field: 'foto_estudiante' as const,

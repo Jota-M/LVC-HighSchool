@@ -114,7 +114,7 @@ export const PreinscripcionesHeader: React.FC<PreinscripcionesHeaderProps> = ({
 
             <Tooltip title="Gestionar Cupos">
               <IconButton 
-                onClick={() => window.location.href = '/dashboard/cupos'}
+                onClick={() => window.location.href = '/dashboard/preinscripciones/cupos'}
                 sx={{ 
                   bgcolor: 'info.main',
                   color: '#fff',
