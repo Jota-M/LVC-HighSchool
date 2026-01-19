@@ -327,86 +327,82 @@ export const RegistroPagos: React.FC = () => {
 
   // 🔧 NUEVO: Generar mensualidades
   const handleGenerarMensualidades = useCallback(async () => {
-    if (!estudianteParaGenerar?.matricula) {
-      enqueueSnackbar('No hay datos de matrícula disponibles', { variant: 'error' });
-      return;
-    }
+  if (!estudianteParaGenerar?.matricula) {
+    enqueueSnackbar('No hay datos de matrícula disponibles', { variant: 'error' });
+    return;
+  }
 
-    const matricula = estudianteParaGenerar.matricula;
+  const matricula = estudianteParaGenerar.matricula;
 
-    // Validaciones críticas
-    if (!matricula.nivel_id) {
-      enqueueSnackbar('❌ Error: La matrícula no tiene nivel académico asignado', { 
-        variant: 'error' 
-      });
-      return;
-    }
+  // Validación crítica: solo nivel_id es necesario ahora
+  if (!matricula.nivel_id) {
+    enqueueSnackbar('❌ Error: La matrícula no tiene nivel académico asignado', { 
+      variant: 'error' 
+    });
+    return;
+  }
 
-    if (!matricula.periodo_academico_id) {
-      enqueueSnackbar('❌ Error: La matrícula no tiene período académico asignado', { 
-        variant: 'error' 
-      });
-      return;
-    }
+  setLoadingGenerar(true);
 
-    setLoadingGenerar(true);
+  try {
+    const porcentajeBeca = matricula.es_becado 
+      ? parseFloat(matricula.porcentaje_beca || '0')
+      : 0;
 
-    try {
-      const porcentajeBeca = matricula.es_becado 
-        ? parseFloat(matricula.porcentaje_beca || '0')
-        : 0;
+    // 🎯 CAMBIO PRINCIPAL: Usar periodo_academico_id fijo en 2
+    const periodoId = 2;
 
-      console.log('📤 Generando mensualidades con:', {
-        matricula_id: matricula.id,
-        periodo_academico_id: matricula.periodo_academico_id,
-        nivel_academico_id: matricula.nivel_id,
-        porcentaje_beca: porcentajeBeca
-      });
+    console.log('📤 Generando mensualidades con:', {
+      matricula_id: matricula.id,
+      periodo_academico_id: periodoId, // <- SIEMPRE 2
+      nivel_academico_id: matricula.nivel_id,
+      porcentaje_beca: porcentajeBeca
+    });
 
-      const { data } = await api.post('/api/mensualidad/generar', {
-        matricula_id: matricula.id,
-        periodo_academico_id: matricula.periodo_academico_id,
-        nivel_academico_id: matricula.nivel_id,
-        porcentaje_beca: porcentajeBeca
-      });
+    const { data } = await api.post('/api/mensualidad/generar', {
+      matricula_id: matricula.id,
+      periodo_academico_id: periodoId, // <- SIEMPRE 2
+      nivel_academico_id: matricula.nivel_id,
+      porcentaje_beca: porcentajeBeca
+    });
 
-      enqueueSnackbar(
-        `✅ 10 mensualidades generadas exitosamente para ${estudianteParaGenerar.nombres}`,
-        { variant: 'success' }
-      );
+    enqueueSnackbar(
+      `✅ 10 mensualidades generadas exitosamente para ${estudianteParaGenerar.nombres}`,
+      { variant: 'success' }
+    );
 
-      // Recargar las mensualidades del estudiante
-      await recargarMensualidadesEstudiante(estudianteParaGenerar.id);
+    // Recargar las mensualidades del estudiante
+    await recargarMensualidadesEstudiante(estudianteParaGenerar.id);
 
-      setModalGenerarOpen(false);
-      setEstudianteParaGenerar(null);
+    setModalGenerarOpen(false);
+    setEstudianteParaGenerar(null);
 
-    } catch (error: any) {
-      console.error('❌ Error al generar mensualidades:', error);
-      console.error('📋 Response:', error.response?.data);
+  } catch (error: any) {
+    console.error('❌ Error al generar mensualidades:', error);
+    console.error('📋 Response:', error.response?.data);
+    
+    let errorMsg = 'Error al generar mensualidades';
+    
+    if (error.response?.data?.message) {
+      errorMsg = error.response.data.message;
       
-      let errorMsg = 'Error al generar mensualidades';
-      
-      if (error.response?.data?.message) {
-        errorMsg = error.response.data.message;
-        
-        // Mensajes específicos para errores comunes
-        if (errorMsg.includes('configuración de costo')) {
-          errorMsg = '⚠️ No existe configuración de costo para este nivel y período.\n\n' +
-                    'Por favor, ve a Configuración → Costos de Mensualidad y crea la configuración necesaria.';
-        } else if (errorMsg.includes('Ya existen mensualidades')) {
-          errorMsg = '⚠️ Este estudiante ya tiene mensualidades generadas.';
-        }
+      // Mensajes específicos para errores comunes
+      if (errorMsg.includes('configuración de costo')) {
+        errorMsg = '⚠️ No existe configuración de costo para este nivel y período.\n\n' +
+                  'Por favor, ve a Configuración → Costos de Mensualidad y crea la configuración necesaria.';
+      } else if (errorMsg.includes('Ya existen mensualidades')) {
+        errorMsg = '⚠️ Este estudiante ya tiene mensualidades generadas.';
       }
-      
-      enqueueSnackbar(errorMsg, { 
-        variant: 'error',
-        autoHideDuration: 6000 
-      });
-    } finally {
-      setLoadingGenerar(false);
     }
-  }, [estudianteParaGenerar, enqueueSnackbar, recargarMensualidadesEstudiante]);
+    
+    enqueueSnackbar(errorMsg, { 
+      variant: 'error',
+      autoHideDuration: 6000 
+    });
+  } finally {
+    setLoadingGenerar(false);
+  }
+}, [estudianteParaGenerar, enqueueSnackbar, recargarMensualidadesEstudiante]);
 
   // Calcular total seleccionado
   const totalSeleccionado = React.useMemo(() => {
