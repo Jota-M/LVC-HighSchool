@@ -73,6 +73,9 @@ export const CursosVacacionales: React.FC = () => {
   const handleGestionarInscripciones = () => {
     router.push('/dashboard/CursosVacacionales/inscripciones');
   };
+  const handleCertificados = () => {
+    router.push('/dashboard/CursosVacacionales/certificados');
+  };
 
   return (
     <Box sx={{ minHeight: '100vh', py: 4 }}>
@@ -192,7 +195,27 @@ export const CursosVacacionales: React.FC = () => {
                 >
                   Cursos
                 </Button>
-
+                <Button
+                  variant="outlined"
+                  size="medium"
+                  onClick={handleCertificados}
+                  sx={{
+                    fontSize: { xs: '0.75rem', md: '0.875rem' },
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    px: 3,
+                    py: 1,
+                    borderColor: isDark ? '#facc15' : '#0288d1',
+                    color: isDark ? '#facc15' : '#0288d1',
+                    '&:hover': {
+                      borderColor: isDark ? '#f59e0b' : '#01579b',
+                      bgcolor: isDark ? alpha('#facc15', 0.1) : alpha('#0288d1', 0.1),
+                    },
+                  }}
+                >
+                  Certificados
+                </Button>
                 <Button
                   variant="contained"
                   size="medium"

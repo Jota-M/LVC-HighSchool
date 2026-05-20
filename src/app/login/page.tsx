@@ -1,5 +1,7 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { getRoleBasedRoute } from '../../lib/roleRoutes';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -29,6 +31,7 @@ import Header from './Header';
 
 export default function LoginPage() {
   const { login, loading: authLoading } = useAuth();
+  const router = useRouter();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   
@@ -45,6 +48,7 @@ export default function LoginPage() {
 
     try {
       await login(credential, password);
+      router.replace('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Error al iniciar sesión');
       setLoading(false);

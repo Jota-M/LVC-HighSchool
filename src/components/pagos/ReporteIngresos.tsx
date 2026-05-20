@@ -30,19 +30,33 @@ import {
 } from 'recharts';
 import { Download as DownloadIcon } from '@mui/icons-material';
 import { usePagos } from '@/hooks/usePagos';
+import academicosService from '@/services/academicos';
 
 export const ReporteIngresos: React.FC = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const { ingresos, loadingReportes, cargarIngresos } = usePagos({});
 
-  const [filtros, setFiltros] = useState({
-    periodo_academico_id: 1, // TODO: obtener del contexto
-  });
+  const [periodoId, setPeriodoId] = useState<number | null>(null);
 
   useEffect(() => {
-    cargarIngresos(filtros);
-  }, [filtros, cargarIngresos]);
+    const cargarPeriodoActivo = async () => {
+      try {
+        const response = await academicosService.obtenerPeriodoActivo();
+        setPeriodoId(response.data.periodo.id);
+      } catch (error) {
+        console.error('Error al obtener periodo activo:', error);
+      }
+    };
+  
+    cargarPeriodoActivo();
+  }, []);
+
+  useEffect(() => {
+    if (periodoId) {
+      cargarIngresos({ periodo_academico_id: periodoId });
+    }
+  }, [periodoId, cargarIngresos]);
 
   if (loadingReportes) {
     return (
@@ -74,19 +88,27 @@ export const ReporteIngresos: React.FC = () => {
   }, []);
 
   const ingresosPorMetodo = ingresos.reduce((acc: any[], ingreso) => {
-    const existing = acc.find((item) => item.metodo === ingreso.metodo_pago);
-    if (existing) {
-      existing.total += ingreso.total_ingreso;
-      existing.cantidad += ingreso.cantidad_pagos;
-    } else {
-      acc.push({
-        metodo: ingreso.metodo_pago.charAt(0).toUpperCase() + ingreso.metodo_pago.slice(1),
-        total: ingreso.total_ingreso,
-        cantidad: ingreso.cantidad_pagos,
-      });
-    }
-    return acc;
-  }, []);
+  const metodoPago: string = ingreso.metodo_pago ? String(ingreso.metodo_pago) : 'sin_metodo';
+
+  const existing = acc.find((item) => item.metodo_key === metodoPago);
+
+  if (existing) {
+    existing.total += Number(ingreso.total_ingreso || 0);
+    existing.cantidad += Number(ingreso.cantidad_pagos || 0);
+  } else {
+    acc.push({
+      metodo_key: metodoPago,
+      metodo:
+        metodoPago === 'sin_metodo'
+          ? 'Sin método'
+          : metodoPago.charAt(0).toUpperCase() + metodoPago.slice(1),
+      total: Number(ingreso.total_ingreso || 0),
+      cantidad: Number(ingreso.cantidad_pagos || 0),
+    });
+  }
+
+  return acc;
+}, []);
 
   const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444'];
 
@@ -102,7 +124,7 @@ export const ReporteIngresos: React.FC = () => {
     <Box>
       {/* Resumen */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Card
             sx={{
               borderRadius: '16px',
@@ -129,7 +151,7 @@ export const ReporteIngresos: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Card
             sx={{
               borderRadius: '16px',
@@ -152,7 +174,7 @@ export const ReporteIngresos: React.FC = () => {
       {/* Gráficas */}
       <Grid container spacing={3}>
         {/* Ingresos por Mes */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Card
             sx={{
               borderRadius: '20px',
@@ -174,6 +196,7 @@ export const ReporteIngresos: React.FC = () => {
                   Ingresos por Mes
                 </Typography>
                 <Button
+                  color='secondary'
                   variant="outlined"
                   size="small"
                   startIcon={<DownloadIcon />}
@@ -226,7 +249,7 @@ export const ReporteIngresos: React.FC = () => {
         </Grid>
 
         {/* Ingresos por Método */}
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Card
             sx={{
               borderRadius: '20px',
@@ -247,8 +270,8 @@ export const ReporteIngresos: React.FC = () => {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ metodo, percent }) =>
-                      `${metodo}: ${(percent * 100).toFixed(0)}%`
+                    label={({ payload, percent }) =>
+                      `${payload.metodo}: ${((percent ?? 0) * 100).toFixed(0)}%`
                     }
                     outerRadius={80}
                     fill="#8884d8"

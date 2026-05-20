@@ -1,4 +1,4 @@
-// components/pagos/EstadoCuentaEstudiantes.tsx
+// components/pagos/EstadoCuentaEstudiantes.tsx - CORREGIDO
 'use client';
 import React, { useEffect, useState } from 'react';
 import {
@@ -22,6 +22,7 @@ import {
   InputAdornment,
   IconButton,
   Collapse,
+  Alert,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -31,8 +32,10 @@ import {
   CheckCircle,
   Warning,
   AttachMoney,
+  CalendarMonth,
 } from '@mui/icons-material';
 import { usePagos } from '@/hooks/usePagos';
+import { useAcademicos } from '@/hooks/useAcademicos'; // 🔧 AGREGAR
 import { EstadoPagosEstudiante } from '@/types/pagos';
 
 interface RowProps {
@@ -121,12 +124,12 @@ const EstudianteRow: React.FC<RowProps> = ({ estudiante, isDark }) => {
         </TableCell>
         <TableCell align="right">
           <Typography variant="body2" fontWeight={700} color="#10b981">
-            Bs {estudiante.monto_pagado.toFixed(2)}
+            Bs {(Number(estudiante.monto_pagado) || 0).toFixed(2)}
           </Typography>
         </TableCell>
         <TableCell align="right">
           <Typography variant="body2" fontWeight={700} color="#ef4444">
-            Bs {estudiante.monto_pendiente.toFixed(2)}
+            Bs {(Number(estudiante.monto_pendiente) || 0).toFixed(2)}
           </Typography>
         </TableCell>
         <TableCell align="center">
@@ -151,7 +154,7 @@ const EstudianteRow: React.FC<RowProps> = ({ estudiante, isDark }) => {
           <Collapse in={open} timeout="auto" unmountOnExit>
             <Box sx={{ p: 3, backgroundColor: alpha(isDark ? '#fff' : '#000', 0.02) }}>
               <Grid container spacing={2}>
-                <Grid size={{xs:12, sm:6, md:3}}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Box
                     sx={{
                       p: 2,
@@ -200,7 +203,7 @@ const EstudianteRow: React.FC<RowProps> = ({ estudiante, isDark }) => {
                       Total Pagado
                     </Typography>
                     <Typography variant="h6" fontWeight={700} color="#10b981">
-                      Bs {estudiante.monto_pagado.toFixed(2)}
+                      Bs {(Number(estudiante.monto_pagado) || 0).toFixed(2)}
                     </Typography>
                   </Box>
                 </Grid>
@@ -218,7 +221,7 @@ const EstudianteRow: React.FC<RowProps> = ({ estudiante, isDark }) => {
                       Saldo Pendiente
                     </Typography>
                     <Typography variant="h6" fontWeight={700} color="#ef4444">
-                      Bs {estudiante.monto_pendiente.toFixed(2)}
+                      Bs {(Number(estudiante.monto_pendiente) || 0).toFixed(2)}
                     </Typography>
                   </Box>
                 </Grid>
@@ -235,15 +238,29 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const { estadoEstudiantes, loadingReportes, cargarEstadoEstudiantes } = usePagos({});
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filtros, setFiltros] = useState({
-    periodo_academico_id: 1, // TODO: obtener del contexto
+  
+  // 🔧 AGREGAR: Obtener período activo
+  const { periodoActivo, loading: loadingPeriodo } = useAcademicos({
+    autoLoad: true,
+    loadPeriodos: true,
+    loadTurnos: false,
+    loadNiveles: false,
+    loadGrados: false,
+    loadParalelos: false,
+    loadMaterias: false,
+    loadGradoMaterias: false
   });
 
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // 🔧 MODIFICADO: Usar periodo_academico_id del período activo
   useEffect(() => {
-    cargarEstadoEstudiantes(filtros);
-  }, [filtros, cargarEstadoEstudiantes]);
+    if (periodoActivo) {
+      cargarEstadoEstudiantes({ 
+        periodo_academico_id: periodoActivo.id 
+      });
+    }
+  }, [periodoActivo, cargarEstadoEstudiantes]);
 
   const estudiantesFiltrados = estadoEstudiantes.filter(
     (est) =>
@@ -256,6 +273,32 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
     // TODO: Implementar exportación
     console.log('Exportar estado de cuenta');
   };
+
+  // 🔧 AGREGAR: Loading mientras carga período
+  if (loadingPeriodo) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 8 }}>
+        <CircularProgress />
+        <Typography variant="body2" color="text.secondary" mt={2}>
+          Cargando período académico...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // 🔧 AGREGAR: Validación de período activo
+  if (!periodoActivo) {
+    return (
+      <Alert severity="error" sx={{ borderRadius: '16px', maxWidth: 600, mx: 'auto', mt: 4 }}>
+        <Typography variant="h6" fontWeight={700} gutterBottom>
+          ⚠️ No hay período académico activo
+        </Typography>
+        <Typography variant="body2">
+          Por favor, activa un período en Configuración → Períodos Académicos
+        </Typography>
+      </Alert>
+    );
+  }
 
   if (loadingReportes) {
     return (
@@ -277,6 +320,39 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
 
   return (
     <Box>
+      {/* 🔧 AGREGAR: Banner con período activo */}
+      <Alert 
+        severity="info" 
+        icon={<CalendarMonth />}
+        sx={{ 
+          mb: 3,
+          borderRadius: '16px',
+          background: alpha(isDark ? '#facc15' : '#0288d1', 0.1),
+          border: `2px solid ${alpha(isDark ? '#facc15' : '#0288d1', 0.3)}`,
+        }}
+      >
+        <Box display="flex" alignItems="center" gap={2}>
+          <Box flex={1}>
+            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+              PERÍODO ACADÉMICO
+            </Typography>
+            <Typography variant="h6" fontWeight={700}>
+              {periodoActivo.nombre}
+            </Typography>
+          </Box>
+          <Chip
+            label={`ID: ${periodoActivo.id}`}
+            size="small"
+            sx={{
+              borderRadius: '8px',
+              fontWeight: 700,
+              background: isDark ? '#facc15' : '#0288d1',
+              color: isDark ? '#000' : '#fff',
+            }}
+          />
+        </Box>
+      </Alert>
+
       {/* Resumen */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{xs:12, sm:4}}>
@@ -308,7 +384,8 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
                     Total Recaudado
                   </Typography>
                   <Typography variant="h6" fontWeight={700} color="#10b981">
-                    Bs {totales.pagado.toFixed(2)}
+                    Bs {Number(totales.pagado).toFixed(2)}
+
                   </Typography>
                 </Box>
               </Box>
@@ -345,7 +422,8 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
                     Total Pendiente
                   </Typography>
                   <Typography variant="h6" fontWeight={700} color="#f59e0b">
-                    Bs {totales.pendiente.toFixed(2)}
+                    Bs {(Number(totales.pendiente) || 0).toFixed(2)}
+
                   </Typography>
                 </Box>
               </Box>
@@ -382,7 +460,7 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
                     Monto Total
                   </Typography>
                   <Typography variant="h6" fontWeight={700}>
-                    Bs {totales.total.toFixed(2)}
+                    Bs {(Number(totales.total) || 0).toFixed(2)}
                   </Typography>
                 </Box>
               </Box>

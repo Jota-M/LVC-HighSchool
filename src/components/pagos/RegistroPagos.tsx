@@ -1,4 +1,4 @@
-// components/pagos/RegistroPagos.tsx - CON BOTÓN GENERAR MENSUALIDADES
+// components/pagos/RegistroPagos.tsx - VERSIÓN CON PAGO ANUAL
 'use client';
 import React, { useState, useCallback } from 'react';
 import {
@@ -43,10 +43,12 @@ import {
   Close,
 } from '@mui/icons-material';
 import { useEstudiantes } from '@/hooks/useEstudiantes';
+import { useAcademicos } from '@/hooks/useAcademicos'; 
 import type { Estudiante } from '@/types/estudianteTypes';
 import type { Mensualidad } from '@/types/pagos';
 import { ModalPagoMultiple } from './ModalPagoMultiple';
 import { ModalPagoDistribuido } from './ModalPagoDistribuido';
+import { ModalPagoAnual } from './PagoAnualDialog';
 import { useSnackbar } from 'notistack';
 import api from '@/lib/api';
 import type { EstudianteConMensualidades } from '@/types/pagos';
@@ -84,6 +86,20 @@ export const RegistroPagos: React.FC = () => {
   const isDark = theme.palette.mode === 'dark';
   const { enqueueSnackbar } = useSnackbar();
 
+  const { 
+    periodoActivo, 
+    loading: loadingPeriodo 
+  } = useAcademicos({
+    autoLoad: true,
+    loadPeriodos: true,
+    loadTurnos: false,
+    loadNiveles: false,
+    loadGrados: false,
+    loadParalelos: false,
+    loadMaterias: false,
+    loadGradoMaterias: false
+  });
+
   // Estados
   const [estudiantesSeleccionados, setEstudiantesSeleccionados] = useState<EstudianteConDatos[]>([]);
   const [mensualidadesSeleccionadas, setMensualidadesSeleccionadas] = useState<Set<number>>(new Set());
@@ -92,11 +108,13 @@ export const RegistroPagos: React.FC = () => {
   const [estudianteParaDistribucion, setEstudianteParaDistribucion] = useState<EstudianteConDatos | null>(null);
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [modoSeleccion, setModoSeleccion] = useState(false);
-  
-  // 🔧 NUEVO: Estados para modal de generar mensualidades
   const [modalGenerarOpen, setModalGenerarOpen] = useState(false);
   const [estudianteParaGenerar, setEstudianteParaGenerar] = useState<EstudianteConDatos | null>(null);
   const [loadingGenerar, setLoadingGenerar] = useState(false);
+  
+  // 🆕 Estados para Pago Anual
+  const [pagoAnualOpen, setPagoAnualOpen] = useState(false);
+  const [estudianteParaPagoAnual, setEstudianteParaPagoAnual] = useState<EstudianteConDatos | null>(null);
 
   // Hooks
   const { 
@@ -166,8 +184,16 @@ export const RegistroPagos: React.FC = () => {
     }
   }, [actualizarFiltros]);
 
-  // Agregar estudiante
+  // Agregar estudiante con validación de período
   const handleAgregarEstudiante = useCallback(async (estudiante: Estudiante) => {
+    if (!periodoActivo) {
+      enqueueSnackbar('⚠️ No hay un período académico activo. Por favor, activa un período en Configuración.', { 
+        variant: 'error',
+        autoHideDuration: 5000
+      });
+      return;
+    }
+
     if (estudiantesSeleccionados.some(e => e.id === estudiante.id)) {
       enqueueSnackbar('Este estudiante ya está seleccionado', { variant: 'info' });
       return;
@@ -183,21 +209,38 @@ export const RegistroPagos: React.FC = () => {
     setEstudiantesSeleccionados(prev => [...prev, nuevoEstudiante]);
 
     try {
+      console.log('🔍 Buscando matrícula para estudiante:', estudiante.id, 'en período:', periodoActivo.id);
+      
       const { data } = await api.get('/matricula', {
         params: {
           estudiante_id: estudiante.id,
+          periodo_academico_id: periodoActivo.id,
           estado: 'activo'
         }
       });
+
+      console.log('📋 Matrículas encontradas:', data.data?.matriculas?.length || 0);
 
       let matricula = null;
       if (data.data?.matriculas?.[0]) {
         const { data: detalleData } = await api.get(`/matricula/${data.data.matriculas[0].id}`);
         matricula = detalleData.data.matricula;
+        
+        console.log('✅ Matrícula cargada:', {
+          id: matricula.id,
+          periodo_id: matricula.periodo_academico_id,
+          grado: matricula.grado_nombre
+        });
       }
 
       if (!matricula) {
-        enqueueSnackbar(`${estudiante.nombres} no tiene matrícula activa`, { variant: 'warning' });
+        enqueueSnackbar(
+          `⚠️ ${estudiante.nombres} no tiene matrícula activa en el período ${periodoActivo.nombre}`,
+          { 
+            variant: 'warning',
+            autoHideDuration: 5000
+          }
+        );
         setEstudiantesSeleccionados(prev => 
           prev.map(e => e.id === estudiante.id 
             ? { ...e, loadingMensualidades: false }
@@ -215,6 +258,8 @@ export const RegistroPagos: React.FC = () => {
       );
       const mensualidades = mensualidadesData.data.mensualidades || [];
 
+      console.log('📅 Mensualidades cargadas:', mensualidades.length);
+
       setEstudiantesSeleccionados(prev => 
         prev.map(e => e.id === estudiante.id 
           ? { ...e, matricula, mensualidades, loadingMensualidades: false }
@@ -224,9 +269,12 @@ export const RegistroPagos: React.FC = () => {
 
       setExpandidos(prev => new Set([...prev, estudiante.id]));
 
-    } catch (error) {
-      console.error('Error al cargar datos:', error);
+    } catch (error: any) {
+      console.error('❌ Error al cargar datos:', error);
+      console.error('📋 Response:', error.response?.data);
+      
       enqueueSnackbar('Error al cargar los datos del estudiante', { variant: 'error' });
+      
       setEstudiantesSeleccionados(prev => 
         prev.map(e => e.id === estudiante.id 
           ? { ...e, loadingMensualidades: false }
@@ -234,7 +282,7 @@ export const RegistroPagos: React.FC = () => {
         )
       );
     }
-  }, [estudiantesSeleccionados, enqueueSnackbar]);
+  }, [estudiantesSeleccionados, enqueueSnackbar, periodoActivo]);
 
   // Eliminar estudiante
   const handleEliminarEstudiante = useCallback((estudianteId: number) => {
@@ -315,7 +363,30 @@ export const RegistroPagos: React.FC = () => {
     setPagoDistribuidoOpen(true);
   }, [enqueueSnackbar]);
 
-  // 🔧 NUEVO: Abrir modal para generar mensualidades
+  // 🆕 Abrir pago anual
+  const handleAbrirPagoAnual = useCallback((estudiante: EstudianteConDatos) => {
+    if (!estudiante.matricula) {
+      enqueueSnackbar('El estudiante no tiene matrícula activa', { variant: 'warning' });
+      return;
+    }
+
+    const pendientes = estudiante.mensualidades.filter(
+      m => m.estado === 'pendiente' || m.estado === 'vencido'
+    );
+
+    if (pendientes.length < 10) {
+      enqueueSnackbar(
+        `⚠️ Se necesitan 10 mensualidades pendientes para pago anual. Actualmente hay ${pendientes.length} disponibles.`,
+        { variant: 'warning', autoHideDuration: 5000 }
+      );
+      return;
+    }
+
+    setEstudianteParaPagoAnual(estudiante);
+    setPagoAnualOpen(true);
+  }, [enqueueSnackbar]);
+
+  // Abrir modal para generar mensualidades
   const handleAbrirModalGenerar = useCallback((estudiante: EstudianteConDatos) => {
     if (!estudiante.matricula) {
       enqueueSnackbar('El estudiante no tiene matrícula activa', { variant: 'warning' });
@@ -325,84 +396,85 @@ export const RegistroPagos: React.FC = () => {
     setModalGenerarOpen(true);
   }, [enqueueSnackbar]);
 
-  // 🔧 NUEVO: Generar mensualidades
+  // Generar mensualidades
   const handleGenerarMensualidades = useCallback(async () => {
-  if (!estudianteParaGenerar?.matricula) {
-    enqueueSnackbar('No hay datos de matrícula disponibles', { variant: 'error' });
-    return;
-  }
-
-  const matricula = estudianteParaGenerar.matricula;
-
-  // Validación crítica: solo nivel_id es necesario ahora
-  if (!matricula.nivel_id) {
-    enqueueSnackbar('❌ Error: La matrícula no tiene nivel académico asignado', { 
-      variant: 'error' 
-    });
-    return;
-  }
-
-  setLoadingGenerar(true);
-
-  try {
-    const porcentajeBeca = matricula.es_becado 
-      ? parseFloat(matricula.porcentaje_beca || '0')
-      : 0;
-
-    // 🎯 CAMBIO PRINCIPAL: Usar periodo_academico_id fijo en 2
-    const periodoId = 2;
-
-    console.log('📤 Generando mensualidades con:', {
-      matricula_id: matricula.id,
-      periodo_academico_id: periodoId, // <- SIEMPRE 2
-      nivel_academico_id: matricula.nivel_id,
-      porcentaje_beca: porcentajeBeca
-    });
-
-    const { data } = await api.post('/api/mensualidad/generar', {
-      matricula_id: matricula.id,
-      periodo_academico_id: periodoId, // <- SIEMPRE 2
-      nivel_academico_id: matricula.nivel_id,
-      porcentaje_beca: porcentajeBeca
-    });
-
-    enqueueSnackbar(
-      `✅ 10 mensualidades generadas exitosamente para ${estudianteParaGenerar.nombres}`,
-      { variant: 'success' }
-    );
-
-    // Recargar las mensualidades del estudiante
-    await recargarMensualidadesEstudiante(estudianteParaGenerar.id);
-
-    setModalGenerarOpen(false);
-    setEstudianteParaGenerar(null);
-
-  } catch (error: any) {
-    console.error('❌ Error al generar mensualidades:', error);
-    console.error('📋 Response:', error.response?.data);
-    
-    let errorMsg = 'Error al generar mensualidades';
-    
-    if (error.response?.data?.message) {
-      errorMsg = error.response.data.message;
-      
-      // Mensajes específicos para errores comunes
-      if (errorMsg.includes('configuración de costo')) {
-        errorMsg = '⚠️ No existe configuración de costo para este nivel y período.\n\n' +
-                  'Por favor, ve a Configuración → Costos de Mensualidad y crea la configuración necesaria.';
-      } else if (errorMsg.includes('Ya existen mensualidades')) {
-        errorMsg = '⚠️ Este estudiante ya tiene mensualidades generadas.';
-      }
+    if (!estudianteParaGenerar?.matricula) {
+      enqueueSnackbar('No hay datos de matrícula disponibles', { variant: 'error' });
+      return;
     }
-    
-    enqueueSnackbar(errorMsg, { 
-      variant: 'error',
-      autoHideDuration: 6000 
-    });
-  } finally {
-    setLoadingGenerar(false);
-  }
-}, [estudianteParaGenerar, enqueueSnackbar, recargarMensualidadesEstudiante]);
+
+    const matricula = estudianteParaGenerar.matricula;
+
+    if (!matricula.nivel_id) {
+      enqueueSnackbar('❌ Error: La matrícula no tiene nivel académico asignado', { 
+        variant: 'error' 
+      });
+      return;
+    }
+
+    if (!matricula.periodo_academico_id) {
+      enqueueSnackbar('❌ Error: La matrícula no tiene período académico asignado', { 
+        variant: 'error' 
+      });
+      return;
+    }
+
+    setLoadingGenerar(true);
+
+    try {
+      const porcentajeBeca = matricula.es_becado 
+        ? parseFloat(matricula.porcentaje_beca || '0')
+        : 0;
+
+      console.log('📤 Generando mensualidades con:', {
+        matricula_id: matricula.id,
+        periodo_academico_id: matricula.periodo_academico_id,
+        nivel_academico_id: matricula.nivel_id,
+        porcentaje_beca: porcentajeBeca
+      });
+
+      const { data } = await api.post('/api/mensualidad/generar', {
+        matricula_id: matricula.id,
+        periodo_academico_id: matricula.periodo_academico_id,
+        nivel_academico_id: matricula.nivel_id,
+        porcentaje_beca: porcentajeBeca
+      });
+
+      enqueueSnackbar(
+        `✅ 10 mensualidades generadas exitosamente para ${estudianteParaGenerar.nombres}`,
+        { variant: 'success' }
+      );
+
+      await recargarMensualidadesEstudiante(estudianteParaGenerar.id);
+
+      setModalGenerarOpen(false);
+      setEstudianteParaGenerar(null);
+
+    } catch (error: any) {
+      console.error('❌ Error al generar mensualidades:', error);
+      console.error('📋 Response:', error.response?.data);
+      
+      let errorMsg = 'Error al generar mensualidades';
+      
+      if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+        
+        if (errorMsg.includes('configuración de costo')) {
+          errorMsg = '⚠️ No existe configuración de costo para este nivel y período.\n\n' +
+                    'Por favor, ve a Configuración → Costos de Mensualidad y crea la configuración necesaria.';
+        } else if (errorMsg.includes('Ya existen mensualidades')) {
+          errorMsg = '⚠️ Este estudiante ya tiene mensualidades generadas.';
+        }
+      }
+      
+      enqueueSnackbar(errorMsg, { 
+        variant: 'error',
+        autoHideDuration: 6000 
+      });
+    } finally {
+      setLoadingGenerar(false);
+    }
+  }, [estudianteParaGenerar, enqueueSnackbar, recargarMensualidadesEstudiante]);
 
   // Calcular total seleccionado
   const totalSeleccionado = React.useMemo(() => {
@@ -482,6 +554,19 @@ export const RegistroPagos: React.FC = () => {
     
     setEstudianteParaDistribucion(null);
   }, [estudianteParaDistribucion, recargarMensualidadesEstudiante, enqueueSnackbar]);
+
+  // 🆕 Success callback para pago anual
+  const handlePagoAnualSuccess = useCallback(async () => {
+    console.log('✅ Pago anual exitoso - Recargando datos');
+    setPagoAnualOpen(false);
+    
+    if (estudianteParaPagoAnual) {
+      await recargarMensualidadesEstudiante(estudianteParaPagoAnual.id);
+      enqueueSnackbar('Pago anual registrado y mensualidades actualizadas', { variant: 'success' });
+    }
+    
+    setEstudianteParaPagoAnual(null);
+  }, [estudianteParaPagoAnual, recargarMensualidadesEstudiante, enqueueSnackbar]);
 
   // Render card de mensualidad
   const renderMensualidadCard = (
@@ -620,6 +705,41 @@ export const RegistroPagos: React.FC = () => {
       </Grid>
     );
   };
+
+  if (loadingPeriodo) {
+    return (
+      <Box textAlign="center" py={12}>
+        <CircularProgress size={48} />
+        <Typography variant="body1" color="text.secondary" mt={3}>
+          Cargando período académico activo...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (!periodoActivo) {
+    return (
+      <Alert 
+        severity="error" 
+        sx={{ 
+          borderRadius: '16px',
+          maxWidth: 600,
+          mx: 'auto',
+          mt: 4
+        }}
+      >
+        <Typography variant="h6" fontWeight={700} gutterBottom>
+          ⚠️ No hay período académico activo
+        </Typography>
+        <Typography variant="body2" color="text.secondary" paragraph>
+          No se puede registrar pagos sin un período académico activo.
+        </Typography>
+        <Typography variant="body2" fontWeight={600}>
+          Por favor, ve a <strong>Configuración → Períodos Académicos</strong> y activa un período.
+        </Typography>
+      </Alert>
+    );
+  }
 
   return (
     <Box>
@@ -868,27 +988,50 @@ export const RegistroPagos: React.FC = () => {
 
                     <Stack direction="row" spacing={1} alignItems="center">
                       {estudiante.mensualidades.length > 0 && !modoSeleccion && (
-                        <Tooltip title="Pago con monto personalizado y distribución automática">
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<Calculate />}
-                            onClick={() => handleAbrirPagoDistribuido(estudiante)}
-                            sx={{
-                              borderRadius: '8px',
-                              textTransform: 'none',
-                              fontWeight: 600,
-                              borderColor: isDark ? '#facc15' : '#0288d1',
-                              color: isDark ? '#facc15' : '#0288d1',
-                              '&:hover': {
-                                borderColor: isDark ? '#f59e0b' : '#01579b',
-                                background: alpha(isDark ? '#facc15' : '#0288d1', 0.1),
-                              },
-                            }}
-                          >
-                            Pago Distribuido
-                          </Button>
-                        </Tooltip>
+                        <>
+                          <Tooltip title="Pago Anual Completo - 10% descuento (1 mes gratis)">
+                            <Button
+                              variant="contained"
+                              size="small"
+                              startIcon={<AutoAwesome />}
+                              onClick={() => handleAbrirPagoAnual(estudiante)}
+                              sx={{
+                                borderRadius: '8px',
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                color: '#fff',
+                                '&:hover': {
+                                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                                },
+                              }}
+                            >
+                              Pago Anual
+                            </Button>
+                          </Tooltip>
+
+                          <Tooltip title="Pago con monto personalizado y distribución automática">
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={<Calculate />}
+                              onClick={() => handleAbrirPagoDistribuido(estudiante)}
+                              sx={{
+                                borderRadius: '8px',
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                borderColor: isDark ? '#facc15' : '#0288d1',
+                                color: isDark ? '#facc15' : '#0288d1',
+                                '&:hover': {
+                                  borderColor: isDark ? '#f59e0b' : '#01579b',
+                                  background: alpha(isDark ? '#facc15' : '#0288d1', 0.1),
+                                },
+                              }}
+                            >
+                              Pago Distribuido
+                            </Button>
+                          </Tooltip>
+                        </>
                       )}
 
                       {estudiante.mensualidades.length > 0 && modoSeleccion && (
@@ -925,7 +1068,6 @@ export const RegistroPagos: React.FC = () => {
                         </Typography>
                       </Box>
                     ) : estudiante.mensualidades.length === 0 ? (
-                      // 🔧 NUEVO: Alert con botón para generar mensualidades
                       <Alert 
                         severity="info" 
                         sx={{ borderRadius: '12px' }}
@@ -1031,7 +1173,23 @@ export const RegistroPagos: React.FC = () => {
         />
       )}
 
-      {/* 🔧 NUEVO: Modal para Generar Mensualidades */}
+      {/* 🆕 Modal de Pago Anual */}
+      {pagoAnualOpen && estudianteParaPagoAnual && (
+        <ModalPagoAnual
+          open={pagoAnualOpen}
+          onClose={() => {
+            setPagoAnualOpen(false);
+            setEstudianteParaPagoAnual(null);
+          }}
+          matriculaId={estudianteParaPagoAnual.matricula!.id}
+          estudianteNombre={`${estudianteParaPagoAnual.nombres} ${estudianteParaPagoAnual.apellido_paterno}`}
+          estudianteCodigo={estudianteParaPagoAnual.codigo}
+          mensualidades={estudianteParaPagoAnual.mensualidades}
+          onSuccess={handlePagoAnualSuccess}
+        />
+      )}
+
+      {/* Modal para Generar Mensualidades */}
       <Dialog
         open={modalGenerarOpen}
         onClose={() => !loadingGenerar && setModalGenerarOpen(false)}

@@ -1,241 +1,191 @@
-'use client'
+'use client';
+// app/dashboard/padre/notas/page.tsx
 
-import { Box, Typography, Card, CardContent, Avatar, Grid, Chip, Divider, Button, LinearProgress, useTheme } from '@mui/material'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import EventIcon from '@mui/icons-material/Event'
-import SchoolIcon from '@mui/icons-material/School'
-import GroupsIcon from '@mui/icons-material/Groups'
-import AssignmentIcon from '@mui/icons-material/Assignment'
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
+import React, { useCallback } from 'react';
+import {
+  Box, Container, Typography, Fade, Chip, Skeleton,
+  useTheme, alpha, IconButton, Tooltip,
+} from '@mui/material';
+import { keyframes } from '@mui/system';
+import SchoolIcon from '@mui/icons-material/School';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import BarChartIcon from '@mui/icons-material/BarChart';
 
-import { useState } from 'react'
+import BoletinNotas from '@/components/padre/notas/BoletinNotas';
+import { useHijosDelPadre } from '@/hooks/usePadreAsistencia';
+import { usePeriodosEvaluacion, useBoletinNotas } from '@/hooks/usePadreNotas';
 
-export default function DashboardPage() {
-  const theme = useTheme()
-  const [estudianteActivo, setEstudianteActivo] = useState(0)
+const fadeSlideUp = keyframes`
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+`;
 
-  const estudiantes = [
-    { nombre: 'Juan Pérez', iniciales: 'JP', color: 'success' },
-    { nombre: 'María Pérez', iniciales: 'MP', color: 'primary' },
-  ]
+const shimmer = keyframes`
+  0%   { background-position: -1000px 0; }
+  100% { background-position:  1000px 0; }
+`;
 
-  const calificaciones = [
-    { materia: 'Matemáticas', nota: 92, estado: 'Sobresaliente', color: 'success' },
-    { materia: 'Ciencias', nota: 88, estado: 'Muy bueno', color: 'info' },
-    { materia: 'Lenguaje', nota: 75, estado: 'Bueno', color: 'warning' },
-    { materia: 'Sociales', nota: 84, estado: 'Muy bueno', color: 'info' },
-    { materia: 'Ed. Física', nota: 61, estado: 'Necesita mejorar', color: 'error' },
-    { materia: 'Arte', nota: 80, estado: 'Bueno', color: 'warning' },
-  ]
-    // Función segura para acceder a colores del theme
-  const getPaletteColor = (color: string) => {
-    switch (color) {
-      case 'success':
-        return theme.palette.success.main
-      case 'info':
-        return theme.palette.info.main
-      case 'primary':
-        return theme.palette.primary.main
-      case 'warning':
-        return theme.palette.warning.main
-      case 'error':
-        return theme.palette.error.main
-      default:
-        return theme.palette.grey[500]
-    }
+// ──────────────────────────────────────────────
+// SELECTOR DE TRIMESTRE
+// ──────────────────────────────────────────────
+
+const SelectorTrimestre: React.FC<{
+  periodos: any[];
+  periodoActivo: any;
+  onChange: (p: any) => void;
+  isLoading: boolean;
+}> = ({ periodos, periodoActivo, onChange, isLoading }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', gap: 1 }}>
+        {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" width={130} height={34} sx={{ borderRadius: 2.5 }} />)}
+      </Box>
+    );
   }
 
   return (
-  <Box sx={{ p: 3, bgcolor: theme.palette.background.default }}>
-    {/* Seleccionar Estudiante */}
-    <Card
-        sx={{
-          mb: 3,
-          backgroundColor: theme.palette.background.paper,
-          boxShadow: 4,
-          transition: 'all 0.3s ease-in-out',
-          '&:hover': { boxShadow: 8 },
-        }}
-      >
-        <CardContent>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            Seleccionar Estudiante
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            {estudiantes.map((e, index) => {
-              const isActive = index === estudianteActivo
-              const colorMain = getPaletteColor(e.color)
-
-              return (
-                <Chip
-                  key={index}
-                  avatar={<Avatar>{e.iniciales}</Avatar>}
-                  label={e.nombre}
-                  onClick={() => setEstudianteActivo(index)}
-                  sx={{
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    bgcolor: isActive
-                      ? colorMain
-                      : theme.palette.mode === 'dark'
-                        ? theme.palette.grey[800]
-                        : theme.palette.grey[200],
-                    color: isActive
-                      ? theme.palette.getContrastText(colorMain)
-                      : theme.palette.text.primary,
-                    '&:hover': {
-                      opacity: 0.9,
-                    },
-                  }}
-                />
-              )
-            })}
-          </Box>
-        </CardContent>
-      </Card>
-    {/* Indicadores principales */}
-    <Grid container spacing={2}>
-      {[
-        {
-          title: 'Promedio General',
-          value: '8.7',
-          icon: <CheckCircleIcon color="success" />,
-          label: 'Excelente rendimiento',
-          labelColor: 'success.main',
-        },
-        {
-          title: 'Mejor Materia',
-          value: 'Matemáticas',
-          icon: <SchoolIcon color="info" />,
-          label: 'Sobresaliente',
-          labelColor: 'info.main',
-        },
-        {
-          title: 'Requiere Atención',
-          value: 'Ed. Física',
-          icon: <EventIcon color="warning" />,
-          label: 'Necesita mejorar',
-          labelColor: 'warning.main',
-        },
-        {
-          title: 'Posición en Clase',
-          value: '3ro',
-          icon: <GroupsIcon color="info" />,
-          label: 'De 25 estudiantes',
-          labelColor: 'info.main',
-        },
-      ].map((item, idx) => (
-        <Grid size={{ xs: 12, md: 3 }} key={idx}>
-          <Card
+    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+      {periodos.map(p => {
+        const activo = p.id === periodoActivo?.id;
+        return (
+          <Chip
+            key={p.id}
+            label={p.nombre}
+            onClick={() => onChange(p)}
             sx={{
-              backgroundColor: theme.palette.background.paper,
-              boxShadow: 3,
-              transition: 'transform 0.3s ease',
-              '&:hover': { transform: 'translateY(-5px)', boxShadow: 8 },
+              height: 34, fontWeight: 700, fontSize: 13, borderRadius: 2.5, cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              ...(activo
+                ? { background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff', boxShadow: '0 4px 12px rgba(59,130,246,0.35)', border: 'none' }
+                : { bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04), color: 'text.secondary', border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`, '&:hover': { bgcolor: isDark ? alpha('#3b82f6', 0.15) : alpha('#3b82f6', 0.08), color: isDark ? '#60a5fa' : '#3b82f6' } }),
             }}
-          >
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
-                {item.title}
-              </Typography>
-              <Typography variant="h4" fontWeight="bold">
-                {item.value}
-              </Typography>
-              <Box display="flex" alignItems="center" gap={1} mt={1}>
-                {item.icon}
-                <Typography color={item.labelColor} variant="body2">
-                  {item.label}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      ))}
-    </Grid>
+          />
+        );
+      })}
+    </Box>
+  );
+};
 
-    {/* Rendimiento por Materia */}
-    <Card
-      sx={{
-        mt: 3,
-        backgroundColor: theme.palette.background.paper,
-        boxShadow: 4,
-        transition: 'box-shadow 0.3s ease-in-out',
-        '&:hover': { boxShadow: 8 },
-      }}
-    >
-      <CardContent>
-        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-          Rendimiento por Materia
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
+// ──────────────────────────────────────────────
+// PÁGINA
+// ──────────────────────────────────────────────
 
-        {calificaciones.map((c, index) => {
-          const getBarColor = (color: string) => {
-            switch (color) {
-              case 'success':
-                return theme.palette.success.main
-              case 'info':
-                return theme.palette.info.main
-              case 'warning':
-                return theme.palette.warning.main
-              case 'error':
-                return theme.palette.error.main
-              default:
-                return theme.palette.grey[400]
-            }
-          }
+export default function PadreNotasPage() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
-          return (
+  const { hijoActivo, isLoading: loadingHijo } = useHijosDelPadre();
+
+  const { periodos, periodoActivo, setPeriodoActivo, isLoading: loadingPeriodos } =
+    usePeriodosEvaluacion(hijoActivo);
+
+  const {
+    boletin, isLoading: loadingBoletin,
+    aprobadas, reprobadas, sinNota, promedio,
+    refrescar: refrescarBoletin,
+  } = useBoletinNotas(
+    hijoActivo?.matricula_id ?? null,
+    periodoActivo?.id ?? null
+  );
+
+  const handleCambioPeriodo = useCallback((p: any) => {
+    setPeriodoActivo(p);
+  }, [setPeriodoActivo]);
+
+  return (
+    <Box sx={{ minHeight: '100vh', background: isDark ? 'radial-gradient(circle at top right, rgba(59,130,246,0.04), transparent 60%)' : 'radial-gradient(circle at top right, rgba(59,130,246,0.02), transparent 60%)' }}>
+      <Container maxWidth="xl" disableGutters>
+
+        {/* ── HEADER ── */}
+        <Fade in timeout={400}>
+          <Box sx={{ mb: 4, pt: 3 }}>
             <Box
-              key={index}
-              mb={2}
               sx={{
-                opacity: 0,
-                animation: `fadeIn 0.5s ease ${index * 0.1}s forwards`,
+                p: 3.5, borderRadius: 4,
+                background: isDark ? 'linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)' : '#fff',
+                border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.05)}`,
+                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.06)',
+                position: 'relative', overflow: 'hidden',
               }}
             >
-              <Box display="flex" justifyContent="space-between" mb={0.5}>
-                <Typography fontWeight="medium">{c.materia}</Typography>
-                <Typography fontWeight="bold" color={`${c.color}.main`}>
-                  {c.nota}
-                </Typography>
+              <Box sx={{ position: 'absolute', inset: 0, background: `linear-gradient(90deg, transparent, ${alpha('#fff', isDark ? 0.03 : 0.08)}, transparent)`, backgroundSize: '1000px 100%', animation: `${shimmer} 4s linear infinite`, pointerEvents: 'none' }} />
+
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, position: 'relative', zIndex: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ width: 56, height: 56, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', boxShadow: '0 6px 20px rgba(59,130,246,0.4)' }}>
+                    <SchoolIcon sx={{ fontSize: 30, color: '#fff' }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="h4" fontWeight={900} sx={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: -0.5, lineHeight: 1.2 }}>
+                      Notas y Boletín
+                    </Typography>
+                    {hijoActivo && (
+                      <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ mt: 0.25 }}>
+                        {hijoActivo.nombres} {hijoActivo.apellidos} ·{' '}
+                        <Box component="span" sx={{ color: isDark ? '#60a5fa' : '#3b82f6', fontWeight: 800 }}>
+                          {hijoActivo.grado_nombre} "{hijoActivo.paralelo_nombre}"
+                        </Box>
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                  {promedio != null && (
+                    <Chip
+                      icon={<BarChartIcon sx={{ fontSize: '16px !important' }} />}
+                      label={`Promedio: ${promedio}`}
+                      size="small"
+                      sx={{ height: 28, fontWeight: 800, fontSize: 12, bgcolor: isDark ? alpha('#3b82f6', 0.15) : alpha('#3b82f6', 0.1), color: isDark ? '#60a5fa' : '#3b82f6', border: `1px solid ${alpha('#3b82f6', 0.3)}`, borderRadius: 2, '& .MuiChip-icon': { color: isDark ? '#60a5fa' : '#3b82f6' } }}
+                    />
+                  )}
+                  <Tooltip title="Actualizar">
+                    <IconButton
+                      onClick={refrescarBoletin}
+                      size="small"
+                      disabled={loadingBoletin}
+                      sx={{ bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04), border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`, borderRadius: 2, transition: 'all 0.3s ease', '&:hover': { bgcolor: isDark ? alpha('#3b82f6', 0.15) : alpha('#3b82f6', 0.08), transform: 'rotate(180deg)' } }}
+                    >
+                      <RefreshIcon sx={{ fontSize: 18, color: isDark ? '#60a5fa' : '#3b82f6' }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
               </Box>
-              <LinearProgress
-                variant="determinate"
-                value={c.nota}
-                sx={{
-                  height: 10,
-                  borderRadius: 5,
-                  backgroundColor:
-                    theme.palette.mode === 'dark'
-                      ? theme.palette.grey[800]
-                      : theme.palette.grey[200],
-                  transition: 'all 0.5s ease',
-                  '& .MuiLinearProgress-bar': {
-                    backgroundColor: getBarColor(c.color),
-                  },
-                }}
-              />
+
+              {/* Selector de trimestre */}
+              <Box sx={{ mt: 2.5, pt: 2.5, borderTop: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`, position: 'relative', zIndex: 1 }}>
+                <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                  Trimestre
+                </Typography>
+                <SelectorTrimestre
+                  periodos={periodos}
+                  periodoActivo={periodoActivo}
+                  onChange={handleCambioPeriodo}
+                  isLoading={loadingPeriodos}
+                />
+              </Box>
             </Box>
-          )
-        })}
-      </CardContent>
-    </Card>
+          </Box>
+        </Fade>
 
-    {/* Animación CSS */}
-    <style jsx global>{`
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    `}</style>
-  </Box>
-)
+        {/* ── BOLETÍN ── */}
+        <Box sx={{ animation: `${fadeSlideUp} 0.5s ease-out 0.15s both`, pb: 6 }}>
+          <BoletinNotas
+            boletin={boletin}
+            isLoading={loadingBoletin || loadingHijo}
+            aprobadas={aprobadas}
+            reprobadas={reprobadas}
+            sinNota={sinNota}
+            promedio={promedio}
+            matriculaId={hijoActivo?.matricula_id ?? null}
+            periodoEvaluacionId={periodoActivo?.id ?? null}
+          />
+        </Box>
 
+      </Container>
+    </Box>
+  );
 }

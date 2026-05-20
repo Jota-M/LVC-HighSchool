@@ -43,8 +43,13 @@ import NotificationsActiveOutlinedIcon from '@mui/icons-material/NotificationsAc
 import GradeOutlinedIcon from '@mui/icons-material/GradeOutlined';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
+import PaymentIcon from '@mui/icons-material/Payment';
+import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
 
 import { useAuth } from '../../context/AuthContext';
+import { title } from 'process';
 
 // ==================== ANIMACIONES ====================
 const fadeIn = keyframes`
@@ -360,9 +365,10 @@ const sections = [
     items: [
       {
         title: 'Dashboard',
-        to: '/dashboard',
+        to: '/dashboard/',
         icon: <HomeOutlinedIcon />,
         permissions: [],
+        roles :['super_admin']
       },
     ],
   },
@@ -373,32 +379,34 @@ const sections = [
         title: 'Usuarios',
         to: '/dashboard/users',
         icon: <PeopleOutlinedIcon />,
-        permissions: ['usuarios.leer'],
+        roles :['super_admin']
       },
       {
         title: 'Docentes',
         to: '/dashboard/docentes',
         icon: <SupervisorAccountOutlinedIcon />,
-        permissions: ['docentes.leer'],
+        roles :['super_admin']
       },
       {
         title: 'Estudiantes',
         to: '/dashboard/estudiantes',
         icon: <SchoolOutlinedIcon />,
-        permissions: ['estudiantes.leer'],
+        // permissions: ['estudiantes.leer'],
+        roles: ['super_admin'],
       },
       {
         title: 'Preinscripciones',
         to: '/dashboard/preinscripciones',
         icon: <AppRegistrationIcon />,
-        permissions: ['estudiantes.leer'], 
+        // permissions: ['estudiantes.leer'], 
         badge: 12,
+        roles: ['super_admin'],
       },
       {
         title: 'Cursos Vacacionales',
         to: '/dashboard/CursosVacacionales',
         icon: <ContactsOutlinedIcon />,
-        permissions: ['estudiantes.leer'],
+        roles: ['super_admin'],
       }
     ],
   },
@@ -409,25 +417,32 @@ const sections = [
         title: 'Periodos',
         to: '/dashboard/periodos',
         icon: <CalendarTodayOutlinedIcon />,
-        permissions: ['periodos.leer'],
+        roles: ['super_admin'],
+      },
+      {
+        title: 'Periodos de evaluacion',
+        to: '/dashboard/admin/periodoevaluacion',
+        icon: <CalendarTodayOutlinedIcon />,
+        roles: ['super_admin'],
       },
       {
         title: 'Niveles y Grados',
         to: '/dashboard/niveles-grados',
         icon: <SchoolOutlinedIcon />,
-        permissions: ['niveles.leer'],
+        roles: ['super_admin'],
       },
       {
         title: 'Paralelos',
         to: '/dashboard/paralelos',
         icon: <ClassOutlinedIcon />,
-        permissions: ['paralelos.leer'],
+        roles: ['super_admin'],
       },
       {
         title: 'Materias',
         to: '/dashboard/materias',
         icon: <ClassOutlinedIcon />,
-        permissions: ['materias.leer'],
+        roles: ['super_admin'],
+        
       },
     ],
   },
@@ -444,19 +459,27 @@ const sections = [
         title: 'Mensualidades',
         to: '/dashboard/pagos',
         icon: <CalculateIcon />,
-        permissions: ['materias.leer'],
+        // permissions: ['materias.leer'],
+        roles: ['super_admin'],
+      },
+      {
+        title: 'Transporte',
+        to: '/dashboard/transporte',
+        icon: <LocalShippingOutlinedIcon />,
+        roles: ['super_admin'],
       },
       {
         title: 'Asignaciones',
         to: '/dashboard/plan-estudio',
         icon: <ContactsOutlinedIcon />,
-        permissions: ['plan_estudio.leer'], // ✅ CAMBIADO
+        roles: ['super_admin'],
       },
       {
         title: 'Horarios',
         to: '/dashboard/horario',
         icon: <CalendarTodayOutlinedIcon />,
-        permissions: ['horarios.leer'],
+        // permissions: ['horarios.leer'],
+        roles: ['super_admin'],
       },
     ],
   },
@@ -468,6 +491,12 @@ const sections = [
         to: '/dashboard/reportes',
         icon: <AssessmentOutlinedIcon />,
         permissions: ['reportes.leer'],
+      },
+      {
+        title: 'Backups',
+        to : '/dashboard/admin/backups',
+        icon: <ClassOutlinedIcon/>,
+        roles:['super_admin']
       },
       {
         title: 'Configuración',
@@ -487,9 +516,16 @@ const sections = [
         roles: ['padre'],
       },
       {
-        title: 'Calificaciones',
-        to: '/dashboard/padre/calificaciones',
-        icon: <GradeOutlinedIcon />,
+        title: 'Horario',
+        to: '/dashboard/padre/horario',
+        icon: <CalendarTodayOutlinedIcon />,
+        roles: ['padre'],
+      },
+      
+      {
+        title: 'Tareas',
+        to: '/dashboard/padre/tareas',
+        icon: <AssessmentOutlinedIcon />,
         roles: ['padre'],
       },
       {
@@ -499,11 +535,18 @@ const sections = [
         roles: ['padre'],
       },
       {
-        title: 'Horario',
-        to: '/dashboard/padre/horario',
-        icon: <CalendarTodayOutlinedIcon />,
+        title: 'Calificaciones',
+        to: '/dashboard/padre/calificaciones',
+        icon: <GradeOutlinedIcon />,
         roles: ['padre'],
       },
+      {
+        title: 'Seguimiento Pedagógico',
+        to: '/dashboard/padre/seguimiento',
+        icon: <SchoolOutlinedIcon />,
+        roles: ['padre'], 
+      },
+      
       {
         title: 'Alertas',
         to: '/dashboard/padre/alertas',
@@ -512,36 +555,153 @@ const sections = [
         badge: 2,
       },
     ],
+    
   },
   {
-    label: 'Portal Docentes', // ✅ CAMBIADO (era "Portal Profesores")
+    label: 'Financiero',
+    items:[
+      {
+        title: 'Estado de pagos',
+        to: '/dashboard/padre/financiero',
+        icon: <CalculateIcon />,
+        roles: ['padre'],
+      },
+      {
+        title: 'Pagar Mensualidad',
+        to: '/dashboard/padre/financiero/pagar',
+        icon: <PaymentIcon />,
+        roles: ['padre'],
+      },
+      {
+        title: 'Historial de Pagos',
+        to: '/dashboard/padre/financiero/historial',
+        icon: <HistoryEduIcon />,
+        roles: ['padre'],
+      }
+    ]
+  },
+  {
+    label: 'Portal Docentes', 
     items: [
       {
         title: 'Inicio',
-        to: '/dashboard/docente/home', // ✅ CAMBIADO (era profesor)
+        to: '/dashboard/docente/home', 
         icon: <HomeOutlinedIcon />,
-        roles: ['docente'], // ✅ CAMBIADO (era profesor)
+        roles: ['docente'], 
       },
       {
         title: 'Mis Clases',
-        to: '/dashboard/docente/clases', // ✅ CAMBIADO (era profesor)
+        to: '/dashboard/docente/horario', 
         icon: <ClassOutlinedIcon />,
-        roles: ['docente'], // ✅ CAMBIADO (era profesor)
+        roles: ['docente'], 
       },
       {
-        title: 'Calificaciones',
-        to: '/dashboard/docente/notas', // ✅ CAMBIADO (era profesor)
+        title: 'Temario',
+        to: '/dashboard/docente/temario',
+        icon: <MenuBookIcon />,
+        roles: ['docente'],
+      },
+      {
+        title: 'Tareas',
+        to: '/dashboard/docente/notas', 
+        icon: <AssessmentOutlinedIcon />,
+        roles: ['docente'], 
+      },
+      {
+        title: 'Notas', 
+        to: '/dashboard/docente/calificaciones',
         icon: <GradeOutlinedIcon />,
-        roles: ['docente'], // ✅ CAMBIADO (era profesor)
+        roles: ['docente'],
       },
       {
         title: 'Asistencia',
-        to: '/dashboard/docente/asistencia', // ✅ CAMBIADO (era profesor)
+        to: '/dashboard/docente/asistencia', 
         icon: <EventAvailableOutlinedIcon />,
-        roles: ['docente'], // ✅ CAMBIADO (era profesor)
+        roles: ['docente'],
       },
+      {
+      title: 'Materiales',
+      to: '/dashboard/docente/materiales',
+      icon: <MenuBookIcon />,
+      roles: ['docente'],
+    },
+    {
+      title: 'Modelo Predictivo',
+      to: '/dashboard/docente/prediccion',
+      icon: <CalculateIcon />,
+      roles: ['docente'],
+    },
+    {
+      title: 'Seguimiento Pedagógico',
+      to: '/dashboard/docente/seguimiento',
+      icon: <SchoolOutlinedIcon />,
+      roles: ['docente'],
+    },
+    {
+      title: 'Reportes',
+      to: '/dashboard/docente/reportes',
+      icon: <AssessmentOutlinedIcon />,
+      roles: ['docente'],
+    }
     ],
   },
+  {
+    label: 'Portal Estudiantes',
+    items: [
+      {
+        title: 'Inicio',
+        to: '/dashboard/estudiante/home',
+        icon: <HomeOutlinedIcon />,
+        roles: ['estudiante'],
+      },
+      {
+        title: 'Mi Horario',
+        to: '/dashboard/estudiante/horario',
+        icon: <CalendarTodayOutlinedIcon />,
+        roles: ['estudiante'],
+      },
+      {
+        title: 'Tareas',
+        to: '/dashboard/estudiante/tareas',
+        icon: <AssessmentOutlinedIcon />,
+        roles: ['estudiante'],
+      },
+      {
+        title: 'Asistencia',
+        to: '/dashboard/estudiante/asistencia',
+        icon: <EventAvailableOutlinedIcon />,
+        roles: ['estudiante'],
+      },
+      {
+        title: 'Mis Materias',
+        to: '/dashboard/estudiante/materias',
+        icon: <MenuBookIcon />,
+        roles: ['estudiante'],
+      },
+      {
+        title: 'Materiales',
+        to: '/dashboard/estudiante/materiales',
+        icon: <MenuBookIcon />,
+        roles: ['estudiante'],
+      },
+      {
+        title: 'Calificaciones',
+        to: '/dashboard/estudiante/notas',
+        icon: <GradeOutlinedIcon />,
+        roles: ['estudiante'],
+      },      
+    ]
+  },
+  {
+    label: 'Notificaciones',
+    items:[
+      {
+        title: 'Notificaciones',
+        to: '/dashboard/notificaciones',
+        icon: <AppRegistrationIcon/>
+      }
+    ]
+  }
 ];
 
 // ==================== CONTENIDO DEL SIDEBAR ====================
@@ -852,8 +1012,8 @@ const ModernSidebar = () => {
   const { user, loading } = useAuth();
   const pathname = usePathname();
 
-  const userRoles = user?.roles?.map((r: { nombre: any }) => r.nombre) || [];
-  const userPermissions = user?.permisos?.map((p: { nombre: any }) => p.nombre) || [];
+  const userRoles = user?.roles?.map((r) => r.nombre) || [];
+  const userPermissions = user?.permisos?.map((p) => p.nombre) || [];
   const rolePrincipal = user?.roles?.[0]?.descripcion || 'Usuario';
 
   // Manejar la navegación
@@ -882,22 +1042,23 @@ const ModernSidebar = () => {
       return () => window.removeEventListener('load', handleComplete);
     }
   }, []);
+//   console.log('🎨 SIDEBAR - userRoles:', userRoles);
+// console.log('🎨 SIDEBAR - userPermissions:', userPermissions);
+// console.log('🎨 SIDEBAR - loadin g:', loading);
+// console.log('🎨 SIDEBAR - user:', user);
 
   if (loading) {
-    return (
-      <Box
-        sx={{
-          p: 4,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-        }}
-      >
-        <Typography>Cargando menú...</Typography>
-      </Box>
-    );
-  }
+  return (
+    <Box sx={{ p: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Typography>Cargando menú...</Typography>
+    </Box>
+  );
+}
+
+// Sin usuario → ProtectedRoute ya redirige, no renderizar nada
+if (!user) {
+  return null;
+}
 
   const sidebarContent = (
     <SidebarContent

@@ -39,13 +39,14 @@ class AuthService {
   }
 
   async getCurrentUser(): Promise<User | null> {
-    try {
-      const { data } = await api.get<AuthResponse>('/auth/me');
-      return data.data.user;
-    } catch (error) {
-      return null;
-    }
+  try {
+    const { data } = await api.get<AuthResponse>('/auth/me');
+    // console.log('📦 RESPUESTA COMPLETA /auth/me:', JSON.stringify(data, null, 2));
+    return data.data.user;
+  } catch (error) {
+    return null;
   }
+}
 
   async logout(): Promise<void> {
     await api.post('/auth/logout');

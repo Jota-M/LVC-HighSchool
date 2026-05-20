@@ -26,6 +26,7 @@ import {
 } from '@mui/icons-material';
 import { usePagos } from '@/hooks/usePagos';
 import { ResumenPagos } from '@/types/pagos';
+import academicosService from '@/services/academicos';
 
 interface StatCardProps {
   title: string;
@@ -207,15 +208,28 @@ const MetodoPagoCard: React.FC<MetodoPagoCardProps> = ({
 export const DashboardPagos: React.FC = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const [periodoId, setPeriodoId] = useState<number>(1); // TODO: obtener del contexto
+  const [periodoId, setPeriodoId] = useState<number | null>(null);
   
   const { resumen, loading, cargarResumen } = usePagos({});
 
   useEffect(() => {
-    if (periodoId) {
-      cargarResumen(periodoId);
+  const cargarPeriodoActivo = async () => {
+    try {
+      const response = await academicosService.obtenerPeriodoActivo();
+      setPeriodoId(response.data.periodo.id);
+    } catch (error) {
+      console.error('Error al obtener periodo activo:', error);
     }
-  }, [periodoId, cargarResumen]);
+  };
+
+  cargarPeriodoActivo();
+}, []);
+
+  useEffect(() => {
+  if (periodoId) {
+    cargarResumen(periodoId);
+  }
+}, [periodoId, cargarResumen]);
 
   if (loading) {
     return (
@@ -265,7 +279,7 @@ export const DashboardPagos: React.FC = () => {
         </Typography>
         <Tooltip title="Actualizar datos">
           <IconButton
-            onClick={() => cargarResumen(periodoId)}
+            onClick={() => periodoId && cargarResumen(periodoId)}
             sx={{
               color: isDark ? '#facc15' : '#0288d1',
             }}

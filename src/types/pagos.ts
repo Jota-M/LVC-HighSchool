@@ -415,6 +415,7 @@ export interface FiltrosIngresos {
 }
 
 export interface FiltrosMorosos {
+  periodo_academico_id?: number;
   grado_id?: number;
   paralelo_id?: number;
   dias_mora_minimo?: number;

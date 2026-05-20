@@ -1,393 +1,589 @@
-'use client'
+'use client';
+// app/dashboard/padre/asistencia/page.tsx
 
+import React, { useState, useCallback } from 'react';
 import {
   Box,
+  Container,
   Typography,
-  Card,
-  CardContent,
-  Avatar,
   Grid,
   Chip,
-  Divider,
   Button,
-  useTheme,
+  Tab,
+  Tabs,
   Fade,
-} from '@mui/material'
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
-import AccessTimeIcon from '@mui/icons-material/AccessTime'
-import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn'
-import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew'
-import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos'
-import { useState } from 'react'
+  Avatar,
+  Skeleton,
+  useTheme,
+  alpha,
+  IconButton,
+  Tooltip,
+} from '@mui/material';
+import { keyframes } from '@mui/system';
+import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
+import EventBusyIcon from '@mui/icons-material/EventBusy';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
 
-type ColorType = 'success' | 'info' | 'warning' | 'error' | 'primary' | 'secondary'
+import ResumenHijo from '@/components/padre/asistencia/ResumenHijo';
+import HistorialAsistencia from '@/components/padre/asistencia/HistorialAsistencia';
+import SolicitarPermisoModal from '@/components/padre/asistencia/SolicitarPermisoModal';
+import MisPermisos from '@/components/padre/asistencia/MisPermisos';
 
-interface Estudiante {
-  nombre: string
-  iniciales: string
-  color: ColorType
-}
+import { useAuth } from '@/context/AuthContext';
+import {
+  useHijosDelPadre,
+  useResumenAsistencia,
+  useHistorialAsistencia,
+  usePermisosHijo,
+} from '@/hooks/usePadreAsistencia';
+import { EstadoPermiso } from '@/types/padreAsistenciaTypes';
 
-export default function AttendanceDashboard() {
-  const theme = useTheme()
-  
-  const estudiantes: Estudiante[] = [
-    { nombre: 'Juan Pérez', iniciales: 'JP', color: 'success' },
-    { nombre: 'María Pérez', iniciales: 'MP', color: 'primary' },
-  ]
+// ──────────────────────────────────────────────
+// ANIMACIONES
+// ──────────────────────────────────────────────
 
-  const indicadores = [
-    {
-      titulo: 'Asistencia General',
-      valor: '96%',
-      icon: <CheckCircleOutlineIcon fontSize="large" />,
-      color: 'success' as ColorType,
-      descripcion: 'Excelente asistencia',
-    },
-    {
-      titulo: 'Días Presentes',
-      valor: '19/20',
-      icon: <CalendarTodayIcon fontSize="large" />,
-      color: 'info' as ColorType,
-      descripcion: 'Este mes',
-    },
-    {
-      titulo: 'Llegadas Tarde',
-      valor: '2',
-      icon: <AccessTimeIcon fontSize="large" />,
-      color: 'warning' as ColorType,
-      descripcion: 'Mejorar puntualidad',
-    },
-    {
-      titulo: 'Faltas Justificadas',
-      valor: '1',
-      icon: <AssignmentTurnedInIcon fontSize="large" />,
-      color: 'info' as ColorType,
-      descripcion: 'Médica - 13/03',
-    },
-  ]
+const fadeSlideUp = keyframes`
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+`;
 
-  const calendario = [
-    { dia: 25, estado: 'presente' },
-    { dia: 26, estado: 'presente' },
-    { dia: 27, estado: 'presente' },
-    { dia: 28, estado: 'presente' },
-    { dia: 1, estado: 'presente' },
-    { dia: 2, estado: 'tarde' },
-    { dia: 3, estado: 'tarde' },
+const bounceIcon = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+`;
 
-    { dia: 4, estado: 'presente' },
-    { dia: 5, estado: 'presente' },
-    { dia: 6, estado: 'tarde' },
-    { dia: 7, estado: 'presente' },
-    { dia: 8, estado: 'presente' },
-    { dia: 9, estado: 'falta' },
-    { dia: 10, estado: 'falta' },
+const shimmer = keyframes`
+  0%   { background-position: -1000px 0; }
+  100% { background-position:  1000px 0; }
+`;
 
-    { dia: 11, estado: 'presente' },
-    { dia: 12, estado: 'presente' },
-    { dia: 13, estado: 'falta' },
-    { dia: 14, estado: 'presente' },
-    { dia: 15, estado: 'presente' },
-    { dia: 16, estado: 'falta' },
-    { dia: 17, estado: 'presente' },
+// ──────────────────────────────────────────────
+// SELECTOR DE HIJO
+// ──────────────────────────────────────────────
 
-    { dia: 18, estado: 'presente' },
-    { dia: 19, estado: 'presente' },
-    { dia: 20, estado: 'falta' },
-    { dia: 21, estado: 'tarde' },
-    { dia: 22, estado: 'presente' },
-    { dia: 23, estado: 'falta' },
-    { dia: 24, estado: 'presente' },
-    { dia: 25, estado: 'falta' },
-    { dia: 26, estado: 'presente' },
-    { dia: 27, estado: 'presente' },
-    { dia: 28, estado: 'seleccionado' },
-    { dia: 29, estado: 'none' },
-    { dia: 30, estado: 'none' },
-    { dia: 31, estado: 'none' },
+const SelectorHijo: React.FC<{
+  hijos: any[];
+  hijoActivo: any;
+  onSeleccionar: (hijo: any) => void;
+  isLoading: boolean;
+}> = ({ hijos, hijoActivo, onSeleccionar, isLoading }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
-  ]
-
-  const [selectedMonth, setSelectedMonth] = useState('Marzo 2024')
-
-  // Estilos para días calendario con bordes y colores para modo oscuro y claro
-  const getDayStyles = (estado: string) => {
-    const base = {
-      width: 36,
-      height: 36,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 2,
-      fontWeight: 600,
-      fontSize: '0.9rem',
-      userSelect: 'none',
-      cursor: estado === 'seleccionado' ? 'default' : 'pointer',
-      border: `1.5px solid ${theme.palette.divider}`,
-      transition: 'background-color 0.35s ease, color 0.35s ease, border-color 0.3s ease',
-      position: 'relative' as 'relative',
-    }
-
-    switch (estado) {
-      case 'presente':
-        return {
-          ...base,
-          bgcolor: theme.palette.mode === 'dark' ? theme.palette.success.dark : theme.palette.success.light,
-          color: theme.palette.mode === 'dark' ? theme.palette.success.contrastText : theme.palette.success.dark,
-          borderColor: theme.palette.mode === 'dark' ? theme.palette.success.light : theme.palette.success.main,
-          '&:hover': {
-            bgcolor: theme.palette.mode === 'dark' ? theme.palette.success.main : theme.palette.success.light || theme.palette.success.light,
-          },
-        }
-      case 'tarde':
-        return {
-          ...base,
-          bgcolor: theme.palette.mode === 'dark' ? theme.palette.warning.dark : theme.palette.warning.light,
-          color: theme.palette.mode === 'dark' ? theme.palette.warning.contrastText : theme.palette.warning.dark,
-          borderColor: theme.palette.mode === 'dark' ? theme.palette.warning.light : theme.palette.warning.main,
-          '&:hover': {
-            bgcolor: theme.palette.mode === 'dark' ? theme.palette.warning.main : theme.palette.warning.light || theme.palette.warning.light,
-          },
-        }
-      case 'falta':
-        return {
-          ...base,
-          bgcolor: theme.palette.mode === 'dark' ? theme.palette.error.dark : theme.palette.error.light,
-          color: theme.palette.mode === 'dark' ? theme.palette.error.contrastText : theme.palette.error.dark,
-          borderColor: theme.palette.mode === 'dark' ? theme.palette.error.light : theme.palette.error.main,
-          '&:hover': {
-            bgcolor: theme.palette.mode === 'dark' ? theme.palette.error.main : theme.palette.error.light || theme.palette.error.light,
-          },
-        }
-      case 'seleccionado':
-        return {
-          ...base,
-          bgcolor: theme.palette.mode === 'dark' ? theme.palette.primary.dark : theme.palette.primary.light,
-          color: theme.palette.mode === 'dark' ? theme.palette.primary.contrastText : theme.palette.primary.main,
-          border: `3px solid ${theme.palette.primary.main}`,
-          boxShadow:
-            theme.palette.mode === 'dark'
-              ? `0 0 8px ${theme.palette.primary.light}`
-              : `0 0 10px ${theme.palette.primary.main}`,
-          animation: 'pulse 2.5s infinite',
-          '@keyframes pulse': {
-            '0%, 100%': {
-              boxShadow:
-                theme.palette.mode === 'dark'
-                  ? `0 0 8px ${theme.palette.primary.light}`
-                  : `0 0 10px ${theme.palette.primary.main}`,
-            },
-            '50%': {
-              boxShadow:
-                theme.palette.mode === 'dark'
-                  ? `0 0 18px ${theme.palette.primary.light}`
-                  : `0 0 22px ${theme.palette.primary.main}`,
-            },
-          },
-        }
-      default:
-        return {
-          ...base,
-          color: theme.palette.text.disabled,
-          bgcolor: 'transparent',
-          borderColor: theme.palette.divider,
-          '&:hover': {
-            bgcolor: theme.palette.action.hover,
-          },
-        }
-    }
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+        {[1, 2].map(i => <Skeleton key={i} variant="rounded" width={180} height={60} sx={{ borderRadius: 3 }} />)}
+      </Box>
+    );
   }
 
+  if (hijos.length <= 1) return null;
+
   return (
-    <Box sx={{ p: 3, bgcolor: theme.palette.background.default }}>
-      {/* Seleccionar Estudiante */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            Seleccionar Estudiante
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            {estudiantes.map((e, index) => {
-              // Colores adaptativos para chips:
-              const bgFilled = theme.palette.mode === 'dark' ? theme.palette[e.color].dark : theme.palette[e.color].light
-              const colorFilled = theme.palette.mode === 'dark' ? theme.palette[e.color].contrastText : theme.palette[e.color].main
-              return (
-                <Chip
-                  key={index}
-                  avatar={
-                    <Avatar
-                      sx={{
-                        color: bgFilled,
-                        fontWeight: 700,
-                        fontSize: 14,
-                        userSelect: 'none',
-                      }}
-                    >
-                      {e.iniciales}
-                    </Avatar>
-                  }
-                  label={e.nombre}
-                  variant={index === 0 ? 'filled' : 'outlined'}
-                  sx={{
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    bgcolor: index === 0 ? bgFilled : 'transparent',
-                    color: index === 0 ? colorFilled : theme.palette.text.primary,
-                    borderColor: index === 0 ? bgFilled : undefined,
-                    transition: 'all 0.25s ease',
-                    '&:hover': {
-                      bgcolor: bgFilled,
-                      color: colorFilled,
-                      borderColor: bgFilled,
-                    },
-                  }}
-                />
-              )
-            })}
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Título y subtítulo */}
-      <Typography variant="h5" fontWeight="bold" gutterBottom>
-        Asistencia de Juan Pérez <span style={{ fontSize: 22 }}>📋</span>
-      </Typography>
-      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-        3er Grado A • Control y seguimiento de asistencia escolar
-      </Typography>
-
-      {/* Selector de mes y botones */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 1 }}>
-        <Button
-          variant="outlined"
-          startIcon={<CalendarTodayIcon />}
-          sx={{
-            minWidth: 140,
-            textTransform: 'none',
-            bgcolor: theme.palette.background.paper,
-            color: theme.palette.text.primary,
-            borderColor: theme.palette.divider,
-            transition: 'background-color 0.3s ease, color 0.3s ease',
-            '&:hover': {
-              bgcolor: theme.palette.primary.main,
-              color: theme.palette.primary.contrastText,
-              borderColor: theme.palette.primary.main,
-            },
-          }}
-          onClick={() => alert('Función para seleccionar mes')}
-        >
-          {selectedMonth}
-        </Button>
-
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button variant="outlined" onClick={() => alert('Mes anterior')}>
-            <ArrowBackIosNewIcon />
-          </Button>
-          <Button variant="outlined" onClick={() => alert('Mes siguiente')}>
-            <ArrowForwardIosIcon />
-          </Button>
-        </Box>
-
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Button
-            variant="outlined"
-            startIcon={<DownloadIcon />}
+    <Box sx={{ display: 'flex', gap: 1.5, mb: 3, flexWrap: 'wrap' }}>
+      {hijos.map(hijo => {
+        const activo = hijo.estudiante_id === hijoActivo?.estudiante_id;
+        return (
+          <Box
+            key={hijo.estudiante_id}
+            onClick={() => onSeleccionar(hijo)}
             sx={{
-              textTransform: 'none',
-              borderColor: theme.palette.divider,
-              color: theme.palette.text.primary,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              p: 1.5,
+              borderRadius: 3,
+              cursor: 'pointer',
+              border: `2px solid ${activo
+                ? (isDark ? '#60a5fa' : '#3b82f6')
+                : (isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08))}`,
+              background: activo
+                ? isDark
+                  ? alpha('#3b82f6', 0.15)
+                  : alpha('#3b82f6', 0.06)
+                : 'transparent',
+              transition: 'all 0.2s ease',
               '&:hover': {
-                bgcolor: theme.palette.action.hover,
+                border: `2px solid ${isDark ? '#60a5fa' : '#3b82f6'}`,
+                background: isDark ? alpha('#3b82f6', 0.1) : alpha('#3b82f6', 0.04),
               },
             }}
-            onClick={() => alert('Descargar reporte')}
           >
-            Descargar Reporte
-          </Button>
-          <Button variant="contained" color="success" sx={{ textTransform: 'none' }}>
-            Justificar Falta
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Indicadores */}
-      <Grid container spacing={2}>
-        {indicadores.map(({ titulo, valor, icon, color, descripcion }, i) => (
-          <Grid key={i} size={{ xs: 12, md: 3 }}>
-            <Card
+            <Avatar
+              src={hijo.foto_url ?? undefined}
               sx={{
-                bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fff',
-                transition: 'background-color 0.3s ease',
+                width: 36,
+                height: 36,
+                fontSize: 14,
+                fontWeight: 800,
+                bgcolor: activo
+                  ? isDark ? '#2563eb' : '#3b82f6'
+                  : isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08),
               }}
             >
-              <CardContent>
-                <Typography variant="body2" color="text.secondary">
-                  {titulo}
-                </Typography>
-                <Typography variant="h4" fontWeight="bold" gutterBottom>
-                  {valor}
-                </Typography>
-                <Box display="flex" alignItems="center" gap={1} color={theme.palette[color].main}>
-                  {icon}
-                  <Typography variant="caption">{descripcion}</Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* Calendario de asistencia */}
-      <Box
-        sx={{
-          mt: 5,
-          maxWidth: 1024,
-          mx: 'auto',
-          p: 2,
-          borderRadius: 3,
-          boxShadow: theme.shadows[3],
-          bgcolor: theme.palette.background.paper,
-        }}
-      >
-        <Typography variant="h6" fontWeight="bold" mb={2} textAlign="center">
-          Calendario de Asistencia
-        </Typography>
-        <Grid container spacing={1} justifyContent="center">
-          {calendario.map(({ dia, estado }, i) => (
-            <Grid
-              key={i}
-              size={{ lg: 2 }}
-              sx={{
-                ...getDayStyles(estado),
-                userSelect: 'none',
-              }}
-              title={`Día ${dia} - ${estado}`}
-            >
-              {dia}
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
+              {hijo.nombres.charAt(0)}{hijo.apellidos.charAt(0)}
+            </Avatar>
+            <Box>
+              <Typography variant="body2" fontWeight={800} sx={{ lineHeight: 1.2 }}>
+                {hijo.nombres.split(' ')[0]}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                {hijo.grado_nombre} "{hijo.paralelo_nombre}"
+              </Typography>
+            </Box>
+          </Box>
+        );
+      })}
     </Box>
-  )
-}
+  );
+};
 
-function DownloadIcon() {
+// ──────────────────────────────────────────────
+// PÁGINA PRINCIPAL
+// ──────────────────────────────────────────────
+
+export default function PadreAsistenciaPage() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const { user } = useAuth();
+
+  // ─── Estado de UI ───
+  const [tabActivo, setTabActivo] = useState(0);
+  const [modalPermisoOpen, setModalPermisoOpen] = useState(false);
+  const [filtroEstadoPermisos, setFiltroEstadoPermisos] = useState<EstadoPermiso | ''>('');
+
+  // ─── Hooks de datos ───
+  const { hijos, hijoActivo, setHijoActivo, isLoading: loadingHijos, refrescar: refrescarHijos } = useHijosDelPadre();
+
+  const {
+    resumen,
+    isLoading: loadingResumen,
+    materiasEnRiesgo,
+    refrescar: refrescarResumen,
+  } = useResumenAsistencia(hijoActivo?.matricula_id ?? null);
+
+  const {
+    asistencias,
+    paginacion: paginacionHistorial,
+    filtros: filtrosHistorial,
+    isLoading: loadingHistorial,
+    actualizarFiltros: actualizarFiltrosHistorial,
+    cambiarPagina: cambiarPaginaHistorial,
+    setMatriculaId,
+  } = useHistorialAsistencia(hijoActivo?.matricula_id ?? null);
+
+  const {
+    solicitudes,
+    paginacion: paginacionPermisos,
+    isLoading: loadingPermisos,
+    isSubmitting: submittingPermisos,
+    pendientes,
+    actualizarFiltros: actualizarFiltrosPermisos,
+    crear: crearPermiso,
+    cancelar: cancelarPermiso,
+    refrescar: refrescarPermisos,
+  } = usePermisosHijo(hijoActivo?.estudiante_id ?? null);
+
+  // ─── Handlers ───
+  const handleSeleccionarHijo = useCallback((hijo: any) => {
+    setHijoActivo(hijo);
+    setMatriculaId(hijo.matricula_id);
+    refrescarResumen();
+  }, [setHijoActivo, setMatriculaId, refrescarResumen]);
+
+  const handleFiltroHistorial = useCallback((key: string, value: any) => {
+    actualizarFiltrosHistorial({ [key]: value });
+  }, [actualizarFiltrosHistorial]);
+
+  const handleFiltroEstadoPermisos = useCallback((estado: EstadoPermiso | '') => {
+    setFiltroEstadoPermisos(estado);
+    actualizarFiltrosPermisos({ estado: estado || undefined });
+  }, [actualizarFiltrosPermisos]);
+
+  const handleCrearPermiso = useCallback(async (data: any, archivo?: File) => {
+    const ok = await crearPermiso(data, archivo);
+    if (ok) setModalPermisoOpen(false);
+    return ok;
+  }, [crearPermiso]);
+
+  // Materias disponibles para los filtros del historial
+  const materiasDisponibles = resumen?.por_materia.map(m => ({
+    asignacion_id: m.asignacion_id,
+    materia_nombre: m.materia_nombre,
+  })) ?? [];
+
   return (
-    <svg
-      style={{ width: 20, height: 20 }}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      viewBox="0 0 24 24"
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: isDark
+          ? 'radial-gradient(circle at top right, rgba(59,130,246,0.04), transparent 60%)'
+          : 'radial-gradient(circle at top right, rgba(59,130,246,0.02), transparent 60%)',
+      }}
     >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  )
+      <Container maxWidth="xl" disableGutters>
+        {/* ══════════ HEADER ══════════ */}
+        <Fade in timeout={400}>
+          <Box sx={{ mb: 4, pt: 3 }}>
+            <Box
+              sx={{
+                p: 3.5,
+                borderRadius: 4,
+                background: isDark
+                  ? 'linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)'
+                  : '#fff',
+                backdropFilter: 'blur(20px)',
+                border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.05)}`,
+                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.06)',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Shimmer */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: `linear-gradient(90deg, transparent, ${alpha('#fff', isDark ? 0.03 : 0.08)}, transparent)`,
+                  backgroundSize: '1000px 100%',
+                  animation: `${shimmer} 4s linear infinite`,
+                  pointerEvents: 'none',
+                }}
+              />
+
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 2,
+                  position: 'relative',
+                  zIndex: 1,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 3,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: isDark
+                        ? 'linear-gradient(135deg, #3b82f6, #2563eb)'
+                        : 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                      boxShadow: '0 6px 20px rgba(59,130,246,0.4)',
+                      animation: `${bounceIcon} 4s ease-in-out infinite`,
+                    }}
+                  >
+                    <FamilyRestroomIcon sx={{ fontSize: 30, color: '#fff' }} />
+                  </Box>
+
+                  <Box>
+                    <Typography
+                      variant="h4"
+                      fontWeight={900}
+                      sx={{
+                        background: isDark
+                          ? 'linear-gradient(135deg, #60a5fa, #3b82f6)'
+                          : 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        letterSpacing: -0.5,
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      Asistencia escolar
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ mt: 0.25 }}>
+                      {user?.username && <>Hola, <strong>{user.username}</strong> · </>}
+                      {hijoActivo ? (
+                        <>
+                          Seguimiento de{' '}
+                          <Box
+                            component="span"
+                            sx={{
+                              color: isDark ? '#60a5fa' : '#3b82f6',
+                              fontWeight: 800,
+                            }}
+                          >
+                            {hijoActivo.nombres} {hijoActivo.apellidos}
+                          </Box>
+                        </>
+                      ) : 'Cargando datos...'}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                  {/* Badge de materias en riesgo */}
+                  {materiasEnRiesgo.length > 0 && (
+                    <Chip
+                      icon={<WarningAmberIcon sx={{ fontSize: '16px !important' }} />}
+                      label={`${materiasEnRiesgo.length} materia${materiasEnRiesgo.length > 1 ? 's' : ''} en riesgo`}
+                      size="small"
+                      sx={{
+                        height: 28,
+                        fontWeight: 800,
+                        fontSize: 12,
+                        bgcolor: isDark ? alpha('#f59e0b', 0.15) : alpha('#f59e0b', 0.1),
+                        color: isDark ? '#fbbf24' : '#d97706',
+                        border: `1px solid ${alpha('#f59e0b', 0.3)}`,
+                        borderRadius: 2,
+                        '& .MuiChip-icon': { color: isDark ? '#fbbf24' : '#d97706' },
+                      }}
+                    />
+                  )}
+
+                  {/* Badge de permisos pendientes */}
+                  {pendientes.length > 0 && (
+                    <Chip
+                      icon={<AccessTimeRoundedIcon sx={{ fontSize: '16px !important' }} />}
+                      label={`${pendientes.length} permiso${pendientes.length > 1 ? 's' : ''} pendiente${pendientes.length > 1 ? 's' : ''}`}
+                      size="small"
+                      sx={{
+                        height: 28,
+                        fontWeight: 800,
+                        fontSize: 12,
+                        bgcolor: isDark ? alpha('#f59e0b', 0.12) : alpha('#f59e0b', 0.08),
+                        color: isDark ? '#fbbf24' : '#d97706',
+                        border: `1px solid ${alpha('#f59e0b', 0.25)}`,
+                        borderRadius: 2,
+                        '& .MuiChip-icon': { color: isDark ? '#fbbf24' : '#d97706' },
+                      }}
+                    />
+                  )}
+
+                  {/* Botón solicitar permiso */}
+                  <Button
+                    variant="contained"
+                    startIcon={<NoteAddIcon />}
+                    onClick={() => setModalPermisoOpen(true)}
+                    disabled={!hijoActivo}
+                    sx={{
+                      borderRadius: 2.5,
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      px: 2.5,
+                      background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
+                      boxShadow: '0 4px 12px rgba(245,158,11,0.3)',
+                      '&:hover': {
+                        boxShadow: '0 6px 16px rgba(245,158,11,0.4)',
+                        transform: 'translateY(-1px)',
+                      },
+                      '&.Mui-disabled': { opacity: 0.5 },
+                    }}
+                  >
+                    Solicitar permiso
+                  </Button>
+
+                  <Tooltip title="Actualizar datos">
+                    <IconButton
+                      onClick={() => { refrescarResumen(); refrescarPermisos(); }}
+                      size="small"
+                      sx={{
+                        bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04),
+                        border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
+                        borderRadius: 2,
+                        '&:hover': { bgcolor: isDark ? alpha('#3b82f6', 0.15) : alpha('#3b82f6', 0.08), transform: 'rotate(180deg)' },
+                        transition: 'all 0.3s ease',
+                      }}
+                    >
+                      <RefreshIcon sx={{ fontSize: 18, color: isDark ? '#60a5fa' : '#3b82f6' }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </Box>
+
+              {/* Info del hijo activo */}
+              {hijoActivo && (
+                <Box
+                  sx={{
+                    mt: 2.5,
+                    pt: 2.5,
+                    borderTop: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    flexWrap: 'wrap',
+                    position: 'relative',
+                    zIndex: 1,
+                  }}
+                >
+                  {[
+                    { label: hijoActivo.nivel_nombre },
+                    { label: `${hijoActivo.grado_nombre} "${hijoActivo.paralelo_nombre}"` },
+                    { label: hijoActivo.turno_nombre },
+                    { label: hijoActivo.periodo_nombre },
+                  ].map((item, i) => (
+                    <Chip
+                      key={i}
+                      label={item.label}
+                      size="small"
+                      sx={{
+                        height: 24,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04),
+                        borderRadius: 1.5,
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </Fade>
+
+        {/* ══════════ SELECTOR DE HIJO ══════════ */}
+        <SelectorHijo
+          hijos={hijos}
+          hijoActivo={hijoActivo}
+          onSeleccionar={handleSeleccionarHijo}
+          isLoading={loadingHijos}
+        />
+
+        {/* ══════════ TABS ══════════ */}
+        <Box sx={{ animation: `${fadeSlideUp} 0.5s ease-out 0.15s both` }}>
+          <Box
+            sx={{
+              mb: 3,
+              borderRadius: 3,
+              background: isDark ? alpha('#fff', 0.03) : '#fff',
+              border: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06)}`,
+              overflow: 'hidden',
+            }}
+          >
+            <Tabs
+              value={tabActivo}
+              onChange={(_, v) => setTabActivo(v)}
+              sx={{
+                minHeight: 52,
+                '& .MuiTab-root': {
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  minHeight: 52,
+                  color: 'text.secondary',
+                  transition: 'all 0.2s ease',
+                  '&.Mui-selected': {
+                    color: isDark ? '#60a5fa' : '#3b82f6',
+                  },
+                },
+                '& .MuiTabs-indicator': {
+                  background: isDark
+                    ? 'linear-gradient(90deg, #3b82f6, #60a5fa)'
+                    : 'linear-gradient(90deg, #3b82f6, #2563eb)',
+                  height: 3,
+                  borderRadius: '3px 3px 0 0',
+                },
+              }}
+            >
+              <Tab
+                label="Resumen"
+                icon={<BarChartIcon sx={{ fontSize: 18 }} />}
+                iconPosition="start"
+              />
+              <Tab
+                label="Historial"
+                icon={<ListAltIcon sx={{ fontSize: 18 }} />}
+                iconPosition="start"
+              />
+              <Tab
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    Mis permisos
+                    {pendientes.length > 0 && (
+                      <Chip
+                        label={pendientes.length}
+                        size="small"
+                        sx={{
+                          height: 18,
+                          minWidth: 18,
+                          fontSize: 10,
+                          fontWeight: 900,
+                          bgcolor: '#f59e0b',
+                          color: '#fff',
+                          borderRadius: '9px',
+                          '& .MuiChip-label': { px: 0.75 },
+                        }}
+                      />
+                    )}
+                  </Box>
+                }
+                icon={<EventBusyIcon sx={{ fontSize: 18 }} />}
+                iconPosition="start"
+              />
+            </Tabs>
+          </Box>
+
+          {/* ─── Tab 0: Resumen ─── */}
+          {tabActivo === 0 && (
+            <Fade in timeout={300}>
+              <Box>
+                <ResumenHijo resumen={resumen} isLoading={loadingResumen} />
+              </Box>
+            </Fade>
+          )}
+
+          {/* ─── Tab 1: Historial ─── */}
+          {tabActivo === 1 && (
+            <Fade in timeout={300}>
+              <Box>
+                <HistorialAsistencia
+                  asistencias={asistencias}
+                  paginacion={paginacionHistorial}
+                  isLoading={loadingHistorial}
+                  filtros={filtrosHistorial}
+                  onFiltroChange={handleFiltroHistorial}
+                  onPaginaChange={cambiarPaginaHistorial}
+                  materiasDisponibles={materiasDisponibles}
+                />
+              </Box>
+            </Fade>
+          )}
+
+          {/* ─── Tab 2: Mis permisos ─── */}
+          {tabActivo === 2 && (
+            <Fade in timeout={300}>
+              <Box>
+                <MisPermisos
+                  solicitudes={solicitudes}
+                  paginacion={paginacionPermisos}
+                  isLoading={loadingPermisos}
+                  isSubmitting={submittingPermisos}
+                  filtroEstado={filtroEstadoPermisos}
+                  onFiltroEstadoChange={handleFiltroEstadoPermisos}
+                  onPaginaChange={(p) => actualizarFiltrosPermisos({ page: p })}
+                  onCancelar={cancelarPermiso}
+                  pendientesCount={pendientes.length}
+                />
+              </Box>
+            </Fade>
+          )}
+        </Box>
+
+        {/* Padding final */}
+        <Box sx={{ height: 48 }} />
+      </Container>
+
+      {/* ══════════ MODAL SOLICITAR PERMISO ══════════ */}
+      <SolicitarPermisoModal
+        open={modalPermisoOpen}
+        onClose={() => setModalPermisoOpen(false)}
+        onSubmit={handleCrearPermiso}
+        hijo={hijoActivo}
+        materiasDisponibles={materiasDisponibles}
+        isSubmitting={submittingPermisos}
+      />
+    </Box>
+  );
 }

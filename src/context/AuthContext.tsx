@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import authService, { User } from '../services/authService';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -19,70 +19,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     let isMounted = true;
-
     const loadUser = async () => {
-      console.log('🔄 AuthContext: Cargando usuario...');
       try {
         const currentUser = await authService.getCurrentUser();
-        if (isMounted) {
-          console.log('✅ AuthContext: Usuario cargado', currentUser);
-          setUser(currentUser);
-        }
-      } catch (error) {
-        console.log('❌ AuthContext: Error al cargar usuario', error);
-        if (isMounted) {
-          setUser(null);
-        }
+        if (isMounted) setUser(currentUser);
+      } catch {
+        if (isMounted) setUser(null);
       } finally {
-        if (isMounted) {
-          console.log('🏁 AuthContext: Carga finalizada, loading = false');
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
-
     loadUser();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   const login = async (credential: string, password: string) => {
-    console.log('🔐 AuthContext: Intentando login...');
-    const response = await authService.login({ credential, password });
-    setUser(response.data.user);
-    console.log('✅ AuthContext: Login exitoso', response.data.user);
-    
-    // Determinar ruta según rol
-    const roles = response.data.user.roles?.map(r => r.nombre) || [];
-    let targetPath = '/dashboard';
-    
-    if (roles.includes('padre')) {
-      targetPath = '/dashboard/padre/principal';
-    } else if (roles.includes('profesor')) {
-      targetPath = '/dashboard/profesor/home';
-    } else if (roles.includes('admin') || roles.includes('super_admin')) {
-      targetPath = '/dashboard';
-    }
-    
-    console.log('🚀 AuthContext: Redirigiendo a', targetPath);
-    window.location.href = targetPath;
-  };
+  await authService.login({ credential, password });
+  // En vez de usar el user del login, pedir el user completo
+  const fullUser = await authService.getCurrentUser();
+  setUser(fullUser);
+  // ahora fullUser tiene roles y permisos
+};
 
   const logout = async () => {
-    console.log('👋 AuthContext: Cerrando sesión...');
     try {
       await authService.logout();
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }
     setUser(null);
-    window.location.href = '/login';
+    router.replace('/login');
   };
 
   const hasRole = (roles: string[]): boolean => {
@@ -96,16 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        logout,
-        hasRole,
-        hasPermission,
-      }}
-    >
+    <AuthContext.Provider value={{ user, loading, login, logout, hasRole, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

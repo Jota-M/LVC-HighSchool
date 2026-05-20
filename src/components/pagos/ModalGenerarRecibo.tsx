@@ -1,4 +1,4 @@
-// components/pagos/ModalGenerarRecibo.tsx
+// components/pagos/ModalGenerarRecibo.tsx - CON SOPORTE PAGO ANUAL
 'use client';
 import React, { useState } from 'react';
 import {
@@ -36,11 +36,15 @@ import api from '@/lib/api';
 interface Pago {
   id: number;
   codigo_pago: string;
+  fecha_pago?: string;
   monto_pagado: number | string;
+  metodo_pago?: string;
+  numero_comprobante?: string | null;
+  estudiante_codigo?: string;
   nombres: string;
   apellidos?: string;
   mes_correspondiente?: string;
-  numero_cuota?: number;
+  numero_cuota?: number | null;
 }
 
 interface ModalGenerarReciboProps {
@@ -86,6 +90,11 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
   
   const estudiante = pagos[0];
 
+  // 🔧 Detectar si es pago anual
+  const esPagoAnual = pagos.length === 1 && 
+                      (pagos[0].mes_correspondiente === 'Pago Anual Completo (10 meses)' || 
+                       pagos[0].numero_cuota === null);
+
   const handleSubmit = async () => {
     if (!formData.nombre_entrega.trim()) {
       enqueueSnackbar('Debe ingresar el nombre de quien entrega', { variant: 'warning' });
@@ -100,29 +109,63 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
     setLoading(true);
 
     try {
-      const response = await api.post(
-        '/api/pago-mensualidad/pdf-multiple',
-        {
-          pago_ids: pagos.map(p => p.id),
-          nombre_entrega: formData.nombre_entrega,
-          ci_entrega: formData.ci_entrega,
-          quien_recibe: formData.quien_recibe, // 🔧 Nuevo campo
-          preview: formData.preview,
-        },
-        {
-          responseType: 'blob',
-        }
-      );
+      let response;
+
+      if (esPagoAnual) {
+        // 🆕 MODO DIRECTO: Para pago anual, enviar datos completos
+        console.log('📄 Generando PDF de pago anual con datos directos');
+        
+        response = await api.post(
+          '/api/pago-mensualidad/pdf-directo',
+          {
+            pagos: pagos.map(pago => ({
+              id: pago.id,
+              codigo_pago: pago.codigo_pago,
+              fecha_pago: pago.fecha_pago || new Date().toISOString(),
+              monto_pagado: parseFloat(pago.monto_pagado.toString()),
+              metodo_pago: pago.metodo_pago || 'efectivo',
+              numero_comprobante: pago.numero_comprobante || null,
+              estudiante_codigo: pago.estudiante_codigo || '',
+              nombres: pago.nombres,
+              apellidos: pago.apellidos || '',
+              mes_correspondiente: pago.mes_correspondiente || '',
+              numero_cuota: pago.numero_cuota,
+            })),
+            nombre_entrega: formData.nombre_entrega,
+            ci_entrega: formData.ci_entrega,
+            quien_recibe: formData.quien_recibe,
+            preview: formData.preview,
+          },
+          {
+            responseType: 'blob',
+          }
+        );
+      } else {
+        // MODO NORMAL: Para pagos regulares, buscar por IDs
+        console.log('📄 Generando PDF de pagos regulares por IDs');
+        
+        response = await api.post(
+          '/api/pago-mensualidad/pdf-multiple',
+          {
+            pago_ids: pagos.map(p => p.id),
+            nombre_entrega: formData.nombre_entrega,
+            ci_entrega: formData.ci_entrega,
+            quien_recibe: formData.quien_recibe,
+            preview: formData.preview,
+          },
+          {
+            responseType: 'blob',
+          }
+        );
+      }
 
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
 
       if (formData.preview) {
-        // Abrir en nueva pestaña
         window.open(url, '_blank');
         enqueueSnackbar('Recibo abierto en nueva pestaña', { variant: 'success' });
       } else {
-        // Descargar archivo
         const a = document.createElement('a');
         a.href = url;
         a.download = `Recibo_${estudiante.codigo_pago}.pdf`;
@@ -144,15 +187,6 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleReset = () => {
-    setFormData({
-      nombre_entrega: '',
-      ci_entrega: '',
-      quien_recibe: 'patricia',
-      preview: false,
-    });
   };
 
   return (
@@ -177,7 +211,9 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
                 width: 48,
                 height: 48,
                 borderRadius: '12px',
-                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                background: esPagoAnual
+                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                  : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -187,7 +223,7 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
             </Box>
             <Box>
               <Typography variant="h6" fontWeight={700}>
-                Generar Recibo de Pago
+                {esPagoAnual ? 'Recibo Pago Anual' : 'Generar Recibo de Pago'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {estudiante?.nombres} {estudiante?.apellidos}
@@ -204,27 +240,27 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
         <Stack spacing={3} sx={{ mt: 2 }}>
           {/* Información del pago */}
           <Alert 
-            severity="info" 
+            severity={esPagoAnual ? 'success' : 'info'}
             sx={{ 
               borderRadius: '12px',
-              bgcolor: alpha('#3b82f6', 0.1),
-              border: `1px solid ${alpha('#3b82f6', 0.3)}`,
+              bgcolor: alpha(esPagoAnual ? '#10b981' : '#3b82f6', 0.1),
+              border: `1px solid ${alpha(esPagoAnual ? '#10b981' : '#3b82f6', 0.3)}`,
             }}
           >
             <Typography variant="body2" fontWeight={600} gutterBottom>
-              📄 Resumen del Pago
+              {esPagoAnual ? '🎉 Pago Anual Completo' : '📄 Resumen del Pago'}
             </Typography>
             <Box display="flex" justifyContent="space-between" mt={1}>
               <Typography variant="caption" color="text.secondary">
-                Mensualidades:
+                {esPagoAnual ? 'Meses cubiertos:' : 'Mensualidades:'}
               </Typography>
               <Chip
-                label={`${pagos.length} cuota(s)`}
+                label={esPagoAnual ? '10 meses (Feb - Nov)' : `${pagos.length} cuota(s)`}
                 size="small"
                 sx={{
                   borderRadius: '8px',
                   fontWeight: 600,
-                  bgcolor: alpha('#3b82f6', 0.2),
+                  bgcolor: alpha(esPagoAnual ? '#10b981' : '#3b82f6', 0.2),
                 }}
               />
             </Box>
@@ -232,10 +268,20 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
               <Typography variant="caption" color="text.secondary">
                 Monto Total:
               </Typography>
-              <Typography variant="body2" fontWeight={700} color="#3b82f6">
+              <Typography variant="body2" fontWeight={700} color={esPagoAnual ? '#10b981' : '#3b82f6'}>
                 Bs. {totalMonto.toFixed(2)}
               </Typography>
             </Box>
+            {esPagoAnual && (
+              <Box display="flex" justifyContent="space-between" mt={0.5}>
+                <Typography variant="caption" color="text.secondary">
+                  Descuento aplicado:
+                </Typography>
+                <Typography variant="caption" fontWeight={700} color="#10b981">
+                  10% (1 mes gratis)
+                </Typography>
+              </Box>
+            )}
           </Alert>
 
           <Divider>
@@ -323,7 +369,7 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
             />
           </Divider>
 
-          {/* 🔧 NUEVO: Selector de quien RECIBE el dinero */}
+          {/* Selector de quien RECIBE el dinero */}
           <Box
             sx={{
               p: 2,
@@ -427,7 +473,7 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
           </Box>
 
           {/* Lista de mensualidades */}
-          {pagos.length > 1 && (
+          {pagos.length > 1 && !esPagoAnual && (
             <Box>
               <Typography variant="caption" color="text.secondary" gutterBottom>
                 Mensualidades incluidas en el recibo:
@@ -475,13 +521,17 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
             textTransform: 'none',
             fontWeight: 600,
             px: 3,
-            background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+            background: esPagoAnual
+              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+              : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
             color: '#fff',
             '&:hover': {
-              background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+              background: esPagoAnual
+                ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
             },
             '&:disabled': {
-              background: alpha('#ef4444', 0.5),
+              background: alpha(esPagoAnual ? '#10b981' : '#ef4444', 0.5),
               color: '#fff',
             },
           }}

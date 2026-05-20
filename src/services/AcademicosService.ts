@@ -258,16 +258,21 @@ class AcademicosService {
   // ========== PARALELOS ==========
   
   async listarParalelos(params?: {
-    grado_id?: number;
-    turno_id?: number;
-    anio?: number;
-    activo?: boolean;
-    page?: number;
-    limit?: number;
-  }): Promise<ParalelosResponse> {
-    const { data } = await api.get<ParalelosResponse>('/paralelo', { params });
-    return data;
+  grado_id?: number;
+  turno_id?: number;
+  anio?: number;
+  activo?: boolean;
+}): Promise<any> {
+  // Si no se pasa anio explícito, usar el período activo
+  if (!params?.anio) {
+    const periodoRes = await this.obtenerPeriodoActivo();
+    const anio = new Date(periodoRes.data.periodo.fecha_inicio).getFullYear();
+    params = { ...params, anio };
   }
+
+  const { data } = await api.get('/paralelo', { params });
+  return data;
+}
 
   async obtenerParaleloPorId(id: number): Promise<{ success: boolean; data: { paralelo: Paralelo } }> {
     const { data } = await api.get(`/paralelo/${id}`);

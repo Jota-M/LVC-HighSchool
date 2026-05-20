@@ -1,346 +1,591 @@
-'use client'
-
-import React from 'react'
+// app/dashboard/padre/horario/page.tsx
+'use client';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  Grid,
-  Chip,
-  Avatar,
-  useTheme,
-  Divider,
-  Paper,
-} from '@mui/material'
-import ScheduleIcon from '@mui/icons-material/Schedule'
-import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
-import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos'
-import TodayIcon from '@mui/icons-material/Today'
+  Box, Container, Typography, Paper, Fade, useTheme, keyframes,
+  alpha, Grid, Chip, Skeleton, Alert, FormControl, InputLabel,
+  Select, MenuItem, Avatar, Tab, Tabs, Divider,
+  ToggleButtonGroup, ToggleButton, Card, CardContent,
+  Tooltip, Badge, IconButton,
+} from '@mui/material';
+import {
+  CalendarMonth as CalendarIcon,
+  MenuBook as MateriaIcon,
+  AccessTime as HoraIcon,
+  School as SchoolIcon,
+  Person as PersonIcon,
+  MeetingRoom as AulaIcon,
+  ChildCare as HijoIcon,
+  CheckCircle as CheckIcon,
+  Warning as WarnIcon,
+  Info as InfoIcon,
+  KeyboardArrowDown as ArrowIcon,
+} from '@mui/icons-material';
+import { HorarioReadonlyGrid } from '@/components/horario/HorarioReadonlyGrid';
+import { useHijosPadre, useHorarioEstudiante, HijoResumen } from '@/hooks/useHorarioFamilia';
+import { DIAS_SEMANA } from '@/types/horariotypes';
+import { usePeriodosPublicos } from '@/hooks/usePeriodosPublicos';
+import { useAuth } from '@/context/AuthContext';
 
-// --- Tipos ---
-type ColorType =
-  | 'primary'
-  | 'secondary'
-  | 'success'
-  | 'error'
-  | 'info'
-  | 'warning'
-  | 'default'
+const float = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+`;
 
-// Para clases y recordatorios
-interface ClaseInfo {
-  materia?: string
-  hora: string
-  aula?: string
-  profesor?: string
-  color: ColorType
-}
+const DIAS_L_V = [1, 2, 3, 4, 5];
+const DIAS_L_S = [1, 2, 3, 4, 5, 6];
 
-interface RecordatorioInfo {
-  titulo: string
-  fecha: string
-  hora: string
-  lugar: string
-  color: ColorType
-}
+// ─────────────────────────────────────────────────
+// Página principal
+// ─────────────────────────────────────────────────
+export default function PadreHorarioPage() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const accentColor = isDark ? '#facc15' : '#0288d1';
 
-// --- Datos ---
-const estudiantes = [
-  { nombre: 'Juan Pérez', iniciales: 'JP', color: 'success' as ColorType },
-  { nombre: 'María Gómez', iniciales: 'MG', color: 'primary' as ColorType },
-]
+  // ID del padre de familia autenticado
+  // Ajusta según tu implementación de auth
+  const { user } = useAuth();
+  
 
-const claseActual: ClaseInfo = {
-  materia: 'Matemáticas',
-  hora: '13:30 - 14:15',
-  aula: 'Aula 201',
-  profesor: 'Prof. M. González',
-  color: 'info',
-}
+  const [periodoId, setPeriodoId] = useState<number | null>(null);
+  const [hijoSeleccionado, setHijoSeleccionado] = useState<number>(0); // índice del tab
+  const [diasModo, setDiasModo] = useState<'lv' | 'ls'>('lv');
+  const diasActivos = diasModo === 'ls' ? DIAS_L_S : DIAS_L_V;
 
-const proximaClase: ClaseInfo = {
-  materia: 'Lenguaje',
-  hora: '14:15 - 15:00',
-  aula: 'Aula 203',
-  profesor: 'Prof. A. Rodríguez',
-  color: 'warning',
-}
+  const { periodos, periodoActivo, isLoading: loadingPeriodos } = usePeriodosPublicos();
 
-const recordatorio: RecordatorioInfo = {
-  titulo: 'Reunión de Padres',
-  fecha: 'Viernes 10 de Octubre',
-  hora: '17:00',
-  lugar: 'Salón de Actos',
-  color: 'error',
-}
+  useEffect(() => {
+    if (periodoActivo && !periodoId) setPeriodoId(periodoActivo.id);
+  }, [periodoActivo]);
 
-// Mapeo de materia → color del chip
-const materiaColorMap: Record<string, ColorType> = {
-  Matemáticas: 'info',
-  Ciencias: 'success',
-  Lenguaje: 'warning',
-  Sociales: 'secondary',
-  'Ed. Física': 'error',
-  Arte: 'primary',
-}
+  const { hijos, isLoading: loadingHijos } = useHijosPadre(periodoId);
 
-// Horario semanal (filas)
-const horario: {
-  hora: string
-  lunes: string
-  martes: string
-  miercoles: string
-  jueves: string
-  viernes: string
-}[] = [
-  {
-    hora: '07:00 - 07:45',
-    lunes: 'Matemáticas',
-    martes: 'Ciencias',
-    miercoles: 'Lenguaje',
-    jueves: 'Sociales',
-    viernes: 'Arte',
-  },
-  {
-    hora: '07:45 - 08:30',
-    lunes: 'Ciencias',
-    martes: 'Matemáticas',
-    miercoles: 'Sociales',
-    jueves: 'Lenguaje',
-    viernes: 'Ed. Física',
-  },
-  {
-    hora: '08:30 - 09:15',
-    lunes: 'Lenguaje',
-    martes: 'Arte',
-    miercoles: 'Matemáticas',
-    jueves: 'Ciencias',
-    viernes: 'Matemáticas',
-  },
-  {
-    hora: '09:15 - 10:00',
-    lunes: 'Sociales',
-    martes: 'Ed. Física',
-    miercoles: 'Ciencias',
-    jueves: 'Arte',
-   viernes: 'Lenguaje', // cuidado con faltas de coma
-  },
-]
-
-// --- Componente principal ---
-export default function HorarioPage() {
-  const theme = useTheme()
-
-  // Función para obtener los colores del tema para una clave como "info", "success", etc.
-  const getPaletteColor = (colorKey: ColorType) => {
-    // theme.palette[colorKey] puede no existir explícitamente en todos los casos,
-    // pero MUI garantiza que esas propiedades (info, success, warning, etc.) existan en palette.
-    const paletteItem = (theme.palette as any)[colorKey]
-    if (paletteItem && typeof paletteItem === 'object') {
-      return paletteItem as {
-        main: string
-        light?: string
-        dark?: string
-        contrastText?: string
-      }
+  // Resetear tab si el hijo ya no existe en el nuevo período
+  useEffect(() => {
+    if (hijos.length > 0 && hijoSeleccionado >= hijos.length) {
+      setHijoSeleccionado(0);
     }
-    // fallback
-    return {
-      main: theme.palette.grey[400],
-      light: theme.palette.grey[200],
-      dark: theme.palette.grey[700],
-      contrastText: theme.palette.getContrastText(theme.palette.grey[400]),
-    }
-  }
+  }, [hijos]);
 
-  // Renderiza un chip para una materia con su color asociado
-  const renderMateriaChip = (materia: string) => {
-    const colorKey = materiaColorMap[materia] || 'default'
-    const paletteColor = getPaletteColor(colorKey)
+  const hijoActivo = hijos[hijoSeleccionado] ?? null;
+
+  return (
+    <Box sx={{ minHeight: '100vh', py: 4 }}>
+      <Container maxWidth="xl">
+        <Fade in timeout={450}>
+          <Box>
+
+            {/* ── HEADER ── */}
+            <Box sx={{ mb: 4, display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+                  <CalendarIcon sx={{ color: accentColor, fontSize: 34, animation: `${float} 2.5s ease-in-out infinite` }} />
+                  <Box>
+                    <Typography
+                      variant="h1"
+                      sx={{
+                        fontSize: { xs: '1.4rem', sm: '1.9rem', md: '2.2rem' },
+                        fontWeight: 800,
+                        background: isDark
+                          ? 'linear-gradient(135deg,#facc15,#f59e0b)'
+                          : 'linear-gradient(135deg,#0288d1,#01579b)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      Horarios de mis Hijos
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                      {hijos.length > 0
+                        ? `${hijos.length} ${hijos.length === 1 ? 'estudiante registrado' : 'estudiantes registrados'}`
+                        : 'Seguimiento académico familiar'}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Selector período */}
+              <FormControl size="small" sx={{ minWidth: 220 }}>
+                <InputLabel>Período Académico</InputLabel>
+                <Select
+                  value={periodoId ?? ''}
+                  onChange={(e) => { setPeriodoId(e.target.value as number); setHijoSeleccionado(0); }}
+                  label="Período Académico"
+                  disabled={loadingPeriodos}
+                >
+                  {periodos.map((p) => (
+                    <MenuItem key={p.id} value={p.id}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {p.nombre}
+                        {p.activo && (
+                          <Typography component="span" sx={{ fontSize: '0.6rem', fontWeight: 700, px: 0.7, py: 0.15, borderRadius: 1, bgcolor: accentColor, color: isDark ? '#000' : '#fff' }}>
+                            ACTIVO
+                          </Typography>
+                        )}
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            {!periodoId && !loadingPeriodos && (
+              <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+                Selecciona un período académico para ver los horarios
+              </Alert>
+            )}
+
+            {periodoId && (
+              <>
+                {/* ── SELECTOR DE HIJOS ── */}
+                {loadingHijos ? (
+                  <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                    {[1, 2].map((i) => (
+                      <Skeleton key={i} variant="rounded" width={160} height={80} sx={{ borderRadius: 3 }} />
+                    ))}
+                  </Box>
+                ) : hijos.length === 0 ? (
+                  <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
+                    No se encontraron estudiantes vinculados a tu cuenta en este período.
+                  </Alert>
+                ) : (
+                  <>
+                    {/* Cards de hijos — selector visual */}
+                    <Box sx={{ display: 'flex', gap: 1.5, mb: 3, flexWrap: 'wrap' }}>
+                      {hijos.map((hijo, idx) => (
+                        <HijoCard
+                          key={hijo.estudiante_id}
+                          hijo={hijo}
+                          activo={hijoSeleccionado === idx}
+                          accentColor={accentColor}
+                          isDark={isDark}
+                          onClick={() => setHijoSeleccionado(idx)}
+                        />
+                      ))}
+                    </Box>
+
+                    {/* ── CONTENIDO DEL HIJO SELECCIONADO ── */}
+                    {hijoActivo && (
+                      <HijoHorarioPanel
+                        hijo={hijoActivo}
+                        periodoId={periodoId}
+                        diasActivos={diasActivos}
+                        diasModo={diasModo}
+                        onDiasModoChange={setDiasModo}
+                        accentColor={accentColor}
+                        isDark={isDark}
+                      />
+                    )}
+                  </>
+                )}
+              </>
+            )}
+          </Box>
+        </Fade>
+      </Container>
+    </Box>
+  );
+}
+
+// ─────────────────────────────────────────────────
+// Sub: Card selector de hijo
+// ─────────────────────────────────────────────────
+interface HijoCardProps {
+  hijo: HijoResumen;
+  activo: boolean;
+  accentColor: string;
+  isDark: boolean;
+  onClick: () => void;
+}
+
+const HijoCard: React.FC<HijoCardProps> = ({ hijo, activo, accentColor, isDark, onClick }) => {
+  const tieneHorario = !!hijo.paralelo_id;
+  const iniciales = `${hijo.nombres?.charAt(0) ?? ''}${hijo.apellidos?.charAt(0) ?? ''}`.toUpperCase();
+
+  return (
+    <Box
+      onClick={onClick}
+      sx={{
+        cursor: 'pointer',
+        p: 1.5,
+        borderRadius: 3,
+        minWidth: { xs: 140, sm: 170 },
+        maxWidth: { xs: 160, sm: 200 },
+        border: `2px solid ${activo ? accentColor : alpha(accentColor, 0.15)}`,
+        bgcolor: activo
+          ? isDark ? alpha('#facc15', 0.1) : alpha('#0288d1', 0.07)
+          : isDark ? '#ffffff06' : '#fafafa',
+        transition: 'all 0.18s',
+        position: 'relative',
+        overflow: 'hidden',
+        '&:hover': {
+          borderColor: accentColor,
+          transform: 'translateY(-2px)',
+          boxShadow: `0 6px 20px ${alpha(accentColor, 0.18)}`,
+        },
+      }}
+    >
+      {/* Franja activo */}
+      {activo && (
+        <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, bgcolor: accentColor, borderRadius: '12px 12px 0 0' }} />
+      )}
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+        <Badge
+          overlap="circular"
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          badgeContent={
+            tieneHorario
+              ? <CheckIcon sx={{ fontSize: 12, color: '#10b981', bgcolor: isDark ? '#1a1a1a' : '#fff', borderRadius: '50%' }} />
+              : <WarnIcon sx={{ fontSize: 12, color: '#f59e0b', bgcolor: isDark ? '#1a1a1a' : '#fff', borderRadius: '50%' }} />
+          }
+        >
+          <Avatar
+            src={hijo.foto_url ?? undefined}
+            sx={{
+              width: 38, height: 38,
+              bgcolor: activo ? accentColor : alpha(accentColor, 0.2),
+              color: activo ? (isDark ? '#000' : '#fff') : accentColor,
+              fontWeight: 800, fontSize: '0.9rem',
+            }}
+          >
+            {iniciales}
+          </Avatar>
+        </Badge>
+
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography
+            variant="body2"
+            fontWeight={700}
+            sx={{ lineHeight: 1.2, color: activo ? accentColor : 'text.primary', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
+          >
+            {hijo.nombres.split(' ')[0]}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', lineHeight: 1.2, display: 'block', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+            {hijo.apellido_paterno}
+          </Typography>
+          {hijo.grado_nombre && (
+            <Typography variant="caption" sx={{ fontSize: '0.6rem', color: accentColor, fontWeight: 600, lineHeight: 1 }}>
+              {hijo.grado_nombre}
+            </Typography>
+          )}
+        </Box>
+      </Box>
+
+      {/* Estado matrícula */}
+      <Box sx={{ mt: 1 }}>
+        <Chip
+          size="small"
+          label={tieneHorario ? (hijo.estado_matricula ?? 'Activo') : 'Sin matrícula'}
+          sx={{
+            height: 16, fontSize: '0.58rem', fontWeight: 700,
+            bgcolor: tieneHorario ? alpha('#10b981', 0.1) : alpha('#f59e0b', 0.1),
+            color: tieneHorario ? '#10b981' : '#f59e0b',
+          }}
+        />
+        {hijo.es_becado && (
+          <Chip size="small" label="Beca" sx={{ height: 16, fontSize: '0.58rem', ml: 0.5, bgcolor: alpha('#6366f1', 0.1), color: '#6366f1' }} />
+        )}
+      </Box>
+    </Box>
+  );
+};
+
+// ─────────────────────────────────────────────────
+// Sub: Panel completo de un hijo
+// ─────────────────────────────────────────────────
+interface HijoHorarioPanelProps {
+  hijo: HijoResumen;
+  periodoId: number;
+  diasActivos: number[];
+  diasModo: 'lv' | 'ls';
+  onDiasModoChange: (v: 'lv' | 'ls') => void;
+  accentColor: string;
+  isDark: boolean;
+}
+
+const HijoHorarioPanel: React.FC<HijoHorarioPanelProps> = ({
+  hijo, periodoId, diasActivos, diasModo, onDiasModoChange, accentColor, isDark,
+}) => {
+  const { celdas, bloques, materiasUnicas, totalHoras, isLoading } =
+    useHorarioEstudiante(hijo.paralelo_id, periodoId);
+
+  // Horas por día para resumen
+  const horasPorDia = [1, 2, 3, 4, 5].reduce<Record<number, number>>((acc, dia) => {
+    acc[dia] = celdas.filter((c) => c.dia_semana === dia && !c.es_recreo).length;
+    return acc;
+  }, {});
+
+  const diasConMasHoras = Object.entries(horasPorDia)
+    .filter(([, h]) => h > 0)
+    .sort(([, a], [, b]) => b - a);
+
+  const nombreCompleto = `${hijo.nombres} ${hijo.apellido_paterno}${hijo.apellido_materno ? ` ${hijo.apellido_materno}` : ''}`;
+
+  if (!hijo.paralelo_id) {
     return (
-      <Chip
-        key={materia}
-        label={materia}
-        size="small"
-        sx={{
-          bgcolor: paletteColor.main,
-          color: paletteColor.contrastText ?? '#fff',
-          fontWeight: 'bold',
-          fontSize: '0.75rem',
-          px: 1,
-          borderRadius: 1,
-        }}
-      />
-    )
+      <Alert severity="warning" sx={{ borderRadius: 3 }}>
+        <Typography variant="body2" fontWeight={600}>
+          {hijo.nombres} no tiene matrícula activa en este período.
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Contacta con secretaría para verificar su estado.
+        </Typography>
+      </Alert>
+    );
   }
 
   return (
-    <Box sx={{ p: 1, bgcolor: theme.palette.background.default }}>
-      {/* Selección de estudiante */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            Seleccionar Estudiante
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            {estudiantes.map((e, i) => {
-              const paletteColor = getPaletteColor(e.color)
-              return (
-                <Chip
-                  key={i}
-                  avatar={<Avatar>{e.iniciales}</Avatar>}
-                  label={e.nombre}
-                  sx={{
-                    bgcolor:
-                      theme.palette.mode === 'light'
-                        ? paletteColor.light ?? paletteColor.main
-                        : paletteColor.dark ?? paletteColor.main,
-                    color:
-                      theme.palette.mode === 'light'
-                        ? paletteColor.dark ?? paletteColor.contrastText
-                        : paletteColor.light ?? paletteColor.contrastText,
-                    fontWeight: 600,
-                  }}
-                />
-              )
-            })}
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Tarjetas: clase actual, próxima, recordatorio */}
-      <Grid container spacing={2} mb={3}>
-        {( [claseActual, proximaClase] as ClaseInfo[] ).map((item, i) => (
-          <Grid key={`clase-${i}`} size={{xs:12, md:4}} >
-            <Card
-              sx={{
-                borderLeft: `6px solid ${getPaletteColor(item.color).main}`,
-                boxShadow: 3,
-              }}
-            >
-              <CardContent>
-                <Box display="flex" alignItems="center" gap={1} mb={1}>
-                  {i === 0 && <ScheduleIcon sx={{ color: getPaletteColor(item.color).main }} />}
-                  {i === 1 && <ArrowForwardIosIcon sx={{ color: getPaletteColor(item.color).main }} />}
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    {i === 0 ? 'Clase Actual' : 'Próxima Clase'}
-                  </Typography>
-                </Box>
-                <Typography variant="h6">{item.materia}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {item.hora} • {item.aula}
-                </Typography>
-                <Typography variant="body2">{item.profesor}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-        {/* Recordatorio separado porque tiene estructura diferente */}
-        <Grid size={{xs:12, md:4}} >
-          <Card
-            sx={{
-              borderLeft: `6px solid ${getPaletteColor(recordatorio.color).main}`,
-              boxShadow: 3,
-            }}
+    <Fade in timeout={350}>
+      <Box>
+        {/* ── Info del estudiante ── */}
+        <Paper
+          sx={{
+            mb: 3, p: 2, borderRadius: 3,
+            border: `1px solid ${alpha(accentColor, 0.2)}`,
+            background: isDark
+              ? `linear-gradient(135deg,${alpha('#facc15', 0.06)},transparent)`
+              : `linear-gradient(135deg,${alpha('#0288d1', 0.05)},transparent)`,
+            display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center',
+          }}
+        >
+          <Avatar
+            src={hijo.foto_url ?? undefined}
+            sx={{ width: 52, height: 52, bgcolor: alpha(accentColor, 0.2), color: accentColor, fontWeight: 800, fontSize: '1.1rem' }}
           >
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={1}>
-                <NotificationsActiveIcon
-                  sx={{ color: getPaletteColor(recordatorio.color).main }}
-                />
-                <Typography variant="subtitle1" fontWeight="bold">
-                  Recordatorio
-                </Typography>
-              </Box>
-              <Typography variant="h6">{recordatorio.titulo}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {recordatorio.fecha} • {recordatorio.hora}
-              </Typography>
-              <Typography variant="body2">{recordatorio.lugar}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+            {`${hijo.nombres?.charAt(0) ?? ''}${hijo.apellidos?.charAt(0) ?? ''}`}
+          </Avatar>
 
-      {/* Horario semanal */}
-      <Card>
-        <CardContent>
-          <Box display="flex" alignItems="center" gap={1} mb={2}>
-            <TodayIcon />
-            <Typography variant="h6" fontWeight="bold">
-              Horario Semanal
+          <Box sx={{ flex: 1, minWidth: 180 }}>
+            <Typography variant="h6" fontWeight={800} sx={{ lineHeight: 1.2 }}>
+              {nombreCompleto}
             </Typography>
-          </Box>
-          <Divider sx={{ mb: 2 }} />
-          <Box
-            sx={{
-              overflowX: 'auto',
-              '&::-webkit-scrollbar': {
-                height: '6px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: theme.palette.grey[400],
-                borderRadius: 3,
-              },
-            }}
-          >
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(6, 1fr)',
-                gap: 1,
-                minWidth: 700,
-              }}
-            >
-              {/* Encabezados */}
-              {['Hora', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((dia, i) => (
-                <Paper
-                  key={`header-${i}`}
-                  sx={{
-                    p: 1,
-                    textAlign: 'center',
-                    fontWeight: 'bold',
-                    bgcolor: theme.palette.grey[400],
-                  }}
-                >
-                  {dia}
-                </Paper>
-              ))}
-
-              {/* Filas del horario */}
-              {horario.map((fila, rowIndex) => {
-                return (
-                  <React.Fragment key={`fila-${rowIndex}`}>
-                    {/* Columna de hora */}
-                    <Paper
-                      sx={{ p: 1, textAlign: 'center', fontWeight: 500 }}
-                    >
-                      {fila.hora}
-                    </Paper>
-                    {(['lunes', 'martes', 'miercoles', 'jueves', 'viernes'] as const).map((dia, colIndex) => {
-                      const materia = fila[dia]
-                      return (
-                        <Paper
-                          key={`cell-${rowIndex}-${colIndex}`}
-                          sx={{
-                            p: 1,
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                          }}
-                        >
-                          {renderMateriaChip(materia)}
-                        </Paper>
-                      )
-                    })}
-                  </React.Fragment>
-                )
-              })}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8, mt: 0.8 }}>
+              {hijo.grado_nombre && (
+                <Chip size="small" icon={<SchoolIcon sx={{ fontSize: 12 }} />} label={`${hijo.grado_nombre} — Paralelo ${hijo.paralelo_nombre}`}
+                  sx={{ height: 22, fontSize: '0.68rem', bgcolor: alpha(accentColor, 0.1), color: accentColor, fontWeight: 700, '& .MuiChip-icon': { color: accentColor } }} />
+              )}
+              {hijo.turno_nombre && (
+                <Chip size="small" icon={<HoraIcon sx={{ fontSize: 12 }} />} label={hijo.turno_nombre}
+                  sx={{ height: 22, fontSize: '0.68rem' }} />
+              )}
+              {hijo.aula && (
+                <Chip size="small" icon={<AulaIcon sx={{ fontSize: 12 }} />} label={`Aula ${hijo.aula}`}
+                  sx={{ height: 22, fontSize: '0.68rem' }} />
+              )}
+              {hijo.es_repitente && (
+                <Chip size="small" label="Repitente" sx={{ height: 22, fontSize: '0.65rem', bgcolor: alpha('#f59e0b', 0.1), color: '#f59e0b' }} />
+              )}
+              {hijo.es_becado && (
+                <Chip size="small" label="Becado" sx={{ height: 22, fontSize: '0.65rem', bgcolor: alpha('#6366f1', 0.1), color: '#6366f1' }} />
+              )}
             </Box>
           </Box>
-        </CardContent>
-      </Card>
-    </Box>
-  )
-}
+
+          {/* Mini stats inline */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            {[
+              { valor: isLoading ? '—' : totalHoras, label: 'hrs/sem', color: accentColor },
+              { valor: isLoading ? '—' : materiasUnicas.length, label: 'materias', color: '#8b5cf6' },
+            ].map((s) => (
+              <Box key={s.label} sx={{ textAlign: 'center' }}>
+                <Typography variant="h5" fontWeight={800} sx={{ color: s.color, lineHeight: 1 }}>{s.valor}</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.62rem' }}>{s.label}</Typography>
+              </Box>
+            ))}
+          </Box>
+        </Paper>
+
+        {/* ── GRILLA ── */}
+        <Paper sx={{ borderRadius: 3, border: `1px solid ${alpha(accentColor, 0.15)}`, overflow: 'hidden', mb: 3 }}>
+          {/* Barra controles */}
+          <Box
+            sx={{
+              px: 2.5, py: 1.5,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexWrap: 'wrap', gap: 1,
+              borderBottom: `1px solid ${alpha(accentColor, 0.1)}`,
+              background: isDark ? alpha('#facc15', 0.04) : alpha('#0288d1', 0.04),
+            }}
+          >
+            <Typography variant="subtitle2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CalendarIcon sx={{ color: accentColor, fontSize: 18 }} />
+              Horario Semanal
+              {!isLoading && celdas.length > 0 && (
+                <Chip size="small" label={`${totalHoras} clases`}
+                  sx={{ height: 20, fontSize: '0.65rem', bgcolor: alpha(accentColor, 0.1), color: accentColor, fontWeight: 700 }} />
+              )}
+            </Typography>
+
+            <ToggleButtonGroup
+              value={diasModo} exclusive
+              onChange={(_, v) => v && onDiasModoChange(v)}
+              size="small"
+              sx={{
+                '& .MuiToggleButton-root': {
+                  border: `1px solid ${alpha(accentColor, 0.3)}`,
+                  borderRadius: '8px !important',
+                  px: 1.5, py: 0.5,
+                  fontSize: '0.72rem', fontWeight: 600, textTransform: 'none',
+                  '&.Mui-selected': { bgcolor: accentColor, color: isDark ? '#000' : '#fff' },
+                },
+              }}
+            >
+              <ToggleButton value="lv">L – V</ToggleButton>
+              <ToggleButton value="ls">L – S</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
+            <HorarioReadonlyGrid
+              celdas={celdas}
+              bloques={bloques}
+              diasActivos={diasActivos}
+              isLoading={isLoading}
+            />
+          </Box>
+        </Paper>
+
+        {/* ── RESUMEN POR DÍA + DOCENTES ── */}
+        {!isLoading && celdas.length > 0 && (
+          <Grid container spacing={2}>
+            {/* Resumen por día */}
+            <Grid size={{xs: 12, md: 7}}>
+              <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5, color: accentColor }}>
+                Clases por día
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {[1, 2, 3, 4, 5].filter((d) => horasPorDia[d] > 0).map((dia) => {
+                  const clasesDelDia = celdas
+                    .filter((c) => c.dia_semana === dia && !c.es_recreo)
+                    .sort((a, b) => a.bloque_numero - b.bloque_numero);
+
+                  return (
+                    <Paper key={dia} sx={{ borderRadius: 2.5, overflow: 'hidden', border: `1px solid ${alpha(accentColor, 0.1)}` }}>
+                      {/* Cabecera día */}
+                      <Box sx={{ px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: isDark ? alpha('#facc15', 0.05) : alpha('#0288d1', 0.04) }}>
+                        <Typography variant="caption" fontWeight={700}>{DIAS_SEMANA[dia]}</Typography>
+                        <Chip size="small" label={`${clasesDelDia.length} clases`}
+                          sx={{ height: 16, fontSize: '0.58rem', fontWeight: 700, bgcolor: alpha(accentColor, 0.1), color: accentColor }} />
+                      </Box>
+
+                      {/* Lista de clases compacta */}
+                      <Box sx={{ px: 2, py: 1, display: 'flex', flexDirection: 'column', gap: 0.6 }}>
+                        {clasesDelDia.map((c) => {
+                          const color = c.color || c.materia_color || accentColor;
+                          return (
+                            <Box key={c.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                              <Box sx={{ width: 3, height: 22, borderRadius: 2, bgcolor: color, flexShrink: 0 }} />
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography variant="caption" fontWeight={700} sx={{ color, display: 'block', lineHeight: 1.2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                                  {c.materia_nombre}
+                                </Typography>
+                                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.62rem' }}>
+                                  {c.hora_inicio?.slice(0, 5)} – {c.hora_fin?.slice(0, 5)}
+                                </Typography>
+                              </Box>
+                              {c.docente_apellidos && (
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.62rem', flexShrink: 0, maxWidth: 90, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                                  Prof. {c.docente_apellidos}
+                                </Typography>
+                              )}
+                              {c.aula && (
+                                <Chip size="small" label={c.aula}
+                                  sx={{ height: 16, fontSize: '0.58rem', flexShrink: 0, bgcolor: alpha(accentColor, 0.07), color: 'text.secondary' }} />
+                              )}
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    </Paper>
+                  );
+                })}
+              </Box>
+            </Grid>
+
+            {/* Panel de docentes */}
+            <Grid size={{xs: 12, md: 5}}>
+              <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5, color: accentColor }}>
+                Docentes de {hijo.nombres.split(' ')[0]}
+              </Typography>
+              <Paper sx={{ borderRadius: 2.5, border: `1px solid ${alpha(accentColor, 0.12)}`, overflow: 'hidden' }}>
+                {[...new Map(
+                  celdas
+                    .filter((c) => c.docente_apellidos && !c.es_recreo)
+                    .map((c) => [
+                      c.docente_id,
+                      {
+                        id: c.docente_id,
+                        nombre: `${c.docente_apellidos}, ${c.docente_nombres}`,
+                        materias: [] as string[],
+                        color: c.materia_color || accentColor,
+                      },
+                    ])
+                ).values()].map((d, idx, arr) => {
+                  // Materias de este docente
+                  const materiasDocente = [...new Set(
+                    celdas.filter((c) => c.docente_id === d.id && !c.es_recreo).map((c) => c.materia_nombre)
+                  )];
+
+                  return (
+                    <Box key={d.id}>
+                      <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                        <Avatar sx={{ width: 36, height: 36, bgcolor: alpha(d.color, 0.15), color: d.color, fontSize: '0.8rem', fontWeight: 800, flexShrink: 0 }}>
+                          <PersonIcon sx={{ fontSize: 18 }} />
+                        </Avatar>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="body2" fontWeight={700} sx={{ lineHeight: 1.2 }}>
+                            {d.nombre}
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                            {materiasDocente.map((m) => (
+                              <Chip key={m} size="small" label={m}
+                                sx={{ height: 18, fontSize: '0.6rem', bgcolor: alpha(d.color, 0.1), color: d.color, fontWeight: 600 }} />
+                            ))}
+                          </Box>
+                        </Box>
+                      </Box>
+                      {idx < arr.length - 1 && <Divider sx={{ mx: 2 }} />}
+                    </Box>
+                  );
+                })}
+
+                {celdas.filter((c) => c.docente_apellidos).length === 0 && (
+                  <Box sx={{ p: 3, textAlign: 'center' }}>
+                    <PersonIcon sx={{ fontSize: 32, opacity: 0.2, mb: 1 }} />
+                    <Typography variant="caption" color="text.disabled">
+                      Sin docentes asignados aún
+                    </Typography>
+                  </Box>
+                )}
+              </Paper>
+
+              {/* Materias sin docente (alerta útil para el padre) */}
+              {(() => {
+                const sinDocente = [...new Set(
+                  celdas.filter((c) => !c.docente_apellidos && !c.es_recreo).map((c) => c.materia_nombre)
+                )];
+                return sinDocente.length > 0 ? (
+                  <Alert
+                    severity="warning"
+                    icon={<WarnIcon />}
+                    sx={{ mt: 1.5, borderRadius: 2.5, py: 0.8 }}
+                  >
+                    <Typography variant="caption" fontWeight={600} display="block">
+                      Materias sin docente asignado:
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {sinDocente.join(', ')}
+                    </Typography>
+                  </Alert>
+                ) : null;
+              })()}
+            </Grid>
+          </Grid>
+        )}
+      </Box>
+    </Fade>
+  );
+};
