@@ -511,7 +511,7 @@ const sections = [
     items: [
       {
         title: 'Inicio',
-        to: '/dashboard/padre/principal',
+        to: '/dashboard/padre/home',
         icon: <HomeOutlinedIcon />,
         roles: ['padre'],
       },
