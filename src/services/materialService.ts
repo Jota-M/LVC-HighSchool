@@ -32,6 +32,16 @@ import {
   Tema,
   ComentarioMaterial,
   FavoritoMaterial,
+  ResumenProgresoResponse,
+  QuizPregunta,
+  QuizPreguntaCompleta,
+  ResponderQuizResponse,
+  MiResultadoResponse,
+  ResumenQuizResponse,
+  RespuestaQuizDTO,
+  QuizListResponse,
+  QuizCompletoResponse,
+  GenerarQuizResponse
 } from '@/types/materialTypes';
 
 // =============================================
@@ -52,11 +62,11 @@ export const tipoMaterialService = {
 export const unidadTematicaService = {
   async listar(filters: UnidadFiltros = {}): Promise<UnidadesListResponse> {
     const params = new URLSearchParams();
-    if (filters.grado_materia_id)      params.append('grado_materia_id',      filters.grado_materia_id.toString());
+    if (filters.grado_materia_id) params.append('grado_materia_id', filters.grado_materia_id.toString());
     if (filters.periodo_evaluacion_id) params.append('periodo_evaluacion_id', filters.periodo_evaluacion_id.toString());
-    if (filters.activo !== undefined)  params.append('activo',                filters.activo.toString());
-    if (filters.page)                  params.append('page',                  filters.page.toString());
-    if (filters.limit)                 params.append('limit',                 filters.limit.toString());
+    if (filters.activo !== undefined) params.append('activo', filters.activo.toString());
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
 
     const response = await api.get(`/materiales/unidades?${params}`);
     return response.data;
@@ -106,11 +116,11 @@ export const unidadTematicaService = {
 export const temaService = {
   async listar(filters: TemaFiltros = {}): Promise<TemasListResponse> {
     const params = new URLSearchParams();
-    if (filters.unidad_tematica_id)   params.append('unidad_tematica_id', filters.unidad_tematica_id.toString());
-    if (filters.activo !== undefined) params.append('activo',             filters.activo.toString());
-    if (filters.nivel_dificultad)     params.append('nivel_dificultad',   filters.nivel_dificultad);
-    if (filters.page)                 params.append('page',               filters.page.toString());
-    if (filters.limit)                params.append('limit',              filters.limit.toString());
+    if (filters.unidad_tematica_id) params.append('unidad_tematica_id', filters.unidad_tematica_id.toString());
+    if (filters.activo !== undefined) params.append('activo', filters.activo.toString());
+    if (filters.nivel_dificultad) params.append('nivel_dificultad', filters.nivel_dificultad);
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
 
     const response = await api.get(`/materiales/temas?${params}`);
     return response.data;
@@ -140,6 +150,15 @@ export const temaService = {
     const response = await api.delete(`/materiales/temas/${id}`);
     return response.data;
   },
+
+  async generarContenido(
+    id: number,
+    forzar = false
+  ): Promise<{ success: boolean; message: string; data: { tema: Tema; generado: boolean } }> {
+    const query = forzar ? '?forzar=true' : '';
+    const response = await api.post(`/materiales/temas/${id}/generar-contenido${query}`);
+    return response.data;
+  },
 };
 
 // =============================================
@@ -149,15 +168,15 @@ export const temaService = {
 export const materialAcademicoService = {
   async listar(filters: MaterialFiltros = {}): Promise<MaterialesListResponse> {
     const params = new URLSearchParams();
-    if (filters.asignacion_docente_id)      params.append('asignacion_docente_id',      filters.asignacion_docente_id.toString());
-    if (filters.tipo_material_id)           params.append('tipo_material_id',           filters.tipo_material_id.toString());
-    if (filters.tema_id)                    params.append('tema_id',                    filters.tema_id.toString());
+    if (filters.asignacion_docente_id) params.append('asignacion_docente_id', filters.asignacion_docente_id.toString());
+    if (filters.tipo_material_id) params.append('tipo_material_id', filters.tipo_material_id.toString());
+    if (filters.tema_id) params.append('tema_id', filters.tema_id.toString());
     if (filters.visible_para_estudiantes !== undefined)
-                                            params.append('visible_para_estudiantes',   filters.visible_para_estudiantes.toString());
-    if (filters.es_destacado !== undefined) params.append('es_destacado',               filters.es_destacado.toString());
-    if (filters.solo_publicados)            params.append('solo_publicados',            'true');
-    if (filters.page)                       params.append('page',                       filters.page.toString());
-    if (filters.limit)                      params.append('limit',                      filters.limit.toString());
+      params.append('visible_para_estudiantes', filters.visible_para_estudiantes.toString());
+    if (filters.es_destacado !== undefined) params.append('es_destacado', filters.es_destacado.toString());
+    if (filters.solo_publicados) params.append('solo_publicados', 'true');
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
 
     const response = await api.get(`/materiales?${params}`);
     return response.data;
@@ -171,7 +190,7 @@ export const materialAcademicoService = {
   ): Promise<{ success: boolean; data: { materiales: MaterialAcademico[]; total: number } }> {
     const params = new URLSearchParams({ q, solo_visibles: solo_visibles.toString() });
     if (asignacion_docente_id) params.append('asignacion_docente_id', asignacion_docente_id.toString());
-    if (tipo_material_id)      params.append('tipo_material_id',      tipo_material_id.toString());
+    if (tipo_material_id) params.append('tipo_material_id', tipo_material_id.toString());
 
     const response = await api.get(`/materiales/buscar?${params}`);
     return response.data;
@@ -189,7 +208,7 @@ export const materialAcademicoService = {
   ): Promise<EstadisticasResponse> {
     const params = new URLSearchParams();
     if (fecha_inicio) params.append('fecha_inicio', fecha_inicio);
-    if (fecha_fin)    params.append('fecha_fin',    fecha_fin);
+    if (fecha_fin) params.append('fecha_fin', fecha_fin);
     const query = params.toString() ? `?${params}` : '';
     const response = await api.get(`/materiales/${id}/estadisticas${query}`);
     return response.data;
@@ -209,22 +228,22 @@ export const materialAcademicoService = {
     const formData = new FormData();
 
     formData.append('asignacion_docente_id', data.asignacion_docente_id.toString());
-    formData.append('tipo_material_id',      data.tipo_material_id.toString());
-    formData.append('titulo',                data.titulo);
-    formData.append('es_enlace_externo',     data.es_enlace_externo.toString());
+    formData.append('tipo_material_id', data.tipo_material_id.toString());
+    formData.append('titulo', data.titulo);
+    formData.append('es_enlace_externo', data.es_enlace_externo.toString());
 
-    if (data.descripcion)             formData.append('descripcion',             data.descripcion);
-    if (data.url_externa)             formData.append('url_externa',             data.url_externa);
+    if (data.descripcion) formData.append('descripcion', data.descripcion);
+    if (data.url_externa) formData.append('url_externa', data.url_externa);
     if (data.visible_para_estudiantes !== undefined)
-                                      formData.append('visible_para_estudiantes', data.visible_para_estudiantes.toString());
-    if (data.fecha_publicacion)       formData.append('fecha_publicacion',       data.fecha_publicacion);
-    if (data.fecha_despublicacion)    formData.append('fecha_despublicacion',    data.fecha_despublicacion);
+      formData.append('visible_para_estudiantes', data.visible_para_estudiantes.toString());
+    if (data.fecha_publicacion) formData.append('fecha_publicacion', data.fecha_publicacion);
+    if (data.fecha_despublicacion) formData.append('fecha_despublicacion', data.fecha_despublicacion);
     if (data.requiere_descarga !== undefined)
-                                      formData.append('requiere_descarga',       data.requiere_descarga.toString());
+      formData.append('requiere_descarga', data.requiere_descarga.toString());
     if (data.es_destacado !== undefined)
-                                      formData.append('es_destacado',            data.es_destacado.toString());
-    if (data.temas)                   formData.append('temas',                   JSON.stringify(data.temas));
-    if (data.archivo)                 formData.append('archivo',                 data.archivo);
+      formData.append('es_destacado', data.es_destacado.toString());
+    if (data.temas) formData.append('temas', JSON.stringify(data.temas));
+    if (data.archivo) formData.append('archivo', data.archivo);
 
     const response = await api.post('/materiales', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -387,14 +406,89 @@ export const progresoEstudianteService = {
     const response = await api.put(`/materiales/progreso/${tema_id}`, data);
     return response.data;
   },
+  async getResumenPorTema(
+    tema_id: number,
+    paralelo_id: number,
+    periodo_academico_id: number
+  ): Promise<ResumenProgresoResponse> {
+    const response = await api.get(
+      `/materiales/temas/${tema_id}/progreso-resumen?paralelo_id=${paralelo_id}&periodo_academico_id=${periodo_academico_id}`
+    );
+    return response.data;
+  }
+};
+
+// =============================================
+// QUIZ AUTOMÁTICO (Nivel 2)
+// =============================================
+export const temaQuizService = {
+  /**
+   * POST /api/materiales/temas/:id/generar-quiz
+   * Genera (o regenera) el quiz de un tema con IA.
+   */
+  async generar(id: number, cantidad_preguntas = 5): Promise<GenerarQuizResponse> {
+    const response = await api.post(`/materiales/temas/${id}/generar-quiz`, { cantidad_preguntas });
+    return response.data;
+  },
+
+  /**
+   * GET /api/materiales/temas/:id/quiz
+   * Preguntas sin respuesta correcta (vista estudiante).
+   */
+  async listar(id: number): Promise<QuizListResponse> {
+    const response = await api.get(`/materiales/temas/${id}/quiz`);
+    return response.data;
+  },
+
+  /**
+   * GET /api/materiales/temas/:id/quiz/completo
+   * Preguntas con respuesta correcta y explicación (vista docente).
+   */
+  async listarCompleto(id: number): Promise<QuizCompletoResponse> {
+    const response = await api.get(`/materiales/temas/${id}/quiz/completo`);
+    return response.data;
+  },
+
+  /**
+   * POST /api/materiales/temas/:id/quiz/responder
+   * Envía respuestas del estudiante y recibe calificación.
+   */
+  async responder(
+    id: number,
+    matricula_id: number,
+    respuestas: RespuestaQuizDTO[]
+  ): Promise<ResponderQuizResponse> {
+    const response = await api.post(`/materiales/temas/${id}/quiz/responder`, { matricula_id, respuestas });
+    return response.data;
+  },
+
+  /**
+   * GET /api/materiales/temas/:id/quiz/mi-resultado?matricula_id=X
+   * Último intento del estudiante.
+   */
+  async miResultado(id: number, matricula_id: number): Promise<MiResultadoResponse> {
+    const response = await api.get(`/materiales/temas/${id}/quiz/mi-resultado?matricula_id=${matricula_id}`);
+    return response.data;
+  },
+
+  /**
+   * GET /api/materiales/temas/:id/quiz/resumen?paralelo_id=X&periodo_academico_id=Y
+   * Resumen agregado para el docente.
+   */
+  async getResumen(id: number, paralelo_id: number, periodo_academico_id: number): Promise<ResumenQuizResponse> {
+    const response = await api.get(
+      `/materiales/temas/${id}/quiz/resumen?paralelo_id=${paralelo_id}&periodo_academico_id=${periodo_academico_id}`
+    );
+    return response.data;
+  },
 };
 
 export default {
-  tipos:      tipoMaterialService,
-  unidades:   unidadTematicaService,
-  temas:      temaService,
+  tipos: tipoMaterialService,
+  unidades: unidadTematicaService,
+  temas: temaService,
   materiales: materialAcademicoService,
   comentarios: comentarioMaterialService,
-  favoritos:  favoritoMaterialService,
-  progreso:   progresoEstudianteService,
+  favoritos: favoritoMaterialService,
+  progreso: progresoEstudianteService,
 };

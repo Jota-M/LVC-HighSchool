@@ -255,3 +255,34 @@ export function calcularProgreso(resumen: ResumenMensualidades): number {
   if (resumen.total === 0) return 0;
   return Math.round((resumen.pagadas / resumen.total) * 100);
 }
+export interface QRFamiliarData {
+  imagenQr:       string;
+  alias:          string;
+  monto_total:    number;
+  cantidad_meses: number;
+  hijos: {
+    nombres:    string;
+    apellidos:  string;
+    meses:      string[];
+    monto:      number;
+  }[];
+  bancoDestino:    string;
+  cuentaDestino:   string;
+  qr_expiracion:   string;
+  mensualidad_ids: number[];
+}
+
+export interface MensualidadFamiliar {
+  estudiante_id:       number;
+  nombres:             string;
+  apellidos:           string;
+  grado:               string;
+  paralelo:            string;
+  mensualidad_id:      number;
+  numero_cuota:        number;
+  mes_correspondiente: string;
+  fecha_vencimiento:   string;
+  monto_final:         number;
+  estado:              EstadoMensualidad;
+  tiene_qr_activo:     boolean;
+}

@@ -11,16 +11,19 @@ import {
   EstadisticasMatricula,
   MatriculaUpdate,
   RetiroMatricula,
+  MatriculaDetalleResponse,
+  TransferenciaParalelo,
+  CambioEstado,
+  SubirDocumentosData,
+  MatriculaDocumento,
 } from '@/types/matriculacionTypes';
 
 class MatriculacionService {
-  // =============================================
-  // CONSULTAS
-  // =============================================
 
-  /**
-   * Listar estudiantes elegibles para matriculación
-   */
+  // ============================================================
+  // CONSULTAS
+  // ============================================================
+
   async listarEstudiantesElegibles(
     periodoAcademicoId: number,
     filters: {
@@ -31,33 +34,21 @@ class MatriculacionService {
     } = {}
   ): Promise<EstudiantesElegiblesResponse> {
     const { data } = await api.get('/matriculacion/estudiantes-elegibles', {
-      params: {
-        periodo_academico_id: periodoAcademicoId,
-        ...filters,
-      },
+      params: { periodo_academico_id: periodoAcademicoId, ...filters },
     });
     return data.data;
   }
 
-  /**
-   * Verificar disponibilidad de paralelo
-   */
   async verificarDisponibilidad(
     paraleloId: number,
     periodoAcademicoId: number
   ): Promise<DisponibilidadParalelo> {
     const { data } = await api.get('/matriculacion/verificar-disponibilidad', {
-      params: {
-        paralelo_id: paraleloId,
-        periodo_academico_id: periodoAcademicoId,
-      },
+      params: { paralelo_id: paraleloId, periodo_academico_id: periodoAcademicoId },
     });
     return data.data;
   }
 
-  /**
-   * Obtener matrículas por periodo
-   */
   async obtenerMatriculasPorPeriodo(
     periodoAcademicoId: number,
     filters: Omit<MatriculasFilters, 'periodo_academico_id'> = {}
@@ -68,36 +59,44 @@ class MatriculacionService {
     return data.data;
   }
 
-  /**
-   * Obtener estadísticas de matrícula
-   */
   async obtenerEstadisticas(periodoAcademicoId: number): Promise<EstadisticasMatricula> {
     const { data } = await api.get(`/matriculacion/estadisticas/${periodoAcademicoId}`);
     return data.data;
   }
 
-  // =============================================
-  // ACCIONES
-  // =============================================
+  /**
+   * GET /api/matriculacion/:id
+   * Detalle completo: matrícula + documentos + historial
+   */
+  async obtenerMatricula(matriculaId: number): Promise<MatriculaDetalleResponse> {
+    const { data } = await api.get(`/matriculacion/${matriculaId}`);
+    return data.data;
+  }
 
   /**
-   * Matricular estudiante con documentos
+   * GET /api/matriculacion/:id/documentos
    */
+  async listarDocumentos(matriculaId: number): Promise<MatriculaDocumento[]> {
+    const { data } = await api.get(`/matriculacion/${matriculaId}/documentos`);
+    return data.data.documentos;
+  }
+
+  // ============================================================
+  // CREACIÓN
+  // ============================================================
+
   async matricularEstudiante(
     estudianteId: number,
     data: MatriculacionData
   ): Promise<MatriculacionResponse> {
     const formData = new FormData();
 
-    // 1. Datos de matrícula (JSON) - FormData requiere stringify
     formData.append('matricula', JSON.stringify(data.matricula));
 
-    // 2. Metadata de documentos (JSON) - FormData requiere stringify
     if (data.documentos && data.documentos.length > 0) {
       formData.append('documentos', JSON.stringify(data.documentos));
     }
 
-    // 3. Archivos de documentos
     if (data.documentos_archivos && data.documentos_archivos.length > 0) {
       data.documentos_archivos.forEach((doc) => {
         formData.append('documentos', doc.file);
@@ -105,30 +104,49 @@ class MatriculacionService {
     }
 
     const { data: response } = await api.post(
-      `/matriculacion/matricular/${estudianteId}`, 
+      `/matriculacion/matricular/${estudianteId}`,
       formData,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }
+      { headers: { 'Content-Type': 'multipart/form-data' } }
     );
-
     return response;
   }
 
-  /**
-   * Re-matricular estudiante (sin documentos)
-   */
   async rematricularEstudiante(
     estudianteId: number,
     data: RematriculacionData
   ): Promise<MatriculacionResponse> {
-    const { data: response } = await api.post(`/matriculacion/rematricular/${estudianteId}`, data);
+    const { data: response } = await api.post(
+      `/matriculacion/rematricular/${estudianteId}`,
+      data
+    );
     return response;
   }
 
   /**
-   * Actualizar matrícula
+   * POST /api/matriculacion/:id/documentos
+   * Subir docs a matrícula ya existente
    */
+  async subirDocumentos(
+    matriculaId: number,
+    payload: SubirDocumentosData
+  ): Promise<MatriculaDocumento[]> {
+    const formData = new FormData();
+
+    payload.files.forEach((file) => formData.append('documentos', file));
+    formData.append('documentos', JSON.stringify(payload.metadata));
+
+    const { data } = await api.post(
+      `/matriculacion/${matriculaId}/documentos`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return data.data.documentos;
+  }
+
+  // ============================================================
+  // ACTUALIZACIÓN
+  // ============================================================
+
   async actualizarMatricula(
     matriculaId: number,
     data: MatriculaUpdate
@@ -138,112 +156,114 @@ class MatriculacionService {
   }
 
   /**
-   * Retirar matrícula
+   * PATCH /api/matriculacion/:id/transferir
+   */
+  async transferirParalelo(
+    matriculaId: number,
+    data: TransferenciaParalelo
+  ): Promise<MatriculacionResponse> {
+    const { data: response } = await api.patch(
+      `/matriculacion/${matriculaId}/transferir`,
+      data
+    );
+    return response;
+  }
+
+  /**
+   * PATCH /api/matriculacion/:id/retirar
    */
   async retirarMatricula(
     matriculaId: number,
     data: RetiroMatricula
   ): Promise<MatriculacionResponse> {
-    const { data: response } = await api.patch(`/matriculacion/${matriculaId}/retirar`, data);
+    const { data: response } = await api.patch(
+      `/matriculacion/${matriculaId}/retirar`,
+      data
+    );
     return response;
   }
 
-  // =============================================
-  // 📄 FUNCIONES DE PDF
-  // =============================================
-
   /**
-   * Descargar PDF de matrícula
-   * Descarga automáticamente el archivo
+   * PATCH /api/matriculacion/:id/estado
    */
-  async descargarPDF(matriculaId: number): Promise<void> {
-    try {
-      const response = await api.get(`/matricula/${matriculaId}/pdf`, {
-        responseType: 'blob',
-      });
-
-      // Crear URL temporal del blob
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-
-      // Crear elemento <a> temporal para descargar
-      const link = document.createElement('a');
-      link.href = url;
-      
-      // Extraer nombre del archivo del header si existe
-      const contentDisposition = response.headers['content-disposition'];
-      let filename = `Matricula_${matriculaId}.pdf`;
-      
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
-        if (filenameMatch && filenameMatch[1]) {
-          filename = filenameMatch[1];
-        }
-      }
-
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-
-      // Limpiar
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error al descargar PDF:', error);
-      throw error;
-    }
+  async cambiarEstado(
+    matriculaId: number,
+    data: CambioEstado
+  ): Promise<MatriculacionResponse> {
+    const { data: response } = await api.patch(
+      `/matriculacion/${matriculaId}/estado`,
+      data
+    );
+    return response;
   }
 
   /**
-   * Ver PDF en el navegador (nueva pestaña)
-   * Abre el PDF en línea sin descargarlo
+   * PATCH /api/matriculacion/documentos/:doc_id/verificar
    */
+  async verificarDocumento(docId: number): Promise<MatriculaDocumento> {
+    const { data } = await api.patch(`/matriculacion/documentos/${docId}/verificar`);
+    return data.data.documento;
+  }
+
+  // ============================================================
+  // ELIMINACIÓN
+  // ============================================================
+
+  /**
+   * DELETE /api/matriculacion/documentos/:doc_id
+   */
+  async eliminarDocumento(docId: number): Promise<void> {
+    await api.delete(`/matriculacion/documentos/${docId}`);
+  }
+
+  /**
+   * DELETE /api/matriculacion/:id
+   */
+  async eliminarMatricula(matriculaId: number): Promise<void> {
+    await api.delete(`/matriculacion/${matriculaId}`);
+  }
+
+  // ============================================================
+  // PDF
+  // ============================================================
+
+  async descargarPDF(matriculaId: number): Promise<void> {
+    const response = await api.get(`/matricula/${matriculaId}/pdf`, {
+      responseType: 'blob',
+    });
+
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = `Matricula_${matriculaId}.pdf`;
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="?(.+)"?/i);
+      if (match?.[1]) filename = match[1];
+    }
+
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }
+
   verPDFPreview(matriculaId: number): void {
     this.abrirPDFEnNuevaPestaña(matriculaId);
   }
 
-  /**
-   * Método auxiliar para abrir PDF con autenticación
-   */
   async abrirPDFEnNuevaPestaña(matriculaId: number): Promise<void> {
-    try {
-      const response = await api.get(`/matricula/${matriculaId}/pdf/preview`, {
-        responseType: 'blob',
-      });
-
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-
-      // Abrir en nueva pestaña
-      const newWindow = window.open(url, '_blank');
-      
-      if (!newWindow) {
-        throw new Error('Por favor permite ventanas emergentes para ver el PDF');
-      }
-
-      // Limpiar URL después de un tiempo
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-      }, 60000); // 1 minuto
-    } catch (error) {
-      console.error('Error al abrir PDF:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Obtener URL del PDF para preview
-   * Nota: Esta URL requiere autenticación mediante el header que api ya maneja
-   */
-  getPDFUrl(matriculaId: number): string {
-    return `/matricula/${matriculaId}/pdf`;
-  }
-
-  /**
-   * Obtener URL del PDF preview
-   */
-  getPDFPreviewUrl(matriculaId: number): string {
-    return `/matricula/${matriculaId}/pdf/preview`;
+    const response = await api.get(`/matricula/${matriculaId}/pdf/preview`, {
+      responseType: 'blob',
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const newWindow = window.open(url, '_blank');
+    if (!newWindow) throw new Error('Permite ventanas emergentes para ver el PDF');
+    setTimeout(() => window.URL.revokeObjectURL(url), 60000);
   }
 }
 

@@ -1,25 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
   Button,
   TextField,
   Grid,
   Box,
-  Avatar,
   Typography,
-  Divider,
-  Fade,
+  CircularProgress,
   alpha,
   useTheme,
-  Tooltip
+  Tooltip,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import CategoryIcon from '@mui/icons-material/Category';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Category as CategoryIcon,
+  CheckCircle as CheckCircleIcon,
+  Close as CloseIcon,
+} from '@mui/icons-material';
 import { AreaConocimiento, AreaFormData } from '../../services/materias';
 
 interface AreaFormDialogProps {
@@ -32,7 +31,7 @@ interface AreaFormDialogProps {
 }
 
 const coloresAreas = [
-  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
   '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'
 ];
 
@@ -45,6 +44,8 @@ export const AreaFormDialog: React.FC<AreaFormDialogProps> = ({
   areas
 }) => {
   const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
   const [formData, setFormData] = useState<AreaFormData>({
     nombre: '',
     descripcion: '',
@@ -53,6 +54,38 @@ export const AreaFormDialog: React.FC<AreaFormDialogProps> = ({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // ── tokens (mismos que NuevoHorarioModal) ─────────────────────────────────
+  const brand = isDark ? '#facc15' : '#0288d1';
+  const brandDim = isDark ? 'rgba(250,204,21,0.12)' : 'rgba(2,136,209,0.10)';
+  const brandBorder = isDark ? 'rgba(250,204,21,0.25)' : 'rgba(2,136,209,0.25)';
+  const bgModal = isDark ? '#09101dff' : '#ffffff';
+  const bgField = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
+  const borderField = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)';
+  const R = '14px';
+
+  const fieldSx = {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: R,
+      background: bgField,
+      '& fieldset': {
+        borderColor: borderField,
+        borderRadius: R,
+      },
+      '&:hover fieldset': { borderColor: alpha(brand, 0.5) },
+      '&.Mui-focused fieldset': {
+        borderColor: brand,
+        borderWidth: '1.5px',
+        borderRadius: R,
+      },
+      '&.Mui-focused': {
+        boxShadow: `0 0 0 3px ${alpha(brand, 0.12)}`,
+        borderRadius: R,
+      },
+    },
+    '& .MuiInputLabel-root': { color: 'text.secondary' },
+    '& .MuiInputLabel-root.Mui-focused': { color: brand },
+  };
 
   useEffect(() => {
     if (editingArea) {
@@ -100,12 +133,12 @@ export const AreaFormDialog: React.FC<AreaFormDialogProps> = ({
   const handleChange = (field: keyof AreaFormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const value = e.target.type === 'number' 
+    const value = e.target.type === 'number'
       ? (e.target.value ? parseInt(e.target.value) : 0)
       : e.target.value;
-    
+
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     if (errors[field]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -116,47 +149,84 @@ export const AreaFormDialog: React.FC<AreaFormDialogProps> = ({
   };
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      TransitionComponent={Fade}
-      TransitionProps={{ timeout: 500 }}
       PaperProps={{
         sx: {
-          borderRadius: 4,
-          boxShadow: `0 24px 48px ${alpha(theme.palette.common.black, 0.2)}`,
+          borderRadius: '20px !important',
+          overflow: 'hidden',
+          background: bgModal,
+          border: `1.5px solid ${brandBorder}`,
+          boxShadow: isDark
+            ? `0 0 0 1px rgba(250,204,21,0.06), 0 32px 64px rgba(0,0,0,0.8)`
+            : `0 32px 64px rgba(0,0,0,0.18)`,
         }
       }}
     >
-      <DialogTitle sx={{ 
-        pb: 2,
-        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar sx={{ 
-            bgcolor: editingArea ? 'warning.main' : 'success.main',
-            width: 48,
-            height: 48
-          }}>
-            {editingArea ? <EditIcon /> : <AddIcon />}
-          </Avatar>
+      {/* ── HEADER ── */}
+      <Box sx={{ px: 3, pt: 2.5, pb: 2, borderBottom: `1px solid ${borderField}`, background: brandDim }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.5 }}>
           <Box>
-            <Typography variant="h5" fontWeight="800">
-              {editingArea ? '✏️ Editar Área de Conocimiento' : '➕ Nueva Área de Conocimiento'}
+            <Typography
+              sx={{
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: alpha(brand, 0.7),
+                mb: 0.4,
+              }}
+            >
+              {editingArea ? 'Editar área' : 'Nueva área'}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {editingArea ? 'Modifica la información del área' : 'Crea una nueva área educativa'}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Box
+                sx={{
+                  width: 34, height: 34, borderRadius: '9px', flexShrink: 0,
+                  background: alpha(brand, 0.15),
+                  border: `1px solid ${alpha(brand, 0.3)}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                {editingArea ? <EditIcon sx={{ color: brand, fontSize: 18 }} /> : <AddIcon sx={{ color: brand, fontSize: 18 }} />}
+              </Box>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', lineHeight: 1.1, color: 'text.primary' }}>
+                {editingArea ? 'Editar Área de Conocimiento' : 'Área de Conocimiento'}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box
+            onClick={onClose}
+            sx={{
+              width: 32, height: 32, borderRadius: '9px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,255,255,0.05)',
+              border: `1px solid ${borderField}`,
+              color: 'text.secondary',
+              transition: 'all 0.15s',
+              '&:hover': { background: alpha(brand, 0.12), borderColor: alpha(brand, 0.4), color: brand },
+            }}
+          >
+            <CloseIcon sx={{ fontSize: 16 }} />
           </Box>
         </Box>
-      </DialogTitle>
+      </Box>
 
-      <DialogContent sx={{ mt: 2 }}>
-        <Grid container spacing={3}>
+      {/* ── BODY ── */}
+      <DialogContent sx={{ px: 3, py: 3 }}>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+              {editingArea ? 'Modifica la información del área' : 'Crea una nueva área educativa'}
+            </Typography>
+          </Grid>
+
           {/* Nombre */}
-          <Grid size={{xs:12}} >
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               label="Nombre del Área"
@@ -168,16 +238,12 @@ export const AreaFormDialog: React.FC<AreaFormDialogProps> = ({
               InputProps={{
                 startAdornment: <CategoryIcon sx={{ mr: 1, color: 'action.active' }} />
               }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
-                }
-              }}
+              sx={fieldSx}
             />
           </Grid>
 
           {/* Descripción */}
-          <Grid size={{xs:12}} >
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               label="Descripción (opcional)"
@@ -186,134 +252,117 @@ export const AreaFormDialog: React.FC<AreaFormDialogProps> = ({
               placeholder="Describe el área de conocimiento"
               multiline
               rows={3}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
-                }
-              }}
+              sx={fieldSx}
             />
           </Grid>
 
           {/* Orden */}
-          <Grid size={{xs:12}} >
+          <Grid size={{ xs: 12 }}>
             <TextField
               fullWidth
               type="number"
               label="Orden"
               value={formData.orden}
               onChange={handleChange('orden')}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
-                }
-              }}
+              sx={fieldSx}
             />
           </Grid>
 
           {/* Color */}
-          <Grid size={{xs:12}} >
+          <Grid size={{ xs: 12 }}>
             <Typography variant="body2" fontWeight="600" sx={{ mb: 1 }}>
               Color Identificador
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               {coloresAreas.map((color) => (
                 <Tooltip key={color} title={color}>
-                  <Avatar
+                  <Box
+                    onClick={() => setFormData({ ...formData, color })}
                     sx={{
-                      width: 40,
-                      height: 40,
+                      width: 36,
+                      height: 36,
+                      borderRadius: '9px',
                       bgcolor: color,
                       cursor: 'pointer',
-                      border: formData.color === color 
-                        ? `3px solid ${theme.palette.text.primary}` 
-                        : '2px solid transparent',
-                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: formData.color === color
+                        ? `2px solid ${brand}`
+                        : `1px solid ${borderField}`,
+                      boxShadow: formData.color === color ? `0 0 0 3px ${alpha(brand, 0.15)}` : 'none',
+                      transition: 'all 0.15s',
                       '&:hover': {
-                        transform: 'scale(1.2)',
-                        boxShadow: `0 4px 12px ${alpha(color, 0.5)}`
+                        transform: 'scale(1.08)',
                       }
                     }}
-                    onClick={() => setFormData({ ...formData, color })}
                   >
-                    {formData.color === color && <CheckCircleIcon sx={{ color: 'white' }} />}
-                  </Avatar>
+                    {formData.color === color && <CheckCircleIcon sx={{ color: 'white', fontSize: 18 }} />}
+                  </Box>
                 </Tooltip>
               ))}
             </Box>
           </Grid>
 
           {/* Vista Previa */}
-          <Grid size={{xs:12}} >
-            <Divider sx={{ my: 1 }} />
+          <Grid size={{ xs: 12 }}>
             <Box sx={{
-              p: 2,
-              bgcolor: alpha(theme.palette.info.main, 0.05),
-              borderRadius: 2,
-              border: `1px solid ${alpha(theme.palette.info.main, 0.3)}`
+              p: 1.75,
+              borderRadius: '12px',
+              background: alpha(brand, 0.08),
+              border: `1px solid ${alpha(brand, 0.2)}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.25,
             }}>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                💡 <strong>Vista previa:</strong>
-              </Typography>
-              <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ 
-                  width: 48, 
-                  height: 48, 
-                  bgcolor: formData.color
-                }}>
-                  <CategoryIcon />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6" fontWeight="700">
-                    {formData.nombre || 'Nombre del área'}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Orden: {formData.orden}
-                  </Typography>
-                </Box>
+              <Box
+                sx={{
+                  width: 44, height: 44, borderRadius: '10px', flexShrink: 0,
+                  bgcolor: formData.color,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <CategoryIcon sx={{ color: 'white', fontSize: 22 }} />
+              </Box>
+              <Box>
+                <Typography variant="body2" fontWeight={700} sx={{ color: brand }}>
+                  {formData.nombre || 'Nombre del área'}
+                </Typography>
+                <Typography variant="caption" sx={{ color: alpha(brand, 0.7) }}>
+                  Orden: {formData.orden}
+                </Typography>
               </Box>
             </Box>
           </Grid>
         </Grid>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 3, pt: 2, gap: 1 }}>
-        <Button 
+      {/* ── FOOTER ── */}
+      <Box sx={{ px: 3, pb: 3, pt: 2, display: 'flex', alignItems: 'center', gap: 1, borderTop: `1px solid ${borderField}` }}>
+        <Box sx={{ flex: 1 }} />
+        <Button
           onClick={onClose}
-          variant="outlined"
-          size="large"
           disabled={loading}
-          sx={{
-            textTransform: 'none',
-            borderRadius: 2,
-            px: 3,
-            fontWeight: 600
-          }}
+          sx={{ borderRadius: '10px', color: 'text.secondary', px: 2, textTransform: 'none', fontWeight: 600, '&:hover': { background: 'rgba(255,255,255,0.05)' } }}
         >
           Cancelar
         </Button>
-        <Button 
-          onClick={handleSave} 
+        <Button
           variant="contained"
-          size="large"
           disabled={loading}
-          startIcon={editingArea ? <EditIcon /> : <AddIcon />}
+          onClick={handleSave}
+          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : (editingArea ? <EditIcon /> : <AddIcon />)}
           sx={{
-            textTransform: 'none',
-            borderRadius: 2,
-            px: 4,
-            fontWeight: 700,
-            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-            boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.4)}`,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: `0 12px 24px ${alpha(theme.palette.primary.main, 0.5)}`,
-            }
+            borderRadius: '10px', px: 3, fontWeight: 700, textTransform: 'none',
+            background: brand, color: isDark ? '#000' : '#fff',
+            boxShadow: `0 4px 16px ${alpha(brand, 0.4)}`,
+            '&:hover': { background: isDark ? '#eab308' : '#01579b', boxShadow: `0 6px 20px ${alpha(brand, 0.5)}` },
+            '&.Mui-disabled': { opacity: 0.3, background: brand, color: isDark ? '#000' : '#fff' },
           }}
         >
           {loading ? 'Guardando...' : (editingArea ? 'Actualizar Área' : 'Crear Área')}
         </Button>
-      </DialogActions>
+      </Box>
     </Dialog>
   );
 };

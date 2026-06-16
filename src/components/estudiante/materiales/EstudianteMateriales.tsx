@@ -7,24 +7,25 @@ import {
   Fade, Skeleton, Grid, Badge,
 } from '@mui/material';
 import {
-  AutoStories       as AutoStoriesIcon,
-  MenuBook          as MenuBookIcon,
-  Favorite          as FavIcon,
-  TrendingUp        as ProgresoIcon,
-  EventAvailable    as AsistenciaIcon,
-  Assignment        as AssignmentRoundedIcon,
+  AutoStories as AutoStoriesIcon,
+  MenuBook as MenuBookIcon,
+  Favorite as FavIcon,
+  TrendingUp as ProgresoIcon,
+  EventAvailable as AsistenciaIcon,
+  Assignment as AssignmentRoundedIcon,
 } from '@mui/icons-material';
 
-import { useMisMaterias }            from '@/hooks/useEstudiante';
+import { useMisMaterias } from '@/hooks/useEstudiante';
 import { SelectorMateriaEstudiante } from './SelectorMateriaEstudiante';
-import { TemarioEstudiante }         from './TemarioEstudiante';
-import { MaterialesLista }           from './MaterialesLista';
-import { FavoritosEstudiante }       from './FavoritosEstudiante';
-import { ProgresoEstudianteView }    from './ProgresoEstudianteView';
-import { AsistenciaEstudianteView }  from './Asistenciaestudianteview';
-import { MaterialesAsignados }       from './MaterialesAsignados';
-import { estudianteService }         from '@/services/estudianteService';
-import type { MateriaResumen }       from '@/services/estudianteService';
+import { TemarioEstudiante } from './TemarioEstudiante';
+import { MaterialesLista } from './MaterialesLista';
+import { FavoritosEstudiante } from './FavoritosEstudiante';
+import { ProgresoEstudianteView } from './ProgresoEstudianteView';
+import { AsistenciaEstudianteView } from './Asistenciaestudianteview';
+import { MaterialesAsignados } from './MaterialesAsignados';
+import CursoEstudiante from './CursoEstudiante';
+import { estudianteService } from '@/services/estudianteService';
+import type { MateriaResumen } from '@/services/estudianteService';
 
 // ── Animaciones ──────────────────────────────────────────────
 const float = keyframes`
@@ -37,27 +38,28 @@ const slideUp = keyframes`
 `;
 
 // ── Tabs ─────────────────────────────────────────────────────
-type VistaTab = 'materiales' | 'temario' | 'favoritos' | 'progreso' | 'asistencia' | 'asignados';
+type VistaTab = 'materiales' | 'temario' | 'favoritos' | 'progreso' | 'asistencia' | 'asignados' | 'curso';
 
 const TABS: { key: VistaTab; label: string; icon: React.ReactNode }[] = [
-  { key: 'materiales', label: 'Materiales',  icon: <MenuBookIcon          sx={{ fontSize: 15 }} /> },
-  { key: 'temario',    label: 'Temario',      icon: <AutoStoriesIcon       sx={{ fontSize: 15 }} /> },
-  { key: 'favoritos',  label: 'Favoritos',    icon: <FavIcon               sx={{ fontSize: 15 }} /> },
-  { key: 'progreso',   label: 'Mi Progreso',  icon: <ProgresoIcon          sx={{ fontSize: 15 }} /> },
-  { key: 'asistencia', label: 'Asistencia',   icon: <AsistenciaIcon        sx={{ fontSize: 15 }} /> },
-  { key: 'asignados',  label: 'Del docente',  icon: <AssignmentRoundedIcon sx={{ fontSize: 15 }} /> },
+  { key: 'materiales', label: 'Materiales', icon: <MenuBookIcon sx={{ fontSize: 15 }} /> },
+  { key: 'temario', label: 'Temario', icon: <AutoStoriesIcon sx={{ fontSize: 15 }} /> },
+  { key: 'favoritos', label: 'Favoritos', icon: <FavIcon sx={{ fontSize: 15 }} /> },
+  { key: 'progreso', label: 'Mi Progreso', icon: <ProgresoIcon sx={{ fontSize: 15 }} /> },
+  { key: 'asistencia', label: 'Asistencia', icon: <AsistenciaIcon sx={{ fontSize: 15 }} /> },
+  { key: 'asignados', label: 'Del docente', icon: <AssignmentRoundedIcon sx={{ fontSize: 15 }} /> },
+  { key: 'curso', label: 'Curso', icon: <MenuBookIcon sx={{ fontSize: 15 }} /> },
 ];
 
 interface EstudianteMaterialesProps { user: any; }
 
 export const EstudianteMateriales: React.FC<EstudianteMaterialesProps> = ({ user }) => {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const accent     = isDark ? '#facc15' : '#0288d1';
+  const accent = isDark ? '#facc15' : '#0288d1';
   const accentDark = isDark ? '#f59e0b' : '#01579b';
 
   const [materiaSeleccionada, setMateriaSeleccionada] = useState<MateriaResumen | null>(null);
-  const [vistaActiva, setVistaActiva]                 = useState<VistaTab>('materiales');
+  const [vistaActiva, setVistaActiva] = useState<VistaTab>('materiales');
   const [pendientesAsignados, setPendientesAsignados] = useState(0);
 
   const { materias, isLoading: loadingMaterias } = useMisMaterias();
@@ -66,7 +68,7 @@ export const EstudianteMateriales: React.FC<EstudianteMaterialesProps> = ({ user
   useEffect(() => {
     estudianteService.getMaterialesAsignadosPendientes()
       .then(res => setPendientesAsignados(res.data.total))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Auto-seleccionar si hay una sola materia
@@ -139,7 +141,7 @@ export const EstudianteMateriales: React.FC<EstudianteMaterialesProps> = ({ user
               '&::-webkit-scrollbar': { display: 'none' }, scrollbarWidth: 'none',
             }}>
               {TABS.map(tab => {
-                const isActive  = vistaActiva === tab.key;
+                const isActive = vistaActiva === tab.key;
                 // ── Badge SOLO en el tab "asignados" y solo si hay pendientes ──
                 const showBadge = tab.key === 'asignados' && pendientesAsignados > 0;
 
@@ -155,10 +157,10 @@ export const EstudianteMateriales: React.FC<EstudianteMaterialesProps> = ({ user
                       fontWeight: 600, fontSize: '0.82rem', transition: 'all 0.2s ease',
                       userSelect: 'none', whiteSpace: 'nowrap', flexShrink: 0,
                       border: 'none', outline: 'none',
-                      color:   isActive ? (isDark ? '#000' : '#fff') : 'text.secondary',
+                      color: isActive ? (isDark ? '#000' : '#fff') : 'text.secondary',
                       bgcolor: isActive ? accent : 'transparent',
                       boxShadow: isActive ? `0 4px 12px ${alpha(accent, 0.32)}` : 'none',
-                      '&:hover':        !isActive ? { bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05) } : {},
+                      '&:hover': !isActive ? { bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05) } : {},
                       '&:focus-visible': { outline: `2px solid ${accent}`, outlineOffset: 2 },
                     }}
                   >
@@ -197,6 +199,14 @@ export const EstudianteMateriales: React.FC<EstudianteMaterialesProps> = ({ user
                 )}
                 {vistaActiva === 'asignados' && (
                   <MaterialesAsignados accent={accent} accentDark={accentDark} isDark={isDark} />
+                )}
+                {vistaActiva === 'curso' && (
+                  <CursoEstudiante
+                    materia={materiaSeleccionada}
+                    accent={accent}
+                    accentDark={accentDark}
+                    isDark={isDark}
+                  />
                 )}
               </Box>
             </Fade>

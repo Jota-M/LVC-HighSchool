@@ -47,6 +47,7 @@ import MenuBookIcon from '@mui/icons-material/MenuBook';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import PaymentIcon from '@mui/icons-material/Payment';
 import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
+import NotificationAddOutlinedIcon from '@mui/icons-material/NotificationAddOutlined';
 
 import { useAuth } from '../../context/AuthContext';
 import { title } from 'process';
@@ -97,6 +98,7 @@ const progressAnimation = keyframes`
 interface ItemProps {
   title: string;
   to: string;
+  exact?: boolean;
   icon: React.ReactNode;
   currentPath: string;
   isCollapsed: boolean;
@@ -150,6 +152,7 @@ const TopProgressBar = ({ isLoading }: { isLoading: boolean }) => {
 const MenuItem = ({
   title,
   to,
+  exact,
   icon,
   currentPath,
   isCollapsed,
@@ -158,7 +161,14 @@ const MenuItem = ({
 }: ItemProps) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const isActive = currentPath === to;
+  const normalizedTo = to.endsWith('/') ? to.slice(0, -1) : to;
+  const normalizedPath = currentPath.endsWith('/') ? currentPath.slice(0, -1) : currentPath;
+
+  const isActive = exact
+    ? normalizedPath === normalizedTo
+    : normalizedPath === normalizedTo ||
+    normalizedPath.startsWith(normalizedTo + '/');
+
 
   const handleClick = () => {
     onNavigate();
@@ -190,17 +200,17 @@ const MenuItem = ({
           },
           '&::before': isActive
             ? {
-                content: '""',
-                position: 'absolute',
-                left: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 4,
-                height: '70%',
-                borderRadius: '0 4px 4px 0',
-                background: 'linear-gradient(180deg, #0288d1, #01579b)',
-                animation: `${pulse} 2s ease-in-out infinite`,
-              }
+              content: '""',
+              position: 'absolute',
+              left: 0,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: 4,
+              height: '70%',
+              borderRadius: '0 4px 4px 0',
+              background: 'linear-gradient(180deg, #0288d1, #01579b)',
+              animation: `${pulse} 2s ease-in-out infinite`,
+            }
             : {},
         }}
       >
@@ -276,11 +286,11 @@ const MenuSection = ({
     if (item.permissions && item.permissions.length > 0) {
       return item.permissions.some((perm: string) => userPermissions.includes(perm));
     }
-    
+
     if (item.roles && item.roles.length > 0) {
       return item.roles.some((role: string) => userRoles.includes(role));
     }
-    
+
     return true;
   });
 
@@ -335,6 +345,7 @@ const MenuSection = ({
                 title={item.title}
                 to={item.to}
                 icon={item.icon}
+                exact={item.exact}
                 currentPath={currentPath}
                 isCollapsed={isCollapsed}
                 badge={item.badge}
@@ -364,11 +375,18 @@ const sections = [
     label: 'Principal',
     items: [
       {
-        title: 'Dashboard',
-        to: '/dashboard/',
+        title: 'Inicio',
+        to: '/dashboard/admin',
+        exact: true,
         icon: <HomeOutlinedIcon />,
         permissions: [],
-        roles :['super_admin']
+        roles: ['super_admin']
+      },
+      {
+        title: 'Inicio',
+        to: '/dashboard/secretaria',
+        icon: <HomeOutlinedIcon />,
+        roles: ['secretaria']
       },
     ],
   },
@@ -379,35 +397,32 @@ const sections = [
         title: 'Usuarios',
         to: '/dashboard/users',
         icon: <PeopleOutlinedIcon />,
-        roles :['super_admin']
+        roles: ['super_admin']
       },
       {
         title: 'Docentes',
         to: '/dashboard/docentes',
         icon: <SupervisorAccountOutlinedIcon />,
-        roles :['super_admin']
+        roles: ['super_admin', 'secretaria']
       },
       {
         title: 'Estudiantes',
         to: '/dashboard/estudiantes',
         icon: <SchoolOutlinedIcon />,
-        // permissions: ['estudiantes.leer'],
-        roles: ['super_admin'],
+        roles: ['super_admin', 'secretaria'],
       },
       {
         title: 'Preinscripciones',
         to: '/dashboard/preinscripciones',
         icon: <AppRegistrationIcon />,
-        // permissions: ['estudiantes.leer'], 
-        badge: 12,
-        roles: ['super_admin'],
+        roles: ['super_admin', 'secretaria'],
       },
-      {
-        title: 'Cursos Vacacionales',
-        to: '/dashboard/CursosVacacionales',
-        icon: <ContactsOutlinedIcon />,
-        roles: ['super_admin'],
-      }
+      // {
+      //   title: 'Cursos Vacacionales',
+      //   to: '/dashboard/CursosVacacionales',
+      //   icon: <ContactsOutlinedIcon />,
+      //   roles: ['super_admin'],
+      // }
     ],
   },
   {
@@ -442,7 +457,7 @@ const sections = [
         to: '/dashboard/materias',
         icon: <ClassOutlinedIcon />,
         roles: ['super_admin'],
-        
+
       },
     ],
   },
@@ -452,22 +467,22 @@ const sections = [
       {
         title: 'Matriculas',
         to: '/dashboard/matriculacion',
-        permissions: ['matriculacion.leer'],
         icon: <AppRegistrationIcon />,
+        roles: ['super_admin', 'secretaria'],
       },
       {
         title: 'Mensualidades',
         to: '/dashboard/pagos',
         icon: <CalculateIcon />,
-        // permissions: ['materias.leer'],
-        roles: ['super_admin'],
+
+        roles: ['super_admin', 'secretaria']
       },
-      {
-        title: 'Transporte',
-        to: '/dashboard/transporte',
-        icon: <LocalShippingOutlinedIcon />,
-        roles: ['super_admin'],
-      },
+      // {
+      //   title: 'Transporte',
+      //   to: '/dashboard/transporte',
+      //   icon: <LocalShippingOutlinedIcon />,
+      //   roles: ['super_admin'],
+      // },
       {
         title: 'Asignaciones',
         to: '/dashboard/plan-estudio',
@@ -476,10 +491,9 @@ const sections = [
       },
       {
         title: 'Horarios',
-        to: '/dashboard/horario',
+        to: '/dashboard/admin/horario',
         icon: <CalendarTodayOutlinedIcon />,
-        // permissions: ['horarios.leer'],
-        roles: ['super_admin'],
+        roles: ['super_admin', 'secretaria'],
       },
     ],
   },
@@ -490,19 +504,25 @@ const sections = [
         title: 'Reportes',
         to: '/dashboard/reportes',
         icon: <AssessmentOutlinedIcon />,
-        permissions: ['reportes.leer'],
+        roles: ['super_admin', 'secretaria']
       },
       {
         title: 'Backups',
-        to : '/dashboard/admin/backups',
-        icon: <ClassOutlinedIcon/>,
-        roles:['super_admin']
+        to: '/dashboard/admin/backups',
+        icon: <ClassOutlinedIcon />,
+        roles: ['super_admin']
       },
       {
         title: 'Configuración',
         to: '/dashboard/configuracion',
         icon: <SettingsOutlinedIcon />,
         permissions: ['configuracion.leer'],
+      },
+      {
+        title: 'Notificaciones Institucionales',
+        to: '/dashboard/notificaciones',
+        icon: <NotificationAddOutlinedIcon />,
+        roles: ['secretaria'],
       },
     ],
   },
@@ -521,7 +541,7 @@ const sections = [
         icon: <CalendarTodayOutlinedIcon />,
         roles: ['padre'],
       },
-      
+
       {
         title: 'Tareas',
         to: '/dashboard/padre/tareas',
@@ -544,22 +564,14 @@ const sections = [
         title: 'Seguimiento Pedagógico',
         to: '/dashboard/padre/seguimiento',
         icon: <SchoolOutlinedIcon />,
-        roles: ['padre'], 
-      },
-      
-      {
-        title: 'Alertas',
-        to: '/dashboard/padre/alertas',
-        icon: <NotificationsActiveOutlinedIcon />,
         roles: ['padre'],
-        badge: 2,
       },
     ],
-    
+
   },
   {
     label: 'Financiero',
-    items:[
+    items: [
       {
         title: 'Estado de pagos',
         to: '/dashboard/padre/financiero',
@@ -581,19 +593,19 @@ const sections = [
     ]
   },
   {
-    label: 'Portal Docentes', 
+    label: 'Portal Docentes',
     items: [
       {
         title: 'Inicio',
-        to: '/dashboard/docente/home', 
+        to: '/dashboard/docente/home',
         icon: <HomeOutlinedIcon />,
-        roles: ['docente'], 
+        roles: ['docente'],
       },
       {
         title: 'Mis Clases',
-        to: '/dashboard/docente/horario', 
+        to: '/dashboard/docente/horario',
         icon: <ClassOutlinedIcon />,
-        roles: ['docente'], 
+        roles: ['docente'],
       },
       {
         title: 'Temario',
@@ -603,46 +615,46 @@ const sections = [
       },
       {
         title: 'Tareas',
-        to: '/dashboard/docente/notas', 
+        to: '/dashboard/docente/notas',
         icon: <AssessmentOutlinedIcon />,
-        roles: ['docente'], 
+        roles: ['docente'],
       },
       {
-        title: 'Notas', 
+        title: 'Calificaciones',
         to: '/dashboard/docente/calificaciones',
         icon: <GradeOutlinedIcon />,
         roles: ['docente'],
       },
       {
         title: 'Asistencia',
-        to: '/dashboard/docente/asistencia', 
+        to: '/dashboard/docente/asistencia',
         icon: <EventAvailableOutlinedIcon />,
         roles: ['docente'],
       },
       {
-      title: 'Materiales',
-      to: '/dashboard/docente/materiales',
-      icon: <MenuBookIcon />,
-      roles: ['docente'],
-    },
-    {
-      title: 'Modelo Predictivo',
-      to: '/dashboard/docente/prediccion',
-      icon: <CalculateIcon />,
-      roles: ['docente'],
-    },
-    {
-      title: 'Seguimiento Pedagógico',
-      to: '/dashboard/docente/seguimiento',
-      icon: <SchoolOutlinedIcon />,
-      roles: ['docente'],
-    },
-    {
-      title: 'Reportes',
-      to: '/dashboard/docente/reportes',
-      icon: <AssessmentOutlinedIcon />,
-      roles: ['docente'],
-    }
+        title: 'Materiales',
+        to: '/dashboard/docente/materiales',
+        icon: <MenuBookIcon />,
+        roles: ['docente'],
+      },
+      {
+        title: 'Modelo Predictivo',
+        to: '/dashboard/docente/prediccion',
+        icon: <CalculateIcon />,
+        roles: ['docente'],
+      },
+      {
+        title: 'Seguimiento Pedagógico',
+        to: '/dashboard/docente/seguimiento',
+        icon: <SchoolOutlinedIcon />,
+        roles: ['docente'],
+      },
+      {
+        title: 'Reportes',
+        to: '/dashboard/docente/reportes',
+        icon: <AssessmentOutlinedIcon />,
+        roles: ['docente'],
+      }
     ],
   },
   {
@@ -689,16 +701,16 @@ const sections = [
         to: '/dashboard/estudiante/notas',
         icon: <GradeOutlinedIcon />,
         roles: ['estudiante'],
-      },      
+      },
     ]
   },
   {
     label: 'Notificaciones',
-    items:[
+    items: [
       {
         title: 'Notificaciones',
-        to: '/dashboard/notificaciones',
-        icon: <AppRegistrationIcon/>
+        to: '/dashboard/notificacion',
+        icon: <AppRegistrationIcon />
       }
     ]
   }
@@ -723,7 +735,7 @@ const SidebarContent = ({
   return (
     <Box
       sx={{
-        background: isDark? "#020518": "ffffff",
+        background: isDark ? "#020518" : "ffffff",
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -731,15 +743,24 @@ const SidebarContent = ({
         overflow: 'hidden',
       }}
     >
+
       {/* HEADER CON LOGO */}
       <Box
         sx={{
-          p: 2.5,
+          p: 2,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
+          borderBottom: `1px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.07)}`,
           position: 'relative',
+          // El ::before del header — funciona bien en ambos modos, no cambia
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0, left: 0, right: 0,
+            height: '2px',
+            background: 'linear-gradient(90deg, #0288d1 0%, #26c6da 60%, transparent 100%)',
+          },
         }}
       >
         {!isCollapsed && (
@@ -756,48 +777,77 @@ const SidebarContent = ({
               transform: hoverLogo ? 'scale(1.02)' : 'scale(1)',
             }}
           >
+            {/* Logo */}
             <Box
               sx={{
-                width: 100,
-                height: 100,
-                borderRadius: 2,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                width: 56,
+                height: 56,
+                flexShrink: 0,
                 transition: 'transform 0.3s ease',
                 transform: hoverLogo ? 'rotate(-5deg)' : 'rotate(0deg)',
               }}
             >
-              <img src="/logo.png" alt="School Icon" />
+              <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </Box>
+
+            {/* Textos */}
             <Box>
+
               <Typography
-                variant="h6"
                 sx={{
-                  fontWeight: 800,
-                  background: isDark
-                    ? 'linear-gradient(90deg, #ffd700, #ffed4e)'
-                    : 'linear-gradient(90deg, #0288d1, #01579b)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  letterSpacing: 0.5,
+                  fontFamily: '"Rajdhani", sans-serif',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: isDark ? '#ffffff' : '#263238',  // ← antes era '#ffffff' fijo
+                  lineHeight: 1.2,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                U.E. L.V.C.
+                Unidad Educativa
               </Typography>
+
               <Typography
-                variant="caption"
                 sx={{
-                  color: isDark ? 'white' : '#90a4ae',
-                  fontSize: '0.7rem',
+                  fontFamily: '"Rajdhani", sans-serif',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: '#0288d1',  // ← este se queda igual, funciona en ambos modos
+                  lineHeight: 1.2,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                Plataforma Educativa
+                Particular
               </Typography>
+
+
+              <Box sx={{ height: '1px', width: '14px', background: '#f9a825', opacity: isDark ? 0.6 : 0.9 }} />
+
+
+              <Typography
+                sx={{
+                  fontFamily: '"Rajdhani", sans-serif',
+                  fontSize: '9px',
+                  fontWeight: 500,
+                  color: isDark ? 'rgba(255,215,0,0.7)' : 'rgba(180,130,0,0.85)',  // ← dorado más oscuro en light
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                La Voz de Cristo
+              </Typography>
+
+              <Box sx={{ height: '1px', width: '14px', background: '#f9a825', opacity: isDark ? 0.6 : 0.9 }} />
+
             </Box>
           </Box>
         )}
 
+        {/* Botón colapsar/cerrar */}
         <Tooltip title={isMobile ? 'Cerrar' : isCollapsed ? 'Expandir' : 'Contraer'} placement="right">
           <IconButton
             onClick={() => {
@@ -811,19 +861,22 @@ const SidebarContent = ({
               transition: 'all 0.3s ease',
               '&:hover': {
                 transform: 'rotate(180deg)',
-                backgroundColor: isDark
-                  ? alpha('#0288d1', 0.15)
-                  : alpha('#0288d1', 0.1),
+                backgroundColor: isDark ? alpha('#0288d1', 0.15) : alpha('#0288d1', 0.1),
               },
             }}
           >
-            {isMobile ? <CloseIcon sx={{ color: '#0288d1' }} /> : <MenuOutlinedIcon sx={{ color: '#0288d1' }} />}
+            {isMobile
+              ? <CloseIcon sx={{ color: '#0288d1' }} />
+              : <MenuOutlinedIcon sx={{ color: '#0288d1' }} />
+            }
           </IconButton>
         </Tooltip>
+
+
       </Box>
 
       {/* PERFIL DE USUARIO */}
-      {!isCollapsed && (
+      {/* {!isCollapsed && (
         <Box
           sx={{
             p: 2.5,
@@ -899,24 +952,26 @@ const SidebarContent = ({
             />
           </Box>
         </Box>
-      )}
+      )} */}
 
       {isCollapsed && (
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
           <Tooltip title={`${user?.username} - ${rolePrincipal}`} placement="right">
-            <Avatar
-              src="/perfil.jpg"
+            <Box
               sx={{
                 width: 44,
                 height: 44,
-                border: '2px solid #0288d1',
                 cursor: 'pointer',
                 transition: 'transform 0.3s ease',
-                '&:hover': {
-                  transform: 'scale(1.1)',
-                },
+                '&:hover': { transform: 'scale(1.1)' },
               }}
-            />
+            >
+              <img
+                src="/logo.png"
+                alt="Logo"
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            </Box>
           </Tooltip>
         </Box>
       )}
@@ -1042,23 +1097,23 @@ const ModernSidebar = () => {
       return () => window.removeEventListener('load', handleComplete);
     }
   }, []);
-//   console.log('🎨 SIDEBAR - userRoles:', userRoles);
-// console.log('🎨 SIDEBAR - userPermissions:', userPermissions);
-// console.log('🎨 SIDEBAR - loadin g:', loading);
-// console.log('🎨 SIDEBAR - user:', user);
+  //   console.log('🎨 SIDEBAR - userRoles:', userRoles);
+  // console.log('🎨 SIDEBAR - userPermissions:', userPermissions);
+  // console.log('🎨 SIDEBAR - loadin g:', loading);
+  // console.log('🎨 SIDEBAR - user:', user);
 
   if (loading) {
-  return (
-    <Box sx={{ p: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-      <Typography>Cargando menú...</Typography>
-    </Box>
-  );
-}
+    return (
+      <Box sx={{ p: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography>Cargando menú...</Typography>
+      </Box>
+    );
+  }
 
-// Sin usuario → ProtectedRoute ya redirige, no renderizar nada
-if (!user) {
-  return null;
-}
+  // Sin usuario → ProtectedRoute ya redirige, no renderizar nada
+  if (!user) {
+    return null;
+  }
 
   const sidebarContent = (
     <SidebarContent
@@ -1129,7 +1184,7 @@ if (!user) {
           sx={{
             '& .MuiDrawer-paper': {
               width: 280,
-              background: isDark? "#020518": "ffffff",
+              background: isDark ? "#020518" : "ffffff",
               borderRight: `1px solid ${isDark ? alpha('#fff', 0.12) : alpha('#000', 0.12)}`,
               boxShadow: '4px 0 24px rgba(0,0,0,0.2)',
               '&::before': {

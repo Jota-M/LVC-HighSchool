@@ -184,7 +184,7 @@ export const InformacionEstudianteStep: React.FC<InformacionEstudianteStepProps>
       </Typography>
 
       <Grid container spacing={3}>
-        <Grid size={{xs:12, md:6}}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <InfoItem
             label="Fecha de Nacimiento"
             value={new Date(estudiante.fecha_nacimiento).toLocaleDateString('es-ES', {
@@ -194,7 +194,7 @@ export const InformacionEstudianteStep: React.FC<InformacionEstudianteStepProps>
             })}
           />
         </Grid>
-        <Grid size={{xs:12, md:6}}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <InfoItem
             label="Género"
             value={
@@ -204,28 +204,28 @@ export const InformacionEstudianteStep: React.FC<InformacionEstudianteStepProps>
             }
           />
         </Grid>
-        <Grid size={{xs:12, md:6}}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <InfoItem
             label="Teléfono"
             value={estudiante.telefono || 'No registrado'}
           />
         </Grid>
-        <Grid size={{xs:12, md:6}}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <InfoItem label="Email" value={estudiante.email || 'No registrado'} />
         </Grid>
-        <Grid size={{xs:12}}>
+        <Grid size={{ xs: 12 }}>
           <InfoItem
             label="Dirección"
             value={estudiante.direccion || 'No registrada'}
           />
         </Grid>
         {estudiante.zona && (
-          <Grid size={{xs:12, md:6}}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <InfoItem label="Zona" value={estudiante.zona} />
           </Grid>
         )}
         {estudiante.ciudad && (
-          <Grid size={{xs:12, md:6}}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <InfoItem label="Ciudad" value={estudiante.ciudad} />
           </Grid>
         )}
@@ -240,7 +240,7 @@ export const InformacionEstudianteStep: React.FC<InformacionEstudianteStepProps>
           </Typography>
           <Grid container spacing={3}>
             {estudiante.contacto_emergencia && (
-              <Grid size={{xs:12, md:6}}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <InfoItem
                   label="Nombre"
                   value={estudiante.contacto_emergencia}
@@ -248,7 +248,7 @@ export const InformacionEstudianteStep: React.FC<InformacionEstudianteStepProps>
               </Grid>
             )}
             {estudiante.telefono_emergencia && (
-              <Grid size={{xs:12, md:6}}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <InfoItem
                   label="Teléfono"
                   value={estudiante.telefono_emergencia}
@@ -259,42 +259,6 @@ export const InformacionEstudianteStep: React.FC<InformacionEstudianteStepProps>
         </>
       )}
 
-      {/* Información médica */}
-      {(estudiante.tiene_discapacidad ||
-        estudiante.alergias ||
-        estudiante.condiciones_medicas) && (
-        <>
-          <Divider sx={{ my: 3 }} />
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 3 }}>
-            Información Médica
-          </Typography>
-          <Grid container spacing={3}>
-            {estudiante.tiene_discapacidad && (
-              <Grid size={{xs:12}}>
-                <Alert severity="info" sx={{ borderRadius: '12px' }}>
-                  <Typography variant="body2" fontWeight={600}>
-                    Discapacidad:{' '}
-                    {estudiante.tipo_discapacidad || 'No especificada'}
-                  </Typography>
-                </Alert>
-              </Grid>
-            )}
-            {estudiante.alergias && (
-              <Grid size={{xs:12}}>
-                <InfoItem label="Alergias" value={estudiante.alergias} />
-              </Grid>
-            )}
-            {estudiante.condiciones_medicas && (
-              <Grid size={{xs:12}}>
-                <InfoItem
-                  label="Condiciones Médicas"
-                  value={estudiante.condiciones_medicas}
-                />
-              </Grid>
-            )}
-          </Grid>
-        </>
-      )}
 
       {/* Observaciones */}
       {estudiante.observaciones && (

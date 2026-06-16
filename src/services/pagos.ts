@@ -37,7 +37,13 @@ import type {
   MensualidadSeleccionada,
   CalculoDistribucionResponse,
   RegistrarPagoDistribuidoRequest,
-  PagoDistribuidoResponse
+  PagoDistribuidoResponse,
+  FiltrosExportarEstadoCuenta,
+  FiltrosExportarMorosos,
+  FiltrosExportarIngresos,
+  FormatoReporte,
+  TipoReportePagos,
+  DescargaReportePagos
 } from '../types/pagos';
 
 class PagosService {
@@ -277,6 +283,101 @@ class PagosService {
       params: { periodo_academico_id: periodoAcademicoId }
     });
     return data;
+  }
+  private getExtensionReporte(formato: FormatoReporte): string {
+    return formato === 'excel' ? 'xlsx' : 'pdf';
+  }
+
+  private getMimeReporte(formato: FormatoReporte): string {
+    return formato === 'excel'
+      ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      : 'application/pdf';
+  }
+
+  private getFilenameDesdeHeaders(
+    contentDisposition: string | undefined,
+    fallback: string
+  ): string {
+    if (!contentDisposition) return fallback;
+
+    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1].replace(/"/g, ''));
+
+    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+    return filenameMatch?.[1] || fallback;
+  }
+
+  private descargarArchivo(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
+  private async descargarReportePagos<TFiltros extends { formato: FormatoReporte }>(
+    url: string,
+    filtros: TFiltros,
+    tipo: TipoReportePagos,
+    nombreBase: string
+  ): Promise<DescargaReportePagos> {
+    const response = await api.get<Blob>(url, {
+      params: filtros,
+      responseType: 'blob'
+    });
+
+    const fallback = `${nombreBase}.${this.getExtensionReporte(filtros.formato)}`;
+    const filename = this.getFilenameDesdeHeaders(
+      response.headers['content-disposition'],
+      fallback
+    );
+    const blob = new Blob([response.data], { type: this.getMimeReporte(filtros.formato) });
+
+    this.descargarArchivo(blob, filename);
+
+    return {
+      tipo,
+      formato: filtros.formato,
+      filename
+    };
+  }
+
+  async exportarEstadoCuenta(filtros: FiltrosExportarEstadoCuenta): Promise<DescargaReportePagos> {
+    return this.descargarReportePagos(
+      '/api/reportes-pagos/exportar/estado-cuenta',
+      filtros,
+      'estado-cuenta',
+      `estado-cuenta-${filtros.periodo_academico_id}`
+    );
+  }
+ 
+  async exportarMorosos(filtros: FiltrosExportarMorosos): Promise<DescargaReportePagos> {
+    return this.descargarReportePagos(
+      '/api/reportes-pagos/exportar/morosos',
+      filtros,
+      'morosos',
+      `morosos-${filtros.periodo_academico_id}`
+    );
+  }
+ 
+  async exportarIngresos(filtros: FiltrosExportarIngresos): Promise<DescargaReportePagos> {
+    return this.descargarReportePagos(
+      '/api/reportes-pagos/exportar/ingresos',
+      filtros,
+      'ingresos',
+      `ingresos-${filtros.periodo_academico_id}`
+    );
+  }
+ 
+  // ============================================================
+  // PDF COMPROBANTES INDIVIDUALES
+  // ============================================================
+ 
+  abrirPDFPago(pagoId: number): void {
+    window.open(`/api/pago-mensualidad/${pagoId}/pdf`, '_blank');
   }
 
   // ============== UTILIDADES ==============

@@ -278,20 +278,37 @@ export const registroCompletoService = {
 // =============================================
 
 export const tutoresService = {
-  async obtenerPorEstudiante(estudianteId: number): Promise<Tutor[]> {
+  async obtenerPorEstudiante(estudianteId: number) {
     const response = await api.get(`/estudiante/${estudianteId}/tutores`);
     return response.data.data.tutores;
   },
 
-  async asignar(estudianteId: number, data: any): Promise<void> {
-    await api.post(`/estudiante/${estudianteId}/tutores`, data);
+  async buscarPorCI(ci: string) {
+    const response = await api.get(`/registro-completo/buscar-padre/${ci}`);
+    return response.data.data;
   },
 
-  async actualizar(estudianteId: number, relacionId: number, data: any): Promise<void> {
-    await api.put(`/estudiante/${estudianteId}/tutores/${relacionId}`, data);
+  async crearPadreFamilia(data: any) {
+    const response = await api.post('/padre-familia', data);
+    return response.data.data.tutor;
   },
 
-  async remover(estudianteId: number, relacionId: number): Promise<void> {
+  async asignar(estudianteId: number, payload: any) {
+    const response = await api.post(`/estudiante/${estudianteId}/tutores`, payload);
+    return response.data.data.relacion;
+  },
+
+  async actualizarPadreFamilia(padreId: number, data: any) {
+    const response = await api.put(`/padre-familia/${padreId}`, data);
+    return response.data.data.tutor;
+  },
+
+  async actualizarRelacion(estudianteId: number, relacionId: number, data: any) {
+    const response = await api.put(`/estudiante/${estudianteId}/tutores/${relacionId}`, data);
+    return response.data.data.relacion;
+  },
+
+  async remover(estudianteId: number, relacionId: number) {
     await api.delete(`/estudiante/${estudianteId}/tutores/${relacionId}`);
   },
 };

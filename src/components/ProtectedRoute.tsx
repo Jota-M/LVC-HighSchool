@@ -3,7 +3,7 @@
 import { useAuth } from '../context/AuthContext';
 import { Box, CircularProgress } from '@mui/material';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,13 +15,21 @@ export default function ProtectedRoute({ children, requiredRoles, requiredPermis
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (loading) return;
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || loading) return;
     if (!user) {
       router.replace(`/login?redirect=${pathname}`);
     }
-  }, [user, loading]); // ← sin router/pathname en deps para evitar loops
+  }, [user, loading, mounted]);
+
+  // Before hydration completes, render nothing (matches server output)
+  if (!mounted) return null;
 
   if (loading) {
     return (
@@ -33,14 +41,12 @@ export default function ProtectedRoute({ children, requiredRoles, requiredPermis
 
   if (!user) return null;
 
-  // Verificar roles
   if (requiredRoles && requiredRoles.length > 0) {
     const userRoles = user.roles?.map(r => r.nombre) ?? [];
     const hasRole = requiredRoles.some(role => userRoles.includes(role));
-    if (!hasRole) return null; // dashboard/page.tsx ya redirigió al lugar correcto
+    if (!hasRole) return null;
   }
 
-  // Verificar permisos
   if (requiredPermissions && requiredPermissions.length > 0) {
     const hasPermission = requiredPermissions.some(p =>
       user.permisos?.some(up => up.nombre === p)

@@ -38,6 +38,7 @@ import {
 import { useParams, useRouter } from 'next/navigation';
 import { useEstudiante } from '@/hooks/useEstudiantes';
 import { DocumentosTab } from '@/components/estudiantes/DocumentosTab';
+import { TutoresTab } from '@/components/estudiantes/TutoresTab';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -536,68 +537,11 @@ export const EstudianteDetalle: React.FC = () => {
 
                 {/* Tab: Tutores */}
                 <TabPanel value={activeTab} index={1}>
-                  {estudiante.tutores && estudiante.tutores.length > 0 ? (
-                    <Grid container spacing={3}>
-                      {estudiante.tutores.map((tutor: any, index: number) => (
-                        <Grid size={{xs:12, md:6}} key={index}>
-                          <Paper
-                            elevation={0}
-                            sx={{
-                              p: 3,
-                              borderRadius: '16px',
-                              bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-                            }}
-                          >
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                              <Typography variant="h6" fontWeight={700}>
-                                {tutor.nombres} {tutor.apellido_paterno}
-                              </Typography>
-                              {tutor.es_tutor_principal && (
-                                <Chip label="Principal" size="small" color="primary" />
-                              )}
-                            </Box>
-
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                              <Box>
-                                <Typography variant="caption" color="text.secondary">
-                                  CI
-                                </Typography>
-                                <Typography variant="body2">{tutor.ci}</Typography>
-                              </Box>
-
-                              <Box>
-                                <Typography variant="caption" color="text.secondary">
-                                  Parentesco
-                                </Typography>
-                                <Typography variant="body2">{tutor.parentesco || 'No especificado'}</Typography>
-                              </Box>
-
-                              <Box>
-                                <Typography variant="caption" color="text.secondary">
-                                  Teléfono / Celular
-                                </Typography>
-                                <Typography variant="body2">
-                                  {tutor.telefono || tutor.celular || 'No especificado'}
-                                </Typography>
-                              </Box>
-
-                              {tutor.email && (
-                                <Box>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Email
-                                  </Typography>
-                                  <Typography variant="body2">{tutor.email}</Typography>
-                                </Box>
-                              )}
-                            </Box>
-                          </Paper>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  ) : (
-                    <Alert severity="info">No hay tutores registrados</Alert>
-                  )}
-                </TabPanel>
+  <TutoresTab
+    tutores={estudiante.tutores ?? []}
+    estudianteId={parseInt(id!)}
+  />
+</TabPanel>
 
                 {/* Tab: Matrículas */}
                 <TabPanel value={activeTab} index={2}>

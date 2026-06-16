@@ -310,10 +310,21 @@ export const TemarioDocente: React.FC<TemarioDocenteProps> = ({
 
                           <Box sx={{ flex: 1, minWidth: 0 }}>
                             <Typography variant="body2" fontWeight={600} noWrap>
-                              {tema.numero_tema}. {tema.tema_titulo}
+                              {tema.tema_numero}. {tema.tema_titulo}
                             </Typography>
                             {tema.tema_descripcion && (
-                              <Typography variant="caption" color="text.secondary" noWrap>
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary" 
+                                sx={{ 
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  wordBreak: 'break-word',
+                                  mb: 0.6 
+                                }}
+                              >
                                 {tema.tema_descripcion}
                               </Typography>
                             )}

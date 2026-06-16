@@ -1,4 +1,4 @@
-// pages/EditarDocente.tsx - VERSIÓN MEJORADA
+// pages/EditarDocente.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
 import {
@@ -20,8 +20,6 @@ import {
   Stack,
   Chip,
   Fade,
-  Card,
-  CardContent,
 } from '@mui/material';
 import {
   ArrowBack as BackIcon,
@@ -35,6 +33,7 @@ import {
   ContactMail as ContactIcon,
   CloudUpload as UploadIcon,
   CheckCircle as CheckIcon,
+  AttachMoney as MoneyIcon,
 } from '@mui/icons-material';
 import { useRouter, useParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -58,19 +57,15 @@ export const EditarDocente: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [docente, setDocente] = useState<Docente | null>(null);
   const [formData, setFormData] = useState<ActualizarDocenteDTO>({});
-
   const [foto, setFoto] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string>('');
   const [cv, setCV] = useState<File | null>(null);
   const [cvFileName, setCVFileName] = useState<string>('');
 
-  // =============================================
-  // CARGAR DATOS DEL DOCENTE
-  // =============================================
+  const accentColor = isDark ? '#facc15' : '#0288d1';
+
   useEffect(() => {
-    if (docenteId) {
-      cargarDocente();
-    }
+    if (docenteId) cargarDocente();
   }, [docenteId]);
 
   const cargarDocente = async () => {
@@ -78,7 +73,6 @@ export const EditarDocente: React.FC = () => {
     try {
       const response = await docenteService.obtenerPorId(docenteId);
       setDocente(response.docente);
-      
       setFormData({
         nombres: response.docente.nombres,
         apellido_paterno: response.docente.apellido_paterno,
@@ -101,17 +95,11 @@ export const EditarDocente: React.FC = () => {
         experiencia_anios: response.docente.experiencia_anios || 0,
         activo: response.docente.activo,
       });
-
-      if (response.docente.foto_url) {
-        setFotoPreview(response.docente.foto_url);
-      }
-
+      if (response.docente.foto_url) setFotoPreview(response.docente.foto_url);
       if (response.docente.cv_url) {
-        const cvName = response.docente.cv_url.split('/').pop() || 'CV actual';
-        setCVFileName(cvName);
+        setCVFileName(response.docente.cv_url.split('/').pop() || 'CV actual');
       }
     } catch (error: any) {
-      console.error('Error al cargar docente:', error);
       toast.error('Error al cargar los datos del docente');
       router.push('/dashboard/docentes');
     } finally {
@@ -119,54 +107,30 @@ export const EditarDocente: React.FC = () => {
     }
   };
 
-  // =============================================
-  // MANEJADORES DE CAMBIOS
-  // =============================================
   const handleInputChange = (field: keyof ActualizarDocenteDTO, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleFotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast.error('Solo se permiten imágenes');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('La foto no debe superar los 5MB');
-        return;
-      }
-
-      setFoto(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFotoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Solo se permiten imágenes'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error('La foto no debe superar los 5MB'); return; }
+    setFoto(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setFotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleCVChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const allowedTypes = ['application/pdf', 'application/msword', 
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error('Solo se permiten archivos PDF o Word');
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error('El CV no debe superar los 10MB');
-        return;
-      }
-
-      setCV(file);
-      setCVFileName(file.name);
-    }
+    if (!file) return;
+    const allowed = ['application/pdf', 'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowed.includes(file.type)) { toast.error('Solo se permiten archivos PDF o Word'); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error('El CV no debe superar los 10MB'); return; }
+    setCV(file);
+    setCVFileName(file.name);
   };
 
   const handleRemoveFoto = () => {
@@ -176,55 +140,27 @@ export const EditarDocente: React.FC = () => {
 
   const handleRemoveCV = () => {
     setCV(null);
-    if (docente?.cv_url) {
-      const cvName = docente.cv_url.split('/').pop() || 'CV actual';
-      setCVFileName(cvName);
-    } else {
-      setCVFileName('');
-    }
+    setCVFileName(docente?.cv_url ? (docente.cv_url.split('/').pop() || 'CV actual') : '');
   };
 
-  // =============================================
-  // GUARDAR CAMBIOS
-  // =============================================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.nombres?.trim()) {
-      toast.error('El nombre es requerido');
-      return;
-    }
-    if (!formData.apellido_paterno?.trim()) {
-      toast.error('El apellido paterno es requerido');
-      return;
-    }
-    if (!formData.ci?.trim()) {
-      toast.error('El CI es requerido');
-      return;
-    }
+    if (!formData.nombres?.trim()) { toast.error('El nombre es requerido'); return; }
+    if (!formData.apellido_paterno?.trim()) { toast.error('El apellido paterno es requerido'); return; }
+    if (!formData.ci?.trim()) { toast.error('El CI es requerido'); return; }
 
     setIsSaving(true);
     try {
-      await docenteService.actualizar(
-        docenteId,
-        formData,
-        foto || undefined,
-        cv || undefined
-      );
-
+      await docenteService.actualizar(docenteId, formData, foto || undefined, cv || undefined);
       toast.success('Docente actualizado exitosamente');
       router.push(`/dashboard/docentes/${docenteId}`);
     } catch (error: any) {
-      console.error('Error al actualizar docente:', error);
       toast.error(error.response?.data?.message || 'Error al actualizar docente');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // =============================================
-  // RENDER
-  // =============================================
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
@@ -241,660 +177,434 @@ export const EditarDocente: React.FC = () => {
     );
   }
 
+  // ─── Shared section header ────────────────────────────────────────────────
+  const SectionHeader = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+      {icon}
+      <Typography variant="h6" fontWeight={700}>{label}</Typography>
+    </Box>
+  );
+
+  // ─── Shared field styles ──────────────────────────────────────────────────
+  const fieldSx = { '& .MuiOutlinedInput-root': { borderRadius: '12px' } };
+
   return (
-    <Box sx={{ 
-      minHeight: '100vh', 
-      py: 4, 
-      background: isDark 
-        ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
-        : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-    }}>
-      <Container maxWidth="lg">
-        {/* Header mejorado */}
-        <Fade in={true}>
-          <Box sx={{ mb: 4 }}>
-            <Button
-              startIcon={<BackIcon />}
-              onClick={() => router.push(`/dashboard/docentes/${docenteId}`)}
+    <Box sx={{ minHeight: '100vh', py: 4 }}>
+      <Container maxWidth="xl">
+        <Fade in timeout={500}>
+          <Box component="form" onSubmit={handleSubmit}>
+            {/* Botón volver */}
+            <Box sx={{ mb: 3 }}>
+              <Button
+                startIcon={<BackIcon />}
+                onClick={() => router.push(`/dashboard/docentes/${docenteId}`)}
+                sx={{ textTransform: 'none', fontWeight: 600, color: accentColor }}
+              >
+                Volver al perfil
+              </Button>
+            </Box>
+
+            {/* Card de encabezado — mismo patrón que detalle */}
+            <Paper
+              elevation={0}
               sx={{
+                borderRadius: '24px',
+                overflow: 'hidden',
+                backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
+                backdropFilter: 'blur(20px)',
                 mb: 3,
-                color: isDark ? '#facc15' : '#0288d1',
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: alpha(isDark ? '#facc15' : '#0288d1', 0.1),
-                },
               }}
             >
-              Volver al perfil
-            </Button>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <Avatar
+              {/* Banner sólido */}
+              <Box
                 sx={{
-                  width: 60,
-                  height: 60,
+                  height: 150,
                   background: isDark
                     ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
                     : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
                 }}
-              >
-                <PersonIcon sx={{ fontSize: 32 }} />
-              </Avatar>
-              <Box>
-                <Typography
-                  variant="h3"
+              />
+
+              <Box sx={{ px: 4, pb: 4 }}>
+                <Box
                   sx={{
-                    fontWeight: 800,
-                    background: isDark
-                      ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                      : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    mb: 0.5,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    mt: -8,
                   }}
                 >
-                  Editar Docente
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Chip 
-                    label={docente.codigo} 
-                    size="small"
-                    sx={{
-                      fontWeight: 600,
-                      backgroundColor: alpha(isDark ? '#facc15' : '#0288d1', 0.15),
-                      color: isDark ? '#facc15' : '#0288d1',
-                    }}
-                  />
-                  <Typography variant="body1" color="text.secondary">
-                    {docente.nombres} {docente.apellidos}
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        </Fade>
-
-        {/* Formulario mejorado */}
-        <Fade in={true} style={{ transitionDelay: '100ms' }}>
-          <Paper
-            component="form"
-            onSubmit={handleSubmit}
-            elevation={0}
-            sx={{
-              borderRadius: '24px',
-              overflow: 'hidden',
-              background: isDark
-                ? alpha('#1e293b', 0.8)
-                : alpha('#ffffff', 0.9),
-              backdropFilter: 'blur(20px)',
-              border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            }}
-          >
-            {/* Sección de Foto */}
-            <Box
-              sx={{
-                background: isDark
-                  ? `linear-gradient(135deg, ${alpha('#facc15', 0.15)} 0%, ${alpha('#f59e0b', 0.05)} 100%)`
-                  : `linear-gradient(135deg, ${alpha('#0288d1', 0.15)} 0%, ${alpha('#01579b', 0.05)} 100%)`,
-                p: 4,
-                borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-              }}
-            >
-              <Grid container spacing={4} alignItems="center">
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                  {/* Avatar con upload */}
+                  <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-end' }}>
+                    <Box sx={{ position: 'relative' }}>
                       <Avatar
                         src={fotoPreview}
                         sx={{
-                          width: 180,
-                          height: 180,
-                          margin: '0 auto',
-                          mb: 2,
-                          border: `4px solid ${isDark ? '#facc15' : '#0288d1'}`,
-                          boxShadow: `0 8px 24px ${alpha(isDark ? '#facc15' : '#0288d1', 0.3)}`,
+                          width: 150,
+                          height: 150,
+                          border: '6px solid',
+                          borderColor: isDark ? '#0f172a' : '#fff',
+                          fontSize: '3rem',
+                          fontWeight: 700,
+                          bgcolor: accentColor,
+                          color: isDark ? '#000' : '#fff',
                         }}
                       >
-                        <PersonIcon sx={{ fontSize: 90 }} />
+                        {!fotoPreview && `${docente.nombres.charAt(0)}${docente.apellido_paterno.charAt(0)}`}
                       </Avatar>
-                      {foto && (
-                        <Chip
-                          icon={<CheckIcon />}
-                          label="Nueva foto"
-                          size="small"
-                          color="success"
-                          sx={{
-                            position: 'absolute',
-                            bottom: 16,
-                            right: '50%',
-                            transform: 'translateX(50%)',
-                          }}
-                        />
-                      )}
-                    </Box>
-                    <Stack spacing={1}>
+                      {/* Botón cámara sobre avatar */}
                       <input
                         accept="image/*"
-                        style={{ display: 'none' }}
                         id="foto-upload"
                         type="file"
+                        style={{ display: 'none' }}
                         onChange={handleFotoChange}
                       />
                       <label htmlFor="foto-upload">
-                        <Button
-                          variant="contained"
+                        <IconButton
                           component="span"
-                          startIcon={<PhotoIcon />}
-                          fullWidth
+                          size="small"
                           sx={{
-                            borderRadius: '12px',
-                            background: isDark
-                              ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                              : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                            position: 'absolute',
+                            bottom: 8,
+                            right: 8,
+                            bgcolor: accentColor,
                             color: isDark ? '#000' : '#fff',
-                            fontWeight: 600,
+                            width: 32,
+                            height: 32,
+                            '&:hover': { bgcolor: accentColor, opacity: 0.85 },
                           }}
                         >
-                          Cambiar Foto
-                        </Button>
+                          <PhotoIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
                       </label>
-                      {foto && (
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          onClick={handleRemoveFoto}
-                          fullWidth
-                          size="small"
-                          sx={{ borderRadius: '10px' }}
-                        >
-                          Restaurar Original
-                        </Button>
-                      )}
-                    </Stack>
-                  </Box>
-                </Grid>
+                    </Box>
 
-                <Grid size={{ xs: 12, md: 8 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                    <Box
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="h4" fontWeight={700} sx={{ mb: 0.5 }}>
+                        {docente.nombres} {docente.apellidos}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <Chip
+                          label={docente.codigo}
+                          size="small"
+                          sx={{
+                            fontFamily: 'monospace',
+                            fontWeight: 700,
+                            bgcolor: isDark ? 'rgba(250,204,21,0.2)' : 'rgba(2,136,209,0.2)',
+                            color: accentColor,
+                          }}
+                        />
+                        {foto && (
+                          <Chip
+                            icon={<CheckIcon sx={{ fontSize: 14 }} />}
+                            label="Nueva foto lista"
+                            size="small"
+                            color="success"
+                          />
+                        )}
+                        {foto && (
+                          <Button
+                            size="small"
+                            color="error"
+                            onClick={handleRemoveFoto}
+                            sx={{ textTransform: 'none', fontWeight: 600, minWidth: 0 }}
+                          >
+                            Restaurar original
+                          </Button>
+                        )}
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {/* Acciones */}
+                  <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => router.push(`/dashboard/docentes/${docenteId}`)}
+                      disabled={isSaving}
+                      sx={{ borderRadius: '10px', fontWeight: 600, textTransform: 'none' }}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      size="small"
+                      disabled={isSaving}
+                      startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
                       sx={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: alpha(isDark ? '#facc15' : '#0288d1', 0.15),
+                        borderRadius: '10px',
+                        fontWeight: 600,
+                        textTransform: 'none',
+                        background: isDark
+                          ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                          : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                        color: isDark ? '#000' : '#fff',
                       }}
                     >
-                      <ContactIcon sx={{ fontSize: 24, color: isDark ? '#facc15' : '#0288d1' }} />
-                    </Box>
-                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                      Datos Personales
-                    </Typography>
+                      {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                    </Button>
                   </Box>
-
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField
-                        fullWidth
-                        required
-                        label="Nombres"
-                        value={formData.nombres || ''}
-                        onChange={(e) => handleInputChange('nombres', e.target.value)}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField
-                        fullWidth
-                        required
-                        label="Apellido Paterno"
-                        value={formData.apellido_paterno || ''}
-                        onChange={(e) => handleInputChange('apellido_paterno', e.target.value)}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Apellido Materno"
-                        value={formData.apellido_materno || ''}
-                        onChange={(e) => handleInputChange('apellido_materno', e.target.value)}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField
-                        fullWidth
-                        required
-                        label="CI"
-                        value={formData.ci || ''}
-                        onChange={(e) => handleInputChange('ci', e.target.value)}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField
-                        fullWidth
-                        type="date"
-                        label="Fecha de Nacimiento"
-                        value={formData.fecha_nacimiento || ''}
-                        onChange={(e) => handleInputChange('fecha_nacimiento', e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField
-                        fullWidth
-                        select
-                        label="Género"
-                        value={formData.genero || 'masculino'}
-                        onChange={(e) => handleInputChange('genero', e.target.value)}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                      >
-                        {GENEROS.map((option) => (
-                          <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Teléfono"
-                        value={formData.telefono || ''}
-                        onChange={(e) => handleInputChange('telefono', e.target.value)}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Celular"
-                        value={formData.celular || ''}
-                        onChange={(e) => handleInputChange('celular', e.target.value)}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                      <TextField
-                        fullWidth
-                        label="Email"
-                        type="email"
-                        value={formData.email || ''}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                      <TextField
-                        fullWidth
-                        label="Dirección"
-                        multiline
-                        rows={2}
-                        value={formData.direccion || ''}
-                        onChange={(e) => handleInputChange('direccion', e.target.value)}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                      />
-                    </Grid>
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Box>
-
-            {/* Formación Académica */}
-            <Box sx={{ p: 4, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                <Box
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: alpha('#8b5cf6', 0.15),
-                  }}
-                >
-                  <SchoolIcon sx={{ fontSize: 24, color: '#8b5cf6' }} />
                 </Box>
-                <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                  Formación Académica
-                </Typography>
               </Box>
+            </Paper>
 
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Título Profesional"
-                    value={formData.titulo_profesional || ''}
-                    onChange={(e) => handleInputChange('titulo_profesional', e.target.value)}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Título de Postgrado"
-                    value={formData.titulo_postgrado || ''}
-                    onChange={(e) => handleInputChange('titulo_postgrado', e.target.value)}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    select
-                    label="Nivel de Formación"
-                    value={formData.nivel_formacion || 'licenciatura'}
-                    onChange={(e) => handleInputChange('nivel_formacion', e.target.value)}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  >
-                    {NIVELES_FORMACION.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Especialidad"
-                    value={formData.especialidad || ''}
-                    onChange={(e) => handleInputChange('especialidad', e.target.value)}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Años de Experiencia"
-                    value={formData.experiencia_anios || 0}
-                    onChange={(e) => handleInputChange('experiencia_anios', parseInt(e.target.value) || 0)}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  />
-                </Grid>
-              </Grid>
-            </Box>
-
-            {/* Información Contractual */}
-            <Box sx={{ p: 4, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                <Box
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: alpha('#10b981', 0.15),
-                  }}
-                >
-                  <WorkIcon sx={{ fontSize: 24, color: '#10b981' }} />
-                </Box>
-                <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                  Información Contractual
-                </Typography>
-              </Box>
-
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    select
-                    label="Tipo de Contrato"
-                    value={formData.tipo_contrato || 'contrato'}
-                    onChange={(e) => handleInputChange('tipo_contrato', e.target.value)}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  >
-                    {TIPOS_CONTRATO.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    type="date"
-                    label="Fecha de Contratación"
-                    value={formData.fecha_contratacion || ''}
-                    onChange={(e) => handleInputChange('fecha_contratacion', e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Salario Mensual (Bs.)"
-                    value={formData.salario_mensual || 0}
-                    onChange={(e) => handleInputChange('salario_mensual', parseFloat(e.target.value) || 0)}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Número de Cuenta"
-                    value={formData.numero_cuenta || ''}
-                    onChange={(e) => handleInputChange('numero_cuenta', e.target.value)}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
-                  />
-                </Grid>
-              </Grid>
-            </Box>
-
-            {/* CV */}
-            <Box sx={{ p: 4 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                <Box
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: alpha('#f59e0b', 0.15),
-                  }}
-                >
-                  <CVIcon sx={{ fontSize: 24, color: '#f59e0b' }} />
-                </Box>
-                <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                  Curriculum Vitae
-                </Typography>
-              </Box>
-
-              <Card
-                sx={{
-                  borderRadius: '16px',
-                  border: `2px dashed ${alpha(theme.palette.divider, 0.3)}`,
-                  backgroundColor: alpha(theme.palette.background.paper, 0.5),
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.5),
-                    backgroundColor: alpha(isDark ? '#facc15' : '#0288d1', 0.05),
-                  },
-                }}
-              >
-                <CardContent sx={{ p: 4, textAlign: 'center' }}>
-  {/* Si NO hay CV cargado */}
-  {!cvFileName ? (
-    <Box>
-      <Avatar
-        sx={{
-          width: 80,
-          height: 80,
-          margin: '0 auto',
-          mb: 2,
-          backgroundColor: alpha(theme.palette.text.disabled, 0.1),
-        }}
-      >
-        <CVIcon sx={{ fontSize: 40, color: 'text.disabled' }} />
-      </Avatar>
-
-      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-        No hay CV cargado
-      </Typography>
-
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Sube el curriculum vitae del docente (PDF o Word)
-      </Typography>
-
-      <input
-        accept=".pdf,.doc,.docx"
-        id="cv-upload"
-        type="file"
-        style={{ display: 'none' }}
-        onChange={handleCVChange}
-      />
-
-      <label htmlFor="cv-upload">
-        <Button
-          variant="contained"
-          component="span"
-          startIcon={<UploadIcon />}
-          size="large"
-          sx={{
-            borderRadius: '12px',
-            px: 4,
-            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-          }}
-        >
-          Subir CV
-        </Button>
-      </label>
-    </Box>
-  ) : (
-    /* Si SÍ hay CV cargado */
-    <Box>
-      <Avatar
-        sx={{
-          width: 80,
-          height: 80,
-          margin: '0 auto',
-          mb: 2,
-          backgroundColor: alpha('#f59e0b', 0.15),
-        }}
-      >
-        <CVIcon sx={{ fontSize: 40, color: '#f59e0b' }} />
-      </Avatar>
-
-      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-        CV cargado
-      </Typography>
-
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        {cvFileName}
-      </Typography>
-
-      {/* Input invisible para reemplazar CV */}
-      <input
-        accept=".pdf,.doc,.docx"
-        id="cv-upload"
-        type="file"
-        style={{ display: 'none' }}
-        onChange={handleCVChange}
-      />
-
-      <Stack spacing={2} alignItems="center">
-        <label htmlFor="cv-upload">
-          <Button
-            variant="contained"
-            component="span"
-            startIcon={<UploadIcon />}
-            sx={{
-              borderRadius: '12px',
-              px: 4,
-              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-            }}
-          >
-            Reemplazar CV
-          </Button>
-        </label>
-
-        <Button
-          variant="outlined"
-          color="error"
-          onClick={handleRemoveCV}
-          sx={{ borderRadius: '12px', px: 3 }}
-          startIcon={<DeleteIcon />}
-        >
-          Eliminar / Restaurar
-        </Button>
-      </Stack>
-    </Box>
-  )}
-</CardContent>
-
-              </Card>
-            </Box>
-
-            {/* Botones de acción */}
-            <Box
+            {/* Secciones del formulario */}
+            <Paper
+              elevation={0}
               sx={{
-                p: 4,
-                background: isDark
-                  ? alpha('#0f172a', 0.5)
-                  : alpha('#f8fafc', 0.5),
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: 2,
+                borderRadius: '24px',
+                backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
+                backdropFilter: 'blur(20px)',
+                overflow: 'hidden',
               }}
             >
-              <Button
-                variant="outlined"
-                size="large"
-                onClick={() => router.push(`/dashboard/docentes/${docenteId}`)}
-                disabled={isSaving}
-                sx={{ 
-                  borderRadius: '12px', 
-                  px: 4,
-                  fontWeight: 600,
-                  textTransform: 'none',
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                disabled={isSaving}
-                startIcon={isSaving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+              {/* ── Datos Personales ── */}
+              <Box sx={{ p: 4 }}>
+                <SectionHeader
+                  icon={<ContactIcon sx={{ color: accentColor }} />}
+                  label="Datos Personales"
+                />
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth required label="Nombres" value={formData.nombres || ''}
+                      onChange={(e) => handleInputChange('nombres', e.target.value)} sx={fieldSx} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth required label="Apellido Paterno" value={formData.apellido_paterno || ''}
+                      onChange={(e) => handleInputChange('apellido_paterno', e.target.value)} sx={fieldSx} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth label="Apellido Materno" value={formData.apellido_materno || ''}
+                      onChange={(e) => handleInputChange('apellido_materno', e.target.value)} sx={fieldSx} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth required label="CI" value={formData.ci || ''}
+                      onChange={(e) => handleInputChange('ci', e.target.value)} sx={fieldSx} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth type="date" label="Fecha de Nacimiento"
+                      value={formData.fecha_nacimiento || ''}
+                      onChange={(e) => handleInputChange('fecha_nacimiento', e.target.value)}
+                      InputLabelProps={{ shrink: true }} sx={fieldSx} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth select label="Género"
+                      value={formData.genero || 'masculino'}
+                      onChange={(e) => handleInputChange('genero', e.target.value)} sx={fieldSx}>
+                      {GENEROS.map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+                    </TextField>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth label="Teléfono" value={formData.telefono || ''}
+                      onChange={(e) => handleInputChange('telefono', e.target.value)} sx={fieldSx} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth label="Celular" value={formData.celular || ''}
+                      onChange={(e) => handleInputChange('celular', e.target.value)} sx={fieldSx} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth type="email" label="Email" value={formData.email || ''}
+                      onChange={(e) => handleInputChange('email', e.target.value)} sx={fieldSx} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth multiline rows={2} label="Dirección" value={formData.direccion || ''}
+                      onChange={(e) => handleInputChange('direccion', e.target.value)} sx={fieldSx} />
+                  </Grid>
+                </Grid>
+              </Box>
+
+              <Divider />
+
+              {/* ── Formación Académica ── */}
+              <Box sx={{ p: 4 }}>
+                <SectionHeader
+                  icon={<SchoolIcon sx={{ color: '#8b5cf6' }} />}
+                  label="Formación Académica"
+                />
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth label="Título Profesional" value={formData.titulo_profesional || ''}
+                      onChange={(e) => handleInputChange('titulo_profesional', e.target.value)} sx={fieldSx} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth label="Título de Postgrado" value={formData.titulo_postgrado || ''}
+                      onChange={(e) => handleInputChange('titulo_postgrado', e.target.value)} sx={fieldSx} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth select label="Nivel de Formación"
+                      value={formData.nivel_formacion || 'licenciatura'}
+                      onChange={(e) => handleInputChange('nivel_formacion', e.target.value)} sx={fieldSx}>
+                      {NIVELES_FORMACION.map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+                    </TextField>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth label="Especialidad" value={formData.especialidad || ''}
+                      onChange={(e) => handleInputChange('especialidad', e.target.value)} sx={fieldSx} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth type="number" label="Años de Experiencia"
+                      value={formData.experiencia_anios || 0}
+                      onChange={(e) => handleInputChange('experiencia_anios', parseInt(e.target.value) || 0)}
+                      sx={fieldSx} />
+                  </Grid>
+                </Grid>
+              </Box>
+
+              <Divider />
+
+              {/* ── Información Contractual ── */}
+              <Box sx={{ p: 4 }}>
+                <SectionHeader
+                  icon={<MoneyIcon sx={{ color: '#10b981' }} />}
+                  label="Información Contractual"
+                />
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth select label="Tipo de Contrato"
+                      value={formData.tipo_contrato || 'contrato'}
+                      onChange={(e) => handleInputChange('tipo_contrato', e.target.value)} sx={fieldSx}>
+                      {TIPOS_CONTRATO.map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+                    </TextField>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth type="date" label="Fecha de Contratación"
+                      value={formData.fecha_contratacion || ''}
+                      onChange={(e) => handleInputChange('fecha_contratacion', e.target.value)}
+                      InputLabelProps={{ shrink: true }} sx={fieldSx} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth type="number" label="Salario Mensual (Bs.)"
+                      value={formData.salario_mensual || 0}
+                      onChange={(e) => handleInputChange('salario_mensual', parseFloat(e.target.value) || 0)}
+                      sx={fieldSx} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField fullWidth label="Número de Cuenta" value={formData.numero_cuenta || ''}
+                      onChange={(e) => handleInputChange('numero_cuenta', e.target.value)} sx={fieldSx} />
+                  </Grid>
+                </Grid>
+              </Box>
+
+              <Divider />
+
+              {/* ── Curriculum Vitae ── */}
+              <Box sx={{ p: 4 }}>
+                <SectionHeader
+                  icon={<CVIcon sx={{ color: '#f59e0b' }} />}
+                  label="Curriculum Vitae"
+                />
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    borderRadius: '16px',
+                    border: `2px dashed ${alpha(theme.palette.divider, 0.4)}`,
+                    bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                    textAlign: 'center',
+                    transition: 'border-color 0.2s',
+                    '&:hover': {
+                      borderColor: alpha('#f59e0b', 0.5),
+                    },
+                  }}
+                >
+                  <Avatar
+                    sx={{
+                      width: 64,
+                      height: 64,
+                      margin: '0 auto',
+                      mb: 2,
+                      bgcolor: cvFileName ? alpha('#f59e0b', 0.15) : alpha(theme.palette.text.disabled, 0.1),
+                    }}
+                  >
+                    <CVIcon sx={{ fontSize: 32, color: cvFileName ? '#f59e0b' : 'text.disabled' }} />
+                  </Avatar>
+
+                  <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
+                    {cvFileName ? 'CV cargado' : 'No hay CV cargado'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    {cvFileName || 'Sube el curriculum vitae del docente (PDF o Word, máx. 10MB)'}
+                  </Typography>
+
+                  <input accept=".pdf,.doc,.docx" id="cv-upload" type="file"
+                    style={{ display: 'none' }} onChange={handleCVChange} />
+
+                  <Stack direction="row" spacing={2} justifyContent="center">
+                    <label htmlFor="cv-upload">
+                      <Button
+                        variant="contained"
+                        component="span"
+                        startIcon={<UploadIcon />}
+                        sx={{
+                          borderRadius: '10px',
+                          fontWeight: 600,
+                          textTransform: 'none',
+                          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                        }}
+                      >
+                        {cvFileName ? 'Reemplazar CV' : 'Subir CV'}
+                      </Button>
+                    </label>
+                    {cvFileName && (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={handleRemoveCV}
+                        sx={{ borderRadius: '10px', fontWeight: 600, textTransform: 'none' }}
+                      >
+                        Eliminar
+                      </Button>
+                    )}
+                  </Stack>
+                </Paper>
+              </Box>
+
+              {/* ── Footer con acciones ── */}
+              <Divider />
+              <Box
                 sx={{
-                  borderRadius: '12px',
-                  px: 5,
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  background: isDark
-                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                  color: isDark ? '#000' : '#fff',
-                  boxShadow: `0 4px 12px ${alpha(isDark ? '#facc15' : '#0288d1', 0.3)}`,
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 6px 16px ${alpha(isDark ? '#facc15' : '#0288d1', 0.4)}`,
-                  },
-                  '&:disabled': {
-                    opacity: 0.6,
-                  },
+                  px: 4,
+                  py: 3,
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: 2,
+                  bgcolor: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.02)',
                 }}
               >
-                {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-              </Button>
-            </Box>
-          </Paper>
+                <Button
+                  variant="outlined"
+                  onClick={() => router.push(`/dashboard/docentes/${docenteId}`)}
+                  disabled={isSaving}
+                  sx={{ borderRadius: '10px', fontWeight: 600, textTransform: 'none', px: 3 }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={isSaving}
+                  startIcon={isSaving ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
+                  sx={{
+                    borderRadius: '10px',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    px: 4,
+                    background: isDark
+                      ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                      : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                    color: isDark ? '#000' : '#fff',
+                  }}
+                >
+                  {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                </Button>
+              </Box>
+            </Paper>
+          </Box>
         </Fade>
       </Container>
     </Box>
@@ -902,4 +612,3 @@ export const EditarDocente: React.FC = () => {
 };
 
 export default EditarDocente;
-                        

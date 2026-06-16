@@ -207,7 +207,7 @@ const DetalleMateria: React.FC<Props> = ({
         </Box>
       ) : (
         <Stack spacing={2.5}>
-          {(['SER', 'SAB', 'HAC', 'AUTO'] as CodigoDimension[]).map(cod => {
+          {(['SER', 'SAB', 'HAC', 'AUT'] as CodigoDimension[]).map(cod => {
             const evals = porDimension[cod];
             if (!evals || evals.length === 0) return null;
             const cfg = DIMENSIONES_CONFIG[cod];

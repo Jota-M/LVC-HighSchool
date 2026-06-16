@@ -5,6 +5,8 @@
 export type EstadoMensualidad = 'pendiente' | 'pagado' | 'pagado_parcial' | 'vencido' | 'cancelado' | 'anulado';
 export type MetodoPago = 'efectivo' | 'transferencia' | 'qr' | 'tarjeta';
 export type EstadoQR = 'generado' | 'pagado' | 'expirado' | 'cancelado';
+export type FormatoReporte = 'pdf' | 'excel';
+export type TipoReportePagos = 'estado-cuenta' | 'morosos' | 'ingresos';
 
 // ============== INTERFACES PRINCIPALES ==============
 
@@ -13,7 +15,7 @@ export interface CostoMensualidad {
   periodo_academico_id: number;
   nivel_academico_id: number;
   monto_base: number;
-  descuento_pago_completo: number; // 🔧 Ahora 10% por defecto
+  descuento_pago_completo: number;
   activo: boolean;
   observaciones?: string;
   created_at: string;
@@ -28,7 +30,7 @@ export interface CostoMensualidad {
 export interface Mensualidad {
   id: number;
   matricula_id: number;
-  numero_cuota: number; // 🔧 Ahora 1-10
+  numero_cuota: number;
   mes_correspondiente: string;
   fecha_vencimiento: string;
   monto_original: number;
@@ -72,7 +74,7 @@ export interface PagoMensualidad {
   fecha_anulacion?: string;
   created_at: string;
   updated_at: string;
-  // Campos QR (futuro)
+  // Campos QR
   qr_data?: string;
   qr_image_url?: string;
   qr_expiracion?: string;
@@ -168,9 +170,7 @@ export interface EstudianteMoroso {
 }
 
 export interface ResumenPagos {
-  estudiantes: {
-    total: number;
-  };
+  estudiantes: { total: number };
   mensualidades: {
     total: number;
     monto_total: number;
@@ -183,22 +183,45 @@ export interface ResumenPagos {
   };
   ingresos: {
     total: number;
-    por_metodo: Array<{
-      metodo_pago: MetodoPago;
-      cantidad: number;
-      total: number;
-    }>;
+    por_metodo: Array<{ metodo_pago: MetodoPago; cantidad: number; total: number }>;
   };
-  pagos_anuales: {
-    total: number;
-    monto_total: number;
-  };
+  pagos_anuales: { total: number; monto_total: number };
   porcentajes: {
     mensualidades_pagadas: string;
     mensualidades_pendientes: string;
     morosidad: string;
   };
-  sistema?: string; // 🔧 NUEVO: Indicador del sistema
+  sistema?: string;
+}
+
+// ============== INTERFACES DE EXPORTACIÓN ==============
+
+export interface FiltrosExportarEstadoCuenta {
+  periodo_academico_id: number;
+  formato: FormatoReporte;
+  grado_id?: number;
+  paralelo_id?: number;
+}
+
+export interface FiltrosExportarMorosos {
+  periodo_academico_id: number;
+  formato: FormatoReporte;
+  dias_mora_minimo?: number;
+  grado_id?: number;
+  paralelo_id?: number;
+}
+
+export interface FiltrosExportarIngresos {
+  periodo_academico_id: number;
+  formato: FormatoReporte;
+  mes_inicio?: string;
+  mes_fin?: string;
+}
+
+export interface DescargaReportePagos {
+  tipo: TipoReportePagos;
+  formato: FormatoReporte;
+  filename: string;
 }
 
 // ============== INTERFACES DE REQUESTS ==============
@@ -207,7 +230,7 @@ export interface CrearCostoMensualidadRequest {
   periodo_academico_id: number;
   nivel_academico_id: number;
   monto_base: number;
-  descuento_pago_completo?: number; // 🔧 Por defecto 10%
+  descuento_pago_completo?: number;
   observaciones?: string;
 }
 
@@ -267,107 +290,72 @@ export interface RegistrarPagoAnualRequest {
 
 export interface CostosResponse {
   success: boolean;
-  data: {
-    costos: CostoMensualidad[];
-  };
+  data: { costos: CostoMensualidad[] };
 }
 
 export interface CostoResponse {
   success: boolean;
-  data: {
-    costo: CostoMensualidad;
-  };
+  data: { costo: CostoMensualidad };
   message?: string;
 }
 
 export interface MensualidadesResponse {
   success: boolean;
-  data: {
-    mensualidades: Mensualidad[];
-    total?: number;
-    sistema?: string; // 🔧 NUEVO: Indicador del sistema
-  };
+  data: { mensualidades: Mensualidad[]; total?: number; sistema?: string };
 }
 
 export interface MensualidadResponse {
   success: boolean;
-  data: {
-    mensualidad: Mensualidad;
-    pagos?: PagoMensualidad[];
-  };
+  data: { mensualidad: Mensualidad; pagos?: PagoMensualidad[] };
 }
 
 export interface PagosResponse {
   success: boolean;
   data: {
     pagos: PagoMensualidad[];
-    paginacion?: {
-      total: number;
-      page: number;
-      limit: number;
-      totalPages: number;
-    };
+    paginacion?: { total: number; page: number; limit: number; totalPages: number };
   };
 }
 
 export interface PagoResponse {
   success: boolean;
-  data: {
-    pago: PagoMensualidad;
-  };
+  data: { pago: PagoMensualidad };
   message?: string;
 }
 
 export interface PagosAnualesResponse {
   success: boolean;
-  data: {
-    pagos: PagoAnualCompleto[];
-    total?: number;
-  };
+  data: { pagos: PagoAnualCompleto[]; total?: number };
 }
 
 export interface PagoAnualResponse {
   success: boolean;
-  data: {
-    pago: PagoAnualCompleto;
-  };
+  data: { pago: PagoAnualCompleto };
   message?: string;
 }
 
 export interface EstadoPagosEstudiantesResponse {
   success: boolean;
-  data: {
-    estudiantes: EstadoPagosEstudiante[];
-    total?: number;
-  };
+  data: { estudiantes: EstadoPagosEstudiante[]; total?: number };
 }
 
 export interface IngresosResponse {
   success: boolean;
   data: {
     ingresos: IngresosPorPeriodo[];
-    totales?: {
-      cantidad_pagos: number;
-      total_ingreso: number;
-    };
+    totales?: { cantidad_pagos: number; total_ingreso: number };
     total_registros?: number;
   };
 }
 
 export interface MorososResponse {
   success: boolean;
-  data: {
-    morosos: EstudianteMoroso[];
-    total_morosos: number;
-    deuda_total: number;
-  };
+  data: { morosos: EstudianteMoroso[]; total_morosos: number; deuda_total: number };
 }
 
 export interface ResumenResponse {
   success: boolean;
-  data: {
-    resumen: ResumenPagos;
-  };
+  data: { resumen: ResumenPagos };
 }
 
 // ============== INTERFACES DE FILTROS ==============
@@ -425,8 +413,8 @@ export interface FiltrosMorosos {
 
 export interface CalculoDescuento {
   monto_base: number;
-  cantidad_meses: number; // 🔧 Ahora 10
-  porcentaje_descuento: number; // 🔧 Ahora 10%
+  cantidad_meses: number;
+  porcentaje_descuento: number;
   porcentaje_beca: number;
   monto_sin_descuento: number;
   monto_descuento_anual: number;
@@ -450,7 +438,7 @@ export const METODOS_PAGO: Record<MetodoPago, string> = {
   efectivo: 'Efectivo',
   transferencia: 'Transferencia Bancaria',
   qr: 'QR',
-  tarjeta: 'Tarjeta'
+  tarjeta: 'Tarjeta',
 };
 
 export const ESTADOS_MENSUALIDAD: Record<EstadoMensualidad, string> = {
@@ -459,18 +447,16 @@ export const ESTADOS_MENSUALIDAD: Record<EstadoMensualidad, string> = {
   pagado_parcial: 'Pago Parcial',
   vencido: 'Vencido',
   cancelado: 'Cancelado',
-  anulado: 'Anulado'
+  anulado: 'Anulado',
 };
 
-// 🔧 CORREGIDO: Solo 10 meses (febrero a noviembre) - SIN diciembre
 export const MESES_ACADEMICOS = [
   'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
-  'agosto', 'septiembre', 'octubre', 'noviembre'
+  'agosto', 'septiembre', 'octubre', 'noviembre',
 ] as const;
 
 export type MesAcademico = typeof MESES_ACADEMICOS[number];
 
-// 🔧 INFORMACIÓN DEL SISTEMA - 10 MESES
 export const SISTEMA_MENSUALIDADES = {
   CANTIDAD_MESES: 10,
   DESCUENTO_PAGO_COMPLETO: 10.0,
@@ -478,7 +464,7 @@ export const SISTEMA_MENSUALIDADES = {
   PRIMER_MES: 'febrero',
   ULTIMO_MES: 'noviembre',
   DESCRIPCION: 'Sistema de 10 mensualidades',
-  BENEFICIO: 'Pagas 9 meses, obtienes 1 mes gratis'
+  BENEFICIO: 'Pagas 9 meses, obtienes 1 mes gratis',
 } as const;
 
 // ============================================
@@ -487,7 +473,7 @@ export const SISTEMA_MENSUALIDADES = {
 
 export interface MensualidadParaPago {
   mensualidad_id: number;
-  numero_cuota: number; // 🔧 1-10
+  numero_cuota: number;
   mes_correspondiente: string;
   fecha_vencimiento: string;
   monto_final: number;
@@ -603,6 +589,18 @@ export interface PagoDistribuidoResponse {
     mensualidades_parciales: number;
     cantidad_pagos: number;
     distribucion: DistribucionMensualidad[];
-    pagos: any[];
+    pagos: PagoMultipleRegistrado[];
   };
+}
+
+// ============== INFO SISTEMA ==============
+
+export interface InfoSistema {
+  cantidad_meses: number;
+  descuento_pago_completo: number;
+  meses_gratis: number;
+  primer_mes: string;
+  ultimo_mes: string;
+  descripcion: string;
+  beneficio: string;
 }

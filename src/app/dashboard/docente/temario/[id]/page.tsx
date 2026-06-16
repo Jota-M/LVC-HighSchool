@@ -91,6 +91,7 @@ const inputSx = { '& .MuiOutlinedInput-root': { borderRadius: '12px' } };
 
 // ── Card de Tema ──────────────────────────────────────────
 const TemaRow: React.FC<{
+  
   tema: TemarioItem;
   index: number;
   isDark: boolean;
@@ -99,6 +100,7 @@ const TemaRow: React.FC<{
   onDelete: () => void;
   submitting: boolean;
 }> = ({ tema, index, isDark, accent, onEdit, onDelete, submitting }) => {
+  console.log('TEMA:', JSON.stringify(tema, null, 2));
   const nivelInfo = NIVELES_DIFICULTAD.find(n => n.value === tema.nivel_dificultad);
 
   return (
@@ -123,16 +125,16 @@ const TemaRow: React.FC<{
     >
       {/* Número */}
       <Box sx={{
-        minWidth: 32, height: 32,
-        borderRadius: '10px',
-        bgcolor: alpha(accent, 0.12),
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-      }}>
-        <Typography variant="caption" fontWeight={900} sx={{ color: accent, fontSize: '0.78rem' }}>
-          {tema.numero_tema}
-        </Typography>
-      </Box>
+  minWidth: 32, height: 32,
+  borderRadius: '10px',
+  bgcolor: alpha(accent, 0.12),
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  flexShrink: 0,
+}}>
+  <Typography variant="caption" fontWeight={900} sx={{ color: accent, fontSize: '0.78rem' }}>
+    {tema.tema_numero}  
+  </Typography>
+</Box>
 
       {/* Contenido */}
       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -140,9 +142,20 @@ const TemaRow: React.FC<{
           {tema.tema_titulo}
         </Typography>
         {tema.tema_descripcion && (
-          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mb: 0.6 }}>
-            {tema.tema_descripcion}
-          </Typography>
+          <Typography 
+  variant="caption" 
+  color="text.secondary" 
+  sx={{ 
+    display: '-webkit-box',
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+    wordBreak: 'break-word',
+    mb: 0.6 
+  }}
+>
+  {tema.tema_descripcion}
+</Typography>
         )}
         <Box sx={{ display: 'flex', gap: 0.6, alignItems: 'center', flexWrap: 'wrap' }}>
           {nivelInfo && (
@@ -456,7 +469,7 @@ export default function DocenteTemarioDetailPage() {
     setUnidadParaTema(null);
     setEditingTema(tema);
     setFTema({
-      numero_tema:       tema.numero_tema,
+      numero_tema:       tema.tema_numero,
       titulo:            tema.tema_titulo,
       descripcion:       tema.tema_descripcion,
       nivel_dificultad:  tema.nivel_dificultad,
@@ -686,17 +699,15 @@ export default function DocenteTemarioDetailPage() {
                     label={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Box sx={{
-                          width: 22, height: 22, borderRadius: '7px',
-                          bgcolor: tabActivo === i
-                            ? isDark ? alpha('#000', 0.25) : alpha('#fff', 0.25)
-                            : isDark ? alpha('#000', 0.15) : alpha('#fff', 0.15),
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '0.65rem', fontWeight: 900,
-                          color: isDark ? '#000' : '#fff',
-                          flexShrink: 0,
-                        }}>
-                          {g.unidad.numero_unidad}
-                        </Box>
+                        width: 22, height: 22, borderRadius: '7px',
+                        bgcolor: tabActivo === i ? alpha('#fff', 0.3) : alpha('#fff', 0.15),
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.65rem', fontWeight: 900,
+                        color: isDark ? '#000' : '#fff',
+                        flexShrink: 0,
+                      }}>
+                        {String(g.unidad.numero_unidad)}
+                      </Box>
                         <Box component="span" sx={{
                           maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>

@@ -21,7 +21,7 @@ export const DIAS_SEMANA_CORTO: Record<number, string> = {
 };
 
 export const ESTADO_CONFIG: Record<HorarioEstado, { label: string; color: string; bg: string }> = {
-  borrador:  { label: 'Borrador',  color: '#f59e0b', bg: '#fef3c7' },
+  borrador: { label: 'Borrador', color: '#f59e0b', bg: '#fef3c7' },
   publicado: { label: 'Publicado', color: '#10b981', bg: '#d1fae5' },
   archivado: { label: 'Archivado', color: '#6b7280', bg: '#f3f4f6' },
 };
@@ -39,6 +39,8 @@ export interface BloqueHorario {
   id: number;
   turno_id: number;
   turno_nombre: string;
+  nivel_academico_id: number | null;
+  nivel_nombre: string;
   nombre: string;
   codigo: string | null;
   numero: number;
@@ -52,6 +54,7 @@ export interface BloqueHorario {
 
 export interface BloqueHorarioCreate {
   turno_id: number;
+  nivel_academico_id?: number | null;
   nombre: string;
   codigo?: string;
   numero: number;
@@ -61,6 +64,7 @@ export interface BloqueHorarioCreate {
 }
 
 export interface BloqueHorarioUpdate {
+  nivel_academico_id?: number | null;
   nombre?: string;
   codigo?: string;
   numero?: number;
@@ -87,6 +91,7 @@ export interface Horario {
   paralelo_nombre: string;
   paralelo_aula: string | null;
   grado_id: number;
+  nivel_academico_id: number;
   grado_nombre: string;
   nivel_nombre: string;
   turno_id: number;
@@ -197,4 +202,5 @@ export interface BloquesFilters {
   turno_id?: number;
   activo?: boolean;
   incluir_recreos?: boolean;
+  nivel_academico_id?: number;
 }

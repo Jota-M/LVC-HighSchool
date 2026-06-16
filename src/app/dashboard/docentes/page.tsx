@@ -124,10 +124,10 @@ export const Docentes: React.FC = () => {
   };
 
   const handleFilterChange = (tipo_contrato?: string, especialidad?: string) => {
-    actualizarFiltros({ 
-      tipo_contrato: tipo_contrato as any, 
-      especialidad, 
-      page: 1 
+    actualizarFiltros({
+      tipo_contrato: tipo_contrato as any,
+      especialidad,
+      page: 1
     });
   };
 
@@ -235,7 +235,7 @@ export const Docentes: React.FC = () => {
                     </ToggleButton>
 
                     <ToggleButton value="table" sx={{ fontSize: { xs: '0.5rem', md: '1rem' } }}>
-                      <TableRowsIcon sx={{ mr: 0.5, fontSize: { xs: 12, md: 20 } }}/>
+                      <TableRowsIcon sx={{ mr: 0.5, fontSize: { xs: 12, md: 20 } }} />
                       Tabla
                     </ToggleButton>
                   </ToggleButtonGroup>
@@ -275,59 +275,59 @@ export const Docentes: React.FC = () => {
             </Box>
 
             {/* Tabs */}
-              <Tabs
-                value={activeTab}
-                onChange={handleTabChange}
-                variant="scrollable"
-                scrollButtons="auto"
-                allowScrollButtonsMobile
-                sx={{
-                  width: '100%',
-                  background: isDark
-                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                  borderRadius: '16px',
-                  p: { xs: 0.5, md: 1 },
-                  backdropFilter: 'blur(20px)',
-                  overflowX: 'auto',
-                  scrollbarWidth: 'none',
-                  '&::-webkit-scrollbar': { display: 'none' },
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
+              sx={{
+                width: '100%',
+                background: isDark
+                  ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                  : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                borderRadius: '16px',
+                p: { xs: 0.5, md: 1 },
+                backdropFilter: 'blur(20px)',
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                '&::-webkit-scrollbar': { display: 'none' },
 
-                  '& .MuiTab-root': {
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    borderRadius: '12px',
+                '& .MuiTab-root': {
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderRadius: '12px',
 
-                    /** 👇 AQUI ESTÁ LA CLAVE */
-                    minWidth: { xs: 80, md: 'auto' },       // tamaño estático en mobile
-                    maxWidth: { xs: 80, md: 'none' },       // para mantener forma compacta
+                  /** 👇 AQUI ESTÁ LA CLAVE */
+                  minWidth: { xs: 80, md: 'auto' },       // tamaño estático en mobile
+                  maxWidth: { xs: 80, md: 'none' },       // para mantener forma compacta
 
-                    fontSize: { xs: '0.5rem', md: '0.8rem' },
-                    paddingInline: { xs: 1, md: 2 },
-                    minHeight: { xs: 36, md: 48 },
+                  fontSize: { xs: '0.5rem', md: '0.8rem' },
+                  paddingInline: { xs: 1, md: 2 },
+                  minHeight: { xs: 36, md: 48 },
 
-                    color: isDark ? '#000' : '#fff',
-                  },
+                  color: isDark ? '#000' : '#fff',
+                },
 
-                  '& .MuiTab-root svg': {
-                    fontSize: { xs: '1rem', md: '1.3rem' },
-                  },
+                '& .MuiTab-root svg': {
+                  fontSize: { xs: '1rem', md: '1.3rem' },
+                },
 
-                  '& .Mui-selected': {
-                    color: isDark ? '#fff' : '#fff',
-                  },
+                '& .Mui-selected': {
+                  color: isDark ? '#fff' : '#fff',
+                },
 
-                  '& .MuiTabs-indicator': {
-                    backgroundColor: isDark ? '#fff' : '#fff',
-                    height: { xs: 2, md: 3 },
-                    borderRadius: '3px 3px 0 0',
-                  },
-                }}
-              >
-                <Tab icon={<ListIcon />} iconPosition="start" label="Lista de Docentes" />
-                <Tab icon={<StatsIcon />} iconPosition="start" label="Estadísticas" />
-                <Tab icon={<AssignmentIcon />} iconPosition="start" label="Asignaciones" />
-              </Tabs>
+                '& .MuiTabs-indicator': {
+                  backgroundColor: isDark ? '#fff' : '#fff',
+                  height: { xs: 2, md: 3 },
+                  borderRadius: '3px 3px 0 0',
+                },
+              }}
+            >
+              <Tab icon={<ListIcon />} iconPosition="start" label="Lista de Docentes" />
+              <Tab icon={<StatsIcon />} iconPosition="start" label="Estadísticas" />
+              <Tab icon={<AssignmentIcon />} iconPosition="start" label="Asignaciones" />
+            </Tabs>
 
 
           </Box>

@@ -1,26 +1,21 @@
 'use client';
 // app/dashboard/docente/calificaciones/page.tsx
-//
-// Módulo de CALIFICACIONES — índice de materias.
-// Solo sirve para INGRESAR notas; la creación de evaluaciones
-// sigue viviendo en /dashboard/docente/notas.
-
 import React from 'react';
 import {
   Box, Container, Typography, Chip, Tooltip,
   LinearProgress, Fade, Alert, useTheme, alpha,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
-import EditNoteRoundedIcon    from '@mui/icons-material/EditNoteRounded';
-import ChevronRightIcon       from '@mui/icons-material/ChevronRight';
-import SchoolRoundedIcon      from '@mui/icons-material/SchoolRounded';
-import GroupsRoundedIcon      from '@mui/icons-material/GroupsRounded';
-import AssignmentRoundedIcon  from '@mui/icons-material/AssignmentRounded';
+import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import SchoolRoundedIcon from '@mui/icons-material/SchoolRounded';
+import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
+import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
-import InfoOutlinedIcon       from '@mui/icons-material/InfoOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 import { useRouter } from 'next/navigation';
-import { useAuth }   from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { useMisMateriasNotas } from '@/hooks/useNotas';
 import { MateriaDocenteNotas, DIMENSIONES_CONFIG } from '@/types/notasTypes';
 
@@ -46,16 +41,16 @@ function agruparPorMateria(materias: MateriaDocenteNotas[]) {
 
 // ── Card de un trimestre ───────────────────────────────────────────────────────
 const TrimestreCard: React.FC<{
-  m:       MateriaDocenteNotas;
-  gold:    string;
-  gradBg:  string;
-  isDark:  boolean;
+  m: MateriaDocenteNotas;
+  gold: string;
+  gradBg: string;
+  isDark: boolean;
   onClick: () => void;
 }> = ({ m, gold, gradBg, isDark, onClick }) => {
-  const pct       = m.total_estudiantes > 0
+  const pct = m.total_estudiantes > 0
     ? Math.round((m.calificaciones_registradas / m.total_estudiantes) * 100)
     : 0;
-  const completo  = pct === 100;
+  const completo = pct === 100;
 
   return (
     <Box
@@ -112,10 +107,10 @@ const TrimestreCard: React.FC<{
       <Box sx={{ display: 'flex', gap: 0.8, mb: 2 }}>
         {(
           [
-            { key: 'SER' as const,  val: m.evaluaciones_ser   },
-            { key: 'SAB' as const,  val: m.evaluaciones_saber },
-            { key: 'HAC' as const,  val: m.evaluaciones_hacer },
-            { key: 'AUT' as const, val: m.evaluaciones_auto  },
+            { key: 'SER' as const, val: m.evaluaciones_ser },
+            { key: 'SAB' as const, val: m.evaluaciones_saber },
+            { key: 'HAC' as const, val: m.evaluaciones_hacer },
+            { key: 'AUT' as const, val: m.evaluaciones_auto },
           ]
         ).map(({ key, val }) => {
           const cfg = DIMENSIONES_CONFIG[key];
@@ -182,14 +177,14 @@ const TrimestreCard: React.FC<{
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function CalificacionesIndexPage() {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const router = useRouter();
   const { user } = useAuth();
 
-  const gold    = isDark ? '#facc15' : '#0288d1';
+  const gold = isDark ? '#facc15' : '#0288d1';
   const goldEnd = isDark ? '#f59e0b' : '#01579b';
-  const gradBg  = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
+  const gradBg = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
 
   const { materias, isLoading, sinMaterias } = useMisMateriasNotas();
   const grupos = agruparPorMateria(materias);
@@ -217,7 +212,7 @@ export default function CalificacionesIndexPage() {
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}>
-                Calificaciones
+                Gestión de Calificaciones
               </Typography>
             </Box>
             <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>

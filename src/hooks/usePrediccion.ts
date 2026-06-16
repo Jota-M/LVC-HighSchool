@@ -17,6 +17,7 @@ import {
   SimulacionOptimoResponse,
   AccionRequerida,
   RestriccionesOptimo,
+  SimulacionOptimoV2Response,
 } from '@/types/prediccionTypes';
 
 // ============================================
@@ -184,6 +185,11 @@ export const usePrediccionClase = () => {
 
       return res.data;
     } catch (err: any) {
+      // 409 = análisis ya en progreso (guard backend) — no es un error real
+      if (err.response?.status === 409) {
+        toast('⏳ Análisis en progreso, esperá un momento…', { icon: 'ℹ️' });
+        return null;
+      }
       const msg = err.response?.data?.message || 'Error al analizar la clase';
       setError(msg);
       toast.error(msg);
@@ -512,3 +518,50 @@ export const useSimulacionOptimo = () => {
     colorDificultad,
   };
 };
+export const useSimulacionOptimoV2 = () => {
+  const [resultado, setResultado] = useState<SimulacionOptimoV2Response | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError]         = useState<string | null>(null);
+ 
+  const calcular = useCallback(async (
+    params: {
+      matricula_id:          number;
+      asignacion_docente_id: number;
+      periodo_evaluacion_id: number;
+    },
+    opciones?: {
+      objetivoNota?:        number;
+      restricciones?:       RestriccionesOptimo;
+      practicasRestantes?:  number;   // del docente — undefined = estimar
+      examenesRestantes?:   number;   // del docente — undefined = estimar
+      silencioso?:          boolean;
+    },
+  ) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await prediccionService.simularOptimoV2({
+        matricula_id:          params.matricula_id,
+        asignacion_docente_id: params.asignacion_docente_id,
+        periodo_evaluacion_id: params.periodo_evaluacion_id,
+        objetivo_nota:         opciones?.objetivoNota  ?? 51,
+        restricciones:         opciones?.restricciones ?? {},
+        practicas_restantes:   opciones?.practicasRestantes,
+        examenes_restantes:    opciones?.examenesRestantes,
+      });
+      setResultado(res.data);
+      return res.data;
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Error al calcular simulación óptima v2';
+      setError(msg);
+      if (!opciones?.silencioso) toast.error(msg);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+ 
+  const limpiar = useCallback(() => { setResultado(null); setError(null); }, []);
+  return { resultado, isLoading, error, calcular, limpiar };
+};
+ 

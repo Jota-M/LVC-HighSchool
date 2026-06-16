@@ -6,10 +6,10 @@ import {
   Fade, Alert, LinearProgress, Chip, Tooltip,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
-import GradeRoundedIcon    from '@mui/icons-material/GradeRounded';
-import ChevronRightIcon    from '@mui/icons-material/ChevronRight';
-import SchoolRoundedIcon   from '@mui/icons-material/SchoolRounded';
-import GroupsRoundedIcon   from '@mui/icons-material/GroupsRounded';
+import GradeRoundedIcon from '@mui/icons-material/GradeRounded';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import SchoolRoundedIcon from '@mui/icons-material/SchoolRounded';
+import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 
@@ -42,14 +42,14 @@ function agruparPorMateria(materias: MateriaDocenteNotas[]) {
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 export default function DocenteNotasIndexPage() {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const router = useRouter();
   const { user } = useAuth();
 
-  const gold    = isDark ? '#facc15' : '#0288d1';
+  const gold = isDark ? '#facc15' : '#0288d1';
   const goldEnd = isDark ? '#f59e0b' : '#01579b';
-  const gradBg  = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
+  const gradBg = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
 
   const { materias, isLoading, sinMaterias } = useMisMateriasNotas();
 
@@ -85,7 +85,7 @@ export default function DocenteNotasIndexPage() {
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}>
-                Gestión de Notas
+                Gestión de Tareas
               </Typography>
             </Box>
             <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
@@ -143,7 +143,7 @@ export default function DocenteNotasIndexPage() {
                 gap: 2,
               }}>
                 {grupo.map(m => {
-                  const pct     = completitud(m);
+                  const pct = completitud(m);
                   const cerrado = pct === 100;
 
                   return (
@@ -223,10 +223,10 @@ export default function DocenteNotasIndexPage() {
                       <Box sx={{ display: 'flex', gap: 0.8, mb: 2 }}>
                         {(
                           [
-                            { key: 'SER',  val: m.evaluaciones_ser   },
-                            { key: 'SAB',  val: m.evaluaciones_saber },
-                            { key: 'HAC',  val: m.evaluaciones_hacer },
-                            { key: 'AUT', val: m.evaluaciones_auto  },
+                            { key: 'SER', val: m.evaluaciones_ser },
+                            { key: 'SAB', val: m.evaluaciones_saber },
+                            { key: 'HAC', val: m.evaluaciones_hacer },
+                            { key: 'AUT', val: m.evaluaciones_auto },
                           ] as const
                         ).map(({ key, val }) => (
                           <Tooltip key={key} title={`${DIMENSIONES_CONFIG[key].label}: ${val} evaluaciones`}>

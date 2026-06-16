@@ -16,7 +16,6 @@ import {
   TableRow,
   Chip,
   CircularProgress,
-  TextField,
   Grid,
   Button,
   Alert,
@@ -29,11 +28,20 @@ import {
 } from '@mui/icons-material';
 import { usePagos } from '@/hooks/usePagos';
 import { useAcademicos } from '@/hooks/useAcademicos'; // 🔧 AGREGAR
+import { FormatoReporte } from '@/types/pagos';
+import { useSnackbar } from 'notistack';
 
 export const ReporteMorosos: React.FC = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const { morosos, loadingReportes, cargarMorosos } = usePagos({});
+  const {
+    morosos,
+    loadingReportes,
+    loadingExportacionReportes,
+    cargarMorosos,
+    exportarMorosos
+  } = usePagos({});
+  const { enqueueSnackbar } = useSnackbar();
 
   // 🔧 AGREGAR: Obtener período activo
   const { periodoActivo, loading: loadingPeriodo } = useAcademicos({
@@ -72,9 +80,23 @@ useEffect(() => {
     return '#991b1b';
   };
 
-  const handleExportar = () => {
-    // TODO: Implementar exportación a Excel/PDF
-    console.log('Exportar morosos');
+  const handleExportar = async (formato: FormatoReporte) => {
+    if (!periodoActivo) {
+      enqueueSnackbar('No hay un período académico activo para generar el reporte', { variant: 'warning' });
+      return;
+    }
+
+    try {
+      await exportarMorosos({
+        periodo_academico_id: periodoActivo.id,
+        formato,
+        dias_mora_minimo: filtros.dias_mora_minimo,
+      });
+      enqueueSnackbar(`Reporte de morosos descargado (${formato.toUpperCase()})`, { variant: 'success' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al descargar reporte de morosos';
+      enqueueSnackbar(message, { variant: 'error' });
+    }
   };
 
   // 🔧 AGREGAR: Loading período
@@ -234,18 +256,34 @@ useEffect(() => {
             <Typography variant="h6" fontWeight={700}>
               Lista de Morosos
             </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<DownloadIcon />}
-              onClick={handleExportar}
-              sx={{
-                borderRadius: '12px',
-                textTransform: 'none',
-                fontWeight: 600,
-              }}
-            >
-              Exportar
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Button
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                onClick={() => handleExportar('pdf')}
+                disabled={loadingExportacionReportes}
+                sx={{
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                PDF
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<DownloadIcon />}
+                onClick={() => handleExportar('excel')}
+                disabled={loadingExportacionReportes}
+                sx={{
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                Excel
+              </Button>
+            </Box>
           </Box>
 
           {morosos.length === 0 ? (

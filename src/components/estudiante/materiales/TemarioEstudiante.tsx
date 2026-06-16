@@ -239,7 +239,18 @@ export const TemarioEstudiante: React.FC<TemarioEstudianteProps> = ({
                               {tema.numero_tema}. {tema.tema_titulo}
                             </Typography>
                             {tema.tema_descripcion && (
-                              <Typography variant="caption" color="text.secondary" noWrap>
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary" 
+                                sx={{ 
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  wordBreak: 'break-word',
+                                  mb: 0.6 
+                                }}
+                              >
                                 {tema.tema_descripcion}
                               </Typography>
                             )}

@@ -1,7 +1,7 @@
-// src/app/dashboard/preinscripciones/components/StatCard.tsx
+// src/components/preinscripciones/StatCard.tsx
 
 import React from 'react';
-import { Card, CardContent, Stack, Avatar, Chip, Typography, Zoom } from '@mui/material';
+import { Paper, Box, Typography, useTheme, alpha } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 
@@ -14,67 +14,118 @@ interface StatCardProps {
   trend: string;
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ 
-  title, 
-  value, 
-  subtitle, 
-  color, 
-  icon, 
-  trend 
+export const StatCard: React.FC<StatCardProps> = ({
+  title,
+  value,
+  subtitle,
+  color,
+  icon,
+  trend,
 }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const isPositive = trend.startsWith('+');
+
   return (
-    <Zoom in timeout={600}>
-      <Card
+    <Paper
+      elevation={0}
+      sx={{
+        p: 3,
+        borderRadius: '20px',
+        background: isDark
+          ? `linear-gradient(135deg, ${color}15 0%, ${color}05 100%)`
+          : `linear-gradient(135deg, ${color}10 0%, ${color}05 100%)`,
+        border: `2px solid ${color}30`,
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: `0 12px 24px ${color}20`,
+          borderColor: `${color}60`,
+        },
+      }}
+    >
+      {/* Icono decorativo de fondo */}
+      <Box
         sx={{
-          background: `linear-gradient(135deg, ${color}15 0%, ${color}05 100%)`,
-          borderRadius: 4,
-          border: `2px solid ${color}30`,
-          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          position: 'relative',
-          overflow: 'hidden',
-          '&:hover': {
-            transform: 'translateY(-8px) scale(1.02)',
-            boxShadow: `0 20px 40px ${color}40`,
-            border: `2px solid ${color}60`,
-          },
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: `linear-gradient(90deg, ${color}, transparent)`,
-          }
+          position: 'absolute',
+          right: -10,
+          top: -10,
+          opacity: 0.08,
+          transform: 'rotate(15deg)',
+          '& svg': { fontSize: 100, color },
         }}
       >
-        <CardContent sx={{ p: 3 }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
-            <Avatar sx={{ bgcolor: `${color}20`, color: color, width: 56, height: 56 }}>
-              {icon}
-            </Avatar>
-            <Chip 
-              label={trend} 
-              size="small" 
-              icon={trend.startsWith('+') ? <TrendingUpIcon /> : <TrendingDownIcon />}
-              sx={{ 
-                bgcolor: trend.startsWith('+') ? '#4caf5020' : '#f4433620',
-                color: trend.startsWith('+') ? '#4caf50' : '#f44336',
-                fontWeight: 700,
-              }} 
-            />
-          </Stack>
-          <Typography variant="h3" fontWeight="bold" color={color} mb={1}>
-            {value}
-          </Typography>
-          <Typography variant="body1" fontWeight={600} color="text.primary" mb={0.5}>
+        {icon}
+      </Box>
+
+      <Box sx={{ position: 'relative', zIndex: 1 }}>
+        {/* Icono + título */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <Box
+            sx={{
+              width: 48,
+              height: 48,
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: `${color}20`,
+              '& svg': { fontSize: 24, color },
+            }}
+          >
+            {icon}
+          </Box>
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}
+          >
             {title}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+        </Box>
+
+        {/* Valor */}
+        <Typography
+          variant="h3"
+          sx={{ fontWeight: 700, color: 'text.primary', mb: 0.5 }}
+        >
+          {value}
+        </Typography>
+
+        {/* Subtítulo + trend */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             {subtitle}
           </Typography>
-        </CardContent>
-      </Card>
-    </Zoom>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.3,
+              px: 1,
+              py: 0.3,
+              borderRadius: '8px',
+              bgcolor: isPositive
+                ? alpha('#10b981', 0.15)
+                : alpha('#ef4444', 0.15),
+              color: isPositive ? '#10b981' : '#ef4444',
+            }}
+          >
+            {isPositive
+              ? <TrendingUpIcon sx={{ fontSize: 14 }} />
+              : <TrendingDownIcon sx={{ fontSize: 14 }} />}
+            <Typography variant="caption" fontWeight={700}>
+              {trend}
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+    </Paper>
   );
 };

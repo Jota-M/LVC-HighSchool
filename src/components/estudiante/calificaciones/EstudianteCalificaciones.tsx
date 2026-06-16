@@ -247,7 +247,7 @@ const TablaPorDimension: React.FC<{ detalle: NotasPorMateria; color: string }> =
 
   return (
     <Stack spacing={2.5}>
-      {['SER','SAB','HAC','AUTO'].map(cod => {
+      {['SER','SAB','HAC','AUT'].map(cod => {
         const evals = porDimension[cod];
         if (!evals?.length) return null;
         const cfg = DIMENSIONES[cod];

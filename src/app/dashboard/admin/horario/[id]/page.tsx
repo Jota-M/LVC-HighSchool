@@ -53,7 +53,12 @@ export default function HorarioEditorPage() {
 
   // Bloques del turno de este horario
   const { bloques } = useBloques(
-    horario ? { turno_id: horario.turno_id, activo: true, incluir_recreos: true } : {}
+    horario ? {
+      turno_id: horario.turno_id,
+      nivel_academico_id: horario.nivel_academico_id,
+      activo: true,
+      incluir_recreos: true,
+    } : {}
   );
 
   const handlePublicar = async () => {
@@ -93,7 +98,7 @@ export default function HorarioEditorPage() {
     puedeArchivar: horario.estado === 'publicado',
     puedeBorrador: horario.estado === 'publicado',
     puedeEliminar: horario.estado !== 'publicado',
-    puedeEditar:   horario.estado !== 'archivado',
+    puedeEditar: horario.estado !== 'archivado',
   } : {};
 
   if (isLoading) {
@@ -143,85 +148,124 @@ export default function HorarioEditorPage() {
               sx={{
                 borderRadius: 3, overflow: 'hidden', mb: 3,
                 border: `1px solid ${alpha(accentColor, 0.2)}`,
+                bgcolor: isDark ? '#11131f' : 'background.paper',
               }}
             >
               {/* Top accent */}
               <Box sx={{ height: 5, background: `linear-gradient(90deg, ${accentColor}, ${alpha(accentColor, 0.3)})` }} />
 
-              <Box sx={{ p: { xs: 2, md: 3 } }}>
+              <Box sx={{ p: { xs: 1.5, md: 3 } }}>
+                {/* Fila 1: navegación + estado + acciones */}
                 <Box sx={{
-                  display: 'flex', flexWrap: 'wrap', gap: 2,
-                  justifyContent: 'space-between', alignItems: 'flex-start',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  gap: 1, mb: 1.5, flexWrap: { xs: 'nowrap', md: 'wrap' },
                 }}>
-                  {/* Info */}
-                  <Box sx={{ flex: 1, minWidth: 240 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                      <Button
-                        startIcon={<BackIcon />}
-                        onClick={() => router.push('/dashboard/admin/horario')}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
+                    {/* Botón atrás: ícono en mobile, texto en desktop */}
+                    <IconButton
+                      onClick={() => router.push('/dashboard/admin/horario')}
+                      size="small"
+                      sx={{
+                        display: { xs: 'inline-flex', md: 'none' },
+                        border: `1px solid ${alpha(accentColor, 0.3)}`, borderRadius: 1.5,
+                      }}
+                    >
+                      <BackIcon fontSize="small" />
+                    </IconButton>
+                    <Button
+                      startIcon={<BackIcon />}
+                      onClick={() => router.push('/dashboard/admin/horario')}
+                      size="small"
+                      sx={{ display: { xs: 'none', md: 'inline-flex' }, borderRadius: 2, minWidth: 0, px: 1.5 }}
+                    >
+                      Atrás
+                    </Button>
+
+                    <HorarioStatusChip estado={horario.estado} />
+
+                    {horario.estado === 'borrador' && (
+                      <Chip
+                        label="En edición"
                         size="small"
-                        sx={{ borderRadius: 2, minWidth: 0, px: 1.5 }}
-                      >
-                        Atrás
-                      </Button>
-                      <HorarioStatusChip estado={horario.estado} />
-                      {horario.estado === 'borrador' && (
-                        <Chip
-                          label="En edición"
-                          size="small"
-                          sx={{ height: 20, fontSize: '0.65rem', animation: `${pulse} 2s infinite`, bgcolor: alpha('#f59e0b', 0.1), color: '#f59e0b', fontWeight: 700 }}
-                        />
-                      )}
-                    </Box>
-
-                    <Typography variant="h5" fontWeight={800} sx={{ mb: 0.5 }}>
-                      {horario.nombre ?? `${horario.grado_nombre} — Paralelo ${horario.paralelo_nombre}`}
-                    </Typography>
-
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                      {[
-                        { icon: <SchoolIcon sx={{ fontSize: 14 }} />, label: horario.nivel_nombre },
-                        { icon: <TimeIcon sx={{ fontSize: 14 }} />, label: horario.turno_nombre },
-                        { icon: <CalendarIcon sx={{ fontSize: 14 }} />, label: `${horario.periodo_nombre} (${horario.periodo_codigo})` },
-                        ...(horario.paralelo_aula ? [{ icon: null, label: `Aula: ${horario.paralelo_aula}` }] : []),
-                      ].map((item, i) => (
-                        <Chip
-                          key={i}
-                          size="small"
-                          icon={item.icon ?? undefined}
-                          label={item.label}
-                          sx={{ fontSize: '0.7rem', bgcolor: alpha(accentColor, 0.07), '& .MuiChip-icon': { color: accentColor } }}
-                        />
-                      ))}
-                    </Box>
+                        sx={{
+                          height: 20, fontSize: '0.65rem',
+                          animation: `${pulse} 2s infinite`,
+                          bgcolor: alpha('#f59e0b', 0.1), color: '#f59e0b', fontWeight: 700,
+                          display: { xs: 'none', sm: 'inline-flex' },
+                        }}
+                      />
+                    )}
                   </Box>
 
-                  {/* Actions */}
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexShrink: 0 }}>
-                    {/* Publicar — acción primaria */}
+                  {/* Acciones */}
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
                     {acciones.puedePublicar && (
-                      <Tooltip title="Haz visible este horario para estudiantes y padres">
-                        <Button
-                          variant="contained"
-                          startIcon={<PublishIcon />}
-                          onClick={() => setConfirmAction({ estado: 'publicado', label: 'publicar' })}
-                          disabled={isCambiandoEstado}
-                          sx={{
-                            borderRadius: 2, fontWeight: 700,
-                            bgcolor: ESTADO_CONFIG.publicado.color,
-                            '&:hover': { bgcolor: '#059669' },
-                          }}
-                        >
+                      <Button
+                        variant="contained"
+                        startIcon={<PublishIcon />}
+                        onClick={() => setConfirmAction({ estado: 'publicado', label: 'publicar' })}
+                        disabled={isCambiandoEstado}
+                        size="small"
+                        sx={{
+                          borderRadius: 2, fontWeight: 700,
+                          bgcolor: ESTADO_CONFIG.publicado.color,
+                          '&:hover': { bgcolor: '#059669' },
+                          px: { xs: 1.5, md: 2 },
+                          '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+                        }}
+                      >
+                        <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
                           Publicar
-                        </Button>
-                      </Tooltip>
+                        </Box>
+                      </Button>
                     )}
 
-                    {/* Menú contextual */}
-                    <IconButton onClick={(e) => setMenuAnchor(e.currentTarget)} sx={{ border: `1px solid ${alpha(accentColor, 0.3)}`, borderRadius: 1.5 }}>
-                      <MoreIcon />
+                    <IconButton
+                      onClick={(e) => setMenuAnchor(e.currentTarget)}
+                      size="small"
+                      sx={{ border: `1px solid ${alpha(accentColor, 0.3)}`, borderRadius: 1.5 }}
+                    >
+                      <MoreIcon fontSize="small" />
                     </IconButton>
                   </Box>
+                </Box>
+
+                {/* Fila 2: título */}
+                <Typography
+                  variant="h5"
+                  fontWeight={800}
+                  sx={{ mb: 1, fontSize: { xs: '1.05rem', md: '1.5rem' }, lineHeight: 1.3 }}
+                >
+                  {horario.nombre ?? `${horario.grado_nombre} — Paralelo ${horario.paralelo_nombre}`}
+                </Typography>
+
+                {/* Fila 3: chips informativos — scroll horizontal en mobile */}
+                <Box sx={{
+                  display: 'flex', gap: 1,
+                  flexWrap: { xs: 'nowrap', md: 'wrap' },
+                  overflowX: { xs: 'auto', md: 'visible' },
+                  pb: { xs: 0.5, md: 0 },
+                  '&::-webkit-scrollbar': { height: 4 },
+                  '&::-webkit-scrollbar-thumb': { bgcolor: alpha(accentColor, 0.2), borderRadius: 2 },
+                }}>
+                  {[
+                    { icon: <SchoolIcon sx={{ fontSize: 14 }} />, label: horario.nivel_nombre },
+                    { icon: <TimeIcon sx={{ fontSize: 14 }} />, label: horario.turno_nombre },
+                    { icon: <CalendarIcon sx={{ fontSize: 14 }} />, label: `${horario.periodo_nombre} (${horario.periodo_codigo})` },
+                    ...(horario.paralelo_aula ? [{ icon: null, label: `Aula: ${horario.paralelo_aula}` }] : []),
+                  ].map((item, i) => (
+                    <Chip
+                      key={i}
+                      size="small"
+                      icon={item.icon ?? undefined}
+                      label={item.label}
+                      sx={{
+                        fontSize: '0.7rem', flexShrink: 0,
+                        bgcolor: alpha(accentColor, 0.07),
+                        '& .MuiChip-icon': { color: accentColor },
+                      }}
+                    />
+                  ))}
                 </Box>
 
                 {/* Observaciones */}
@@ -234,7 +278,7 @@ export default function HorarioEditorPage() {
             </Paper>
 
             {/* ── GRILLA INTERACTIVA ── */}
-            <Paper sx={{ borderRadius: 3, p: { xs: 2, md: 3 }, border: `1px solid ${alpha(accentColor, 0.12)}` }}>
+            <Paper sx={{ borderRadius: 3, p: { xs: 2, md: 3 }, border: `1px solid ${alpha(accentColor, 0.12)}`, bgcolor: isDark ? '#11131f' : 'background.paper' }}>
               <HorarioGrid
                 horarioId={horario.id}
                 gradoId={horario.grado_id}
@@ -252,73 +296,73 @@ export default function HorarioEditorPage() {
 
       {/* ── CONTEXT MENU ── */}
       <Menu
-  anchorEl={menuAnchor}
-  open={!!menuAnchor}
-  onClose={() => setMenuAnchor(null)}
-  PaperProps={{ sx: { borderRadius: 2, minWidth: 200 } }}
->
-  {/* Editar */}
-  {acciones.puedeEditar && (
-    <MenuItem onClick={openEditNombre}>
-      <ListItemIcon>
-        <EditIcon fontSize="small" />
-      </ListItemIcon>
-      <ListItemText>Editar nombre</ListItemText>
-    </MenuItem>
-  )}
+        anchorEl={menuAnchor}
+        open={!!menuAnchor}
+        onClose={() => setMenuAnchor(null)}
+        PaperProps={{ sx: { borderRadius: 2, minWidth: 200 } }}
+      >
+        {/* Editar */}
+        {acciones.puedeEditar && (
+          <MenuItem onClick={openEditNombre}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Editar nombre</ListItemText>
+          </MenuItem>
+        )}
 
-  <Divider />
+        <Divider />
 
-  {/* Pasar a borrador */}
-  {acciones.puedeBorrador && (
-    <MenuItem
-      onClick={() => {
-        setMenuAnchor(null);
-        setConfirmAction({ estado: 'borrador', label: 'mover a borrador' });
-      }}
-      disabled={isCambiandoEstado}
-    >
-      <ListItemIcon>
-        <UndoIcon fontSize="small" sx={{ color: ESTADO_CONFIG.borrador.color }} />
-      </ListItemIcon>
-      <ListItemText>Pasar a Borrador</ListItemText>
-    </MenuItem>
-  )}
+        {/* Pasar a borrador */}
+        {acciones.puedeBorrador && (
+          <MenuItem
+            onClick={() => {
+              setMenuAnchor(null);
+              setConfirmAction({ estado: 'borrador', label: 'mover a borrador' });
+            }}
+            disabled={isCambiandoEstado}
+          >
+            <ListItemIcon>
+              <UndoIcon fontSize="small" sx={{ color: ESTADO_CONFIG.borrador.color }} />
+            </ListItemIcon>
+            <ListItemText>Pasar a Borrador</ListItemText>
+          </MenuItem>
+        )}
 
-  {/* Archivar */}
-  {acciones.puedeArchivar && (
-    <MenuItem
-      onClick={() => {
-        setMenuAnchor(null);
-        setConfirmAction({ estado: 'archivado', label: 'archivar' });
-      }}
-      disabled={isCambiandoEstado}
-    >
-      <ListItemIcon>
-        <ArchiveIcon fontSize="small" sx={{ color: ESTADO_CONFIG.archivado.color }} />
-      </ListItemIcon>
-      <ListItemText>Archivar</ListItemText>
-    </MenuItem>
-  )}
+        {/* Archivar */}
+        {acciones.puedeArchivar && (
+          <MenuItem
+            onClick={() => {
+              setMenuAnchor(null);
+              setConfirmAction({ estado: 'archivado', label: 'archivar' });
+            }}
+            disabled={isCambiandoEstado}
+          >
+            <ListItemIcon>
+              <ArchiveIcon fontSize="small" sx={{ color: ESTADO_CONFIG.archivado.color }} />
+            </ListItemIcon>
+            <ListItemText>Archivar</ListItemText>
+          </MenuItem>
+        )}
 
-  {/* 🔴 Eliminar (SIN Fragment) */}
-  {acciones.puedeEliminar && <Divider />}
+        {/* 🔴 Eliminar (SIN Fragment) */}
+        {acciones.puedeEliminar && <Divider />}
 
-  {acciones.puedeEliminar && (
-    <MenuItem
-      onClick={() => {
-        setMenuAnchor(null);
-        setConfirmDelete(true);
-      }}
-      sx={{ color: 'error.main' }}
-    >
-      <ListItemIcon>
-        <DeleteIcon fontSize="small" color="error" />
-      </ListItemIcon>
-      <ListItemText>Eliminar Horario</ListItemText>
-    </MenuItem>
-  )}
-</Menu>
+        {acciones.puedeEliminar && (
+          <MenuItem
+            onClick={() => {
+              setMenuAnchor(null);
+              setConfirmDelete(true);
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" color="error" />
+            </ListItemIcon>
+            <ListItemText>Eliminar Horario</ListItemText>
+          </MenuItem>
+        )}
+      </Menu>
 
       {/* ── MODAL: Confirmar cambio de estado ── */}
       <Dialog
@@ -330,8 +374,8 @@ export default function HorarioEditorPage() {
           {confirmAction?.estado === 'publicado'
             ? <><PublishIcon sx={{ color: ESTADO_CONFIG.publicado.color }} /> Publicar horario</>
             : confirmAction?.estado === 'archivado'
-            ? <><ArchiveIcon sx={{ color: ESTADO_CONFIG.archivado.color }} /> Archivar horario</>
-            : <><UndoIcon /> Mover a borrador</>
+              ? <><ArchiveIcon sx={{ color: ESTADO_CONFIG.archivado.color }} /> Archivar horario</>
+              : <><UndoIcon /> Mover a borrador</>
           }
         </DialogTitle>
         <DialogContent>
@@ -357,7 +401,8 @@ export default function HorarioEditorPage() {
             disabled={isCambiandoEstado}
             onClick={() => confirmAction && handleCambiarEstado(confirmAction.estado)}
             startIcon={<CheckIcon />}
-            sx={{ borderRadius: 2, fontWeight: 700,
+            sx={{
+              borderRadius: 2, fontWeight: 700,
               bgcolor: confirmAction?.estado ? ESTADO_CONFIG[confirmAction.estado].color : accentColor,
               color: '#fff',
             }}

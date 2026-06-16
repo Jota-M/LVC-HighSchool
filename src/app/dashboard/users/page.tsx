@@ -28,12 +28,16 @@ import {
   ViewModule as ViewModuleIcon,
   TableRows as TableRowsIcon,
 } from '@mui/icons-material';
+import VpnKeyRoundedIcon from '@mui/icons-material/VpnKeyRounded';
+import GroupRoundedIcon from '@mui/icons-material/GroupRounded';
 import { useUsuarios } from '@/hooks/useUsuarios';
 import { Usuario } from '@/services/usuariosService';
 import UsuariosCardView from '@/components/usuarios/UsuariosCardView';
 import UsuariosStats from '@/components/usuarios/UsuariosStats';
 import UsuarioFormDialog from '@/components/usuarios/UsuarioFormDialog';
 import UsuarioDeleteDialog from '@/components/usuarios/UsuarioDeleteDialog';
+import { RolesTab } from '@/components/roles/RolesTab';
+import { PermisosTab } from '@/components/roles/PermisosTab';
 import UsuarioResetPasswordDialog from '@/components/usuarios/UsuarioResetPasswordDialog';
 import UsuarioActividadDialog from '@/components/usuarios/UsuarioActividadDialog';
 
@@ -61,7 +65,7 @@ export const Usuarios: React.FC = () => {
   const isDark = theme.palette.mode === 'dark';
   const [activeTab, setActiveTab] = useState(0);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  
+
   // Estados para diálogos
   const [formOpen, setFormOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -326,6 +330,8 @@ export const Usuarios: React.FC = () => {
             >
               <Tab icon={<ListIcon />} iconPosition="start" label="Lista de Usuarios" />
               <Tab icon={<StatsIcon />} iconPosition="start" label="Estadísticas" />
+              <Tab icon={<GroupRoundedIcon />} iconPosition="start" label="Roles" />
+              <Tab icon={<VpnKeyRoundedIcon />} iconPosition="start" label="Permisos" />
             </Tabs>
 
           </Box>
@@ -364,6 +370,23 @@ export const Usuarios: React.FC = () => {
             </Box>
           </Fade>
         </TabPanel>
+
+        <TabPanel value={activeTab} index={2}>
+          <Fade in timeout={700}>
+            <Box>
+              <RolesTab />
+            </Box>
+          </Fade>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={3}>
+          <Fade in timeout={700}>
+            <Box>
+              <PermisosTab />
+            </Box>
+          </Fade>
+        </TabPanel>
+
       </Container>
 
       {/* Diálogos */}

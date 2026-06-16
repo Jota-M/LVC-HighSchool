@@ -10,7 +10,6 @@ import {
   alpha,
   Grid,
   CircularProgress,
-  TextField,
   Button,
 } from '@mui/material';
 import {
@@ -25,17 +24,37 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
 } from 'recharts';
 import { Download as DownloadIcon } from '@mui/icons-material';
 import { usePagos } from '@/hooks/usePagos';
 import academicosService from '@/services/academicos';
+import { FormatoReporte } from '@/types/pagos';
+import { useSnackbar } from 'notistack';
+
+interface IngresoMesChart {
+  mes: string;
+  total: number;
+  cantidad: number;
+}
+
+interface IngresoMetodoChart extends Record<string, string | number> {
+  metodo_key: string;
+  metodo: string;
+  total: number;
+  cantidad: number;
+}
 
 export const ReporteIngresos: React.FC = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const { ingresos, loadingReportes, cargarIngresos } = usePagos({});
+  const {
+    ingresos,
+    loadingReportes,
+    loadingExportacionReportes,
+    cargarIngresos,
+    exportarIngresos
+  } = usePagos({});
+  const { enqueueSnackbar } = useSnackbar();
 
   const [periodoId, setPeriodoId] = useState<number | null>(null);
 
@@ -67,7 +86,7 @@ export const ReporteIngresos: React.FC = () => {
   }
 
   // Preparar datos para gráficas
-  const ingresosPorMes = ingresos.reduce((acc: any[], ingreso) => {
+  const ingresosPorMes = ingresos.reduce<IngresoMesChart[]>((acc, ingreso) => {
     const mesKey = new Date(ingreso.mes).toLocaleDateString('es-BO', {
       month: 'short',
       year: 'numeric',
@@ -87,7 +106,7 @@ export const ReporteIngresos: React.FC = () => {
     return acc;
   }, []);
 
-  const ingresosPorMetodo = ingresos.reduce((acc: any[], ingreso) => {
+  const ingresosPorMetodo = ingresos.reduce<IngresoMetodoChart[]>((acc, ingreso) => {
   const metodoPago: string = ingreso.metodo_pago ? String(ingreso.metodo_pago) : 'sin_metodo';
 
   const existing = acc.find((item) => item.metodo_key === metodoPago);
@@ -115,9 +134,22 @@ export const ReporteIngresos: React.FC = () => {
   const totalIngresos = ingresos.reduce((sum, ing) => sum + ing.total_ingreso, 0);
   const totalPagos = ingresos.reduce((sum, ing) => sum + ing.cantidad_pagos, 0);
 
-  const handleExportar = () => {
-    // TODO: Implementar exportación
-    console.log('Exportar ingresos');
+  const handleExportar = async (formato: FormatoReporte) => {
+    if (!periodoId) {
+      enqueueSnackbar('No hay un período académico activo para generar el reporte', { variant: 'warning' });
+      return;
+    }
+
+    try {
+      await exportarIngresos({
+        periodo_academico_id: periodoId,
+        formato,
+      });
+      enqueueSnackbar(`Reporte de ingresos descargado (${formato.toUpperCase()})`, { variant: 'success' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al descargar reporte de ingresos';
+      enqueueSnackbar(message, { variant: 'error' });
+    }
   };
 
   return (
@@ -195,19 +227,36 @@ export const ReporteIngresos: React.FC = () => {
                 <Typography variant="h6" fontWeight={700}>
                   Ingresos por Mes
                 </Typography>
-                <Button
-                  color='secondary'
-                  variant="outlined"
-                  size="small"
-                  startIcon={<DownloadIcon />}
-                  onClick={handleExportar}
-                  sx={{
-                    borderRadius: '8px',
-                    textTransform: 'none',
-                  }}
-                >
-                  Exportar
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Button
+                    color='secondary'
+                    variant="outlined"
+                    size="small"
+                    startIcon={<DownloadIcon />}
+                    onClick={() => handleExportar('pdf')}
+                    disabled={!periodoId || loadingExportacionReportes}
+                    sx={{
+                      borderRadius: '8px',
+                      textTransform: 'none',
+                    }}
+                  >
+                    PDF
+                  </Button>
+                  <Button
+                    color='secondary'
+                    variant="outlined"
+                    size="small"
+                    startIcon={<DownloadIcon />}
+                    onClick={() => handleExportar('excel')}
+                    disabled={!periodoId || loadingExportacionReportes}
+                    sx={{
+                      borderRadius: '8px',
+                      textTransform: 'none',
+                    }}
+                  >
+                    Excel
+                  </Button>
+                </Box>
               </Box>
 
               <ResponsiveContainer width="100%" height={300}>
@@ -229,8 +278,8 @@ export const ReporteIngresos: React.FC = () => {
                       borderRadius: '8px',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                     }}
-                    formatter={(value: any) =>
-                      `Bs ${parseFloat(value).toLocaleString('es-BO', {
+                    formatter={(value: number | string) =>
+                      `Bs ${Number(value).toLocaleString('es-BO', {
                         minimumFractionDigits: 2,
                       })}`
                     }
@@ -288,8 +337,8 @@ export const ReporteIngresos: React.FC = () => {
                       borderRadius: '8px',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                     }}
-                    formatter={(value: any) =>
-                      `Bs ${parseFloat(value).toLocaleString('es-BO', {
+                    formatter={(value: number | string) =>
+                      `Bs ${Number(value).toLocaleString('es-BO', {
                         minimumFractionDigits: 2,
                       })}`
                     }

@@ -73,6 +73,20 @@ export const useGestionBloques = () => {
 // =============================================
 // HOOK: Lista de horarios con filtros
 // =============================================
+export const useAsignacionTitular = (
+  gradoMateriaId: number | null,
+  paraleloId: number | null,
+  periodoId: number | null
+) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['asignacion-titular', gradoMateriaId, paraleloId, periodoId],
+    queryFn: () =>
+      horarioService.obtenerAsignacionTitular(gradoMateriaId!, paraleloId!, periodoId!),
+    enabled: !!gradoMateriaId && !!paraleloId && !!periodoId,
+    staleTime: 1000 * 60 * 5,
+  });
+  return { asignacionTitular: data ?? null, isLoading };
+};
 export const useHorarios = (initialFilters: HorariosFilters = {}) => {
   const [filters, setFilters] = useState<HorariosFilters>(initialFilters);
 

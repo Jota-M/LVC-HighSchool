@@ -10,7 +10,9 @@ import {
   MLHealthResponse,
   EscenarioSimulacion,
   SimulacionOptimoDTO, 
-  SimulacionOptimoResponse
+  SimulacionOptimoResponse,
+  SimulacionOptimoV2Response,
+  SimulacionOptimoV2DTO
 } from '@/types/prediccionTypes';
 
 // ============================================
@@ -123,7 +125,19 @@ export const prediccionService = {
     );
     return response.data;
   },
-
+  
+  async simularOptimoV2(
+  data: SimulacionOptimoV2DTO,
+  opciones: { usarXgboost?: boolean } = {},
+): Promise<{ success: boolean; data: SimulacionOptimoV2Response }> {
+  const params = new URLSearchParams();
+  if (opciones.usarXgboost !== undefined)
+    params.append('usar_xgboost', String(opciones.usarXgboost));
+  const response = await api.post(`/prediccion/simular/optimo/v2?${params}`, data);
+  return response.data;
+},
+ 
+  
   /**
    * Estado del microservicio ML.
    * Útil para mostrar un indicador en el dashboard.

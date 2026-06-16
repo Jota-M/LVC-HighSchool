@@ -23,6 +23,7 @@ import {
   IconButton,
   Collapse,
   Alert,
+  Button,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -36,7 +37,8 @@ import {
 } from '@mui/icons-material';
 import { usePagos } from '@/hooks/usePagos';
 import { useAcademicos } from '@/hooks/useAcademicos'; // 🔧 AGREGAR
-import { EstadoPagosEstudiante } from '@/types/pagos';
+import { EstadoPagosEstudiante, FormatoReporte } from '@/types/pagos';
+import { useSnackbar } from 'notistack';
 
 interface RowProps {
   estudiante: EstadoPagosEstudiante;
@@ -237,7 +239,14 @@ const EstudianteRow: React.FC<RowProps> = ({ estudiante, isDark }) => {
 export const EstadoCuentaEstudiantes: React.FC = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const { estadoEstudiantes, loadingReportes, cargarEstadoEstudiantes } = usePagos({});
+  const {
+    estadoEstudiantes,
+    loadingReportes,
+    loadingExportacionReportes,
+    cargarEstadoEstudiantes,
+    exportarEstadoCuenta
+  } = usePagos({});
+  const { enqueueSnackbar } = useSnackbar();
   
   // 🔧 AGREGAR: Obtener período activo
   const { periodoActivo, loading: loadingPeriodo } = useAcademicos({
@@ -269,9 +278,22 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
       est.estudiante_codigo.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleExportar = () => {
-    // TODO: Implementar exportación
-    console.log('Exportar estado de cuenta');
+  const handleExportar = async (formato: FormatoReporte) => {
+    if (!periodoActivo) {
+      enqueueSnackbar('No hay un período académico activo para generar el reporte', { variant: 'warning' });
+      return;
+    }
+
+    try {
+      await exportarEstadoCuenta({
+        periodo_academico_id: periodoActivo.id,
+        formato,
+      });
+      enqueueSnackbar(`Estado de cuenta descargado (${formato.toUpperCase()})`, { variant: 'success' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al descargar estado de cuenta';
+      enqueueSnackbar(message, { variant: 'error' });
+    }
   };
 
   // 🔧 AGREGAR: Loading mientras carga período
@@ -514,15 +536,35 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
                 }}
               />
 
-              <IconButton
-                onClick={handleExportar}
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<DownloadIcon />}
+                onClick={() => handleExportar('pdf')}
+                disabled={loadingExportacionReportes}
                 sx={{
                   border: `1px solid ${alpha(isDark ? '#facc15' : '#0288d1', 0.3)}`,
                   borderRadius: '12px',
+                  textTransform: 'none',
                 }}
               >
-                <DownloadIcon />
-              </IconButton>
+                PDF
+              </Button>
+
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<DownloadIcon />}
+                onClick={() => handleExportar('excel')}
+                disabled={loadingExportacionReportes}
+                sx={{
+                  border: `1px solid ${alpha(isDark ? '#facc15' : '#0288d1', 0.3)}`,
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                }}
+              >
+                Excel
+              </Button>
             </Box>
           </Box>
 

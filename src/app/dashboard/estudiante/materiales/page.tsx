@@ -2,8 +2,8 @@
 // app/dashboard/estudiante/materiales/page.tsx
 
 import { useAuth } from '@/context/AuthContext';
-import EstudianteMateriales from '@/components/estudiante/materiales/EstudianteMateriales';
 import { Box, CircularProgress } from '@mui/material';
+import MateriasSelector from '@/components/estudiante/materiales/MateriasSelector';
 
 export default function EstudianteMaterialesPage() {
   const { user, loading } = useAuth();
@@ -16,5 +16,5 @@ export default function EstudianteMaterialesPage() {
     );
   }
 
-  return <EstudianteMateriales user={user} />;
+  return <MateriasSelector user={user} />;
 }

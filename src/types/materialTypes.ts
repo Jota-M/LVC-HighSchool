@@ -124,14 +124,12 @@ export interface MaterialTema {
 }
 
 export interface TemarioItem {
-  tema_numero: number;
-  unidad_numero: number;
   unidad_id: number;
-  numero_unidad: number;
+  unidad_numero: number;
   unidad_titulo: string;
   unidad_descripcion?: string;
   tema_id: number;
-  numero_tema: number;
+  tema_numero: number;   // 
   tema_titulo: string;
   tema_descripcion?: string;
   nivel_dificultad?: NivelDificultad;
@@ -226,7 +224,115 @@ export interface EstadisticasMaterial {
   promedio_duracion_segundos: number;
   total_completados: number;
 }
+export interface ResumenProgresoTema {
+  tema_id: number;
+  total_estudiantes: number;
+  completados: number;
+  en_progreso: number;
+  revisando: number;
+  no_iniciado: number;
+}
 
+export interface ResumenProgresoResponse {
+  success: boolean;
+  data: { resumen: ResumenProgresoTema };
+}
+// ============================================
+// QUIZ AUTOMÁTICO (Nivel 2)
+// ============================================
+
+// Pregunta tal como la ve el ESTUDIANTE (sin respuesta correcta)
+export interface QuizPregunta {
+  id: number;
+  tema_id: number;
+  pregunta: string;
+  opciones: string[];
+  orden: number;
+}
+
+// Pregunta tal como la ve el DOCENTE (con respuesta correcta + explicación)
+export interface QuizPreguntaCompleta extends QuizPregunta {
+  respuesta_correcta: number;
+  explicacion: string | null;
+  activo: boolean;
+  generado_por_ia: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RespuestaQuizDTO {
+  quiz_id: number;
+  respuesta_dada: number;
+}
+
+export interface ResultadoPregunta {
+  quiz_id: number;
+  respuesta_dada: number;
+  es_correcta: boolean;
+  respuesta_correcta?: number;
+  explicacion?: string | null;
+}
+
+export interface IntentoQuiz {
+  id: number;
+  tema_id: number;
+  matricula_id: number;
+  respuestas: ResultadoPregunta[];
+  total_preguntas: number;
+  correctas: number;
+  puntaje: number;
+  created_at: string;
+}
+
+export interface ResumenQuizTema {
+  tema_id: number;
+  total_estudiantes: number;
+  total_intentaron: number;
+  promedio_puntaje: number;
+  aprobados: number;
+}
+
+// ============================================
+// RESPUESTAS DE LA API — QUIZ
+// ============================================
+
+export interface QuizListResponse {
+  success: boolean;
+  data: { preguntas: QuizPregunta[]; total: number };
+}
+
+export interface QuizCompletoResponse {
+  success: boolean;
+  data: { preguntas: QuizPreguntaCompleta[]; total: number };
+}
+
+export interface GenerarQuizResponse {
+  success: boolean;
+  message: string;
+  data: { preguntas: QuizPreguntaCompleta[]; total: number };
+}
+
+export interface ResponderQuizResponse {
+  success: boolean;
+  message: string;
+  data: {
+    intento: IntentoQuiz;
+    resultados: ResultadoPregunta[];
+    correctas: number;
+    total: number;
+    puntaje: number;
+  };
+}
+
+export interface MiResultadoResponse {
+  success: boolean;
+  data: { intento: IntentoQuiz | null };
+}
+
+export interface ResumenQuizResponse {
+  success: boolean;
+  data: { resumen: ResumenQuizTema };
+}
 // ============================================
 // DTOs
 // ============================================
@@ -449,10 +555,10 @@ export const NIVELES_DIFICULTAD: {
   color: string;
   bgColor: string;
 }[] = [
-  { value: 'basico',      label: 'Básico',      color: '#16a34a', bgColor: '#dcfce7' },
-  { value: 'intermedio',  label: 'Intermedio',  color: '#d97706', bgColor: '#fef3c7' },
-  { value: 'avanzado',    label: 'Avanzado',    color: '#dc2626', bgColor: '#fee2e2' },
-];
+    { value: 'basico', label: 'Básico', color: '#16a34a', bgColor: '#dcfce7' },
+    { value: 'intermedio', label: 'Intermedio', color: '#d97706', bgColor: '#fef3c7' },
+    { value: 'avanzado', label: 'Avanzado', color: '#dc2626', bgColor: '#fee2e2' },
+  ];
 
 export const ESTADOS_PROGRESO: {
   value: EstadoProgreso;
@@ -461,8 +567,8 @@ export const ESTADOS_PROGRESO: {
   bgColor: string;
   icon: string;
 }[] = [
-  { value: 'no_iniciado', label: 'No iniciado',  color: '#6b7280', bgColor: '#f3f4f6', icon: '⭕' },
-  { value: 'en_progreso', label: 'En progreso',  color: '#2563eb', bgColor: '#dbeafe', icon: '🔵' },
-  { value: 'completado',  label: 'Completado',   color: '#16a34a', bgColor: '#dcfce7', icon: '✅' },
-  { value: 'revisando',   label: 'Revisando',    color: '#d97706', bgColor: '#fef3c7', icon: '🔄' },
-];
+    { value: 'no_iniciado', label: 'No iniciado', color: '#6b7280', bgColor: '#f3f4f6', icon: '⭕' },
+    { value: 'en_progreso', label: 'En progreso', color: '#2563eb', bgColor: '#dbeafe', icon: '🔵' },
+    { value: 'completado', label: 'Completado', color: '#16a34a', bgColor: '#dcfce7', icon: '✅' },
+    { value: 'revisando', label: 'Revisando', color: '#d97706', bgColor: '#fef3c7', icon: '🔄' },
+  ];

@@ -173,7 +173,7 @@ export default function NotificacionCampana() {
       await marcarLeido(notif.notificacion_id);
       refrescarContador();
     }
-    router.push(`/dashboard/notificaciones?id=${notif.notificacion_id}`);
+    router.push(`/dashboard/notificacion?id=${notif.notificacion_id}`);
   };
 
   const handleMarcarTodas = async () => {
@@ -183,7 +183,7 @@ export default function NotificacionCampana() {
 
   const handleVerTodas = () => {
     setOpen(false);
-    router.push('/dashboard/notificaciones');
+    router.push('/dashboard/notificacion');
   };
 
   useEffect(() => {

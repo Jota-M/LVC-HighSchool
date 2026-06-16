@@ -21,6 +21,9 @@ import {
   AccessTime as TimeIcon,
   GridView as GridIcon,
   CheckCircle as OkIcon,
+  ViewQuilt as TotalIcon,
+  EditNote as DraftIcon,
+  WbSunny as TurnoIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useHorarios, useGestionHorarios } from '@/hooks/useHorario';
@@ -103,29 +106,52 @@ export const HorariosListado: React.FC<Props> = ({
 
   return (
     <>
-      {/* Stats row */}
+      {/* Stats row - estilo dashboard: badge icono + número grande + barra de progreso */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
-          { label: 'Total', value: stats.total, color: accentColor },
-          { label: 'Borradores', value: stats.borradores, color: ESTADO_CONFIG.borrador.color },
-          { label: 'Publicados', value: stats.publicados, color: ESTADO_CONFIG.publicado.color },
-          { label: 'Archivados', value: stats.archivados, color: ESTADO_CONFIG.archivado.color },
-        ].map((s) => (
-          <Grid size={{xs:6, sm:3}} key={s.label}>
-            <Box
-              sx={{
-                p: 2, borderRadius: 3, textAlign: 'center',
-                bgcolor: alpha(s.color, 0.08),
-                border: `1px solid ${alpha(s.color, 0.2)}`,
-              }}
-            >
-              <Typography variant="h4" fontWeight={800} sx={{ color: s.color, lineHeight: 1 }}>
-                {s.value}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">{s.label}</Typography>
-            </Box>
-          </Grid>
-        ))}
+          { label: 'Total', value: stats.total, color: accentColor, icon: <TotalIcon />, max: stats.total || 1 },
+          { label: 'Borradores', value: stats.borradores, color: ESTADO_CONFIG.borrador.color, icon: <DraftIcon />, max: stats.total || 1 },
+          { label: 'Publicados', value: stats.publicados, color: ESTADO_CONFIG.publicado.color, icon: <OkIcon />, max: stats.total || 1 },
+          { label: 'Archivados', value: stats.archivados, color: ESTADO_CONFIG.archivado.color, icon: <ArchiveIcon />, max: stats.total || 1 },
+        ].map((s) => {
+          const pct = s.max > 0 ? Math.round((s.value / s.max) * 100) : 0;
+          return (
+            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={s.label}>
+              <Box
+                sx={{
+                  p: 2.5, borderRadius: 3,
+                  bgcolor: isDark ? alpha('#ffffff', 0.03) : '#fff',
+                  border: `1px solid ${isDark ? alpha('#ffffff', 0.08) : alpha('#000000', 0.06)}`,
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                  <Box
+                    sx={{
+                      width: 44, height: 44, borderRadius: 2,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      bgcolor: alpha(s.color, isDark ? 0.18 : 0.1),
+                      color: s.color, fontSize: 22,
+                    }}
+                  >
+                    {s.icon}
+                  </Box>
+                </Box>
+                <Typography variant="h4" fontWeight={800} sx={{ lineHeight: 1, mb: 0.5 }}>
+                  {s.value}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                  {s.label}
+                </Typography>
+                <Box sx={{ height: 4, borderRadius: 2, bgcolor: alpha(s.color, 0.15), overflow: 'hidden' }}>
+                  <Box sx={{ height: '100%', width: `${pct}%`, bgcolor: s.color, borderRadius: 2, transition: 'width 0.4s ease' }} />
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  {s.value} de {stats.total} · {pct}%
+                </Typography>
+              </Box>
+            </Grid>
+          );
+        })}
       </Grid>
 
       {/* Filters bar */}
@@ -217,8 +243,8 @@ export const HorariosListado: React.FC<Props> = ({
       {isLoading ? (
         <Grid container spacing={2}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Grid size={{xs:12, sm:6, lg:4}} key={i}>
-              <Skeleton variant="rounded" height={200} sx={{ borderRadius: 3 }} />
+            <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={i}>
+              <Skeleton variant="rounded" height={220} sx={{ borderRadius: 3 }} />
             </Grid>
           ))}
         </Grid>
@@ -237,7 +263,7 @@ export const HorariosListado: React.FC<Props> = ({
       ) : (
         <Grid container spacing={2}>
           {horariosFiltrados.map((horario) => (
-            <Grid size={{xs:12,sm:6,lg:4}} key={horario.id}>
+            <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={horario.id}>
               <HorarioCard
                 horario={horario}
                 accentColor={accentColor}
@@ -259,42 +285,46 @@ export const HorariosListado: React.FC<Props> = ({
       >
         <MenuItem onClick={() => handleMenuAction('editar')}>
           <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Editar Horario</ListItemText>
+          <ListItemText>Editar grilla</ListItemText>
         </MenuItem>
 
-        <Divider />
-
-        {menuAnchor?.horario.estado === 'borrador' && (
+        {menuAnchor?.horario.estado !== 'publicado' && (
           <MenuItem onClick={() => handleMenuAction('publicar')} disabled={isCambiandoEstado}>
             <ListItemIcon><PublishIcon fontSize="small" sx={{ color: ESTADO_CONFIG.publicado.color }} /></ListItemIcon>
             <ListItemText>Publicar</ListItemText>
           </MenuItem>
         )}
-        {menuAnchor?.horario.estado === 'publicado' && (
-          <>
-            <MenuItem onClick={() => handleMenuAction('borrador')} disabled={isCambiandoEstado}>
-              <ListItemIcon><EditIcon fontSize="small" sx={{ color: ESTADO_CONFIG.borrador.color }} /></ListItemIcon>
-              <ListItemText>Pasar a Borrador</ListItemText>
-            </MenuItem>
-            <MenuItem onClick={() => handleMenuAction('archivar')} disabled={isCambiandoEstado}>
-              <ListItemIcon><ArchiveIcon fontSize="small" sx={{ color: ESTADO_CONFIG.archivado.color }} /></ListItemIcon>
-              <ListItemText>Archivar</ListItemText>
-            </MenuItem>
-          </>
-        )}
 
-        {menuAnchor?.horario.estado !== 'publicado' && (
-          <>
-            <Divider />
-            <MenuItem
-              onClick={() => handleMenuAction('eliminar')}
-              sx={{ color: 'error.main' }}
-            >
-              <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
-              <ListItemText>Eliminar</ListItemText>
-            </MenuItem>
-          </>
-        )}
+        {menuAnchor?.horario.estado === 'publicado' && [
+          <MenuItem
+            key="borrador"
+            onClick={() => handleMenuAction('borrador')}
+            disabled={isCambiandoEstado}
+          >
+            <ListItemIcon>
+              <EditIcon fontSize="small" sx={{ color: ESTADO_CONFIG.borrador.color }} />
+            </ListItemIcon>
+            <ListItemText>Pasar a Borrador</ListItemText>
+          </MenuItem>,
+
+          <MenuItem
+            key="archivar"
+            onClick={() => handleMenuAction('archivar')}
+            disabled={isCambiandoEstado}
+          >
+            <ListItemIcon>
+              <ArchiveIcon fontSize="small" sx={{ color: ESTADO_CONFIG.archivado.color }} />
+            </ListItemIcon>
+            <ListItemText>Archivar</ListItemText>
+          </MenuItem>
+        ]}
+
+        <Divider />
+
+        <MenuItem onClick={() => handleMenuAction('eliminar')} sx={{ color: 'error.main' }}>
+          <ListItemIcon><DeleteIcon fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>
+          <ListItemText>Eliminar</ListItemText>
+        </MenuItem>
       </Menu>
 
       {/* Modal nuevo horario */}
@@ -308,7 +338,8 @@ export const HorariosListado: React.FC<Props> = ({
 };
 
 // =============================================
-// Sub-componente: Tarjeta de horario
+// Sub-componente: Tarjeta de horario - Variante 3
+// Header sólido de color + anillo de progreso circular
 // =============================================
 interface HorarioCardProps {
   horario: Horario;
@@ -321,56 +352,91 @@ interface HorarioCardProps {
 const HorarioCard: React.FC<HorarioCardProps> = ({ horario, accentColor, isDark, onEdit, onMenuOpen }) => {
   const completitud = horario.total_celdas > 0 ? Math.min(100, Math.round((horario.total_celdas / 30) * 100)) : 0;
 
+  // Color del header según estado
+  const estadoColor = ESTADO_CONFIG[horario.estado]?.color ?? accentColor;
+
+  // Geometría del anillo de progreso
+  const radius = 18;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (completitud / 100) * circumference;
+
   return (
     <Card
       sx={{
-        borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column',
-        border: `1px solid ${alpha(accentColor, 0.15)}`,
+        borderRadius: 3,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        border: `1px solid ${alpha(estadoColor, 0.15)}`,
         transition: 'all 0.2s',
-        '&:hover': { boxShadow: `0 8px 24px ${alpha(accentColor, 0.18)}`, transform: 'translateY(-2px)' },
+        '&:hover': { boxShadow: `0 8px 24px ${alpha(estadoColor, 0.18)}`, transform: 'translateY(-2px)' },
       }}
     >
-      {/* Color accent top bar */}
-      <Box sx={{ height: 4, background: `linear-gradient(90deg, ${accentColor}, ${alpha(accentColor, 0.4)})`, borderRadius: '12px 12px 0 0' }} />
+      {/* Barra de acento superior, fina */}
+      <Box sx={{ height: 4, bgcolor: estadoColor }} />
 
       <CardContent sx={{ flex: 1, p: 2.5 }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="h6" fontWeight={800} sx={{ fontSize: '1rem', lineHeight: 1.2 }}>
-              {horario.grado_nombre}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" fontWeight={600}>
-              Paralelo {horario.paralelo_nombre}
-            </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+            <Box
+              sx={{
+                width: 44, height: 44, borderRadius: 2, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                bgcolor: alpha(estadoColor, isDark ? 0.18 : 0.1),
+                color: estadoColor, fontSize: 22,
+              }}
+            >
+              <SchoolIcon fontSize="small" />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                variant="subtitle1"
+                fontWeight={800}
+                sx={{ fontSize: '0.95rem', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              >
+                {horario.grado_nombre}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Paralelo {horario.paralelo_nombre} · {horario.periodo_codigo}
+              </Typography>
+            </Box>
           </Box>
           <HorarioStatusChip estado={horario.estado} />
         </Box>
-
         {/* Info chips */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8, mb: 2 }}>
           <Chip size="small" label={horario.nivel_nombre} sx={{ fontSize: '0.65rem', bgcolor: alpha(accentColor, 0.08), color: accentColor, fontWeight: 600 }} />
           <Chip size="small" icon={<TimeIcon sx={{ fontSize: 12 }} />} label={horario.turno_nombre} sx={{ fontSize: '0.65rem' }} />
-          <Chip size="small" label={horario.periodo_codigo} sx={{ fontSize: '0.65rem' }} />
         </Box>
 
-        {/* Completitud */}
-        <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="caption" color="text.secondary">
-              Completitud
-            </Typography>
-            <Typography variant="caption" fontWeight={700} sx={{ color: accentColor }}>
-              {horario.total_celdas} celdas
-            </Typography>
+        {/* Anillo de progreso + texto */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{ position: 'relative', width: 44, height: 44, flexShrink: 0 }}>
+            <svg width="44" height="44" viewBox="0 0 44 44" style={{ transform: 'rotate(-90deg)' }}>
+              <circle cx="22" cy="22" r={radius} fill="none" stroke={alpha(accentColor, 0.12)} strokeWidth="4" />
+              <circle
+                cx="22" cy="22" r={radius} fill="none"
+                stroke={accentColor} strokeWidth="4" strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+                style={{ transition: 'stroke-dashoffset 0.4s ease' }}
+              />
+            </svg>
           </Box>
-          <Box sx={{ height: 6, borderRadius: 3, bgcolor: alpha(accentColor, 0.12), overflow: 'hidden' }}>
-            <Box sx={{ height: '100%', width: `${completitud}%`, bgcolor: accentColor, borderRadius: 3, transition: 'width 0.4s ease' }} />
+          <Box>
+            <Typography variant="body2" fontWeight={700}>
+              {horario.total_celdas} celdas completadas
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Completitud de la grilla
+            </Typography>
           </Box>
         </Box>
 
         {horario.publicado_por_username && (
-          <Typography variant="caption" color="text.disabled" sx={{ mt: 1, display: 'block' }}>
+          <Typography variant="caption" color="text.disabled" sx={{ mt: 1.5, display: 'block' }}>
             Publicado por {horario.publicado_por_username}
           </Typography>
         )}

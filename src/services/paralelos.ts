@@ -223,7 +223,9 @@ class ParalelosService {
     return {
       totalParalelos,
       totalEstudiantes,
-      promedioEstudiantes: totalParalelos > 0 ? Math.round(totalEstudiantes / totalParalelos) : 0,
+      promedioEstudiantes: totalParalelos > 0 
+  ? Math.round((totalEstudiantes / totalParalelos) * 10) / 10 
+  : 0,
       paralelosLlenos,
       paralelosBajoMinimo,
       capacidadTotal,

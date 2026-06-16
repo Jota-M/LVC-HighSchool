@@ -1,10 +1,9 @@
-'use client';
 // app/dashboard/padre/tareas/page.tsx
-
+'use client';
 import React, { useState, useCallback } from 'react';
 import {
   Box, Container, Typography, Fade, Chip, Skeleton,
-  useTheme, alpha, IconButton, Tooltip,
+  useTheme, alpha, IconButton, Tooltip, Avatar,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -17,6 +16,7 @@ import { useHijosDelPadre } from '@/hooks/usePadreAsistencia';
 import { usePeriodosEvaluacion } from '@/hooks/usePadreNotas';
 import { useTareasHijo } from '@/hooks/usePadreTareas';
 import type { TareaHijo } from '@/types/padreTareasTypes';
+import type { HijoInfo } from '@/types/padreAsistenciaTypes';
 
 const fadeSlideUp = keyframes`
   from { opacity: 0; transform: translateY(20px); }
@@ -29,9 +29,78 @@ const shimmer = keyframes`
 `;
 
 // ──────────────────────────────────────────────
-// SELECTOR DE TRIMESTRE (igual que en notas)
+// SELECTOR DE HIJO (nuevo componente)
 // ──────────────────────────────────────────────
+const SelectorHijo: React.FC<{
+  hijos: HijoInfo[];
+  hijoActivo: HijoInfo | null;
+  onChange: (h: HijoInfo) => void;
+  isLoading: boolean;
+}> = ({ hijos, hijoActivo, onChange, isLoading }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
+  if (isLoading) return (
+    <Box sx={{ display: 'flex', gap: 1 }}>
+      {[1, 2].map(i => (
+        <Skeleton key={i} variant="rounded" width={150} height={38} sx={{ borderRadius: 2.5 }} />
+      ))}
+    </Box>
+  );
+
+  // Si solo hay un hijo, no mostrar selector
+  if (hijos.length <= 1) return null;
+
+  return (
+    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+      {hijos.map(hijo => {
+        const activo = hijo.estudiante_id === hijoActivo?.estudiante_id;
+        const iniciales = `${hijo.nombres?.charAt(0) ?? ''}${hijo.apellidos?.charAt(0) ?? ''}`.toUpperCase();
+        return (
+          <Box
+            key={hijo.estudiante_id}
+            onClick={() => onChange(hijo)}
+            sx={{
+              display: 'flex', alignItems: 'center', gap: 1,
+              px: 1.5, py: 0.75, borderRadius: 2.5, cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              border: `2px solid ${activo ? '#f59e0b' : alpha(isDark ? '#fff' : '#000', 0.1)}`,
+              bgcolor: activo
+                ? alpha('#f59e0b', isDark ? 0.15 : 0.08)
+                : alpha(isDark ? '#fff' : '#000', 0.04),
+              '&:hover': {
+                borderColor: '#f59e0b',
+                bgcolor: alpha('#f59e0b', isDark ? 0.12 : 0.06),
+              },
+            }}
+          >
+            <Avatar sx={{
+              width: 26, height: 26, fontSize: '0.65rem', fontWeight: 800,
+              bgcolor: activo ? '#f59e0b' : alpha('#f59e0b', 0.2),
+              color: activo ? '#fff' : '#f59e0b',
+            }}>
+              {iniciales}
+            </Avatar>
+            <Box>
+              <Typography variant="caption" fontWeight={700} sx={{ color: activo ? '#f59e0b' : 'text.primary', display: 'block', lineHeight: 1.2 }}>
+                {hijo.nombres.split(' ')[0]} {hijo.apellidos.split(' ')[0]}
+              </Typography>
+              {hijo.grado_nombre && (
+                <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1 }}>
+                  {hijo.grado_nombre}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+};
+
+// ──────────────────────────────────────────────
+// SELECTOR DE TRIMESTRE
+// ──────────────────────────────────────────────
 const SelectorTrimestre: React.FC<{
   periodos: any[]; periodoActivo: any;
   onChange: (p: any) => void; isLoading: boolean;
@@ -66,12 +135,12 @@ const SelectorTrimestre: React.FC<{
 // ──────────────────────────────────────────────
 // PÁGINA
 // ──────────────────────────────────────────────
-
 export default function PadreTareasPage() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
-  const { hijoActivo, isLoading: loadingHijo } = useHijosDelPadre();
+  // ✅ Ahora usamos hijos (lista completa) y setHijoActivo
+  const { hijos, hijoActivo, setHijoActivo, isLoading: loadingHijo } = useHijosDelPadre();
 
   const { periodos, periodoActivo, setPeriodoActivo, isLoading: loadingPeriodos } =
     usePeriodosEvaluacion(hijoActivo);
@@ -83,6 +152,12 @@ export default function PadreTareasPage() {
 
   const handleVerDetalle = useCallback((t: TareaHijo) => setTareaSeleccionada(t), []);
   const handleCerrarDetalle = useCallback(() => setTareaSeleccionada(null), []);
+
+  // ✅ Al cambiar de hijo, recargar tareas y limpiar filtros
+  const handleCambioHijo = useCallback((hijo: HijoInfo) => {
+    setHijoActivo(hijo);
+    actualizarFiltros({ estado: null, materia: null, busqueda: null });
+  }, [setHijoActivo, actualizarFiltros]);
 
   const handleCambioPeriodo = useCallback((p: any) => {
     setPeriodoActivo(p);
@@ -149,6 +224,21 @@ export default function PadreTareasPage() {
                   </Tooltip>
                 </Box>
               </Box>
+
+              {/* ✅ Selector de hijo — solo visible si hay más de uno */}
+              {hijos.length > 1 && (
+                <Box sx={{ mt: 2.5, pt: 2.5, borderTop: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`, position: 'relative', zIndex: 1 }}>
+                  <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Estudiante
+                  </Typography>
+                  <SelectorHijo
+                    hijos={hijos}
+                    hijoActivo={hijoActivo}
+                    onChange={handleCambioHijo}
+                    isLoading={loadingHijo}
+                  />
+                </Box>
+              )}
 
               {/* Selector trimestre */}
               <Box sx={{ mt: 2.5, pt: 2.5, borderTop: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`, position: 'relative', zIndex: 1 }}>

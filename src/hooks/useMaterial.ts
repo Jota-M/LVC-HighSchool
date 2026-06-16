@@ -9,6 +9,7 @@ import {
   comentarioMaterialService,
   favoritoMaterialService,
   progresoEstudianteService,
+  temaQuizService,
 } from '@/services/materialService';
 import {
   TipoMaterial,
@@ -36,14 +37,27 @@ import {
   RegistrarAccesoDTO,
   CrearComentarioDTO,
   ActualizarProgresoDTO,
+  ResumenProgresoTema,
+  ResumenQuizTema,
+  RespuestaQuizDTO,
+  QuizPreguntaCompleta,
+  QuizPregunta,
+  ResultadoPregunta,
+  IntentoQuiz,
 } from '@/types/materialTypes';
 
 // =============================================
 // HOOK: TIPOS DE MATERIAL (catálogo)
 // =============================================
+interface UnidadResumen {
+  unidad_id: number;
+  numero_unidad: number;
+  unidad_titulo: string;
+  unidad_descripcion?: string;
+}
 
 export const useTiposMaterial = () => {
-  const [tipos, setTipos]         = useState<TipoMaterial[]>([]);
+  const [tipos, setTipos] = useState<TipoMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -62,10 +76,10 @@ export const useTiposMaterial = () => {
 // =============================================
 
 export const useUnidadesTematicas = (filtrosIniciales: UnidadFiltros = {}) => {
-  const [unidades, setUnidades]       = useState<UnidadTematica[]>([]);
-  const [paginacion, setPaginacion]   = useState<Paginacion>({ total: 0, page: 1, limit: 50, totalPages: 0 });
-  const [filters, setFilters]         = useState<UnidadFiltros>({ page: 1, limit: 50, ...filtrosIniciales });
-  const [isLoading, setIsLoading]     = useState(false);
+  const [unidades, setUnidades] = useState<UnidadTematica[]>([]);
+  const [paginacion, setPaginacion] = useState<Paginacion>({ total: 0, page: 1, limit: 50, totalPages: 0 });
+  const [filters, setFilters] = useState<UnidadFiltros>({ page: 1, limit: 50, ...filtrosIniciales });
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -149,7 +163,7 @@ export const useUnidadesTematicas = (filtrosIniciales: UnidadFiltros = {}) => {
 // =============================================
 
 export const useTemario = (grado_materia_id: number | null, periodo_evaluacion_id?: number) => {
-  const [temario, setTemario]     = useState<TemarioItem[]>([]);
+  const [temario, setTemario] = useState<TemarioItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -169,17 +183,15 @@ export const useTemario = (grado_materia_id: number | null, periodo_evaluacion_i
   useEffect(() => { cargar(); }, [cargar]);
 
   // Agrupado por unidad para renderizado fácil
-  const porUnidad = temario.reduce<Record<number, { unidad: Omit<TemarioItem, 'tema_id' | 'numero_tema' | 'tema_titulo' | 'tema_descripcion' | 'nivel_dificultad' | 'total_materiales'>; temas: TemarioItem[] }>>(
+  const porUnidad = temario.reduce<Record<number, { unidad: UnidadResumen; temas: TemarioItem[] }>>(
     (acc, item) => {
       if (!acc[item.unidad_id]) {
         acc[item.unidad_id] = {
           unidad: {
             unidad_id: item.unidad_id,
-            numero_unidad: item.numero_unidad,
+            numero_unidad: item.unidad_numero, // ← leer de unidad_numero
             unidad_titulo: item.unidad_titulo,
-            unidad_descripcion: item.unidad_descripcion,
-            tema_numero: 0,
-            unidad_numero: 0
+            unidad_descripcion: item.unidad_descripcion ?? undefined,
           },
           temas: [],
         };
@@ -198,10 +210,10 @@ export const useTemario = (grado_materia_id: number | null, periodo_evaluacion_i
 // =============================================
 
 export const useTemas = (filtrosIniciales: TemaFiltros = {}) => {
-  const [temas, setTemas]           = useState<Tema[]>([]);
+  const [temas, setTemas] = useState<Tema[]>([]);
   const [paginacion, setPaginacion] = useState<Paginacion>({ total: 0, page: 1, limit: 50, totalPages: 0 });
-  const [filters, setFilters]       = useState<TemaFiltros>({ page: 1, limit: 50, ...filtrosIniciales });
-  const [isLoading, setIsLoading]   = useState(false);
+  const [filters, setFilters] = useState<TemaFiltros>({ page: 1, limit: 50, ...filtrosIniciales });
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -272,11 +284,32 @@ export const useTemas = (filtrosIniciales: TemaFiltros = {}) => {
       setIsSubmitting(false);
     }
   }, [cargar]);
+  const [generandoIA, setGenerandoIA] = useState<number | null>(null);
+
+  const generarContenido = useCallback(async (
+    id: number,
+    forzar = false
+  ): Promise<{ tema: Tema; generado: boolean } | null> => {
+    setGenerandoIA(id);
+    try {
+      const res = await temaService.generarContenido(id, forzar);
+      if (res.data.generado) {
+        toast.success('Contenido generado con IA');
+      }
+      await cargar();
+      return res.data;
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error al generar contenido con IA');
+      return null;
+    } finally {
+      setGenerandoIA(null);
+    }
+  }, [cargar]);
 
   return {
     temas, paginacion, filters, isLoading, isSubmitting,
     actualizarFiltros, crear, actualizar, eliminar,
-    refrescar: cargar,
+    refrescar: cargar, generarContenido, generandoIA,
   };
 };
 
@@ -285,10 +318,10 @@ export const useTemas = (filtrosIniciales: TemaFiltros = {}) => {
 // =============================================
 
 export const useMateriales = (filtrosIniciales: MaterialFiltros = {}) => {
-  const [materiales, setMateriales]   = useState<MaterialAcademico[]>([]);
-  const [paginacion, setPaginacion]   = useState<Paginacion>({ total: 0, page: 1, limit: 10, totalPages: 0 });
-  const [filters, setFilters]         = useState<MaterialFiltros>({ page: 1, limit: 10, ...filtrosIniciales });
-  const [isLoading, setIsLoading]     = useState(false);
+  const [materiales, setMateriales] = useState<MaterialAcademico[]>([]);
+  const [paginacion, setPaginacion] = useState<Paginacion>({ total: 0, page: 1, limit: 10, totalPages: 0 });
+  const [filters, setFilters] = useState<MaterialFiltros>({ page: 1, limit: 10, ...filtrosIniciales });
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -389,8 +422,8 @@ export const useMateriales = (filtrosIniciales: MaterialFiltros = {}) => {
 // =============================================
 
 export const useMaterialDetalle = (id: number | null) => {
-  const [material, setMaterial]   = useState<MaterialAcademico | null>(null);
-  const [temas, setTemas]         = useState<MaterialTema[]>([]);
+  const [material, setMaterial] = useState<MaterialAcademico | null>(null);
+  const [temas, setTemas] = useState<MaterialTema[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -457,7 +490,7 @@ export const useMaterialDetalle = (id: number | null) => {
 
 export const useEstadisticasMaterial = (id: number | null) => {
   const [estadisticas, setEstadisticas] = useState<EstadisticasMaterial | null>(null);
-  const [isLoading, setIsLoading]       = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const cargar = useCallback(async (fecha_inicio?: string, fecha_fin?: string) => {
     if (!id) return;
@@ -483,7 +516,7 @@ export const useEstadisticasMaterial = (id: number | null) => {
 
 export const useComentariosMaterial = (material_id: number | null, solo_dudas = false) => {
   const [comentarios, setComentarios] = useState<ComentarioMaterial[]>([]);
-  const [isLoading, setIsLoading]     = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -574,9 +607,9 @@ export const useComentariosMaterial = (material_id: number | null, solo_dudas = 
 // =============================================
 
 export const useFavoritosMaterial = (matricula_id: number | null) => {
-  const [favoritos, setFavoritos]   = useState<FavoritoMaterial[]>([]);
-  const [isLoading, setIsLoading]   = useState(false);
-  const [toggling, setToggling]     = useState<number | null>(null);
+  const [favoritos, setFavoritos] = useState<FavoritoMaterial[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [toggling, setToggling] = useState<number | null>(null);
 
   const cargar = useCallback(async () => {
     if (!matricula_id) return;
@@ -629,8 +662,8 @@ export const useProgresoEstudiante = (
   matricula_id: number | null,
   grado_materia_id: number | null
 ) => {
-  const [progreso, setProgreso]     = useState<ProgresoEstudiante[]>([]);
-  const [isLoading, setIsLoading]   = useState(false);
+  const [progreso, setProgreso] = useState<ProgresoEstudiante[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -678,4 +711,169 @@ export const useProgresoEstudiante = (
     totalTemas: progreso.length,
     actualizar, refrescar: cargar,
   };
+
+};
+
+// =============================================
+// HOOK: RESUMEN DE PROGRESO DE UN TEMA (vista docente)
+// =============================================
+
+export const useResumenProgresoTema = (
+  tema_id: number | null,
+  paralelo_id: number | null,
+  periodo_academico_id: number | null
+) => {
+  const [resumen, setResumen] = useState<ResumenProgresoTema | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const cargar = useCallback(async () => {
+    if (!tema_id || !paralelo_id || !periodo_academico_id) { setResumen(null); return; }
+    setIsLoading(true);
+    try {
+      const res = await progresoEstudianteService.getResumenPorTema(tema_id, paralelo_id, periodo_academico_id);
+      setResumen(res.data.resumen);
+    } catch {
+      setResumen(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [tema_id, paralelo_id, periodo_academico_id]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  return { resumen, isLoading, refrescar: cargar };
+};
+// =============================================
+// HOOK: QUIZ DE UN TEMA (vista docente - generación y gestión)
+// =============================================
+
+export const useQuizTema = (tema_id: number | null) => {
+  const [preguntas, setPreguntas] = useState<QuizPreguntaCompleta[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [generando, setGenerando] = useState(false);
+
+  const cargar = useCallback(async () => {
+    if (!tema_id) return;
+    setIsLoading(true);
+    try {
+      const res = await temaQuizService.listarCompleto(tema_id);
+      setPreguntas(res.data.preguntas);
+    } catch {
+      setPreguntas([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [tema_id]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const generar = useCallback(async (cantidad_preguntas = 5): Promise<boolean> => {
+    if (!tema_id) return false;
+    setGenerando(true);
+    try {
+      const res = await temaQuizService.generar(tema_id, cantidad_preguntas);
+      setPreguntas(res.data.preguntas);
+      toast.success(`Quiz generado: ${res.data.total} preguntas`);
+      return true;
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error al generar el quiz');
+      return false;
+    } finally {
+      setGenerando(false);
+    }
+  }, [tema_id]);
+
+  return { preguntas, isLoading, generando, generar, refrescar: cargar };
+};
+
+// =============================================
+// HOOK: QUIZ DE UN TEMA (vista estudiante - resolver)
+// =============================================
+
+export const useResolverQuiz = (tema_id: number | null, matricula_id: number | null) => {
+  const [preguntas, setPreguntas] = useState<QuizPregunta[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [resultado, setResultado] = useState<{
+    resultados: ResultadoPregunta[]; correctas: number; total: number; puntaje: number;
+  } | null>(null);
+  const [ultimoIntento, setUltimoIntento] = useState<IntentoQuiz | null>(null);
+
+  const cargar = useCallback(async () => {
+    if (!tema_id) return;
+    setIsLoading(true);
+    try {
+      const res = await temaQuizService.listar(tema_id);
+      setPreguntas(res.data.preguntas);
+
+      if (matricula_id) {
+        const mi = await temaQuizService.miResultado(tema_id, matricula_id);
+        setUltimoIntento(mi.data.intento);
+      }
+    } catch {
+      setPreguntas([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [tema_id, matricula_id]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const responder = useCallback(async (respuestas: RespuestaQuizDTO[]): Promise<boolean> => {
+    if (!tema_id || !matricula_id) return false;
+    setEnviando(true);
+    try {
+      const res = await temaQuizService.responder(tema_id, matricula_id, respuestas);
+      setResultado({
+        resultados: res.data.resultados,
+        correctas: res.data.correctas,
+        total: res.data.total,
+        puntaje: res.data.puntaje,
+      });
+      setUltimoIntento(res.data.intento);
+      return true;
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error al enviar el quiz');
+      return false;
+    } finally {
+      setEnviando(false);
+    }
+  }, [tema_id, matricula_id]);
+
+  const reiniciar = useCallback(() => setResultado(null), []);
+
+  return {
+    preguntas, isLoading, enviando, resultado, ultimoIntento,
+    responder, reiniciar, refrescar: cargar,
+  };
+};
+
+// =============================================
+// HOOK: RESUMEN DE QUIZ DE UN TEMA (vista docente)
+// =============================================
+
+export const useResumenQuizTema = (
+  tema_id: number | null,
+  paralelo_id: number | null,
+  periodo_academico_id: number | null
+) => {
+  const [resumen, setResumen] = useState<ResumenQuizTema | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const cargar = useCallback(async () => {
+    if (!tema_id || !paralelo_id || !periodo_academico_id) { setResumen(null); return; }
+    setIsLoading(true);
+    try {
+      const res = await temaQuizService.getResumen(tema_id, paralelo_id, periodo_academico_id);
+      setResumen(res.data.resumen);
+    } catch {
+      setResumen(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [tema_id, paralelo_id, periodo_academico_id]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  return { resumen, isLoading, refrescar: cargar };
 };

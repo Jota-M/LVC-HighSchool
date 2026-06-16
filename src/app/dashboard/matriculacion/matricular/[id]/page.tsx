@@ -1,6 +1,6 @@
 // pages/FormularioMatriculacion.tsx
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -37,6 +37,14 @@ interface DocumentoForm {
   observaciones: string;
 }
 
+// Normaliza nombres de grado para comparar sin problemas de mayúsculas/espacios/acentos
+const normalizarNombreGrado = (nombre: string): string =>
+  nombre
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // quita acentos
+    .trim();
+
 const FormularioMatriculacion: React.FC = () => {
   const theme = useTheme();
   const router = useRouter();
@@ -69,6 +77,7 @@ const FormularioMatriculacion: React.FC = () => {
     periodos,
     periodoActivo,
     isLoadingPeriodos,
+    grados,
     obtenerTodosLosParalelos,
   } = useGestionAcademica();
 
@@ -105,6 +114,94 @@ const FormularioMatriculacion: React.FC = () => {
     cargarParalelos();
   }, [formData.periodo_academico_id, obtenerTodosLosParalelos]);
 
+  // ============================================================
+  // LÓGICA: Determinar grado correspondiente y filtrar paralelos
+  // ============================================================
+
+  // Grados en su secuencia global (PreKinder, Kínder, 1ro-6to Primaria, 1ro-6to Secundaria...)
+  // NOTA: el campo `orden` de cada grado es relativo a su nivel académico (1-6 dentro
+  // de Inicial, Primaria o Secundaria), por lo que NO sirve para calcular "el siguiente
+  // grado" de forma global. El backend ya devuelve `grados` en secuencia correcta,
+  // así que usamos el índice del array como progresión.
+  const gradosOrdenados = useMemo(() => [...grados], [grados]);
+
+  // Nombre del último grado cursado por el estudiante (de su última matrícula)
+  const nombreGradoActual = useMemo(() => {
+    if (estudiante?.grado_actual) return estudiante.grado_actual;
+
+    if (estudiante?.matriculas && estudiante.matriculas.length > 0) {
+      return estudiante.matriculas[estudiante.matriculas.length - 1].grado;
+    }
+
+    return null;
+  }, [estudiante]);
+
+  // Grado actual (objeto completo) según nombre normalizado
+  const gradoActual = useMemo(() => {
+    if (!nombreGradoActual) return null;
+
+    const nombreNormalizado = normalizarNombreGrado(nombreGradoActual);
+
+    return (
+      gradosOrdenados.find(
+        (g) => normalizarNombreGrado(g.nombre) === nombreNormalizado
+      ) || null
+    );
+  }, [nombreGradoActual, gradosOrdenados]);
+
+  // Grado al que corresponde matricularse (promoción = siguiente grado en la secuencia global)
+  // Si el estudiante es nuevo (sin grado actual), se usa el primer grado disponible
+  const gradoCorrespondiente = useMemo(() => {
+    if (!gradoActual) return gradosOrdenados[0] || null;
+
+    const indiceActual = gradosOrdenados.findIndex((g) => g.id === gradoActual.id);
+    if (indiceActual === -1) return gradoActual;
+
+    // Si ya está en el último grado (ej: 6to de Secundaria), no hay siguiente
+    return gradosOrdenados[indiceActual + 1] || gradoActual;
+  }, [gradoActual, gradosOrdenados]);
+
+  // Paralelos filtrados según el grado correspondiente y si es repitente
+  const paralelosFiltrados = useMemo(() => {
+    if (!gradoCorrespondiente) return paralelosDisponibles;
+
+    if (formData.es_repitente && gradoActual) {
+      // Grado correspondiente (promoción) + grado actual (repite)
+      return paralelosDisponibles.filter(
+        (p) =>
+          p.grado_id === gradoCorrespondiente.id || p.grado_id === gradoActual.id
+      );
+    }
+
+    // Solo el grado que le corresponde
+    return paralelosDisponibles.filter((p) => p.grado_id === gradoCorrespondiente.id);
+  }, [paralelosDisponibles, gradoCorrespondiente, gradoActual, formData.es_repitente]);
+
+  // Debug temporal — revisar en consola del navegador
+  useEffect(() => {
+    console.log('🎓 DEBUG MATRICULACIÓN →', {
+      nombreGradoActual,
+      gradoActual,
+      gradoCorrespondiente,
+      gradosDisponibles: gradosOrdenados.map((g) => ({ id: g.id, nombre: g.nombre, orden: g.orden })),
+      totalParalelos: paralelosDisponibles.length,
+      totalFiltrados: paralelosFiltrados.length,
+      es_repitente: formData.es_repitente,
+    });
+  }, [nombreGradoActual, gradoActual, gradoCorrespondiente, gradosOrdenados, paralelosDisponibles, paralelosFiltrados, formData.es_repitente]);
+
+  // Limpiar paralelo seleccionado si queda fuera de la lista filtrada
+  useEffect(() => {
+    if (
+      formData.paralelo_id &&
+      !paralelosFiltrados.some((p) => p.id === formData.paralelo_id)
+    ) {
+      setFormData((prev) => ({ ...prev, paralelo_id: null }));
+    }
+  }, [paralelosFiltrados, formData.paralelo_id]);
+
+  // ============================================================
+
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -119,7 +216,7 @@ const FormularioMatriculacion: React.FC = () => {
   const handleNext = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Validate current step
     if (activeStep === 1) {
       const newErrors: Record<string, string> = {};
@@ -359,7 +456,7 @@ const FormularioMatriculacion: React.FC = () => {
             <DatosMatriculaStep
               formData={formData}
               periodos={periodos}
-              paralelosDisponibles={paralelosDisponibles}
+              paralelosDisponibles={paralelosFiltrados}
               isLoadingParalelos={isLoadingParalelos}
               disponibilidad={disponibilidad}
               puedeMatricular={puedeMatricular}
@@ -384,7 +481,7 @@ const FormularioMatriculacion: React.FC = () => {
               estudiante={estudiante}
               formData={formData}
               periodos={periodos}
-              paralelosDisponibles={paralelosDisponibles}
+              paralelosDisponibles={paralelosFiltrados}
               documentos={documentos}
             />
           )}

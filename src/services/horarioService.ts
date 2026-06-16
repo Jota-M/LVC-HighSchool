@@ -97,12 +97,12 @@ class HorarioService {
   // =============================================
 
   /** Materias disponibles para un grado */
- async listarGradoMaterias(gradoId: number): Promise<GradoMateria[]> {
-  const { data } = await api.get(`/grado-materia/grado/${gradoId}`, {
-    params: { activo: true },
-  });
-  return data.data.materias ?? data.data.grado_materias ?? data.data ?? [];
-}
+  async listarGradoMaterias(gradoId: number): Promise<GradoMateria[]> {
+    const { data } = await api.get(`/grado-materia/grado/${gradoId}`, {
+      params: { activo: true },
+    });
+    return data.data.materias ?? data.data.grado_materias ?? data.data ?? [];
+  }
 
   /** Asignaciones de docentes para un paralelo + período (opcionalmente filtrado por materia) */
   async listarAsignaciones(
@@ -123,7 +123,20 @@ class HorarioService {
   // =============================================
   // VISTAS ESPECIALES
   // =============================================
-
+  async obtenerAsignacionTitular(
+    gradoMateriaId: number,
+    paraleloId: number,
+    periodoId: number
+  ): Promise<AsignacionDocente | null> {
+    const { data } = await api.get('/asignacion-docente/titular', {
+      params: {
+        grado_materia_id: gradoMateriaId,
+        paralelo_id: paraleloId,
+        periodo_academico_id: periodoId,
+      },
+    });
+    return data.data.asignacion ?? null;
+  }
   async horarioDocente(
     docenteId: number,
     periodoId: number,

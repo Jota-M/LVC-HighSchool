@@ -56,6 +56,10 @@ const BarraDimension: React.FC<{ codigo: CodigoDimension; nota: number | null | 
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const cfg = DIMENSIONES_CONFIG[codigo];
+  if (!cfg) {
+  console.warn('código inválido:', JSON.stringify(codigo));
+  return null;
+}
   const valor = nota ?? 0;
   return (
     <Box sx={{ mb: 1.25 }}>
@@ -196,7 +200,7 @@ const TablaPorDimension: React.FC<{ calificaciones: CalificacionPorPeriodo[]; co
 
   return (
     <Stack spacing={2}>
-      {(['SER', 'SAB', 'HAC', 'AUTO'] as CodigoDimension[]).map(cod => {
+      {(['SER', 'SAB', 'HAC', 'AUT'] as CodigoDimension[]).map(cod => {
         const evals = porDimension[cod];
         if (!evals?.length) return null;
         const cfg = DIMENSIONES_CONFIG[cod];
@@ -359,11 +363,17 @@ const TarjetaMateria: React.FC<TarjetaMateriaProps> = ({
             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 1 }}>
               Mínimo aprobación: {materia.nota_minima} pts
             </Typography>
-            {(['SER', 'SAB', 'HAC', 'AUTO'] as CodigoDimension[]).map((cod, i) => (
+
+            {(['SER', 'SAB', 'HAC', 'AUT'] as CodigoDimension[]).map((cod, i) => (
               <BarraDimension
                 key={cod}
                 codigo={cod}
-                nota={cod === 'SER' ? materia.nota_ser : cod === 'SAB' ? materia.nota_saber : cod === 'HAC' ? materia.nota_hacer : materia.nota_auto}
+                nota={
+                  cod === 'SER' ? materia.nota_ser :
+                  cod === 'SAB' ? materia.nota_saber :
+                  cod === 'HAC' ? materia.nota_hacer :
+                  materia.nota_auto   // AUT
+                }
                 delay={index * 0.06 + i * 0.05}
               />
             ))}

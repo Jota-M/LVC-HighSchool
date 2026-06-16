@@ -1,113 +1,91 @@
 'use client';
 // app/dashboard/docente/seguimiento/page.tsx
-// Mismo patrón estructural que la página de asistencia:
-// Sección 1 → Mis materias (reutiliza MisMaterias de asistencia)
-// Sección 2 → Lista de estudiantes con conteos de observaciones
-// Sección 3 → Drawer lateral al seleccionar un estudiante
+// Restiladla al sistema de tokens brand/brandDim/brandBorder — mismo patrón que gestión de notas.
+// Funcionalidad 100% intacta.
 
 import React, { useState, useCallback } from 'react';
 import {
-  Box, Container, Typography, Fade, Alert, Button,
+  Box, Container, Typography, Fade, Alert, Button, LinearProgress,
   IconButton, Tooltip, Chip, useTheme, alpha, Snackbar,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
-import PsychologyIcon  from '@mui/icons-material/Psychology';
-import RefreshIcon     from '@mui/icons-material/Refresh';
+import PsychologyIcon from '@mui/icons-material/Psychology';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import ErrorIcon from '@mui/icons-material/Error';
 
-// Reutilizar MisMaterias de asistencia — mismo componente
 import MisMaterias, { MateriaDocente } from '@/components/docente/asistencia/MisMaterias';
-
-// Componentes propios del módulo
 import ListaEstudiantesSeguimiento from '@/components/docente/seguimiento/ListaEstudiantesSeguimiento';
 import DrawerObservacionesEstudiante from '@/components/docente/seguimiento/DrawerObservacionesEstudiante';
 
-// Hooks
-import { useAuth }           from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { useMisAsignaciones } from '@/hooks/useAsistencia';
-import {
-  useResumenPorAsignacion,
-} from '@/hooks/useSeguimientoPedagogico';
+import { useResumenPorAsignacion } from '@/hooks/useSeguimientoPedagogico';
 import { AsignacionDocente } from '@/services/asistenciaService';
 import { ResumenEstudianteAsignacion } from '@/types/seguimientoPedagogicoTypes';
 
-// ─────────────────────────────────────
-// Animaciones (mismo estilo que asistencia)
-// ─────────────────────────────────────
-
+// ── animaciones ───────────────────────────────────────────────────────────────
 const bounceIcon = keyframes`
   0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-8px); }
+  50%       { transform: translateY(-5px); }
 `;
-const shimmer = keyframes`
-  0%   { background-position: -1000px 0; }
-  100% { background-position: 1000px 0; }
-`;
-const rotate = keyframes`
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-`;
-const fadeSlideUp = keyframes`
-  from { opacity: 0; transform: translateY(30px); }
+const fadeUp = keyframes`
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 `;
 
-// ─────────────────────────────────────
-// Adaptador: AsignacionDocente → MateriaDocente
-// (mismo que en asistencia)
-// ─────────────────────────────────────
-
+// ── adaptador (igual que antes) ───────────────────────────────────────────────
 const adaptarAsignacion = (a: AsignacionDocente): MateriaDocente => ({
-  asignacion_id:     a.asignacion_id,
-  materia_nombre:    a.materia_nombre,
-  materia_codigo:    a.materia_codigo,
-  paralelo_nombre:   a.paralelo_nombre,
-  grado_nombre:      a.grado_nombre,
-  turno_nombre:      a.turno_nombre,
+  asignacion_id: a.asignacion_id,
+  materia_nombre: a.materia_nombre,
+  materia_codigo: a.materia_codigo,
+  paralelo_nombre: a.paralelo_nombre,
+  grado_nombre: a.grado_nombre,
+  turno_nombre: a.turno_nombre,
   turno_hora_inicio: a.turno_hora_inicio,
-  turno_hora_fin:    a.turno_hora_fin,
+  turno_hora_fin: a.turno_hora_fin,
   total_estudiantes: Number(a.total_estudiantes),
-  color:             a.materia_color ?? undefined,
-  lista_pasada_hoy:  false,           // no aplica para seguimiento
+  color: a.materia_color ?? undefined,
+  lista_pasada_hoy: false,
   hora_ultimo_registro: undefined,
 });
 
-// ─────────────────────────────────────
-// PÁGINA PRINCIPAL
-// ─────────────────────────────────────
-
+// ─────────────────────────────────────────────────────────────────────────────
+// PÁGINA
+// ─────────────────────────────────────────────────────────────────────────────
 export default function DocenteSeguimientoPage() {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const { user } = useAuth();
 
-  // ── Mis asignaciones (reutiliza hook de asistencia — misma API) ──
+  // ── tokens (mismo sistema que notas / NuevoHorarioModal) ──
+  const brand = isDark ? '#facc15' : '#0288d1';
+  const brandEnd = isDark ? '#f59e0b' : '#01579b';
+  const gradBg = `linear-gradient(135deg, ${brand} 0%, ${brandEnd} 100%)`;
+
+  // ── hooks (sin cambios) ──
   const {
     asignaciones,
-    isLoading:      loadingMaterias,
+    isLoading: loadingMaterias,
     sinAsignaciones,
-    refrescar:      refrescarAsignaciones,
+    refrescar: refrescarAsignaciones,
   } = useMisAsignaciones();
 
-  // ── Materia seleccionada ──
   const [materiaSeleccionada, setMateriaSeleccionada] = useState<number | null>(null);
   const asignacionActual = asignaciones.find(a => a.asignacion_id === materiaSeleccionada);
 
-  // ── Resumen de estudiantes (observaciones por alumno) ──
   const {
     resumen,
-    isLoading:            loadingResumen,
+    isLoading: loadingResumen,
     estudiantesUrgentes,
-    cargar:               cargarResumen,
-    refrescar:            refrescarResumen,
+    cargar: cargarResumen,
+    refrescar: refrescarResumen,
   } = useResumenPorAsignacion();
 
-  // ── Estudiante seleccionado (abre el drawer) ──
   const [estudianteSeleccionado, setEstudianteSeleccionado] =
     useState<ResumenEstudianteAsignacion | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // ── Snackbar ──
   const [snack, setSnack] = useState<{
     open: boolean; msg: string; severity: 'success' | 'error' | 'info';
   }>({ open: false, msg: '', severity: 'success' });
@@ -115,12 +93,8 @@ export default function DocenteSeguimientoPage() {
   const showSnack = (msg: string, severity: 'success' | 'error' | 'info' = 'success') =>
     setSnack({ open: true, msg, severity });
 
-  // ─────────────────────────────────────
-  // Handlers
-  // ─────────────────────────────────────
-
+  // ── handlers (sin cambios) ──
   const handleSeleccionarMateria = useCallback(async (asignacionId: number) => {
-    // Toggle: si ya estaba seleccionada, deseleccionar
     if (asignacionId === materiaSeleccionada) {
       setMateriaSeleccionada(null);
       setEstudianteSeleccionado(null);
@@ -130,7 +104,6 @@ export default function DocenteSeguimientoPage() {
     setMateriaSeleccionada(asignacionId);
     setEstudianteSeleccionado(null);
     setDrawerOpen(false);
-    // Cargar resumen de esa asignación
     const periodo = asignaciones.find(a => a.asignacion_id === asignacionId)?.periodo_academico_id;
     await cargarResumen(asignacionId, periodo);
   }, [materiaSeleccionada, asignaciones, cargarResumen]);
@@ -148,151 +121,128 @@ export default function DocenteSeguimientoPage() {
 
   const handleObservacionGuardada = useCallback(() => {
     showSnack('✅ Observación registrada exitosamente', 'success');
-    // Refrescar el resumen para actualizar los conteos en la lista
     refrescarResumen();
   }, [refrescarResumen]);
 
   const materiasAdaptadas = asignaciones.map(adaptarAsignacion);
 
-  // ─────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────
-
+  // ─────────────────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <Box sx={{
-      minHeight: '100vh',
-      background: isDark
-        ? 'radial-gradient(circle at top right, rgba(251,191,36,0.05), transparent 50%), radial-gradient(circle at bottom left, rgba(139,92,246,0.05), transparent 50%)'
-        : 'radial-gradient(circle at top right, rgba(139,92,246,0.03), transparent 50%), radial-gradient(circle at bottom left, rgba(251,191,36,0.03), transparent 50%)',
-    }}>
-      <Container maxWidth="xl" disableGutters>
+    <Box sx={{ minHeight: '100vh', py: 4 }}>
+      <Container maxWidth="xl">
 
-        {/* ══ HEADER ══ */}
+        {/* ══ HEADER — mismo patrón que gestión de notas ══ */}
         <Fade in timeout={500}>
-          <Box sx={{ mb: 5, pt: 3 }}>
-            <Box sx={{
-              p: 4, borderRadius: 4,
-              background: isDark
-                ? 'linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))'
-                : 'linear-gradient(145deg, #fff, #f9fafb)',
-              backdropFilter: 'blur(20px)',
-              border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.05)}`,
-              boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 8px 32px rgba(0,0,0,0.08)',
-              position: 'relative', overflow: 'hidden',
-            }}>
-              {/* shimmer decorativo */}
-              <Box sx={{
-                position: 'absolute', inset: 0,
-                background: `linear-gradient(90deg, transparent, ${alpha('#fff', isDark ? 0.05 : 0.1)}, transparent)`,
-                backgroundSize: '1000px 100%',
-                animation: `${shimmer} 3s linear infinite`,
-                pointerEvents: 'none',
-              }} />
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
 
-              <Box sx={{
-                display: 'flex', alignItems: 'flex-start',
-                justifyContent: 'space-between', flexWrap: 'wrap', gap: 3,
-                position: 'relative', zIndex: 1,
-              }}>
-                <Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                    {/* Ícono animado */}
-                    <Box sx={{
-                      width: 64, height: 64, borderRadius: 3,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: isDark
-                        ? 'linear-gradient(135deg, #fbbf24, #f59e0b)'
-                        : 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                      boxShadow: isDark
-                        ? '0 8px 24px rgba(251,191,36,0.4)'
-                        : '0 8px 24px rgba(139,92,246,0.4)',
-                      animation: `${bounceIcon} 3s ease-in-out infinite`,
-                      position: 'relative', overflow: 'hidden',
-                      '&::before': {
-                        content: '""', position: 'absolute',
-                        top: '-50%', left: '-50%', width: '200%', height: '200%',
-                        background: `radial-gradient(circle, ${alpha('#fff', 0.3)} 0%, transparent 70%)`,
-                        animation: `${rotate} 10s linear infinite`,
-                      },
-                    }}>
-                      <PsychologyIcon sx={{ fontSize: 36, color: '#fff', zIndex: 1 }} />
-                    </Box>
-
-                    <Box>
-                      <Typography variant="h3" fontWeight={900} sx={{
-                        background: isDark
-                          ? 'linear-gradient(135deg, #fbbf24, #f59e0b)'
-                          : 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        letterSpacing: -1, lineHeight: 1.2,
-                      }}>
-                        Seguimiento Pedagógico
-                      </Typography>
-                      <Typography variant="body1" color="text.secondary" fontWeight={600} sx={{ mt: 0.5 }}>
-                        Hola,{' '}
-                        <strong>{user?.username}</strong>
-                        {asignaciones.length > 0 && (
-                          <>
-                            {' · '}
-                            <Box component="span" sx={{ color: isDark ? '#fbbf24' : '#8b5cf6' }}>
-                              {asignaciones.length} materia{asignaciones.length > 1 ? 's' : ''} asignada{asignaciones.length > 1 ? 's' : ''}
-                            </Box>
-                          </>
-                        )}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  {/* Alerta urgentes globales */}
-                  {estudiantesUrgentes.length > 0 && (
-                    <Chip
-                      icon={<PsychologyIcon sx={{ fontSize: '14px !important' }} />}
-                      label={`${estudiantesUrgentes.length} estudiante${estudiantesUrgentes.length > 1 ? 's' : ''} con observaciones urgentes`}
-                      size="small"
-                      sx={{
-                        mt: 1,
-                        bgcolor: '#fee2e2',
-                        color: '#dc2626',
-                        fontWeight: 700,
-                        fontSize: '0.75rem',
-                        border: '1px solid rgba(220,38,38,0.2)',
-                      }}
-                    />
-                  )}
+              {/* Título + subtítulo */}
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+                  <PsychologyIcon sx={{
+                    color: brand,
+                    fontSize: 36,
+                    animation: `${bounceIcon} 1.5s ease-in-out infinite`,
+                  }} />
+                  <Typography variant="h1" sx={{
+                    fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                    fontWeight: 800,
+                    background: gradBg,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}>
+                    Seguimiento Pedagógico
+                  </Typography>
                 </Box>
 
-                {/* Botón refrescar */}
-                <Tooltip title="Refrescar materias">
-                  <IconButton
-                    onClick={refrescarAsignaciones}
-                    disabled={loadingMaterias}
+                <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  Hola, <strong>{user?.username}</strong>
+                  {asignaciones.length > 0 && (
+                    <>
+                      {' — '}
+                      <Box component="span" sx={{ color: brand, fontWeight: 700 }}>
+                        {asignaciones.length} materia{asignaciones.length > 1 ? 's' : ''} asignada{asignaciones.length > 1 ? 's' : ''}
+                      </Box>
+                    </>
+                  )}
+                  {!materiaSeleccionada && ' · Seleccioná una materia para ver el seguimiento.'}
+                </Typography>
+
+                {/* Chip urgentes globales */}
+                {estudiantesUrgentes.length > 0 && (
+                  <Chip
+                    icon={<ErrorIcon sx={{ fontSize: '13px !important', color: '#dc2626 !important' }} />}
+                    label={`${estudiantesUrgentes.length} estudiante${estudiantesUrgentes.length > 1 ? 's' : ''} con observaciones urgentes`}
+                    size="small"
                     sx={{
-                      bgcolor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.04),
-                      border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.05)}`,
-                      '&:hover': {
-                        bgcolor: isDark ? alpha('#fbbf24', 0.2) : alpha('#8b5cf6', 0.15),
-                        transform: 'rotate(180deg)',
-                      },
-                      transition: 'all 0.3s ease',
+                      mt: 1,
+                      bgcolor: alpha('#dc2626', 0.08),
+                      color: '#dc2626',
+                      border: `1px solid ${alpha('#dc2626', 0.2)}`,
+                      fontWeight: 700,
+                      fontSize: '0.72rem',
                     }}
-                  >
-                    <RefreshIcon sx={{ color: isDark ? '#fbbf24' : '#8b5cf6' }} />
-                  </IconButton>
-                </Tooltip>
+                  />
+                )}
               </Box>
+
+              {/* Botón refrescar */}
+              <Tooltip title="Refrescar materias">
+                <IconButton
+                  onClick={refrescarAsignaciones}
+                  disabled={loadingMaterias}
+                  size="small"
+                  sx={{
+                    border: `1px solid ${alpha(brand, 0.25)}`,
+                    color: brand,
+                    '&:hover': {
+                      bgcolor: alpha(brand, 0.08),
+                      transform: 'rotate(180deg)',
+                    },
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  <RefreshIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Box>
           </Box>
         </Fade>
+
+        {/* ══ LOADING ══ */}
+        {loadingMaterias && (
+          <LinearProgress
+            sx={{
+              borderRadius: 4,
+              height: 4,
+              mb: 3,
+              bgcolor: alpha(brand, 0.1),
+              '& .MuiLinearProgress-bar': { background: gradBg },
+            }}
+          />
+        )}
 
         {/* ══ SIN ASIGNACIONES ══ */}
         {sinAsignaciones && (
           <Fade in>
             <Alert
               severity="info"
-              sx={{ mb: 4, borderRadius: 3 }}
+              sx={{
+                mb: 4,
+                borderRadius: 3,
+                background: alpha(brand, 0.06),
+                color: brand,
+                border: `1px solid ${alpha(brand, 0.2)}`,
+                '& .MuiAlert-icon': { color: brand },
+              }}
               action={
-                <Button size="small" onClick={refrescarAsignaciones} sx={{ fontWeight: 700 }}>
+                <Button
+                  size="small"
+                  onClick={refrescarAsignaciones}
+                  sx={{ fontWeight: 700, color: brand }}
+                >
                   Reintentar
                 </Button>
               }
@@ -305,7 +255,7 @@ export default function DocenteSeguimientoPage() {
         )}
 
         {/* ══ SECCIÓN 1: MIS MATERIAS ══ */}
-        <Box sx={{ mb: 5, animation: `${fadeSlideUp} 0.6s ease-out 0.2s both` }}>
+        <Box sx={{ mb: 4, animation: `${fadeUp} 0.35s ease-out 0.07s both` }}>
           <MisMaterias
             materias={materiasAdaptadas}
             isLoading={loadingMaterias}
@@ -318,32 +268,43 @@ export default function DocenteSeguimientoPage() {
         {/* ══ SECCIÓN 2: LISTA DE ESTUDIANTES ══ */}
         {materiaSeleccionada && (
           <Fade in timeout={400}>
-            <Box sx={{ mb: 5, animation: `${fadeSlideUp} 0.5s ease-out` }}>
+            <Box sx={{ mb: 5, animation: `${fadeUp} 0.35s ease-out` }}>
 
-              {/* Breadcrumb */}
+              {/* Breadcrumb — mismo estilo que notas */}
               <Box sx={{
-                display: 'flex', alignItems: 'center', gap: 1, mb: 3,
-                p: 2, borderRadius: 3,
-                background: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
-                border: `1px solid ${isDark ? alpha('#fff', 0.05) : alpha('#000', 0.05)}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                mb: 3,
               }}>
                 <Typography variant="caption" color="text.disabled" fontWeight={700}>
                   Mis Materias
                 </Typography>
-                <NavigateNextIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                <NavigateNextIcon sx={{ fontSize: 15, color: 'text.disabled' }} />
                 <Typography variant="caption" fontWeight={800} sx={{
-                  background: isDark
-                    ? 'linear-gradient(135deg, #fbbf24, #f59e0b)'
-                    : 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                  background: gradBg,
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                 }}>
                   {asignacionActual?.materia_nombre} — {asignacionActual?.grado_nombre} "{asignacionActual?.paralelo_nombre}"
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto', fontWeight: 600 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto', fontWeight: 500, display: { xs: 'none', sm: 'block' } }}>
                   Seleccioná un estudiante para ver su historial o registrar una observación
                 </Typography>
               </Box>
+
+              {/* Loading resumen */}
+              {loadingResumen && (
+                <LinearProgress
+                  sx={{
+                    borderRadius: 4,
+                    height: 4,
+                    mb: 3,
+                    bgcolor: alpha(brand, 0.1),
+                    '& .MuiLinearProgress-bar': { background: gradBg },
+                  }}
+                />
+              )}
 
               <ListaEstudiantesSeguimiento
                 resumen={resumen}
@@ -357,7 +318,7 @@ export default function DocenteSeguimientoPage() {
 
       </Container>
 
-      {/* ══ DRAWER: Historial + Nueva Observación ══ */}
+      {/* ══ MODAL: Historial + Nueva Observación ══ */}
       <DrawerObservacionesEstudiante
         open={drawerOpen}
         estudiante={estudianteSeleccionado}
@@ -383,17 +344,17 @@ export default function DocenteSeguimientoPage() {
             fontWeight: 700,
             minWidth: 300,
             background:
-              snack.severity === 'success' ? 'linear-gradient(135deg,#10b981,#34d399)' :
-              snack.severity === 'error'   ? 'linear-gradient(135deg,#ef4444,#f87171)' :
-                                             'linear-gradient(135deg,#8b5cf6,#a78bfa)',
-            color: '#fff',
+              snack.severity === 'success' ? gradBg :
+                snack.severity === 'error' ? 'linear-gradient(135deg,#ef4444,#f87171)' :
+                  'linear-gradient(135deg,#8b5cf6,#a78bfa)',
+            color: isDark ? '#000' : '#fff',
             boxShadow:
-              snack.severity === 'success' ? '0 8px 32px rgba(16,185,129,0.4)' :
-              snack.severity === 'error'   ? '0 8px 32px rgba(239,68,68,0.4)' :
-                                             '0 8px 32px rgba(139,92,246,0.4)',
+              snack.severity === 'success' ? `0 8px 32px ${alpha(brand, 0.4)}` :
+                snack.severity === 'error' ? '0 8px 32px rgba(239,68,68,0.4)' :
+                  '0 8px 32px rgba(139,92,246,0.4)',
             border: 'none',
-            '& .MuiAlert-icon':                     { color: '#fff' },
-            '& .MuiAlert-action .MuiIconButton-root': { color: '#fff' },
+            '& .MuiAlert-icon': { color: isDark ? '#000' : '#fff' },
+            '& .MuiAlert-action .MuiIconButton-root': { color: isDark ? '#000' : '#fff' },
           }}
         >
           {snack.msg}

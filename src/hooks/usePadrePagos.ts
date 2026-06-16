@@ -10,6 +10,7 @@ import {
   cancelarQRMensualidad,
   generarQRMultiple,
   getEstadoQRMultiple,
+  generarQRFamiliar,
 } from '@/services/padrePagosService';
 import type {
   HijoPagoInfo,
@@ -19,6 +20,7 @@ import type {
   EstadoQRResponse,
   QRMultipleData,
   EstadoQRMultipleResponse,
+  QRFamiliarData,
 } from '@/types/padrePagosTypes';
 import api from '@/lib/api';
 
@@ -37,6 +39,8 @@ function esPagoReal(estado: EstadoQRResponse | EstadoQRMultipleResponse): boolea
 // =============================================
 // HOOK: HIJOS CON RESUMEN DE PAGOS
 // =============================================
+// hooks/usePadrePagos.ts - solo cambiar useHijosConPagos
+
 export const useHijosConPagos = () => {
   const [hijos, setHijos]         = useState<HijoPagoInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +49,25 @@ export const useHijosConPagos = () => {
     setIsLoading(true);
     try {
       const data = await getHijosConPagos();
-      setHijos(data.hijos);
+      
+      // ✅ Filtrar: por cada estudiante, quedarse solo con la matrícula activa.
+      // Si no tiene ninguna activa, mostrar igual (para que el padre vea "sin matrícula").
+      const porEstudiante = new Map<number, HijoPagoInfo>();
+      
+      for (const hijo of data.hijos) {
+        const existe = porEstudiante.get(hijo.estudiante_id);
+        
+        if (!existe) {
+          // Primera aparición: guardar siempre
+          porEstudiante.set(hijo.estudiante_id, hijo);
+        } else if (hijo.matricula_estado === 'activo') {
+          // Preferir la matrícula activa sobre cualquier otra
+          porEstudiante.set(hijo.estudiante_id, hijo);
+        }
+        // Si la existente ya es activa y la nueva no, ignorar la nueva
+      }
+      
+      setHijos(Array.from(porEstudiante.values()));
     } catch (error: any) {
       toast.error(
         error.response?.data?.message || 'Error al cargar los datos de tus hijos'
@@ -358,6 +380,114 @@ export const useQRMultiple = () => {
       toast.success('QR cancelado. Podés seleccionar nuevas mensualidades.');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Error al cancelar el QR');
+    } finally {
+      setIsCancelando(false);
+    }
+  }, [qrData, detenerPolling]);
+
+  const resetear = useCallback(() => {
+    detenerPolling();
+    setQrData(null);
+    setEstadoQR(null);
+    setPagado(false);
+  }, [detenerPolling]);
+
+  return {
+    qrData, estadoQR, pagado,
+    isGenerando, isCancelando,
+    generarQR, cancelarQR, resetear,
+  };
+};
+// Agregá al final del archivo
+export const useQRFamiliar = () => {
+  const [qrData, setQrData]           = useState<QRFamiliarData | null>(null);
+  const [estadoQR, setEstadoQR]       = useState<EstadoQRMultipleResponse | null>(null);
+  const [isGenerando, setIsGenerando] = useState(false);
+  const [isCancelando, setIsCancelando] = useState(false);
+  const [pagado, setPagado]           = useState(false);
+
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef  = useRef<NodeJS.Timeout | null>(null);
+
+  const detenerPolling = useCallback(() => {
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    if (timeoutRef.current)  { clearTimeout(timeoutRef.current);   timeoutRef.current  = null; }
+  }, []);
+
+  const generarQR = useCallback(async (mensualidadIds: number[]) => {
+    setIsGenerando(true);
+    setQrData(null);
+    setPagado(false);
+    try {
+      const data = await generarQRFamiliar(mensualidadIds);
+      setQrData(data);
+      toast.success(`QR familiar generado para ${data.cantidad_meses} mensualidades`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'No se pudo generar el QR familiar');
+    } finally {
+      setIsGenerando(false);
+    }
+  }, []);
+
+  // Polling igual que useQRMultiple — reutiliza estado-qr-multiple por alias
+  // En useQRFamiliar, cambiar la dependencia del iniciarPolling
+const iniciarPolling = useCallback(() => {
+  if (intervalRef.current || timeoutRef.current || !qrData?.alias) return;
+  
+  const alias = qrData.alias;                    // ✅ capturar valor estable
+  const cantidadMeses = qrData.cantidad_meses;   // ✅ capturar valor estable
+
+  timeoutRef.current = setTimeout(() => {
+    timeoutRef.current = null;
+    (async () => {
+      try {
+        const estado = await getEstadoQRMultiple(alias);
+        setEstadoQR(estado);
+        if (esPagoReal(estado)) {
+          setPagado(true);
+          detenerPolling();
+          toast.success(`¡Pago familiar confirmado! ${cantidadMeses} mensualidades al día.`);
+        }
+      } catch { /* silencioso */ }
+    })();
+
+    intervalRef.current = setInterval(async () => {
+      try {
+        const estado = await getEstadoQRMultiple(alias);
+        setEstadoQR(estado);
+        if (esPagoReal(estado)) {
+          setPagado(true);
+          detenerPolling();
+          toast.success(`¡Pago familiar confirmado! ${cantidadMeses} mensualidades al día.`);
+        }
+      } catch { /* silencioso */ }
+    }, 8000);
+
+  }, 15000);
+}, [qrData?.alias, qrData?.cantidad_meses, detenerPolling]); 
+
+  useEffect(() => {
+    if (qrData && !pagado) iniciarPolling();
+    else detenerPolling();
+    return () => detenerPolling();
+  }, [qrData, pagado, iniciarPolling, detenerPolling]);
+
+  const cancelarQR = useCallback(async () => {
+    if (!qrData?.mensualidad_ids) return;
+    setIsCancelando(true);
+    detenerPolling();
+    try {
+      await Promise.all(
+        qrData.mensualidad_ids.map(id =>
+          api.delete(`/padre-p/mensualidad/${id}/cancelar-qr`)
+        )
+      );
+      setQrData(null);
+      setEstadoQR(null);
+      setPagado(false);
+      toast.success(`QR familiar cancelado.`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error al cancelar');
     } finally {
       setIsCancelando(false);
     }

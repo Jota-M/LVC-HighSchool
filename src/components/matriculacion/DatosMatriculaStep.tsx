@@ -67,9 +67,8 @@ export const DatosMatriculaStep: React.FC<DatosMatriculaStepProps> = ({
       },
       '&.Mui-focused fieldset': {
         borderColor: isDark ? '#facc15' : '#0288d1',
-        boxShadow: `0 0 0 2px ${
-          isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(2, 136, 209, 0.25)'
-        }`,
+        boxShadow: `0 0 0 2px ${isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(2, 136, 209, 0.25)'
+          }`,
       },
     },
     '& .MuiInputBase-input': {
@@ -111,7 +110,7 @@ export const DatosMatriculaStep: React.FC<DatosMatriculaStepProps> = ({
           Datos de Matrícula
         </Typography>
       </Box>
-      
+
       {/* Info de paralelos cargados */}
       {isLoadingParalelos && (
         <Alert
@@ -122,6 +121,7 @@ export const DatosMatriculaStep: React.FC<DatosMatriculaStepProps> = ({
           Cargando paralelos disponibles...
         </Alert>
       )}
+
 
       {!isLoadingParalelos && paralelosDisponibles.length > 0 && (
         <Alert
@@ -156,7 +156,7 @@ export const DatosMatriculaStep: React.FC<DatosMatriculaStepProps> = ({
 
       <Grid container spacing={3}>
         {/* Periodo Académico */}
-        <Grid size={{xs:12, md:6}}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormControl fullWidth error={!!errors.periodo_academico_id} sx={fieldStyle}>
             <InputLabel>Periodo Académico *</InputLabel>
             <Select
@@ -189,7 +189,7 @@ export const DatosMatriculaStep: React.FC<DatosMatriculaStepProps> = ({
         </Grid>
 
         {/* Paralelo */}
-        <Grid size={{xs:12, md:6}}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <FormControl
             fullWidth
             error={!!errors.paralelo_id}
@@ -218,7 +218,7 @@ export const DatosMatriculaStep: React.FC<DatosMatriculaStepProps> = ({
 
         {/* Disponibilidad del paralelo */}
         {disponibilidad && (
-          <Grid size={{xs:12}}>
+          <Grid size={{ xs: 12 }}>
             <Alert
               severity={puedeMatricular ? 'success' : 'error'}
               sx={{
@@ -252,7 +252,7 @@ export const DatosMatriculaStep: React.FC<DatosMatriculaStepProps> = ({
         )}
 
         {/* Switches de repitente y becado */}
-        <Grid size={{xs:12, md:6}}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Box
             sx={{
               p: 2,
@@ -287,7 +287,7 @@ export const DatosMatriculaStep: React.FC<DatosMatriculaStepProps> = ({
           </Box>
         </Grid>
 
-        <Grid size={{xs:12, md:6}}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Box
             sx={{
               p: 2,
@@ -325,7 +325,7 @@ export const DatosMatriculaStep: React.FC<DatosMatriculaStepProps> = ({
         {/* Campos de beca (condicionales) */}
         {formData.es_becado && (
           <>
-            <Grid size={{xs:12, md:6}}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 type="number"
@@ -336,7 +336,7 @@ export const DatosMatriculaStep: React.FC<DatosMatriculaStepProps> = ({
                 sx={fieldStyle}
               />
             </Grid>
-            <Grid size={{xs:12, md:6}}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Tipo de Beca"
@@ -350,7 +350,7 @@ export const DatosMatriculaStep: React.FC<DatosMatriculaStepProps> = ({
         )}
 
         {/* Observaciones */}
-        <Grid size={{xs:12}}>
+        <Grid size={{ xs: 12 }}>
           <TextField
             fullWidth
             multiline

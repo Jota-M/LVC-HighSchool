@@ -40,6 +40,7 @@ import WarningAmberRoundedIcon  from '@mui/icons-material/WarningAmberRounded';
 import { EstudianteClase, NIVELES_RIESGO, PrediccionMeta, AccionRequerida } from '@/types/prediccionTypes';
 import { usePrediccionClase, usePrediccionEstudiante, useSimulacionOptimo } from '@/hooks/usePrediccion';
 import prediccionService from '@/services/prediccionService';
+import SeccionOptimaV2 from '@/components/prediccion/SeccionOptimaV2';
 
 // ── Animaciones ───────────────────────────────────────────────
 const fadeUp = keyframes`
@@ -816,7 +817,7 @@ const TabSimulacion: React.FC<TabSimulacionProps> = ({
         <Box sx={{ animation: `${fadeUp} 0.3s ease-out` }}>
 
           {/* ══ SECCIÓN ÓPTIMA — nueva ══ */}
-          <SeccionOptima
+          <SeccionOptimaV2
             seleccionado={seleccionado}
             asignacionId={asignacionId}
             periodoId={periodoId}

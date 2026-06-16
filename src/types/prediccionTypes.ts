@@ -356,3 +356,46 @@ export interface SimulacionOptimoDTO extends Pick<PrediccionEstudianteDTO, 'matr
   objetivo_nota?:  number;          // default 51
   restricciones?:  RestriccionesOptimo;
 }
+
+export interface EvaluacionPendienteResponse {
+  numero: number;
+  tipo: 'practica' | 'examen';
+  nota_objetivo: number;
+  es_alcanzable: boolean;
+}
+
+export interface EscenarioDetalladoResponse {
+  id: 'minimo' | 'solo_practicas' | 'con_examen' | 'agresivo';
+  titulo: string;
+  descripcion: string;
+  evaluaciones: EvaluacionPendienteResponse[];
+  nota_proyectada: number;
+  alcanzable: boolean;
+  porcentaje_exito: number;
+  mensaje: string;
+}
+
+export interface SimulacionOptimoV2Response {
+  objetivo_nota: number;
+  nota_actual: number;
+  nota_maxima_posible: number;
+  semanas_restantes: number;
+  practicas_restantes_est: number;
+  examenes_restantes_est: number;
+  techo_practicas: number;
+  techo_examenes: number;
+  escenarios: EscenarioDetalladoResponse[];
+  ya_alcanza: boolean;
+  imposible: boolean;
+  mensaje_general: string;
+}
+
+export interface SimulacionOptimoV2DTO extends Pick<
+  PrediccionEstudianteDTO,
+  'matricula_id' | 'asignacion_docente_id' | 'periodo_evaluacion_id'
+> {
+  objetivo_nota?:       number;
+  restricciones?:       RestriccionesOptimo;
+  practicas_restantes?: number;   // undefined = estimar por ritmo
+  examenes_restantes?:  number;   // undefined = estimar por ritmo
+}

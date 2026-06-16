@@ -23,13 +23,16 @@ import { BloqueHorario, BloqueHorarioCreate, BloqueHorarioUpdate } from '@/types
 
 // Turnos los traes de tu hook de gestión académica
 interface Turno { id: number; nombre: string; hora_inicio: string; hora_fin: string; }
+interface NivelAcademico { id: number; nombre: string; }
 
 interface Props {
   turnos: Turno[];
+  nivelesAcademicos?: NivelAcademico[];
 }
 
 interface FormData {
   turno_id: number | '';
+  nivel_academico_id: number | '';
   nombre: string;
   codigo: string;
   numero: number | '';
@@ -39,10 +42,10 @@ interface FormData {
 }
 
 const EMPTY_FORM: FormData = {
-  turno_id: '', nombre: '', codigo: '', numero: '', hora_inicio: '', hora_fin: '', es_recreo: false,
+  turno_id: '', nivel_academico_id: '', nombre: '', codigo: '', numero: '', hora_inicio: '', hora_fin: '', es_recreo: false,
 };
 
-export const BloqueHorarioManager: React.FC<Props> = ({ turnos }) => {
+export const BloqueHorarioManager: React.FC<Props> = ({ turnos, nivelesAcademicos = [] }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const accentColor = isDark ? '#facc15' : '#0288d1';
@@ -74,6 +77,7 @@ export const BloqueHorarioManager: React.FC<Props> = ({ turnos }) => {
     setEditTarget(bloque);
     setForm({
       turno_id: bloque.turno_id,
+      nivel_academico_id: bloque.nivel_academico_id ?? '',
       nombre: bloque.nombre,
       codigo: bloque.codigo ?? '',
       numero: bloque.numero,
@@ -90,6 +94,7 @@ export const BloqueHorarioManager: React.FC<Props> = ({ turnos }) => {
     if (!form.turno_id || !form.nombre || !form.numero || !form.hora_inicio || !form.hora_fin) return;
     const payload = {
       turno_id: Number(form.turno_id),
+      nivel_academico_id: form.nivel_academico_id !== '' ? Number(form.nivel_academico_id) : null,
       nombre: form.nombre,
       codigo: form.codigo || undefined,
       numero: Number(form.numero),
@@ -192,6 +197,7 @@ export const BloqueHorarioManager: React.FC<Props> = ({ turnos }) => {
                           <TableRow sx={{ '& th': { fontWeight: 700, fontSize: '0.75rem', color: 'text.secondary', border: 'none', py: 1 } }}>
                             <TableCell>#</TableCell>
                             <TableCell>Nombre</TableCell>
+                            <TableCell>Nivel</TableCell>
                             <TableCell>Código</TableCell>
                             <TableCell>Hora inicio</TableCell>
                             <TableCell>Hora fin</TableCell>
@@ -220,6 +226,20 @@ export const BloqueHorarioManager: React.FC<Props> = ({ turnos }) => {
                                   {bloque.es_recreo && <RecresoIcon sx={{ fontSize: 14, color: 'text.secondary' }} />}
                                   <Typography variant="body2" fontWeight={600}>{bloque.nombre}</Typography>
                                 </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Chip
+                                  size="small"
+                                  label={bloque.nivel_nombre || 'General'}
+                                  variant={bloque.nivel_nombre ? 'outlined' : 'filled'}
+                                  sx={{
+                                    height: 20, fontSize: '0.65rem',
+                                    borderColor: bloque.nivel_nombre ? accentColor : 'transparent',
+                                    bgcolor: bloque.nivel_nombre ? 'transparent' : alpha('#94a3b8', 0.1),
+                                    color: bloque.nivel_nombre ? accentColor : '#6b7280',
+                                    fontWeight: bloque.nivel_nombre ? 600 : 400,
+                                  }}
+                                />
                               </TableCell>
                               <TableCell>
                                 <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: alpha(accentColor, 0.08), px: 0.8, py: 0.3, borderRadius: 1 }}>
@@ -310,6 +330,22 @@ export const BloqueHorarioManager: React.FC<Props> = ({ turnos }) => {
                 >
                   {turnos.map((t) => (
                     <MenuItem key={t.id} value={t.id}>{t.nombre}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid size={{xs:12}}>
+              <FormControl fullWidth>
+                <InputLabel>Nivel Académico (Opcional)</InputLabel>
+                <Select
+                  value={form.nivel_academico_id}
+                  onChange={(e) => setForm((p) => ({ ...p, nivel_academico_id: e.target.value as number | '' }))}
+                  label="Nivel Académico (Opcional)"
+                >
+                  <MenuItem value=""><em>General / Todos los niveles</em></MenuItem>
+                  {nivelesAcademicos.map((n) => (
+                    <MenuItem key={n.id} value={n.id}>{n.nombre}</MenuItem>
                   ))}
                 </Select>
               </FormControl>

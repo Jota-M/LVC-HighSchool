@@ -1,76 +1,121 @@
 // components/configuracion/SesionesTab.tsx
+'use client';
 import { useState, useEffect } from 'react';
 import {
-  Box,
-  Card,
-  CardContent,
-  CardHeader,
-  Button,
-  Chip,
-  Alert,
-  CircularProgress,
-  IconButton,
-  Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Stack,
-  useTheme,
-  alpha,
-  Tooltip
+  Box, Button, Chip, Alert, CircularProgress, IconButton,
+  Typography, Dialog, DialogTitle, DialogContent,
+  DialogContentText, DialogActions, Stack, Tooltip,
+  useTheme, alpha, keyframes,
 } from '@mui/material';
 import SmartphoneIcon from '@mui/icons-material/Smartphone';
 import ComputerIcon from '@mui/icons-material/Computer';
 import TabletIcon from '@mui/icons-material/Tablet';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import DevicesIcon from '@mui/icons-material/Devices';
 import LanguageIcon from '@mui/icons-material/Language';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import configuracionService, { Sesion } from '@/services/configuracionService';
 
+const fadeUp = keyframes`
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+`;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function getDeviceIcon(ua: string) {
+  const u = ua.toLowerCase();
+  if (u.includes('mobile') || u.includes('android') || u.includes('iphone')) return <SmartphoneIcon sx={{ fontSize: 26 }} />;
+  if (u.includes('tablet') || u.includes('ipad')) return <TabletIcon sx={{ fontSize: 26 }} />;
+  return <ComputerIcon sx={{ fontSize: 26 }} />;
+}
+
+function getDeviceName(ua: string) {
+  const u = ua.toLowerCase();
+  if (u.includes('mobile') || u.includes('android') || u.includes('iphone')) return 'Móvil';
+  if (u.includes('tablet') || u.includes('ipad')) return 'Tablet';
+  return 'Escritorio';
+}
+
+function getBrowserName(ua: string) {
+  if (ua.includes('Edg'))     return 'Edge';
+  if (ua.includes('Chrome'))  return 'Chrome';
+  if (ua.includes('Firefox')) return 'Firefox';
+  if (ua.includes('Safari'))  return 'Safari';
+  return 'Navegador';
+}
+
+function formatRelative(d: string) {
+  const date = new Date(d);
+  const now = Date.now();
+  const diff = now - date.getTime(); // positivo = pasado, negativo = futuro
+
+  // Fecha futura (expiración)
+  if (diff < 0) {
+    const absDiff = Math.abs(diff);
+    const m    = Math.floor(absDiff / 60000);
+    const h    = Math.floor(absDiff / 3600000);
+    const days = Math.floor(absDiff / 86400000);
+    if (m < 1)    return 'En un momento';
+    if (m < 60)   return `En ${m} min`;
+    if (h < 24)   return `En ${h}h`;
+    if (days < 7) return `En ${days}d`;
+    return date.toLocaleDateString('es-BO');
+  }
+
+  // Fecha pasada (inicio de sesión)
+  const m    = Math.floor(diff / 60000);
+  const h    = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (m < 1)    return 'Ahora mismo';
+  if (m < 60)   return `Hace ${m} min`;
+  if (h < 24)   return `Hace ${h}h`;
+  if (days < 7) return `Hace ${days}d`;
+  return date.toLocaleDateString('es-BO');
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export default function SesionesTab() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const [sesiones, setSesiones] = useState<Sesion[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
-  const [showDialogCerrarTodas, setShowDialogCerrarTodas] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    cargarSesiones();
-  }, []);
+  const accent   = isDark ? '#facc15' : '#0288d1';
+  const accentBg = isDark ? alpha('#facc15', 0.06) : alpha('#0288d1', 0.06);
+  const border   = isDark ? alpha('#ffffff', 0.09) : alpha('#000000', 0.08);
+  const surface  = isDark ? alpha('#ffffff', 0.025) : alpha('#000000', 0.018);
+
+  const [sesiones, setSesiones]             = useState<Sesion[]>([]);
+  const [loading, setLoading]               = useState(true);
+  const [actionLoading, setActionLoading]   = useState<number | null>(null);
+  const [confirmDialog, setConfirmDialog]   = useState(false);
+  const [error, setError]                   = useState<string | null>(null);
+  const [success, setSuccess]               = useState<string | null>(null);
+
+  useEffect(() => { cargarSesiones(); }, []);
 
   const cargarSesiones = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await configuracionService.obtenerSesiones();
-      setSesiones(data);
-    } catch (error: any) {
-      setError(error.response?.data?.message || 'Error al cargar sesiones');
+      setSesiones(await configuracionService.obtenerSesiones());
+    } catch (e: any) {
+      setError(e.response?.data?.message || 'Error al cargar sesiones');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCerrarSesion = async (sesionId: number) => {
+  const handleCerrarSesion = async (id: number) => {
     try {
-      setActionLoading(sesionId);
+      setActionLoading(id);
       setError(null);
-      await configuracionService.cerrarSesion(sesionId);
-
+      await configuracionService.cerrarSesion(id);
       setSuccess('Sesión cerrada correctamente');
       await cargarSesiones();
-      
       setTimeout(() => setSuccess(null), 3000);
-    } catch (error: any) {
-      setError(error.response?.data?.message || 'Error al cerrar sesión');
+    } catch (e: any) {
+      setError(e.response?.data?.message || 'Error al cerrar sesión');
     } finally {
       setActionLoading(null);
     }
@@ -80,406 +125,316 @@ export default function SesionesTab() {
     try {
       setLoading(true);
       setError(null);
-      const cantidad = await configuracionService.cerrarTodasSesiones();
-
-      setSuccess(`${cantidad} sesión${cantidad !== 1 ? 'es' : ''} cerrada${cantidad !== 1 ? 's' : ''}`);
+      const n = await configuracionService.cerrarTodasSesiones();
+      setSuccess(`${n} sesión${n !== 1 ? 'es' : ''} cerrada${n !== 1 ? 's' : ''} correctamente`);
       await cargarSesiones();
-      
       setTimeout(() => setSuccess(null), 3000);
-    } catch (error: any) {
-      setError(error.response?.data?.message || 'Error al cerrar sesiones');
+    } catch (e: any) {
+      setError(e.response?.data?.message || 'Error al cerrar sesiones');
     } finally {
       setLoading(false);
-      setShowDialogCerrarTodas(false);
+      setConfirmDialog(false);
     }
-  };
-
-  const getDeviceIcon = (userAgent: string) => {
-    const ua = userAgent.toLowerCase();
-    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
-      return <SmartphoneIcon sx={{ fontSize: 28 }} />;
-    }
-    if (ua.includes('tablet') || ua.includes('ipad')) {
-      return <TabletIcon sx={{ fontSize: 28 }} />;
-    }
-    return <ComputerIcon sx={{ fontSize: 28 }} />;
-  };
-
-  const getDeviceName = (userAgent: string) => {
-    const ua = userAgent.toLowerCase();
-    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
-      return 'Móvil';
-    }
-    if (ua.includes('tablet') || ua.includes('ipad')) {
-      return 'Tablet';
-    }
-    return 'Escritorio';
-  };
-
-  const getBrowserName = (userAgent: string) => {
-    if (userAgent.includes('Chrome')) return 'Chrome';
-    if (userAgent.includes('Firefox')) return 'Firefox';
-    if (userAgent.includes('Safari')) return 'Safari';
-    if (userAgent.includes('Edge')) return 'Edge';
-    return 'Desconocido';
-  };
-
-  const formatFechaRelativa = (fecha: string) => {
-    const date = new Date(fecha);
-    const ahora = new Date();
-    const diffMs = ahora.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHoras = Math.floor(diffMs / 3600000);
-    const diffDias = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Ahora mismo';
-    if (diffMins < 60) return `Hace ${diffMins} min`;
-    if (diffHoras < 24) return `Hace ${diffHoras}h`;
-    if (diffDias < 7) return `Hace ${diffDias}d`;
-
-    return date.toLocaleDateString('es-BO');
   };
 
   if (loading && sesiones.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
-        <CircularProgress 
-          sx={{ 
-            color: isDark ? '#facc15' : '#0288d1',
-            animationDuration: '0.8s'
-          }} 
-          size={50}
-        />
+        <CircularProgress size={46} sx={{ color: accent }} />
       </Box>
     );
   }
 
   return (
     <>
-      {error && (
-        <Alert 
-          severity="error" 
-          sx={{ 
-            mb: 3,
-            borderRadius: 2,
-            border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
-          }} 
-          onClose={() => setError(null)}
-        >
-          {error}
-        </Alert>
-      )}
-      
-      {success && (
-        <Alert 
-          severity="success" 
-          sx={{ 
-            mb: 3,
-            borderRadius: 2,
-            border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
-            backgroundColor: isDark ? alpha('#facc15', 0.1) : alpha('#0288d1', 0.1),
-            '& .MuiAlert-icon': {
-              color: isDark ? '#facc15' : '#0288d1'
-            }
-          }} 
-          onClose={() => setSuccess(null)}
-        >
-          {success}
-        </Alert>
-      )}
+      <Stack spacing={2.5}>
+        {/* Feedback */}
+        {error && (
+          <Alert severity="error" onClose={() => setError(null)}
+            sx={{ borderRadius: 2, border: `1px solid ${alpha(theme.palette.error.main, 0.3)}` }}>
+            {error}
+          </Alert>
+        )}
+        {success && (
+          <Alert severity="success" onClose={() => setSuccess(null)}
+            sx={{ borderRadius: 2, border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`, bgcolor: accentBg, '& .MuiAlert-icon': { color: accent } }}>
+            {success}
+          </Alert>
+        )}
 
-      <Card
-        sx={{
-          borderRadius: 3,
-          border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`,
-          transition: 'all 0.3s ease',
-          '&:hover': {
-            boxShadow: isDark 
-              ? `0 8px 24px ${alpha('#facc15', 0.1)}`
-              : `0 8px 24px ${alpha('#0288d1', 0.1)}`,
-          }
-        }}
-      >
-        <CardHeader
-          title={
-            <Box display="flex" alignItems="center" gap={1.5}>
-              <DevicesIcon sx={{ color: isDark ? '#facc15' : '#0288d1', fontSize: 28 }} />
-              <Typography variant="h6" fontWeight={700}>
-                Sesiones Activas
-              </Typography>
+        {/* ── Card principal ── */}
+        <Box
+          sx={{
+            borderRadius: 3,
+            border: `1px solid ${border}`,
+            overflow: 'hidden',
+            animation: `${fadeUp} 0.4s ease both`,
+            transition: 'box-shadow 0.25s',
+            '&:hover': { boxShadow: `0 8px 28px ${alpha(accent, 0.1)}` },
+          }}
+        >
+          {/* Header */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
+              px: 2.5,
+              py: 2,
+              background: accentBg,
+              borderBottom: `1px solid ${border}`,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ width: 32, height: 32, borderRadius: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `linear-gradient(135deg, ${accent}, ${alpha(accent, 0.7)})` }}>
+                <DevicesIcon sx={{ fontSize: 17, color: '#fff' }} />
+              </Box>
+              <Box>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.92rem', lineHeight: 1.2 }}>
+                  Sesiones Activas
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Dispositivos donde has iniciado sesión
+                </Typography>
+              </Box>
             </Box>
-          }
-          subheader="Administra los dispositivos donde has iniciado sesión"
-          action={
-            sesiones.length > 1 && (
+
+            {sesiones.length > 1 && (
               <Button
-                variant="contained"
-                color="error"
                 size="small"
                 startIcon={<ExitToAppIcon />}
-                onClick={() => setShowDialogCerrarTodas(true)}
+                onClick={() => setConfirmDialog(true)}
                 disabled={loading}
                 sx={{
-                  borderRadius: 2,
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  px: 2.5,
-                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                  boxShadow: `0 4px 14px ${alpha('#ef4444', 0.4)}`,
+                  borderRadius: 2, fontWeight: 700, textTransform: 'none', px: 2,
+                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                  color: '#fff',
+                  boxShadow: `0 4px 14px ${alpha('#ef4444', 0.35)}`,
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                    boxShadow: `0 6px 20px ${alpha('#ef4444', 0.5)}`,
-                  }
+                    background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: `0 6px 18px ${alpha('#ef4444', 0.45)}`,
+                  },
                 }}
               >
-                Cerrar Todas
+                Cerrar todas
               </Button>
-            )
-          }
+            )}
+          </Box>
+
+          {/* Body */}
+          <Box sx={{ p: 2.5, background: surface }}>
+            {sesiones.length === 0 ? (
+              <Alert severity="info"
+                sx={{
+                  borderRadius: 2,
+                  border: `1px solid ${alpha(accent, 0.3)}`,
+                  bgcolor: accentBg,
+                  '& .MuiAlert-icon': { color: accent },
+                }}>
+                No tienes sesiones activas en otros dispositivos
+              </Alert>
+            ) : (
+              <Stack spacing={1.5}>
+                {sesiones.map((sesion, i) => (
+                  <SessionRow
+                    key={sesion.id}
+                    sesion={sesion}
+                    isCurrent={i === 0}
+                    actionLoading={actionLoading}
+                    onClose={handleCerrarSesion}
+                    accent={accent}
+                    accentBg={accentBg}
+                    border={border}
+                    surface={surface}
+                  />
+                ))}
+              </Stack>
+            )}
+          </Box>
+        </Box>
+
+        {/* ── Security note ── */}
+        <Box
           sx={{
-            background: isDark
-              ? alpha('#facc15', 0.05)
-              : alpha('#0288d1', 0.05),
-            borderBottom: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`
-          }}
-        />
-        <CardContent>
-          {sesiones.length === 0 ? (
-            <Alert 
-              severity="info"
-              sx={{
-                borderRadius: 2,
-                border: `1px solid ${isDark ? alpha('#facc15', 0.3) : alpha('#0288d1', 0.3)}`,
-                backgroundColor: isDark ? alpha('#facc15', 0.1) : alpha('#0288d1', 0.1),
-                '& .MuiAlert-icon': {
-                  color: isDark ? '#facc15' : '#0288d1'
-                }
-              }}
-            >
-              No tienes sesiones activas en otros dispositivos
-            </Alert>
-          ) : (
-            <Stack spacing={2}>
-              {sesiones.map((sesion, index) => (
-                <Box
-                  key={sesion.id}
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 2,
-                    border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`,
-                    backgroundColor: index === 0 
-                      ? (isDark 
-                          ? alpha('#facc15', 0.05) 
-                          : alpha('#0288d1', 0.05))
-                      : (isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02)),
-                    transition: 'all 0.3s ease',
-                    '&:hover': { 
-                      backgroundColor: isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04),
-                      boxShadow: isDark 
-                        ? `0 4px 12px ${alpha('#facc15', 0.1)}`
-                        : `0 4px 12px ${alpha('#0288d1', 0.1)}`,
-                      transform: 'translateY(-2px)',
-                    },
-                  }}
-                >
-                  <Box display="flex" alignItems="flex-start" gap={2}>
-                    {/* Icono del dispositivo */}
-                    <Box
-                      sx={{
-                        width: 50,
-                        height: 50,
-                        borderRadius: 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: isDark
-                          ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                          : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                        color: isDark ? '#000' : '#fff',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {getDeviceIcon(sesion.user_agent)}
-                    </Box>
-
-                    {/* Información de la sesión */}
-                    <Box flex={1}>
-                      <Box display="flex" alignItems="center" gap={1.5} mb={1.5} flexWrap="wrap">
-                        <Typography variant="subtitle1" fontWeight={700}>
-                          {getDeviceName(sesion.user_agent)} • {getBrowserName(sesion.user_agent)}
-                        </Typography>
-                        {index === 0 && (
-                          <Chip 
-                            label="Sesión Actual" 
-                            size="small"
-                            sx={{
-                              background: isDark
-                                ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                                : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                              color: isDark ? '#000' : '#fff',
-                              fontWeight: 600,
-                              fontSize: '0.75rem',
-                            }}
-                          />
-                        )}
-                      </Box>
-
-                      <Stack spacing={1}>
-                        {sesion.ip_address && (
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <LanguageIcon 
-                              fontSize="small" 
-                              sx={{ color: isDark ? '#facc15' : '#0288d1', fontSize: 18 }} 
-                            />
-                            <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                              {sesion.ip_address}
-                              {sesion.ubicacion && (
-                                <>
-                                  <Box 
-                                    component="span" 
-                                    sx={{ 
-                                      mx: 1, 
-                                      color: isDark ? alpha('#fff', 0.3) : alpha('#000', 0.3) 
-                                    }}
-                                  >
-                                    •
-                                  </Box>
-                                  {sesion.ubicacion}
-                                </>
-                              )}
-                            </Typography>
-                          </Box>
-                        )}
-
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <CalendarTodayIcon 
-                            fontSize="small" 
-                            sx={{ color: isDark ? '#facc15' : '#0288d1', fontSize: 18 }} 
-                          />
-                          <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                            Iniciada {formatFechaRelativa(sesion.created_at)}
-                          </Typography>
-                        </Box>
-
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <CalendarTodayIcon 
-                            fontSize="small" 
-                            sx={{ color: isDark ? '#facc15' : '#0288d1', fontSize: 18 }} 
-                          />
-                          <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                            Expira {formatFechaRelativa(sesion.expires_at)}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    </Box>
-
-                    {/* Botón de cerrar sesión */}
-                    {index !== 0 && (
-                      <Tooltip title="Cerrar sesión">
-                        <IconButton
-                          onClick={() => handleCerrarSesion(sesion.id)}
-                          disabled={actionLoading === sesion.id}
-                          sx={{
-                            color: '#ef4444',
-                            backgroundColor: alpha('#ef4444', 0.1),
-                            border: `1px solid ${alpha('#ef4444', 0.2)}`,
-                            '&:hover': {
-                              backgroundColor: alpha('#ef4444', 0.2),
-                              transform: 'scale(1.1)',
-                            },
-                            transition: 'all 0.2s ease',
-                          }}
-                        >
-                          {actionLoading === sesion.id ? (
-                            <CircularProgress size={24} sx={{ color: '#ef4444' }} />
-                          ) : (
-                            <DeleteIcon />
-                          )}
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                  </Box>
-                </Box>
-              ))}
-            </Stack>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Alert de seguridad */}
-      <Box mt={3}>
-        <Alert 
-          severity="warning"
-          sx={{
+            display: 'flex',
+            gap: 1.5,
+            p: 2,
             borderRadius: 2,
             border: `1px solid ${alpha('#f59e0b', 0.3)}`,
-            backgroundColor: alpha('#f59e0b', 0.1),
-            '& .MuiAlert-icon': {
-              color: '#f59e0b'
-            }
+            bgcolor: alpha('#f59e0b', 0.07),
+            animation: `${fadeUp} 0.4s ease both`,
+            animationDelay: '80ms',
           }}
         >
-          <Typography variant="body2" fontWeight={600} gutterBottom>
-            Nota de seguridad:
-          </Typography>
-          <Typography variant="body2">
-            Si ves alguna sesión que no reconoces, ciérrala inmediatamente y considera cambiar tu contraseña.
-          </Typography>
-        </Alert>
-      </Box>
+          <WarningAmberIcon sx={{ color: '#f59e0b', fontSize: 20, flexShrink: 0, mt: 0.1 }} />
+          <Box>
+            <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: '#f59e0b', mb: 0.3 }}>
+              Nota de seguridad
+            </Typography>
+            <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.5 }}>
+              Si ves una sesión que no reconoces, ciérrala de inmediato y cambia tu contraseña.
+            </Typography>
+          </Box>
+        </Box>
+      </Stack>
 
-      {/* Dialog de confirmación */}
-      <Dialog 
-        open={showDialogCerrarTodas} 
-        onClose={() => setShowDialogCerrarTodas(false)}
+      {/* ── Confirm dialog ── */}
+      <Dialog
+        open={confirmDialog}
+        onClose={() => setConfirmDialog(false)}
         PaperProps={{
-          sx: {
-            borderRadius: 3,
-            border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`,
-          }
+          sx: { borderRadius: 3, border: `1px solid ${border}`, minWidth: 320 },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700 }}>
+        <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem', pb: 1 }}>
           ¿Cerrar todas las sesiones?
         </DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Se cerrarán todas las sesiones activas excepto la actual. Tendrás que iniciar sesión
-            nuevamente en esos dispositivos.
+          <DialogContentText sx={{ fontSize: '0.88rem' }}>
+            Se cerrarán todas las sesiones activas excepto la actual. Tendrás que volver a iniciar
+            sesión en esos dispositivos.
           </DialogContentText>
         </DialogContent>
-        <DialogActions sx={{ p: 2.5, gap: 1 }}>
-          <Button 
-            onClick={() => setShowDialogCerrarTodas(false)}
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 600,
-              px: 3,
-            }}
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            onClick={() => setConfirmDialog(false)}
+            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, px: 2.5 }}
           >
             Cancelar
           </Button>
-          <Button 
-            onClick={handleCerrarTodas} 
-            variant="contained" 
-            autoFocus
+          <Button
+            onClick={handleCerrarTodas}
+            variant="contained"
             sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 600,
-              px: 3,
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-              boxShadow: `0 4px 14px ${alpha('#ef4444', 0.4)}`,
-              '&:hover': {
-                background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-              }
+              borderRadius: 2, textTransform: 'none', fontWeight: 700, px: 2.5,
+              background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+              boxShadow: `0 4px 14px ${alpha('#ef4444', 0.35)}`,
+              '&:hover': { background: 'linear-gradient(135deg, #dc2626, #b91c1c)' },
             }}
           >
-            Cerrar Todas
+            Cerrar todas
           </Button>
         </DialogActions>
       </Dialog>
     </>
+  );
+}
+
+// ─── Session row ──────────────────────────────────────────────────────────────
+function SessionRow({
+  sesion, isCurrent, actionLoading, onClose,
+  accent, accentBg, border, surface,
+}: {
+  sesion: Sesion;
+  isCurrent: boolean;
+  actionLoading: number | null;
+  onClose: (id: number) => void;
+  accent: string; accentBg: string; border: string; surface: string;
+}) {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 2,
+        p: 2,
+        borderRadius: 2,
+        border: `1px solid ${isCurrent ? alpha(accent, 0.3) : border}`,
+        background: isCurrent ? alpha(accent, 0.05) : surface,
+        transition: 'all 0.2s',
+        '&:hover': {
+          background: alpha(accent, 0.06),
+          boxShadow: `0 4px 14px ${alpha(accent, 0.1)}`,
+          transform: 'translateY(-1px)',
+        },
+      }}
+    >
+      {/* Device icon */}
+      <Box
+        sx={{
+          width: 46, height: 46, borderRadius: 2, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: `linear-gradient(135deg, ${accent}, ${alpha(accent, 0.7)})`,
+          color: '#fff',
+        }}
+      >
+        {getDeviceIcon(sesion.user_agent)}
+      </Box>
+
+      {/* Info */}
+      <Box flex={1} minWidth={0}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 0.8 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.88rem' }}>
+            {getDeviceName(sesion.user_agent)} · {getBrowserName(sesion.user_agent)}
+          </Typography>
+          {isCurrent && (
+            <Chip
+              label="Sesión actual"
+              size="small"
+              sx={{
+                background: `linear-gradient(135deg, ${accent}, ${alpha(accent, 0.7)})`,
+                color: accent === '#facc15' ? '#000' : '#fff',
+                fontWeight: 700,
+                fontSize: '0.7rem',
+                height: 20,
+              }}
+            />
+          )}
+        </Box>
+
+        <Stack spacing={0.6}>
+          {sesion.ip_address && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+              <LanguageIcon sx={{ fontSize: 15, color: accent }} />
+              <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>
+                {sesion.ip_address}
+                {sesion.ubicacion && ` · ${sesion.ubicacion}`}
+              </Typography>
+            </Box>
+          )}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+            <CalendarTodayIcon sx={{ fontSize: 15, color: accent }} />
+            <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>
+              Iniciada {formatRelative(sesion.created_at)}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+            <CalendarTodayIcon sx={{ fontSize: 15, color: 'text.disabled' }} />
+            <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>
+              Expira {formatRelative(sesion.expires_at)}
+            </Typography>
+          </Box>
+        </Stack>
+      </Box>
+
+      {/* Close button */}
+      {!isCurrent && (
+        <Tooltip title="Cerrar sesión">
+          <IconButton
+            onClick={() => onClose(sesion.id)}
+            disabled={actionLoading === sesion.id}
+            size="small"
+            sx={{
+              color: '#ef4444',
+              bgcolor: alpha('#ef4444', 0.08),
+              border: `1px solid ${alpha('#ef4444', 0.2)}`,
+              flexShrink: 0,
+              '&:hover': {
+                bgcolor: alpha('#ef4444', 0.18),
+                transform: 'scale(1.1)',
+              },
+              transition: 'all 0.2s',
+            }}
+          >
+            {actionLoading === sesion.id
+              ? <CircularProgress size={20} sx={{ color: '#ef4444' }} />
+              : <DeleteIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+      )}
+    </Box>
   );
 }

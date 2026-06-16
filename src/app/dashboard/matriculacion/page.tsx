@@ -118,13 +118,13 @@ export const Matriculacion: React.FC = () => {
         {/* Header */}
         <Fade in timeout={500}>
           <Box sx={{ mb: 4 }}>
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
               alignItems: { xs: 'flex-start', md: 'center' },
               flexDirection: { xs: 'column', md: 'row' },
               gap: 2,
-              mb: 3 
+              mb: 3
             }}>
               {/* IZQUIERDA: TÍTULO */}
               <Box>
@@ -156,8 +156,8 @@ export const Matriculacion: React.FC = () => {
                     Matriculación de Estudiantes
                   </Typography>
                 </Box>
-                <Typography 
-                  variant="body1" 
+                <Typography
+                  variant="body1"
                   color="text.secondary"
                   sx={{
                     fontWeight: 500,
@@ -224,10 +224,10 @@ export const Matriculacion: React.FC = () => {
 
             {/* Alerta si no hay periodo seleccionado */}
             {!periodoSeleccionado && !isLoadingPeriodos && (
-              <Alert 
-                severity="info" 
-                sx={{ 
-                  mb: 3, 
+              <Alert
+                severity="info"
+                sx={{
+                  mb: 3,
                   borderRadius: 2,
                   backgroundColor: isDark ? alpha('#facc15', 0.1) : alpha('#0288d1', 0.1),
                   color: isDark ? '#facc15' : '#0288d1',
@@ -242,9 +242,9 @@ export const Matriculacion: React.FC = () => {
 
             {/* Tabs con Slider en Mobile y Toggle */}
             {periodoSeleccionado && (
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
                 gap: 2,
                 flexWrap: { xs: 'wrap', md: 'nowrap' }

@@ -4,7 +4,7 @@
 import React, { useCallback } from 'react';
 import {
   Box, Container, Typography, Fade, Chip, Skeleton,
-  useTheme, alpha, IconButton, Tooltip,
+  useTheme, alpha, IconButton, Tooltip, Avatar,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 import SchoolIcon from '@mui/icons-material/School';
@@ -14,6 +14,7 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import BoletinNotas from '@/components/padre/notas/BoletinNotas';
 import { useHijosDelPadre } from '@/hooks/usePadreAsistencia';
 import { usePeriodosEvaluacion, useBoletinNotas } from '@/hooks/usePadreNotas';
+import type { HijoInfo } from '@/types/padreAsistenciaTypes';
 
 const fadeSlideUp = keyframes`
   from { opacity: 0; transform: translateY(20px); }
@@ -26,9 +27,77 @@ const shimmer = keyframes`
 `;
 
 // ──────────────────────────────────────────────
+// SELECTOR DE HIJO
+// ──────────────────────────────────────────────
+const SelectorHijo: React.FC<{
+  hijos: HijoInfo[];
+  hijoActivo: HijoInfo | null;
+  onChange: (h: HijoInfo) => void;
+  isLoading: boolean;
+}> = ({ hijos, hijoActivo, onChange, isLoading }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
+  if (isLoading) return (
+    <Box sx={{ display: 'flex', gap: 1 }}>
+      {[1, 2].map(i => (
+        <Skeleton key={i} variant="rounded" width={150} height={38} sx={{ borderRadius: 2.5 }} />
+      ))}
+    </Box>
+  );
+
+  if (hijos.length <= 1) return null;
+
+  return (
+    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+      {hijos.map(hijo => {
+        const activo = hijo.estudiante_id === hijoActivo?.estudiante_id;
+        const iniciales = `${hijo.nombres?.charAt(0) ?? ''}${hijo.apellidos?.charAt(0) ?? ''}`.toUpperCase();
+        return (
+          <Box
+            key={hijo.estudiante_id}
+            onClick={() => onChange(hijo)}
+            sx={{
+              display: 'flex', alignItems: 'center', gap: 1,
+              px: 1.5, py: 0.75, borderRadius: 2.5, cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              border: `2px solid ${activo ? '#3b82f6' : alpha(isDark ? '#fff' : '#000', 0.1)}`,
+              bgcolor: activo
+                ? alpha('#3b82f6', isDark ? 0.15 : 0.08)
+                : alpha(isDark ? '#fff' : '#000', 0.04),
+              '&:hover': {
+                borderColor: '#3b82f6',
+                bgcolor: alpha('#3b82f6', isDark ? 0.12 : 0.06),
+              },
+            }}
+          >
+            <Avatar sx={{
+              width: 26, height: 26, fontSize: '0.65rem', fontWeight: 800,
+              bgcolor: activo ? '#3b82f6' : alpha('#3b82f6', 0.2),
+              color: activo ? '#fff' : '#3b82f6',
+            }}>
+              {iniciales}
+            </Avatar>
+            <Box>
+              <Typography variant="caption" fontWeight={700} sx={{ color: activo ? '#3b82f6' : 'text.primary', display: 'block', lineHeight: 1.2 }}>
+                {hijo.nombres.split(' ')[0]} {hijo.apellidos.split(' ')[0]}
+              </Typography>
+              {hijo.grado_nombre && (
+                <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1 }}>
+                  {hijo.grado_nombre}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+};
+
+// ──────────────────────────────────────────────
 // SELECTOR DE TRIMESTRE
 // ──────────────────────────────────────────────
-
 const SelectorTrimestre: React.FC<{
   periodos: any[];
   periodoActivo: any;
@@ -52,9 +121,7 @@ const SelectorTrimestre: React.FC<{
         const activo = p.id === periodoActivo?.id;
         return (
           <Chip
-            key={p.id}
-            label={p.nombre}
-            onClick={() => onChange(p)}
+            key={p.id} label={p.nombre} onClick={() => onChange(p)}
             sx={{
               height: 34, fontWeight: 700, fontSize: 13, borderRadius: 2.5, cursor: 'pointer',
               transition: 'all 0.2s ease',
@@ -72,12 +139,12 @@ const SelectorTrimestre: React.FC<{
 // ──────────────────────────────────────────────
 // PÁGINA
 // ──────────────────────────────────────────────
-
 export default function PadreNotasPage() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
-  const { hijoActivo, isLoading: loadingHijo } = useHijosDelPadre();
+  // ✅ Destructurar hijos y setHijoActivo
+  const { hijos, hijoActivo, setHijoActivo, isLoading: loadingHijo } = useHijosDelPadre();
 
   const { periodos, periodoActivo, setPeriodoActivo, isLoading: loadingPeriodos } =
     usePeriodosEvaluacion(hijoActivo);
@@ -90,6 +157,12 @@ export default function PadreNotasPage() {
     hijoActivo?.matricula_id ?? null,
     periodoActivo?.id ?? null
   );
+
+  // ✅ Al cambiar hijo, el boletín se recarga automáticamente
+  // porque useBoletinNotas depende de hijoActivo?.matricula_id
+  const handleCambioHijo = useCallback((hijo: HijoInfo) => {
+    setHijoActivo(hijo);
+  }, [setHijoActivo]);
 
   const handleCambioPeriodo = useCallback((p: any) => {
     setPeriodoActivo(p);
@@ -154,6 +227,21 @@ export default function PadreNotasPage() {
                   </Tooltip>
                 </Box>
               </Box>
+
+              {/* ✅ Selector de hijo — solo si hay más de uno */}
+              {hijos.length > 1 && (
+                <Box sx={{ mt: 2.5, pt: 2.5, borderTop: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`, position: 'relative', zIndex: 1 }}>
+                  <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Estudiante
+                  </Typography>
+                  <SelectorHijo
+                    hijos={hijos}
+                    hijoActivo={hijoActivo}
+                    onChange={handleCambioHijo}
+                    isLoading={loadingHijo}
+                  />
+                </Box>
+              )}
 
               {/* Selector de trimestre */}
               <Box sx={{ mt: 2.5, pt: 2.5, borderTop: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`, position: 'relative', zIndex: 1 }}>

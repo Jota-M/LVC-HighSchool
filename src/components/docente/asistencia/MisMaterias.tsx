@@ -1,20 +1,10 @@
 'use client';
 // components/docente/asistencia/MisMaterias.tsx
-// ✨ PREMIUM VERSION - Diseño glassmorphism con animaciones fluidas
 
 import React from 'react';
 import {
-  Box,
-  Card,
-  CardActionArea,
-  CardContent,
-  Typography,
-  Chip,
-  Grid,
-  Skeleton,
-  useTheme,
-  alpha,
-  Stack,
+  Box, Typography, Chip, Grid, Skeleton,
+  useTheme, alpha, Stack,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
@@ -24,10 +14,9 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import SchoolIcon from '@mui/icons-material/School';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
-// ──────────────────────────────────────────────
-// TIPOS
-// ──────────────────────────────────────────────
+// ── tipos ─────────────────────────────────────────────────────────────────────
 
 export interface MateriaDocente {
   asignacion_id: number;
@@ -52,117 +41,62 @@ interface Props {
   fecha: string;
 }
 
-// ──────────────────────────────────────────────
-// ANIMACIONES PREMIUM
-// ──────────────────────────────────────────────
+// ── animaciones ───────────────────────────────────────────────────────────────
 
-const float = keyframes`
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
+const fadeUp = keyframes`
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 `;
 
-const slideUp = keyframes`
-  from { 
-    opacity: 0; 
-    transform: translateY(30px) scale(0.95);
-  }
-  to { 
-    opacity: 1; 
-    transform: translateY(0) scale(1);
-  }
-`;
+// ── paleta (misma que antes) ──────────────────────────────────────────────────
 
-const shimmer = keyframes`
-  0% { background-position: -1000px 0; }
-  100% { background-position: 1000px 0; }
-`;
-
-const pulse = keyframes`
-  0%, 100% { 
-    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
-  }
-  50% { 
-    box-shadow: 0 0 0 15px rgba(251, 191, 36, 0);
-  }
-`;
-
-const rotateGradient = keyframes`
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-`;
-
-// ──────────────────────────────────────────────
-// PALETA DE COLORES PREMIUM
-// ──────────────────────────────────────────────
 const COLORES_PREMIUM = {
   light: [
-    { primary: '#3b82f6', secondary: '#60a5fa', bg: '#eff6ff' },
-    { primary: '#8b5cf6', secondary: '#a78bfa', bg: '#f5f3ff' },
-    { primary: '#ec4899', secondary: '#f472b6', bg: '#fdf2f8' },
-    { primary: '#10b981', secondary: '#34d399', bg: '#ecfdf5' },
-    { primary: '#f59e0b', secondary: '#fbbf24', bg: '#fffbeb' },
-    { primary: '#06b6d4', secondary: '#22d3ee', bg: '#ecfeff' },
-    { primary: '#ef4444', secondary: '#f87171', bg: '#fef2f2' },
-    { primary: '#6366f1', secondary: '#818cf8', bg: '#eef2ff' },
+    { primary: '#3b82f6', secondary: '#60a5fa' },
+    { primary: '#8b5cf6', secondary: '#a78bfa' },
+    { primary: '#ec4899', secondary: '#f472b6' },
+    { primary: '#10b981', secondary: '#34d399' },
+    { primary: '#f59e0b', secondary: '#fbbf24' },
+    { primary: '#06b6d4', secondary: '#22d3ee' },
+    { primary: '#ef4444', secondary: '#f87171' },
+    { primary: '#6366f1', secondary: '#818cf8' },
   ],
   dark: [
-    { primary: '#60a5fa', secondary: '#93c5fd', bg: '#1e3a8a' },
-    { primary: '#a78bfa', secondary: '#c4b5fd', bg: '#4c1d95' },
-    { primary: '#f472b6', secondary: '#f9a8d4', bg: '#831843' },
-    { primary: '#34d399', secondary: '#6ee7b7', bg: '#065f46' },
-    { primary: '#fbbf24', secondary: '#fcd34d', bg: '#78350f' },
-    { primary: '#22d3ee', secondary: '#67e8f9', bg: '#164e63' },
-    { primary: '#f87171', secondary: '#fca5a5', bg: '#7f1d1d' },
-    { primary: '#818cf8', secondary: '#a5b4fc', bg: '#3730a3' },
+    { primary: '#60a5fa', secondary: '#93c5fd' },
+    { primary: '#a78bfa', secondary: '#c4b5fd' },
+    { primary: '#f472b6', secondary: '#f9a8d4' },
+    { primary: '#34d399', secondary: '#6ee7b7' },
+    { primary: '#fbbf24', secondary: '#fcd34d' },
+    { primary: '#22d3ee', secondary: '#67e8f9' },
+    { primary: '#f87171', secondary: '#fca5a5' },
+    { primary: '#818cf8', secondary: '#a5b4fc' },
   ],
 };
 
-const getColorScheme = (materia: MateriaDocente, index: number, isDark: boolean) => {
+const getColorScheme = (index: number, isDark: boolean) => {
   const palette = isDark ? COLORES_PREMIUM.dark : COLORES_PREMIUM.light;
   return palette[index % palette.length];
 };
 
-// ──────────────────────────────────────────────
-// SKELETON PREMIUM
-// ──────────────────────────────────────────────
-const MateriaCardSkeleton = () => {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  
-  return (
-    <Card 
-      sx={{ 
-        borderRadius: 4,
-        overflow: 'hidden',
-        background: isDark 
-          ? 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-          : 'linear-gradient(145deg, #ffffff 0%, #f9fafb 100%)',
-        backdropFilter: 'blur(10px)',
-        border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.05)}`,
-      }}
-    >
-      <CardContent sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-          <Skeleton variant="rounded" width={56} height={56} sx={{ borderRadius: 2.5 }} />
-          <Box sx={{ flex: 1 }}>
-            <Skeleton variant="text" width="70%" height={28} sx={{ mb: 1 }} />
-            <Skeleton variant="text" width="40%" height={20} />
-          </Box>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Skeleton variant="rounded" width={80} height={28} sx={{ borderRadius: 2 }} />
-          <Skeleton variant="rounded" width={90} height={28} sx={{ borderRadius: 2 }} />
-          <Skeleton variant="rounded" width={70} height={28} sx={{ borderRadius: 2 }} />
-        </Box>
-      </CardContent>
-    </Card>
-  );
-};
+// iniciales de la materia (hasta 2 chars)
+const getIniciales = (nombre: string) =>
+  nombre
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0].toUpperCase())
+    .join('');
 
-// ──────────────────────────────────────────────
-// CARD PREMIUM INDIVIDUAL
-// ──────────────────────────────────────────────
+// ── skeleton ──────────────────────────────────────────────────────────────────
+
+const MateriaCardSkeleton = () => (
+  <Box sx={{ borderRadius: '16px', overflow: 'hidden' }}>
+    <Skeleton variant="rounded" height={180} sx={{ borderRadius: '16px' }} />
+  </Box>
+);
+
+// ── card individual ───────────────────────────────────────────────────────────
+
 const MateriaCardPremium: React.FC<{
   materia: MateriaDocente;
   index: number;
@@ -171,350 +105,184 @@ const MateriaCardPremium: React.FC<{
 }> = ({ materia, index, isSelected, onClick }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const colorScheme = getColorScheme(materia, index, isDark);
+  const cs = getColorScheme(index, isDark);
+  const iniciales = getIniciales(materia.materia_nombre);
+
+  const borderColor = isDark ? alpha('#fff', 0.07) : alpha('#000', 0.07);
+  const bgCard = isDark ? alpha('#fff', 0.02) : '#fff';
+  const bgStat = isDark ? alpha('#fff', 0.04) : alpha('#f8f9fa', 0.9);
 
   return (
-    <Card
+    <Box
+      onClick={onClick}
       sx={{
-        borderRadius: 4,
-        animation: `${slideUp} 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.1}s both`,
-        position: 'relative',
-        overflow: 'hidden',
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        borderRadius: '16px',
+        border: isSelected
+          ? `2px solid ${cs.primary}`
+          : `1.5px solid ${borderColor}`,
+        bgcolor: bgCard,
         cursor: 'pointer',
-        
-        // Glassmorphism effect
-        background: isSelected
-          ? isDark
-            ? `linear-gradient(145deg, ${alpha(colorScheme.primary, 0.2)} 0%, ${alpha(colorScheme.secondary, 0.1)} 100%)`
-            : `linear-gradient(145deg, ${colorScheme.bg} 0%, ${alpha(colorScheme.primary, 0.05)} 100%)`
-          : isDark
-            ? 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-            : 'linear-gradient(145deg, #ffffff 0%, #f9fafb 100%)',
-        
-        backdropFilter: 'blur(20px)',
-        border: isSelected 
-          ? `2px solid ${colorScheme.primary}`
-          : `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.05)}`,
-        
+        overflow: 'hidden',
         boxShadow: isSelected
-          ? `0 20px 60px ${alpha(colorScheme.primary, 0.3)}, 0 0 0 4px ${alpha(colorScheme.primary, 0.1)}`
-          : isDark
-            ? '0 4px 20px rgba(0,0,0,0.3)'
-            : '0 4px 20px rgba(0,0,0,0.08)',
-        
+          ? `0 4px 20px ${alpha(cs.primary, 0.22)}`
+          : isDark ? 'none' : '0 1px 8px rgba(0,0,0,0.05)',
+        transition: 'transform 0.18s, box-shadow 0.18s, border-color 0.18s',
+        animation: `${fadeUp} 0.35s ease-out ${index * 0.07}s both`,
         '&:hover': {
-          transform: 'translateY(-8px) scale(1.02)',
-          boxShadow: `0 25px 70px ${alpha(colorScheme.primary, 0.25)}`,
-          border: `2px solid ${colorScheme.primary}`,
-          
-          '& .hover-icon': {
-            transform: 'scale(1.1) rotate(5deg)',
-          },
-          
-          '& .shimmer-effect': {
-            animation: `${shimmer} 2s linear infinite`,
-          },
+          transform: 'translateY(-3px)',
+          borderColor: alpha(cs.primary, 0.55),
+          boxShadow: isDark
+            ? `0 4px 20px ${alpha(cs.primary, 0.15)}`
+            : `0 6px 24px ${alpha(cs.primary, 0.18)}`,
         },
-
+        // borde superior de color
         '&::before': {
           content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '4px',
-          background: `linear-gradient(90deg, ${colorScheme.primary}, ${colorScheme.secondary})`,
-          opacity: isSelected ? 1 : 0,
-          transition: 'opacity 0.3s ease',
+          display: 'block',
+          height: '3px',
+          background: `linear-gradient(90deg, ${cs.primary}, ${cs.secondary})`,
+          borderRadius: '16px 16px 0 0',
+          marginTop: '-1.5px',
         },
-
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          top: -2,
-          left: -2,
-          right: -2,
-          bottom: -2,
-          background: `linear-gradient(45deg, ${colorScheme.primary}, ${colorScheme.secondary})`,
-          borderRadius: 4,
-          opacity: 0,
-          zIndex: -1,
-          transition: 'opacity 0.3s ease',
-          filter: 'blur(20px)',
-        },
-
-        ...(isSelected && {
-          '&::after': {
-            opacity: 0.3,
-          },
-        }),
       }}
     >
-      {/* Shimmer overlay */}
-      <Box
-        className="shimmer-effect"
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: `linear-gradient(90deg, transparent, ${alpha('#fff', isDark ? 0.05 : 0.3)}, transparent)`,
-          backgroundSize: '1000px 100%',
-          pointerEvents: 'none',
-        }}
-      />
+      {/* ── cabecera: avatar + nombre + chevron ── */}
+      <Box sx={{ px: 2.5, pt: 2, pb: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        {/* Avatar cuadrado con iniciales */}
+        <Box sx={{
+          width: 46, height: 46, borderRadius: '12px', flexShrink: 0,
+          background: `linear-gradient(135deg, ${cs.primary}, ${cs.secondary})`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: `0 4px 12px ${alpha(cs.primary, 0.35)}`,
+        }}>
+          <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.9rem', letterSpacing: 0.5 }}>
+            {iniciales}
+          </Typography>
+        </Box>
 
-      <CardActionArea onClick={onClick} sx={{ height: '100%' }}>
-        <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          {/* Header con icono y estado */}
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2.5 }}>
-            <Box
-              className="hover-icon"
-              sx={{
-                width: 56,
-                height: 56,
-                borderRadius: 2.5,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: `linear-gradient(135deg, ${colorScheme.primary}, ${colorScheme.secondary})`,
-                boxShadow: `0 8px 24px ${alpha(colorScheme.primary, 0.4)}`,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                position: 'relative',
-                overflow: 'hidden',
-                
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: '-50%',
-                  left: '-50%',
-                  width: '200%',
-                  height: '200%',
-                  background: `radial-gradient(circle, ${alpha('#fff', 0.3)} 0%, transparent 70%)`,
-                  animation: materia.lista_pasada_hoy ? 'none' : `${rotateGradient} 3s linear infinite`,
-                },
-              }}
-            >
-              <MenuBookIcon sx={{ fontSize: 28, color: '#fff', zIndex: 1 }} />
-            </Box>
-
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              {materia.lista_pasada_hoy ? (
-                <Chip
-                  icon={<CheckCircleIcon />}
-                  label="Lista pasada"
-                  size="small"
-                  sx={{
-                    bgcolor: alpha('#10b981', 0.15),
-                    color: '#10b981',
-                    fontWeight: 800,
-                    fontSize: 11,
-                    height: 26,
-                    borderRadius: 2,
-                    border: `1px solid ${alpha('#10b981', 0.3)}`,
-                    '& .MuiChip-icon': { 
-                      fontSize: 16,
-                      color: '#10b981',
-                    },
-                  }}
-                />
-              ) : (
-                <Chip
-                  icon={<RadioButtonUncheckedIcon />}
-                  label="Pendiente"
-                  size="small"
-                  sx={{
-                    bgcolor: alpha('#fbbf24', 0.15),
-                    color: '#fbbf24',
-                    fontWeight: 800,
-                    fontSize: 11,
-                    height: 26,
-                    borderRadius: 2,
-                    border: `1px solid ${alpha('#fbbf24', 0.3)}`,
-                    animation: `${pulse} 2s ease-in-out infinite`,
-                    '& .MuiChip-icon': { 
-                      fontSize: 16,
-                      color: '#fbbf24',
-                    },
-                  }}
-                />
-              )}
-            </Box>
-          </Box>
-
-          {/* Nombre de la materia */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography
-            variant="h6"
+            variant="body1"
             fontWeight={800}
             sx={{
-              background: isSelected
-                ? `linear-gradient(135deg, ${colorScheme.primary}, ${colorScheme.secondary})`
-                : isDark ? '#fff' : '#1f2937',
-              WebkitBackgroundClip: isSelected ? 'text' : 'unset',
-              WebkitTextFillColor: isSelected ? 'transparent' : 'unset',
-              color: isSelected ? 'transparent' : isDark ? '#fff' : '#1f2937',
-              mb: 0.5,
-              lineHeight: 1.3,
-              letterSpacing: -0.5,
+              lineHeight: 1.2,
+              color: isSelected ? cs.primary : 'text.primary',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}
           >
             {materia.materia_nombre}
           </Typography>
-
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              color: 'text.secondary',
-              fontWeight: 600,
-              mb: 2.5,
-              display: 'block',
-            }}
-          >
-            {materia.materia_codigo}
+          <Typography variant="caption" color="text.secondary" fontWeight={500}>
+            {materia.grado_nombre} "{materia.paralelo_nombre}" · {materia.turno_nombre}
           </Typography>
+        </Box>
 
-          {/* Info chips con iconos mejorados */}
-          <Stack spacing={1} sx={{ mt: 'auto' }}>
-            <Chip
-              icon={<SchoolIcon sx={{ fontSize: '16px !important' }} />}
-              label={`${materia.grado_nombre} "${materia.paralelo_nombre}"`}
-              size="small"
-              sx={{
-                fontSize: 12,
-                fontWeight: 600,
-                bgcolor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.04),
-                borderRadius: 2,
-                height: 32,
-                '& .MuiChip-icon': {
-                  color: colorScheme.primary,
-                },
-              }}
-            />
-            
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Chip
-                icon={<AccessTimeIcon sx={{ fontSize: '14px !important' }} />}
-                label={materia.turno_nombre}
-                size="small"
-                sx={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.03),
-                  borderRadius: 1.5,
-                  height: 28,
-                  '& .MuiChip-icon': {
-                    color: colorScheme.secondary,
-                  },
-                }}
-              />
-              
-              <Chip
-                icon={<GroupsIcon sx={{ fontSize: '14px !important' }} />}
-                label={`${materia.total_estudiantes}`}
-                size="small"
-                sx={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.03),
-                  borderRadius: 1.5,
-                  height: 28,
-                  '& .MuiChip-icon': {
-                    color: colorScheme.secondary,
-                  },
-                }}
-              />
-            </Box>
-          </Stack>
+        <ChevronRightIcon sx={{ fontSize: 18, color: alpha(cs.primary, 0.6), flexShrink: 0 }} />
+      </Box>
 
-          {materia.hora_ultimo_registro && (
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                mt: 2,
-                pt: 2,
-                borderTop: `1px solid ${isDark ? alpha('#fff', 0.05) : alpha('#000', 0.05)}`,
-                color: 'text.disabled',
-                display: 'block',
-              }}
-            >
-              ⏱ {materia.hora_ultimo_registro}
+      {/* ── stats en cajitas ── */}
+      <Box sx={{ px: 2.5, pb: 1.5, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+        <Box sx={{ bgcolor: bgStat, borderRadius: '10px', p: 1.2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.3 }}>
+            <GroupsIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
+              Estudiantes
             </Typography>
-          )}
-        </CardContent>
-      </CardActionArea>
-    </Card>
+          </Box>
+          <Typography variant="body2" fontWeight={800}>{materia.total_estudiantes}</Typography>
+        </Box>
+
+        <Box sx={{ bgcolor: bgStat, borderRadius: '10px', p: 1.2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.3 }}>
+            <AccessTimeIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
+              Código
+            </Typography>
+          </Box>
+          <Typography variant="body2" fontWeight={800}>{materia.materia_codigo}</Typography>
+        </Box>
+      </Box>
+
+      {/* ── footer: estado ── */}
+      <Box sx={{
+        px: 2.5, py: 1.25,
+        borderTop: `1px solid ${isDark ? alpha('#fff', 0.05) : alpha('#000', 0.05)}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.68rem' }}>
+          {materia.hora_ultimo_registro ? `⏱ ${materia.hora_ultimo_registro}` : materia.turno_hora_inicio
+            ? `${materia.turno_hora_inicio} – ${materia.turno_hora_fin}`
+            : ''}
+        </Typography>
+
+        {materia.lista_pasada_hoy ? (
+          <Chip
+            icon={<CheckCircleIcon sx={{ fontSize: '12px !important', color: '#10b981 !important' }} />}
+            label="Lista pasada"
+            size="small"
+            sx={{
+              height: 22, fontSize: '0.62rem', fontWeight: 700,
+              bgcolor: alpha('#10b981', 0.1), color: '#10b981',
+              border: `1px solid ${alpha('#10b981', 0.25)}`,
+            }}
+          />
+        ) : (
+          <Chip
+            icon={<RadioButtonUncheckedIcon sx={{ fontSize: '12px !important', color: '#f59e0b !important' }} />}
+            label="Pendiente"
+            size="small"
+            sx={{
+              height: 22, fontSize: '0.62rem', fontWeight: 700,
+              bgcolor: alpha('#f59e0b', 0.1), color: '#f59e0b',
+              border: `1px solid ${alpha('#f59e0b', 0.25)}`,
+            }}
+          />
+        )}
+      </Box>
+    </Box>
   );
 };
 
-// ──────────────────────────────────────────────
-// COMPONENTE PRINCIPAL
-// ──────────────────────────────────────────────
+// ── componente principal (header sin cambios) ─────────────────────────────────
+
 const MisMaterias: React.FC<Props> = ({
-  materias,
-  isLoading = false,
-  seleccionada,
-  onSeleccionar,
-  fecha,
+  materias, isLoading = false, seleccionada, onSeleccionar, fecha,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+
+  const brand = isDark ? '#facc15' : '#0288d1';
+  const brandEnd = isDark ? '#f59e0b' : '#01579b';
+  const gradBg = `linear-gradient(135deg, ${brand} 0%, ${brandEnd} 100%)`;
 
   const pendientes = materias.filter(m => !m.lista_pasada_hoy).length;
   const completadas = materias.filter(m => m.lista_pasada_hoy).length;
 
   return (
     <Box>
-      {/* Header premium con estadísticas */}
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          mb: 3,
-          p: 3,
-          borderRadius: 4,
-          background: isDark
-            ? 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)'
-            : 'linear-gradient(145deg, #ffffff 0%, #f9fafb 100%)',
-          backdropFilter: 'blur(20px)',
-          border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.05)}`,
-          boxShadow: isDark
-            ? '0 4px 20px rgba(0,0,0,0.3)'
-            : '0 4px 20px rgba(0,0,0,0.05)',
-        }}
-      >
+      {/* Header */}
+      <Box sx={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        mb: 3, p: 3, borderRadius: '16px',
+        bgcolor: isDark ? alpha('#fff', 0.02) : '#fff',
+        border: `1.5px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.07)}`,
+        boxShadow: isDark ? 'none' : '0 1px 8px rgba(0,0,0,0.05)',
+      }}>
         <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-            <Typography 
-              variant="h5" 
-              fontWeight={900}
-              sx={{
-                background: isDark
-                  ? 'linear-gradient(135deg, #fbbf24, #f59e0b)'
-                  : 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                letterSpacing: -0.5,
-              }}
-            >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.4 }}>
+            <Typography variant="h6" fontWeight={800} sx={{
+              background: gradBg,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
               Mis Materias
             </Typography>
             {!isLoading && materias.length > 0 && (
-              <Chip 
-                label={materias.length}
-                size="small"
-                sx={{
-                  bgcolor: isDark ? alpha('#fbbf24', 0.2) : alpha('#3b82f6', 0.15),
-                  color: isDark ? '#fbbf24' : '#3b82f6',
-                  fontWeight: 800,
-                  fontSize: 12,
-                  height: 24,
-                  minWidth: 24,
-                  '& .MuiChip-label': { px: 1 },
-                }}
-              />
+              <Chip label={materias.length} size="small" sx={{
+                bgcolor: alpha(brand, 0.12), color: brand,
+                fontWeight: 800, fontSize: 12, height: 22,
+                '& .MuiChip-label': { px: 1 },
+              }} />
             )}
           </Box>
           <Typography variant="body2" color="text.secondary" fontWeight={500}>
@@ -524,99 +292,63 @@ const MisMaterias: React.FC<Props> = ({
 
         {!isLoading && materias.length > 0 && (
           <Box sx={{ display: 'flex', gap: 1.5 }}>
-            <Box
-              sx={{
-                px: 2,
-                py: 1,
-                borderRadius: 2.5,
-                bgcolor: alpha('#10b981', 0.1),
-                border: `1px solid ${alpha('#10b981', 0.2)}`,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-              }}
-            >
-              <CheckCircleIcon sx={{ fontSize: 18, color: '#10b981' }} />
-              <Typography variant="body2" fontWeight={700} color="#10b981">
-                {completadas}
-              </Typography>
+            <Box sx={{
+              px: 2, py: 1, borderRadius: '10px',
+              bgcolor: alpha('#10b981', 0.08),
+              border: `1px solid ${alpha('#10b981', 0.2)}`,
+              display: 'flex', alignItems: 'center', gap: 1,
+            }}>
+              <CheckCircleIcon sx={{ fontSize: 16, color: '#10b981' }} />
+              <Typography variant="body2" fontWeight={700} color="#10b981">{completadas}</Typography>
             </Box>
-            
-            <Box
-              sx={{
-                px: 2,
-                py: 1,
-                borderRadius: 2.5,
-                bgcolor: alpha('#fbbf24', 0.1),
-                border: `1px solid ${alpha('#fbbf24', 0.2)}`,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-              }}
-            >
-              <TrendingUpIcon sx={{ fontSize: 18, color: '#fbbf24' }} />
-              <Typography variant="body2" fontWeight={700} color="#fbbf24">
-                {pendientes}
-              </Typography>
+            <Box sx={{
+              px: 2, py: 1, borderRadius: '10px',
+              bgcolor: alpha('#f59e0b', 0.08),
+              border: `1px solid ${alpha('#f59e0b', 0.2)}`,
+              display: 'flex', alignItems: 'center', gap: 1,
+            }}>
+              <TrendingUpIcon sx={{ fontSize: 16, color: '#f59e0b' }} />
+              <Typography variant="body2" fontWeight={700} color="#f59e0b">{pendientes}</Typography>
             </Box>
           </Box>
         )}
       </Box>
 
-      {/* Grid de materias */}
-      <Grid container spacing={3}>
+      {/* Grid */}
+      <Grid container spacing={2}>
         {isLoading
           ? Array.from({ length: 4 }).map((_, i) => (
-              <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={i}>
-                <MateriaCardSkeleton />
-              </Grid>
-            ))
-          : materias.length === 0
-          ? (
-            <Grid size={{ xs: 12 }}>
-              <Box
-                sx={{
-                  textAlign: 'center',
-                  py: 8,
-                  borderRadius: 4,
-                  background: isDark
-                    ? 'linear-gradient(145deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%)'
-                    : 'linear-gradient(145deg, #fafafa 0%, #f3f4f6 100%)',
-                  border: `2px dashed ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.1)}`,
-                }}
-              >
-                <MenuBookIcon 
-                  sx={{ 
-                    fontSize: 64, 
-                    color: 'text.disabled',
-                    mb: 2,
-                    opacity: 0.5,
-                  }} 
-                />
-                <Typography 
-                  variant="h6" 
-                  color="text.secondary" 
-                  fontWeight={700}
-                  sx={{ mb: 1 }}
-                >
-                  Sin materias asignadas
-                </Typography>
-                <Typography variant="body2" color="text.disabled">
-                  No tenés materias asignadas para este período académico
-                </Typography>
-              </Box>
-            </Grid>
-          )
-          : materias.map((m, i) => (
-            <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={m.asignacion_id}>
-              <MateriaCardPremium
-                materia={m}
-                index={i}
-                isSelected={seleccionada === m.asignacion_id}
-                onClick={() => onSeleccionar(m.asignacion_id)}
-              />
+            <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={i}>
+              <MateriaCardSkeleton />
             </Grid>
           ))
+          : materias.length === 0
+            ? (
+              <Grid size={{ xs: 12 }}>
+                <Box sx={{
+                  textAlign: 'center', py: 8, borderRadius: '16px',
+                  border: `2px dashed ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.1)}`,
+                }}>
+                  <MenuBookIcon sx={{ fontSize: 56, color: 'text.disabled', mb: 2, opacity: 0.5 }} />
+                  <Typography variant="h6" color="text.secondary" fontWeight={700} sx={{ mb: 0.5 }}>
+                    Sin materias asignadas
+                  </Typography>
+                  <Typography variant="body2" color="text.disabled">
+                    No tenés materias asignadas para este período académico
+                  </Typography>
+                </Box>
+              </Grid>
+            )
+            : materias.map((m, i) => (
+              <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={m.asignacion_id}>
+                <MateriaCardPremium
+                  materia={m}
+                  index={i}
+                  isSelected={seleccionada === m.asignacion_id}
+                  onClick={() => onSeleccionar(m.asignacion_id)}
+                />
+              </Grid>
+            ))
         }
       </Grid>
     </Box>

@@ -10,6 +10,7 @@ import type {
   EstadoQRResponse,
   QRMultipleData,
   EstadoQRMultipleResponse,
+  QRFamiliarData,
 } from '@/types/padrePagosTypes';
 
 
@@ -92,4 +93,16 @@ export const cancelarQRMensualidad = async (
   mensualidadId: number
 ): Promise<void> => {
   await api.delete(`/padre-p/mensualidad/${mensualidadId}/cancelar-qr`);
+};
+// =============================================
+// 6. GENERAR QR PARA MENSUALIDADES DE UN HIJO (FAMILIAR)
+// POST /api/padre/mensualidades/generar-qr-familiar
+// =============================================
+export const generarQRFamiliar = async (
+  mensualidadIds: number[]
+): Promise<QRFamiliarData> => {
+  const res = await api.post('/padre-p/mensualidades/generar-qr-familiar', {
+    mensualidad_ids: mensualidadIds,
+  });
+  return res.data.data;
 };

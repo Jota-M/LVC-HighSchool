@@ -54,7 +54,7 @@ const DIMENSIONES: Record<string, {
   SER:  { label: 'Ser',            color: '#10B981', porcentaje: 10, gradient: 'linear-gradient(135deg,#10B981,#34D399)' },
   SAB:  { label: 'Saber',          color: '#3B82F6', porcentaje: 40, gradient: 'linear-gradient(135deg,#3B82F6,#60A5FA)' },
   HAC:  { label: 'Hacer',          color: '#F59E0B', porcentaje: 45, gradient: 'linear-gradient(135deg,#F59E0B,#FCD34D)' },
-  AUTO: { label: 'Autoevaluación', color: '#8B5CF6', porcentaje: 5,  gradient: 'linear-gradient(135deg,#8B5CF6,#A78BFA)' },
+  AUT: { label: 'Autoevaluación', color: '#8B5CF6', porcentaje: 5, gradient: 'linear-gradient(135deg,#8B5CF6,#A78BFA)' },
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -247,7 +247,7 @@ const TablaPorDimension: React.FC<{ detalle: NotasPorMateria; color: string }> =
 
   return (
     <Stack spacing={2.5}>
-      {['SER','SAB','HAC','AUTO'].map(cod => {
+      {['SER','SAB','HAC','AUT'].map(cod => {
         const evals = porDimension[cod];
         if (!evals?.length) return null;
         const cfg = DIMENSIONES[cod];
@@ -421,7 +421,7 @@ const TarjetaMateria: React.FC<{
             </Typography>
 
             {/* Barras Ser/Saber/Hacer */}
-            {(['SER', 'SAB', 'HAC', 'AUTO'] as const).map((cod, i) => (
+            {(['SER', 'SAB', 'HAC', 'AUT'] as const).map((cod, i) => (
             <BarraDimension
               key={cod}
               codigo={cod}

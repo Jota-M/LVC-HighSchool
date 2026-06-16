@@ -23,12 +23,10 @@ import {
   FiberManualRecord as DotIcon,
 } from '@mui/icons-material';
 
-import { HorarioReadonlyGrid } from '@/components/horario/HorarioReadonlyGrid';
-import { useHorarioDocente }   from '@/hooks/useHorarioDocente';
-import { useDocentePerfil }    from '@/hooks/useDocentePerfil';
-import { useAcademicos }       from '@/hooks/useAcademicos';
-import { DIAS_SEMANA }         from '@/types/horariotypes';
-import { useAuth }             from '@/context/AuthContext';
+import { useHorarioDocente } from '@/hooks/useHorarioDocente';
+import { useDocentePerfil } from '@/hooks/useDocentePerfil';
+import { useAcademicos } from '@/hooks/useAcademicos';
+import { useAuth } from '@/context/AuthContext';
 
 // ─────────────────────────────────────────────────────────────
 // KEYFRAMES — mismo estilo que el home de docente
@@ -85,7 +83,7 @@ const getColor = (nombre: string, override?: string | null) => {
 };
 
 const fmtHora = (h: string) => h?.slice(0, 5) ?? '';
-const toMin   = (h: string) => {
+const toMin = (h: string) => {
   const [hh, mm] = h.split(':').map(Number);
   return hh * 60 + mm;
 };
@@ -103,11 +101,11 @@ const diaActual = (): number | null => {
 // ─────────────────────────────────────────────────────────────
 
 interface CeldaProps {
-  celda:    any | null;   // HorarioDetalle | null
-  esHoy:    boolean;
-  enCurso:  boolean;
-  isDark:   boolean;
-  GOLD:     string;
+  celda: any | null;   // HorarioDetalle | null
+  esHoy: boolean;
+  enCurso: boolean;
+  isDark: boolean;
+  GOLD: string;
 }
 
 const Celda: React.FC<CeldaProps> = ({ celda, esHoy, enCurso, isDark, GOLD }) => {
@@ -348,7 +346,7 @@ const StatPanel: React.FC<{
   label: string; value: string | number; sub?: string;
   accent: string; delay?: number; loading?: boolean;
 }> = ({ label, value, sub, accent, delay = 0, loading }) => {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
   return (
@@ -467,12 +465,12 @@ const Leyenda: React.FC<{ celdas: any[]; isDark: boolean; GOLD: string }> = ({ c
 // ─────────────────────────────────────────────────────────────
 
 const VistaDia: React.FC<{
-  dia:      number;
-  celdas:   any[];
-  bloques:  any[];
-  ahora:    number;
-  isDark:   boolean;
-  GOLD:     string;
+  dia: number;
+  celdas: any[];
+  bloques: any[];
+  ahora: number;
+  isDark: boolean;
+  GOLD: string;
 }> = ({ dia, celdas, bloques, ahora, isDark, GOLD }) => {
   const celdasDia = celdas.filter(c => c.dia_semana === dia);
   const esHoy = dia === diaActual();
@@ -610,12 +608,12 @@ const VistaDia: React.FC<{
 // ─────────────────────────────────────────────────────────────
 
 const GrillaSemanal: React.FC<{
-  celdas:  any[];
+  celdas: any[];
   bloques: any[];
-  dias:    number[];
-  ahora:   number;
-  isDark:  boolean;
-  GOLD:    string;
+  dias: number[];
+  ahora: number;
+  isDark: boolean;
+  GOLD: string;
 }> = ({ celdas, bloques, dias, ahora, isDark, GOLD }) => {
   const hoy = diaActual();
 
@@ -697,21 +695,21 @@ const GrillaSemanal: React.FC<{
 // ─────────────────────────────────────────────────────────────
 
 export default function HorarioDocentePage() {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const { user } = useAuth();
 
   // Colores — mismo sistema que home del docente
-  const GOLD     = isDark ? '#facc15' : '#d97706';
+  const GOLD = isDark ? '#facc15' : '#d97706';
   const GOLD_END = isDark ? '#f59e0b' : '#b45309';
 
   const { docenteId, isLoadingPerfil } = useDocentePerfil();
 
-  const [periodoId, setPeriodoId]   = useState<number | null>(null);
-  const [diasModo, setDiasModo]     = useState<'lv' | 'ls'>('lv');
-  const [vista, setVista]           = useState<'semana' | 'dia'>('semana');
-  const [diaVista, setDiaVista]     = useState<number>(diaActual() ?? 1);
-  const [ahora, setAhora]           = useState(ahoraMin());
+  const [periodoId, setPeriodoId] = useState<number | null>(null);
+  const [diasModo, setDiasModo] = useState<'lv' | 'ls'>('lv');
+  const [vista, setVista] = useState<'semana' | 'dia'>('semana');
+  const [diaVista, setDiaVista] = useState<number>(diaActual() ?? 1);
+  const [ahora, setAhora] = useState(ahoraMin());
 
   const diasActivos = diasModo === 'ls' ? DIAS_LS : DIAS_LV;
 
@@ -749,7 +747,7 @@ export default function HorarioDocentePage() {
       acc[d] = celdas.filter(c => c.dia_semana === d && !c.es_recreo).length;
       return acc;
     }, {}),
-  [celdas, diasActivos]);
+    [celdas, diasActivos]);
 
   const diaConMasClases = Object.entries(horasPorDia)
     .sort(([, a], [, b]) => b - a)[0];

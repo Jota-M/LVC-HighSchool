@@ -3,20 +3,14 @@
 import { useState } from 'react';
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
   Button,
   Typography,
   Alert,
   CircularProgress,
   Box,
-  IconButton,
-  alpha,
   useTheme,
-  Slide,
-  Collapse,
-  keyframes,
+  alpha,
 } from '@mui/material';
 import {
   WarningAmber as WarningAmberIcon,
@@ -33,39 +27,24 @@ interface Props {
   onSuccess: () => void;
 }
 
-const pulse = keyframes`
-  0%, 100% { transform: translateX(-50%) scale(1); }
-  50% { transform: translateX(-50%) scale(1.05); }
-`;
-
-const shake = keyframes`
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
-  20%, 40%, 60%, 80% { transform: translateX(8px); }
-`;
-
-const glow = keyframes`
-  0%, 100% { box-shadow: 0 0 20px rgba(244, 67, 54, 0.4); }
-  50% { box-shadow: 0 0 40px rgba(244, 67, 54, 0.7); }
-`;
-
-export default function UsuarioDeleteDialog({
-  open,
-  onClose,
-  usuario,
-  onSuccess,
-}: Props) {
+export default function UsuarioDeleteDialog({ open, onClose, usuario, onSuccess }: Props) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // ── tokens ──────────────────────────────────────────────────────────────────
+  const brand = '#ef4444';
+  const brandDim = isDark ? 'rgba(239,68,68,0.10)' : 'rgba(239,68,68,0.06)';
+  const brandBorder = isDark ? 'rgba(239,68,68,0.28)' : 'rgba(239,68,68,0.22)';
+  const bgModal = isDark ? '#09101dff' : '#ffffff';
+  const borderField = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)';
+
+  // ── handlers ────────────────────────────────────────────────────────────────
   const handleDelete = async () => {
     if (!usuario) return;
-
     setError('');
     setLoading(true);
-
     try {
       await usuariosService.eliminar(usuario.id);
       onSuccess();
@@ -90,289 +69,128 @@ export default function UsuarioDeleteDialog({
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
-      TransitionComponent={Slide}
-      TransitionProps={{ direction: 'up' } as any}
       PaperProps={{
         sx: {
-          borderRadius: 4,
-          overflow: 'visible',
-          background: isDark
-            ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%)'
-            : 'linear-gradient(135deg, #ffffff 0%, #fff5f5 100%)',
+          borderRadius: '20px !important',
+          overflow: 'hidden',
+          background: bgModal,
+          border: `1.5px solid ${brandBorder}`,
           boxShadow: isDark
-            ? '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 100px rgba(244, 67, 54, 0.15)'
-            : '0 25px 50px -12px rgba(244, 67, 54, 0.4)',
-          border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
+            ? `0 0 0 1px rgba(239,68,68,0.06), 0 32px 64px rgba(0,0,0,0.8)`
+            : `0 32px 64px rgba(0,0,0,0.14)`,
         },
       }}
     >
-      {/* Icono de advertencia flotante ULTRA MODERNO */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: -40,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 80,
-          height: 80,
-          borderRadius: '50%',
-          background: `linear-gradient(135deg, ${theme.palette.error.main}, ${theme.palette.error.dark})`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: `0 12px 40px ${alpha(theme.palette.error.main, 0.6)}`,
-          border: `4px solid ${theme.palette.background.paper}`,
-          animation: `${pulse} 2s ease-in-out infinite, ${glow} 2s ease-in-out infinite`,
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            inset: -8,
-            borderRadius: '50%',
-            padding: '4px',
-            background: `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.6)}, transparent)`,
-            WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-            WebkitMaskComposite: 'xor',
-            maskComposite: 'exclude',
-            animation: `${pulse} 2s ease-in-out infinite`,
-          },
-        }}
-      >
-        <WarningAmberIcon sx={{ color: 'white', fontSize: 40 }} />
+      {/* ── HEADER ── */}
+      <Box sx={{ px: 3, pt: 2.5, pb: 2, borderBottom: `1px solid ${borderField}`, background: brandDim }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <Box>
+            <Typography sx={{
+              fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em',
+              textTransform: 'uppercase', color: alpha(brand, 0.7), mb: 0.5,
+            }}>
+              Administración · Usuarios
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Box sx={{
+                width: 34, height: 34, borderRadius: '9px', flexShrink: 0,
+                background: alpha(brand, 0.15),
+                border: `1px solid ${alpha(brand, 0.3)}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <WarningAmberIcon sx={{ color: brand, fontSize: 18 }} />
+              </Box>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.25rem', color: 'text.primary' }}>
+                Eliminar usuario
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box
+            onClick={handleClose}
+            sx={{
+              width: 32, height: 32, borderRadius: '9px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,255,255,0.05)', border: `1px solid ${borderField}`,
+              color: 'text.secondary', transition: 'all 0.15s',
+              '&:hover': { background: alpha(brand, 0.12), borderColor: alpha(brand, 0.4), color: brand },
+            }}
+          >
+            <CloseIcon sx={{ fontSize: 16 }} />
+          </Box>
+        </Box>
       </Box>
 
-      <DialogTitle
-        sx={{
-          pt: 6,
-          pb: 2,
-          textAlign: 'center',
-          position: 'relative',
-          background: `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.08)} 0%, transparent 100%)`,
-          borderBottom: `1px solid ${alpha(theme.palette.error.main, 0.15)}`,
-        }}
-      >
-        <IconButton
-          onClick={handleClose}
-          disabled={loading}
-          size="small"
-          sx={{
-            position: 'absolute',
-            right: 16,
-            top: 16,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              transform: 'rotate(90deg) scale(1.15)',
-              bgcolor: alpha(theme.palette.error.main, 0.15),
-            },
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
+      {/* ── BODY ── */}
+      <DialogContent sx={{ px: 3, py: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
 
-        <Typography 
-          variant="h4" 
-          fontWeight={800}
-          sx={{
-            background: `linear-gradient(135deg, ${theme.palette.error.main}, ${theme.palette.error.dark})`,
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            mb: 1,
-          }}
-        >
-          ¡Momento!
-        </Typography>
-        <Typography variant="body1" fontWeight={600} color="text.secondary">
-          Estás a punto de eliminar un usuario
-        </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-          Esta acción es irreversible
-        </Typography>
-      </DialogTitle>
-
-      <DialogContent sx={{ px: 4, py: 3 }}>
-        <Collapse in={!!error}>
-          <Alert
-            severity="error"
-            variant="filled"
-            sx={{
-              mb: 3,
-              borderRadius: 3,
-              animation: `${shake} 0.5s`,
-              boxShadow: `0 8px 24px ${alpha(theme.palette.error.main, 0.3)}`,
-            }}
-            onClose={() => setError('')}
-          >
+        {error && (
+          <Alert severity="error" onClose={() => setError('')} sx={{ borderRadius: '12px' }}>
             {error}
           </Alert>
-        </Collapse>
+        )}
 
-        {/* Card del usuario a eliminar - ULTRA MODERNO */}
-        <Box
-          sx={{
-            p: 3,
-            mb: 3,
-            borderRadius: 3,
-            background: `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.15)} 0%, ${alpha(theme.palette.error.main, 0.05)} 100%)`,
-            border: `2px dashed ${theme.palette.error.main}`,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2.5,
-            position: 'relative',
-            overflow: 'hidden',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: `0 12px 32px ${alpha(theme.palette.error.main, 0.25)}`,
-            },
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '3px',
-              background: `linear-gradient(90deg, ${theme.palette.error.main}, transparent)`,
-            },
-          }}
-        >
-          <Box
-            sx={{
-              width: 64,
-              height: 64,
-              borderRadius: 3,
-              background: `linear-gradient(135deg, ${theme.palette.error.main}, ${theme.palette.error.dark})`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: `0 8px 24px ${alpha(theme.palette.error.main, 0.4)}`,
-              border: `3px solid ${alpha(theme.palette.error.main, 0.3)}`,
-              position: 'relative',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                inset: -3,
-                borderRadius: 3,
-                padding: '3px',
-                background: `linear-gradient(135deg, ${alpha('#fff', 0.4)}, transparent)`,
-                WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                WebkitMaskComposite: 'xor',
-                maskComposite: 'exclude',
-              },
-            }}
-          >
-            <PersonIcon sx={{ color: 'white', fontSize: 32 }} />
+        {/* Card usuario a eliminar */}
+        <Box sx={{
+          p: 1.75, borderRadius: '12px',
+          background: alpha(brand, 0.07),
+          border: `1px dashed ${alpha(brand, 0.4)}`,
+          display: 'flex', alignItems: 'center', gap: 1.5,
+        }}>
+          <Box sx={{
+            width: 42, height: 42, borderRadius: '9px', flexShrink: 0,
+            background: alpha(brand, 0.15), border: `1px solid ${alpha(brand, 0.3)}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <PersonIcon sx={{ color: brand, fontSize: 22 }} />
           </Box>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
+          <Box>
+            <Typography variant="caption" color="text.secondary" fontWeight={600}>
               Usuario a eliminar:
             </Typography>
-            <Typography variant="h5" fontWeight={800} color="error.main" sx={{ mb: 0.5 }}>
+            <Typography fontWeight={700} fontSize={15} sx={{ color: brand }}>
               {usuario?.username}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="caption" color="text.secondary">
               {usuario?.email}
             </Typography>
           </Box>
         </Box>
 
-        {/* Mensajes de advertencia - MEJORADOS */}
-        <Box
-          sx={{
-            p: 3,
-            borderRadius: 3,
-            background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.12)} 0%, ${alpha(theme.palette.warning.main, 0.04)} 100%)`,
-            border: `2px solid ${alpha(theme.palette.warning.main, 0.3)}`,
-            position: 'relative',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: '4px',
-              background: `linear-gradient(180deg, ${theme.palette.warning.main}, ${theme.palette.warning.dark})`,
-              borderRadius: '3px 0 0 3px',
-            },
-          }}
-        >
-          <Typography
-            variant="body2"
-            sx={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 1.5,
-              lineHeight: 1.8,
-              mb: 2,
-              fontWeight: 500,
-            }}
-          >
-            <Box
-              component="span"
-              sx={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                backgroundColor: theme.palette.warning.main,
-                mt: 0.8,
-                flexShrink: 0,
-                boxShadow: `0 0 12px ${alpha(theme.palette.warning.main, 0.6)}`,
-              }}
-            />
-            El usuario será marcado como <strong>eliminado</strong> y perderá todo acceso al sistema
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 1.5,
-              lineHeight: 1.8,
-              fontWeight: 500,
-            }}
-          >
-            <Box
-              component="span"
-              sx={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                backgroundColor: theme.palette.warning.main,
-                mt: 0.8,
-                flexShrink: 0,
-                boxShadow: `0 0 12px ${alpha(theme.palette.warning.main, 0.6)}`,
-              }}
-            />
-            Esta acción <strong>NO se puede deshacer</strong>
-          </Typography>
+        {/* Advertencias */}
+        <Box sx={{
+          p: 1.75, borderRadius: '12px',
+          background: 'rgba(245,158,11,0.07)',
+          border: '1px solid rgba(245,158,11,0.2)',
+          borderLeft: '3px solid rgba(245,158,11,0.7)',
+          display: 'flex', flexDirection: 'column', gap: 1.25,
+        }}>
+          {[
+            'El usuario será marcado como eliminado y perderá todo acceso al sistema',
+            'Esta acción NO se puede deshacer',
+          ].map((msg, i) => (
+            <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+              <Box sx={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: 'rgba(245,158,11,0.8)', mt: '6px', flexShrink: 0,
+              }} />
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}
+                dangerouslySetInnerHTML={{ __html: msg.replace('NO', '<strong>NO</strong>').replace('eliminado', '<strong>eliminado</strong>') }}
+              />
+            </Box>
+          ))}
         </Box>
       </DialogContent>
 
-      <DialogActions
-        sx={{
-          px: 4,
-          py: 3,
-          gap: 2,
-          borderTop: `1px solid ${alpha(theme.palette.error.main, 0.15)}`,
-          background: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.01),
-        }}
-      >
+      {/* ── FOOTER ── */}
+      <Box sx={{ px: 3, pb: 3, pt: 2, display: 'flex', gap: 1.25, borderTop: `1px solid ${borderField}` }}>
         <Button
           onClick={handleClose}
           disabled={loading}
-          variant="outlined"
-          size="large"
           sx={{
-            flex: 1,
-            textTransform: 'none',
-            fontWeight: 700,
-            borderRadius: 3,
-            borderWidth: 2,
-            py: 1.5,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              borderWidth: 2,
-              transform: 'translateY(-4px)',
-              boxShadow: `0 12px 24px ${alpha(theme.palette.primary.main, 0.25)}`,
-            },
+            flex: 1, borderRadius: '10px', textTransform: 'none', fontWeight: 600,
+            color: 'text.secondary', border: `1px solid ${borderField}`,
+            '&:hover': { borderColor: alpha(brand, 0.5), color: brand, background: alpha(brand, 0.05) },
           }}
         >
           No, Cancelar
@@ -380,54 +198,19 @@ export default function UsuarioDeleteDialog({
         <Button
           onClick={handleDelete}
           variant="contained"
-          color="error"
-          size="large"
           disabled={loading}
-          startIcon={loading ? null : <DeleteForeverIcon />}
+          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <DeleteForeverIcon />}
           sx={{
-            flex: 1,
-            textTransform: 'none',
-            fontWeight: 700,
-            borderRadius: 3,
-            py: 1.5,
-            background: `linear-gradient(135deg, ${theme.palette.error.main}, ${theme.palette.error.dark})`,
-            boxShadow: `0 8px 24px ${alpha(theme.palette.error.main, 0.4)}`,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            position: 'relative',
-            overflow: 'hidden',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: '-100%',
-              width: '100%',
-              height: '100%',
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-              transition: 'left 0.5s',
-            },
-            '&:hover': {
-              transform: 'translateY(-4px) scale(1.02)',
-              boxShadow: `0 16px 32px ${alpha(theme.palette.error.main, 0.6)}`,
-              '&::before': {
-                left: '100%',
-              },
-            },
-            '&:active': {
-              transform: 'translateY(-2px) scale(0.98)',
-            },
-            '&:disabled': {
-              background: theme.palette.action.disabledBackground,
-              boxShadow: 'none',
-            },
+            flex: 1, borderRadius: '10px', textTransform: 'none', fontWeight: 700,
+            background: brand, color: '#fff',
+            boxShadow: `0 4px 16px ${alpha(brand, 0.35)}`,
+            '&:hover': { background: '#dc2626', boxShadow: `0 6px 20px ${alpha(brand, 0.5)}` },
+            '&.Mui-disabled': { opacity: 0.35, background: brand, color: '#fff' },
           }}
         >
-          {loading ? (
-            <CircularProgress size={24} color="inherit" />
-          ) : (
-            'Sí, Eliminar Usuario'
-          )}
+          {loading ? 'Eliminando...' : 'Sí, eliminar usuario'}
         </Button>
-      </DialogActions>
+      </Box>
     </Dialog>
   );
 }

@@ -144,7 +144,7 @@ export default function HorariosAdminPage() {
             <TabPanel value={activeTab} index={1}>
               <Fade in timeout={500}>
                 <Box>
-                  <BloqueHorarioManager turnos={turnos} />
+                  <BloqueHorarioManager turnos={turnos} nivelesAcademicos={nivelesAcademicos} />
                 </Box>
               </Fade>
             </TabPanel>
