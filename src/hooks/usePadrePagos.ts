@@ -32,8 +32,19 @@ import api from '@/lib/api';
 //   - o SIP devolvió datos_pago con monto (pago real confirmado)
 // =============================================
 function esPagoReal(estado: EstadoQRResponse | EstadoQRMultipleResponse): boolean {
-  if (estado.estado !== 'PAGADO') return false;
-  return estado.en_nuestra_bd === true || !!estado.datos_pago?.monto;
+  const data = estado as any;
+  const estadoQr = String(data.estado ?? data.qr_estado ?? data.estado_qr ?? '').toUpperCase();
+  const mensualidades = Array.isArray(data.mensualidades) ? data.mensualidades : [];
+  const hayMensualidadesPagadas = mensualidades.length > 0
+    && mensualidades.every((mens: any) => String(mens.estado ?? '').toLowerCase() === 'pagado');
+
+  return (
+    estadoQr === 'PAGADO'
+    || data.pagado === true
+    || data.en_nuestra_bd === true
+    || Number(data.datos_pago?.monto ?? 0) > 0
+    || hayMensualidadesPagadas
+  );
 }
 
 // =============================================
@@ -42,21 +53,21 @@ function esPagoReal(estado: EstadoQRResponse | EstadoQRMultipleResponse): boolea
 // hooks/usePadrePagos.ts - solo cambiar useHijosConPagos
 
 export const useHijosConPagos = () => {
-  const [hijos, setHijos]         = useState<HijoPagoInfo[]>([]);
+  const [hijos, setHijos] = useState<HijoPagoInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const cargar = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await getHijosConPagos();
-      
+
       // ✅ Filtrar: por cada estudiante, quedarse solo con la matrícula activa.
       // Si no tiene ninguna activa, mostrar igual (para que el padre vea "sin matrícula").
       const porEstudiante = new Map<number, HijoPagoInfo>();
-      
+
       for (const hijo of data.hijos) {
         const existe = porEstudiante.get(hijo.estudiante_id);
-        
+
         if (!existe) {
           // Primera aparición: guardar siempre
           porEstudiante.set(hijo.estudiante_id, hijo);
@@ -66,7 +77,7 @@ export const useHijosConPagos = () => {
         }
         // Si la existente ya es activa y la nueva no, ignorar la nueva
       }
-      
+
       setHijos(Array.from(porEstudiante.values()));
     } catch (error: any) {
       toast.error(
@@ -111,9 +122,9 @@ export const useMensualidadesHijo = (estudianteId: number | null) => {
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  const pagadas    = mensualidades.filter(m => m.estado === 'pagado');
+  const pagadas = mensualidades.filter(m => m.estado === 'pagado');
   const pendientes = mensualidades.filter(m => m.estado === 'pendiente' || m.estado === 'vencido');
-  const otras      = mensualidades.filter(m => !['pagado', 'pendiente', 'vencido'].includes(m.estado));
+  const otras = mensualidades.filter(m => !['pagado', 'pendiente', 'vencido'].includes(m.estado));
 
   return { mensualidades, resumen, pagadas, pendientes, otras, isLoading, refrescar: cargar };
 };
@@ -123,23 +134,23 @@ export const useMensualidadesHijo = (estudianteId: number | null) => {
 // =============================================
 export const useQRPago = (
   mensualidadId: number | null,
-  autoGenerar:   boolean = true
+  autoGenerar: boolean = true
 ) => {
-  const [qrData, setQrData]               = useState<QRGeneradoData | null>(null);
-  const [estadoQR, setEstadoQR]           = useState<EstadoQRResponse | null>(null);
-  const [isGenerando, setIsGenerando]     = useState(false);
-  const [isCancelando, setIsCancelando]   = useState(false);
+  const [qrData, setQrData] = useState<QRGeneradoData | null>(null);
+  const [estadoQR, setEstadoQR] = useState<EstadoQRResponse | null>(null);
+  const [isGenerando, setIsGenerando] = useState(false);
+  const [isCancelando, setIsCancelando] = useState(false);
   const [isVerificando, setIsVerificando] = useState(false);
-  const [pagado, setPagado]               = useState(false);
+  const [pagado, setPagado] = useState(false);
 
   // Usamos un ref para el intervalo Y para el timeout inicial
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const timeoutRef  = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // ── Limpiar todo ────────────────────────────────────────────────
   const detenerPolling = useCallback(() => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
-    if (timeoutRef.current)  { clearTimeout(timeoutRef.current);   timeoutRef.current  = null; }
+    if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
   }, []);
 
   // ── Generar QR ──────────────────────────────────────────────────
@@ -282,23 +293,23 @@ export const useQRPago = (
 // HOOK: QR MÚLTIPLE
 // =============================================
 export const useQRMultiple = () => {
-  const [qrData, setQrData]             = useState<QRMultipleData | null>(null);
-  const [estadoQR, setEstadoQR]         = useState<EstadoQRMultipleResponse | null>(null);
-  const [isGenerando, setIsGenerando]   = useState(false);
+  const [qrData, setQrData] = useState<QRMultipleData | null>(null);
+  const [estadoQR, setEstadoQR] = useState<EstadoQRMultipleResponse | null>(null);
+  const [isGenerando, setIsGenerando] = useState(false);
   const [isCancelando, setIsCancelando] = useState(false);
-  const [pagado, setPagado]             = useState(false);
+  const [pagado, setPagado] = useState(false);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const timeoutRef  = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const detenerPolling = useCallback(() => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
-    if (timeoutRef.current)  { clearTimeout(timeoutRef.current);   timeoutRef.current  = null; }
+    if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
   }, []);
 
   const generarQR = useCallback(async (
     mensualidadIds: number[],
-    estudianteId:   number
+    estudianteId: number
   ) => {
     setIsGenerando(true);
     setQrData(null);
@@ -317,6 +328,27 @@ export const useQRMultiple = () => {
   }, []);
 
   // Polling con delay de 15 segundos — igual que el individual
+  const verificarEstado = useCallback(async () => {
+    if (!qrData?.alias) return null;
+    try {
+      const estado = await getEstadoQRMultiple(qrData.alias);
+      setEstadoQR(estado);
+
+      if (esPagoReal(estado)) {
+        setPagado(true);
+        detenerPolling();
+        toast.success(`¡${qrData.cantidad_meses} mensualidades pagadas! Tu cuenta está al día.`)
+      } else {
+        toast('El banco todavía no confirmó el pago.', { icon: 'ℹ️' });
+      }
+
+      return estado;
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'No se pudo verificar el pago.');
+      return null;
+    }
+  }, [qrData?.alias, qrData?.cantidad_meses, detenerPolling]);
+
   const iniciarPolling = useCallback(() => {
     if (intervalRef.current || timeoutRef.current || !qrData?.alias) return;
 
@@ -395,23 +427,23 @@ export const useQRMultiple = () => {
   return {
     qrData, estadoQR, pagado,
     isGenerando, isCancelando,
-    generarQR, cancelarQR, resetear,
+    generarQR, cancelarQR, verificarEstado, resetear,
   };
 };
 // Agregá al final del archivo
 export const useQRFamiliar = () => {
-  const [qrData, setQrData]           = useState<QRFamiliarData | null>(null);
-  const [estadoQR, setEstadoQR]       = useState<EstadoQRMultipleResponse | null>(null);
+  const [qrData, setQrData] = useState<QRFamiliarData | null>(null);
+  const [estadoQR, setEstadoQR] = useState<EstadoQRMultipleResponse | null>(null);
   const [isGenerando, setIsGenerando] = useState(false);
   const [isCancelando, setIsCancelando] = useState(false);
-  const [pagado, setPagado]           = useState(false);
+  const [pagado, setPagado] = useState(false);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const timeoutRef  = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const detenerPolling = useCallback(() => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
-    if (timeoutRef.current)  { clearTimeout(timeoutRef.current);   timeoutRef.current  = null; }
+    if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
   }, []);
 
   const generarQR = useCallback(async (mensualidadIds: number[]) => {
@@ -431,40 +463,61 @@ export const useQRFamiliar = () => {
 
   // Polling igual que useQRMultiple — reutiliza estado-qr-multiple por alias
   // En useQRFamiliar, cambiar la dependencia del iniciarPolling
-const iniciarPolling = useCallback(() => {
-  if (intervalRef.current || timeoutRef.current || !qrData?.alias) return;
-  
-  const alias = qrData.alias;                    // ✅ capturar valor estable
-  const cantidadMeses = qrData.cantidad_meses;   // ✅ capturar valor estable
+  const verificarEstado = useCallback(async () => {
+    if (!qrData?.alias) return null;
+    try {
+      const estado = await getEstadoQRMultiple(qrData.alias);
+      setEstadoQR(estado);
 
-  timeoutRef.current = setTimeout(() => {
-    timeoutRef.current = null;
-    (async () => {
-      try {
-        const estado = await getEstadoQRMultiple(alias);
-        setEstadoQR(estado);
-        if (esPagoReal(estado)) {
-          setPagado(true);
-          detenerPolling();
-          toast.success(`¡Pago familiar confirmado! ${cantidadMeses} mensualidades al día.`);
-        }
-      } catch { /* silencioso */ }
-    })();
+      if (esPagoReal(estado)) {
+        setPagado(true);
+        detenerPolling();
+        toast.success(`�Pago familiar confirmado! ${qrData.cantidad_meses} mensualidades al d�a.`);
+      } else {
+        toast('El banco todav�a no confirm� el pago familiar.', { icon: '?' });
+      }
 
-    intervalRef.current = setInterval(async () => {
-      try {
-        const estado = await getEstadoQRMultiple(alias);
-        setEstadoQR(estado);
-        if (esPagoReal(estado)) {
-          setPagado(true);
-          detenerPolling();
-          toast.success(`¡Pago familiar confirmado! ${cantidadMeses} mensualidades al día.`);
-        }
-      } catch { /* silencioso */ }
-    }, 8000);
+      return estado;
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'No se pudo verificar el pago familiar.');
+      return null;
+    }
+  }, [qrData?.alias, qrData?.cantidad_meses, detenerPolling]);
 
-  }, 15000);
-}, [qrData?.alias, qrData?.cantidad_meses, detenerPolling]); 
+  const iniciarPolling = useCallback(() => {
+    if (intervalRef.current || timeoutRef.current || !qrData?.alias) return;
+
+    const alias = qrData.alias;                    // ✅ capturar valor estable
+    const cantidadMeses = qrData.cantidad_meses;   // ✅ capturar valor estable
+
+    timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
+      (async () => {
+        try {
+          const estado = await getEstadoQRMultiple(alias);
+          setEstadoQR(estado);
+          if (esPagoReal(estado)) {
+            setPagado(true);
+            detenerPolling();
+            toast.success(`¡Pago familiar confirmado! ${cantidadMeses} mensualidades al día.`);
+          }
+        } catch { /* silencioso */ }
+      })();
+
+      intervalRef.current = setInterval(async () => {
+        try {
+          const estado = await getEstadoQRMultiple(alias);
+          setEstadoQR(estado);
+          if (esPagoReal(estado)) {
+            setPagado(true);
+            detenerPolling();
+            toast.success(`¡Pago familiar confirmado! ${cantidadMeses} mensualidades al día.`);
+          }
+        } catch { /* silencioso */ }
+      }, 8000);
+
+    }, 15000);
+  }, [qrData?.alias, qrData?.cantidad_meses, detenerPolling]);
 
   useEffect(() => {
     if (qrData && !pagado) iniciarPolling();
@@ -503,6 +556,6 @@ const iniciarPolling = useCallback(() => {
   return {
     qrData, estadoQR, pagado,
     isGenerando, isCancelando,
-    generarQR, cancelarQR, resetear,
+    generarQR, cancelarQR, verificarEstado, resetear,
   };
 };

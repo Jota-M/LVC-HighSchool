@@ -369,31 +369,51 @@ export const NuevoHorarioModal: React.FC<Props> = ({ open, onClose, onCreado }) 
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth required sx={fieldSx}>
                 <Select
-                  value={form.grado_id}
-                  onChange={e => handleChange('grado_id', e.target.value)}
+                  value={form.paralelo_id}
+                  onChange={e => handleChange('paralelo_id', e.target.value)}
                   displayEmpty
-                  disabled={!gradosFiltrados.length}
+                  disabled={!paralelosFiltrados.length}
                   renderValue={(val) => {
-                    const grado = gradosFiltrados.find((g: any) => g.id === val);
-
-                    return grado ? (
-                      <Typography variant="body2">
-                        {grado.nombre}
-                      </Typography>
+                    const paralelo = paralelosFiltrados.find((p: any) => p.id === val);
+                    return paralelo ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" fontWeight={600}>
+                          Paralelo {paralelo.nombre}
+                        </Typography>
+                        {paralelo.turno_nombre && (
+                          <Chip
+                            label={paralelo.turno_nombre}
+                            size="small"
+                            sx={{
+                              height: 18,
+                              fontSize: '0.6rem',
+                              fontWeight: 700,
+                              bgcolor: alpha(brand, 0.15),
+                              color: brand,
+                              border: `1px solid ${alpha(brand, 0.3)}`,
+                            }}
+                          />
+                        )}
+                      </Box>
                     ) : (
                       <Typography color="text.secondary" variant="body2">
-                        Grado
+                        Paralelo *
                       </Typography>
                     );
                   }}
                 >
-                  <MenuItem value="">
-                    <em>Todos los grados</em>
-                  </MenuItem>
-
-                  {gradosFiltrados.map((g: any) => (
-                    <MenuItem key={g.id} value={g.id}>
-                      {g.nombre}
+                  {paralelosFiltrados.map((p: any) => (
+                    <MenuItem key={p.id} value={p.id}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" fontWeight={600}>
+                          Paralelo {p.nombre}
+                        </Typography>
+                        {p.turno_nombre && (
+                          <Typography variant="caption" color="text.secondary">
+                            · {p.turno_nombre}
+                          </Typography>
+                        )}
+                      </Box>
                     </MenuItem>
                   ))}
                 </Select>

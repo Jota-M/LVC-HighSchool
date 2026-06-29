@@ -511,7 +511,8 @@ export default function PagarOnlinePage() {
   const {
     qrData: qrMultiple, estadoQR: estadoMultiple, pagado: pagadoMultiple,
     isGenerando: generandoMultiple, isCancelando: cancelandoMultiple,
-    generarQR: generarMultiple, cancelarQR: cancelarMultiple, resetear: resetearMultiple,
+    generarQR: generarMultiple, cancelarQR: cancelarMultiple,
+    verificarEstado: verificarMultiple, resetear: resetearMultiple,
   } = useQRMultiple();
 
   const mensualidadIdIndividual = mensSeleccionadas.length === 1 ? mensSeleccionadas[0].mensualidad_id : null;
@@ -525,7 +526,8 @@ export default function PagarOnlinePage() {
   const {
     qrData: qrFamiliar, estadoQR: estadoFamiliar, pagado: pagadoFamiliar,
     isGenerando: generandoFamiliar, isCancelando: cancelandoFamiliar,
-    generarQR: generarFamiliarQR, cancelarQR: cancelarFamiliar, resetear: resetearFamiliar,
+    generarQR: generarFamiliarQR, cancelarQR: cancelarFamiliar,
+    verificarEstado: verificarFamiliar, resetear: resetearFamiliar,
   } = useQRFamiliar();
 
   // ── Estado unificado ──
@@ -535,6 +537,7 @@ export default function PagarOnlinePage() {
   const pagado = modo === 'familiar' ? pagadoFamiliar : esIndividual ? pagadoIndividual : pagadoMultiple;
   const isGenerando = modo === 'familiar' ? generandoFamiliar : esIndividual ? generandoIndividual : generandoMultiple;
   const isCancelando = modo === 'familiar' ? cancelandoFamiliar : esIndividual ? cancelandoIndividual : cancelandoMultiple;
+  const verificarQR = modo === 'familiar' ? verificarFamiliar : esIndividual ? verificarEstado : verificarMultiple;
 
   const totalMonto = modo === 'familiar'
     ? (qrFamiliar?.monto_total ?? 0)
@@ -846,7 +849,7 @@ export default function PagarOnlinePage() {
                   qrData={qrData} estadoQR={estadoQR} pagado={pagado}
                   isGenerando={isGenerando} isCancelando={isCancelando}
                   onCancelar={handleCancelar}
-                  onVerificar={modo !== 'familiar' ? verificarEstado : undefined}
+                  onVerificar={verificarQR}
                   isDark={isDark} gold={gold} gradBg={gradBg}
                   totalMonto={totalMonto} mesesLabel={mesesLabel}
                 />

@@ -55,8 +55,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
 };
 
 export const EstudianteDetalle: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
-    const router = useRouter();
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const [activeTab, setActiveTab] = useState(0);
@@ -212,7 +212,7 @@ export const EstudianteDetalle: React.FC = () => {
                         />
                         {estudiante.usuario_id && (
                           <Chip label="Con usuario" size="small" color="info" />
-                          
+
                         )}
                         <Chip label={estudiante.rude} size="small" color="info" />
                       </Box>
@@ -248,7 +248,7 @@ export const EstudianteDetalle: React.FC = () => {
 
                 {/* Info rápida */}
                 <Grid container spacing={2} sx={{ mt: 3 }}>
-                  <Grid size={{xs:12, md:3}} >
+                  <Grid size={{ xs: 12, md: 3 }} >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <CakeIcon sx={{ color: 'text.secondary' }} />
                       <Box>
@@ -262,7 +262,7 @@ export const EstudianteDetalle: React.FC = () => {
                     </Box>
                   </Grid>
 
-                  <Grid size={{xs:12, md:3}} >
+                  <Grid size={{ xs: 12, md: 3 }} >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <BadgeIcon sx={{ color: 'text.secondary' }} />
                       <Box>
@@ -276,7 +276,7 @@ export const EstudianteDetalle: React.FC = () => {
                     </Box>
                   </Grid>
 
-                  <Grid size={{xs:12, md:3}} >
+                  <Grid size={{ xs: 12, md: 3 }} >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <PhoneIcon sx={{ color: 'text.secondary' }} />
                       <Box>
@@ -290,7 +290,7 @@ export const EstudianteDetalle: React.FC = () => {
                     </Box>
                   </Grid>
 
-                  <Grid size={{xs:12, md:3}} >
+                  <Grid size={{ xs: 12, md: 3 }} >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <SchoolIcon sx={{ color: 'text.secondary' }} />
                       <Box>
@@ -340,7 +340,7 @@ export const EstudianteDetalle: React.FC = () => {
                 <Tab icon={<PeopleIcon />} iconPosition="start" label="Tutores" />
                 <Tab icon={<SchoolIcon />} iconPosition="start" label="Matrículas" />
                 <Tab icon={<DocumentIcon />} iconPosition="start" label="Documentos" />
-                <Tab icon={<TimelineIcon />} iconPosition="start" label="Historial" />
+
               </Tabs>
 
               <Divider />
@@ -349,7 +349,7 @@ export const EstudianteDetalle: React.FC = () => {
                 {/* Tab: Perfil */}
                 <TabPanel value={activeTab} index={0}>
                   <Grid container spacing={3}>
-                    <Grid size={{xs:12, md:3}} >
+                    <Grid size={{ xs: 12, md: 3 }} >
                       <Paper
                         elevation={0}
                         sx={{
@@ -410,15 +410,15 @@ export const EstudianteDetalle: React.FC = () => {
                               {estudiante.genero === 'masculino'
                                 ? 'Masculino'
                                 : estudiante.genero === 'femenino'
-                                ? 'Femenino'
-                                : 'No especificado'}
+                                  ? 'Femenino'
+                                  : 'No especificado'}
                             </Typography>
                           </Box>
                         </Box>
                       </Paper>
                     </Grid>
 
-                    <Grid size={{xs:12, md:6}} >
+                    <Grid size={{ xs: 12, md: 6 }} >
                       <Paper
                         elevation={0}
                         sx={{
@@ -484,7 +484,7 @@ export const EstudianteDetalle: React.FC = () => {
 
                     {/* Emergencia */}
                     {(estudiante.contacto_emergencia) && (
-                      <Grid size={{xs:12}}>
+                      <Grid size={{ xs: 12 }}>
                         <Alert
                           severity="warning"
                           icon={<PhoneIcon />}
@@ -494,7 +494,7 @@ export const EstudianteDetalle: React.FC = () => {
                             Contacto de Emergencia
                           </Typography>
                           <Typography variant="body2">
-                            {estudiante.contacto_emergencia} 
+                            {estudiante.contacto_emergencia}
                           </Typography>
                         </Alert>
                       </Grid>
@@ -502,7 +502,7 @@ export const EstudianteDetalle: React.FC = () => {
 
                     {/* Discapacidad */}
                     {estudiante.tiene_discapacidad && (
-                      <Grid size={{xs:12}}>
+                      <Grid size={{ xs: 12 }}>
                         <Alert severity="info" icon={<AccessibleIcon />} sx={{ borderRadius: '16px' }}>
                           <Typography variant="subtitle2" fontWeight={600}>
                             Información Especial
@@ -516,7 +516,7 @@ export const EstudianteDetalle: React.FC = () => {
 
                     {/* Observaciones */}
                     {estudiante.observaciones && (
-                      <Grid size={{xs:12}}>
+                      <Grid size={{ xs: 12 }}>
                         <Paper
                           elevation={0}
                           sx={{
@@ -537,18 +537,18 @@ export const EstudianteDetalle: React.FC = () => {
 
                 {/* Tab: Tutores */}
                 <TabPanel value={activeTab} index={1}>
-  <TutoresTab
-    tutores={estudiante.tutores ?? []}
-    estudianteId={parseInt(id!)}
-  />
-</TabPanel>
+                  <TutoresTab
+                    tutores={estudiante.tutores ?? []}
+                    estudianteId={parseInt(id!)}
+                  />
+                </TabPanel>
 
                 {/* Tab: Matrículas */}
                 <TabPanel value={activeTab} index={2}>
                   {estudiante.matriculas && estudiante.matriculas.length > 0 ? (
                     <Grid container spacing={3}>
                       {estudiante.matriculas.map((matricula: any, index: number) => (
-                        <Grid size={{xs:12, md:6}} key={index}>
+                        <Grid size={{ xs: 12, md: 6 }} key={index}>
                           <Paper
                             elevation={0}
                             sx={{
@@ -586,15 +586,10 @@ export const EstudianteDetalle: React.FC = () => {
 
                 {/* Tab: Documentos */}
                 <TabPanel value={activeTab} index={3}>
-                  <DocumentosTab 
-                    estudianteId={parseInt(id!)} 
-                    matriculas={estudiante.matriculas || []} 
+                  <DocumentosTab
+                    estudianteId={parseInt(id!)}
+                    matriculas={estudiante.matriculas || []}
                   />
-                </TabPanel>
-
-                {/* Tab: Historial */}
-                <TabPanel value={activeTab} index={4}>
-                  <Alert severity="info">Sección de historial en desarrollo</Alert>
                 </TabPanel>
               </Box>
             </Paper>

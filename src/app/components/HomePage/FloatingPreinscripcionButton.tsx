@@ -28,28 +28,22 @@ const FloatingButtons = () => {
   }, []);
 
   const buttons = [
-    {
-      href: "/cursos-vacacionales",
-      topText: "Disponibles ahora",
-      mainText: "Cursos Vacacionales",
-      hoverGradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-    },
+
     {
       href: "/PreInscripcion",
       topText: "Inscripciones abiertas",
       mainText: "2026",
       hoverGradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     },
-    
+
   ];
 
   return (
     <>
       {/* Container de botones siempre expandido */}
       <div
-        className={`fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-50 transition-all duration-500 ${
-          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20 pointer-events-none"
-        }`}
+        className={`fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-50 transition-all duration-500 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-20 pointer-events-none"
+          }`}
       >
         {/* Container con glassmorphism */}
         <div
@@ -81,9 +75,8 @@ const FloatingButtons = () => {
                       <span className="text-[11px] sm:text-xs font-semibold text-indigo-600 dark:text-indigo-400 tracking-wider uppercase group-hover:text-white/90 transition-colors duration-300">
                         {button.topText}
                       </span>
-                      <span className={`font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent group-hover:text-white group-hover:bg-none transition-all duration-300 ${
-                        button.mainText.length > 10 ? 'text-base sm:text-lg' : 'text-xl sm:text-2xl'
-                      }`}>
+                      <span className={`font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent group-hover:text-white group-hover:bg-none transition-all duration-300 ${button.mainText.length > 10 ? 'text-base sm:text-lg' : 'text-xl sm:text-2xl'
+                        }`}>
                         {button.mainText}
                       </span>
                     </div>
@@ -107,7 +100,7 @@ const FloatingButtons = () => {
                   {/* Shine effect sutil */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                 </button>
-                
+
                 {/* Línea divisora - solo si no es el último */}
                 {index < buttons.length - 1 && (
                   <div className="h-px bg-slate-200/50 dark:bg-slate-700/50 mx-4"></div>

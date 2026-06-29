@@ -1,32 +1,38 @@
 'use client';
 // app/dashboard/padre/financiero/historial/page.tsx
-// Historial de Pagos — registro completo de pagos y comprobantes
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   Box, Container, Typography, useTheme, alpha, Fade,
   Chip, Skeleton, IconButton, Tooltip, Select, MenuItem,
-  FormControl, InputLabel, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Stack,
+  FormControl, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, Button, Snackbar, Alert,
+  CircularProgress,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
-import HistoryRoundedIcon           from '@mui/icons-material/HistoryRounded';
-import ArrowBackRoundedIcon         from '@mui/icons-material/ArrowBackRounded';
-import CheckCircleRoundedIcon       from '@mui/icons-material/CheckCircleRounded';
-import QrCode2RoundedIcon           from '@mui/icons-material/QrCode2Rounded';
+
+import HistoryRoundedIcon from '@mui/icons-material/HistoryRounded';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import QrCode2RoundedIcon from '@mui/icons-material/QrCode2Rounded';
 import AccountBalanceWalletRoundedIcon from '@mui/icons-material/AccountBalanceWalletRounded';
-import CalendarMonthRoundedIcon     from '@mui/icons-material/CalendarMonthRounded';
-import TrendingUpRoundedIcon        from '@mui/icons-material/TrendingUpRounded';
-import AccessTimeRoundedIcon        from '@mui/icons-material/AccessTimeRounded';
-import RefreshRoundedIcon           from '@mui/icons-material/RefreshRounded';
+import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
+import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
+import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
-import ReceiptLongRoundedIcon       from '@mui/icons-material/ReceiptLongRounded';
-import SchoolRoundedIcon            from '@mui/icons-material/SchoolRounded';
+import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
+import SchoolRoundedIcon from '@mui/icons-material/SchoolRounded';
+import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import RequestPageRoundedIcon from '@mui/icons-material/RequestPageRounded';
+import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
 
 import { useRouter } from 'next/navigation';
 import { useHijosConPagos, useMensualidadesHijo } from '@/hooks/usePadrePagos';
 import { MESES_LABELS, formatFechaPago } from '@/types/padrePagosTypes';
 import type { MensualidadHijo, HijoPagoInfo } from '@/types/padrePagosTypes';
+import { useSolicitudesFactura } from '@/hooks/useSolicitudesFactura';
+import type { SolicitudFactura } from '@/hooks/useSolicitudesFactura';
 
 // ─── Animaciones ──────────────────────────────────────────────────────────────
 const fadeUp = keyframes`
@@ -44,21 +50,21 @@ const slideIn = keyframes`
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
 const usePalette = () => {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const gold    = isDark ? '#facc15' : '#f59e0b';
+  const gold = isDark ? '#facc15' : '#f59e0b';
   const goldEnd = isDark ? '#f59e0b' : '#d97706';
-  const gradBg  = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
+  const gradBg = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
   return { isDark, gold, goldEnd, gradBg };
 };
 
-// ─── Card de estadística ──────────────────────────────────────────────────────
+// ─── StatCard ─────────────────────────────────────────────────────────────────
 const StatCard: React.FC<{
-  label:  string;
-  valor:  string;
-  sub:    string;
-  icon:   React.ReactNode;
-  color:  string;
+  label: string;
+  valor: string;
+  sub: string;
+  icon: React.ReactNode;
+  color: string;
   delay?: number;
   isDark: boolean;
 }> = ({ label, valor, sub, icon, color, delay = 0, isDark }) => (
@@ -96,18 +102,202 @@ const StatCard: React.FC<{
   </Box>
 );
 
-// ─── Fila del historial ───────────────────────────────────────────────────────
+// ─── CeldaRecibo ──────────────────────────────────────────────────────────────
+const CeldaRecibo: React.FC<{
+  mens: MensualidadHijo;
+  isDark: boolean;
+  descargarRecibo: (pago_id: number) => Promise<void>;
+  onError: (msg: string) => void;
+}> = ({ mens, isDark, descargarRecibo, onError }) => {
+  const [descargando, setDescargando] = useState(false);
+
+  const cellSx = {
+    py: 1.75,
+    borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04)}`,
+  };
+
+  if (mens.estado !== 'pagado' || !mens.pago_id) {
+    return (
+      <TableCell sx={cellSx}>
+        <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>—</Typography>
+      </TableCell>
+    );
+  }
+
+  const handleDescargar = async () => {
+    setDescargando(true);
+    try {
+      await descargarRecibo(mens.pago_id!);
+    } catch {
+      onError('No se pudo descargar el comprobante');
+    } finally {
+      setDescargando(false);
+    }
+  };
+
+  return (
+    <TableCell sx={cellSx}>
+      <Tooltip title="Descargar comprobante de pago">
+        <span>
+          <IconButton
+            size="small"
+            disabled={descargando}
+            onClick={handleDescargar}
+            sx={{
+              bgcolor: isDark ? alpha('#3b82f6', 0.12) : alpha('#3b82f6', 0.08),
+              borderRadius: '10px',
+              width: 30,
+              height: 30,
+              transition: 'all 0.2s',
+              '&:hover': {
+                bgcolor: isDark ? alpha('#3b82f6', 0.22) : alpha('#3b82f6', 0.15),
+                transform: 'scale(1.08)',
+              },
+              '&:disabled': { opacity: 0.5 },
+            }}
+          >
+            {descargando
+              ? <CircularProgress size={13} sx={{ color: '#3b82f6' }} />
+              : <ArticleRoundedIcon sx={{ fontSize: 15, color: '#3b82f6' }} />
+            }
+          </IconButton>
+        </span>
+      </Tooltip>
+    </TableCell>
+  );
+};
+
+// ─── CeldaFactura ─────────────────────────────────────────────────────────────
+const CeldaFactura: React.FC<{
+  mens: MensualidadHijo;
+  solicitud?: SolicitudFactura;
+  isDark: boolean;
+  gold: string;
+  solicitarFactura: (pago_id: number) => Promise<boolean>;
+  onExito: (msg: string) => void;
+  onError: (msg: string) => void;
+}> = ({ mens, solicitud, isDark, gold, solicitarFactura, onExito, onError }) => {
+  const [solicitando, setSolicitando] = useState(false);
+
+  const handleSolicitar = async () => {
+    if (!mens.pago_id) return;
+    setSolicitando(true);
+    try {
+      await solicitarFactura(mens.pago_id);
+      onExito('Solicitud enviada. El administrador la procesará a la brevedad.');
+    } catch (e: any) {
+      onError(e.message ?? 'Error al enviar la solicitud');
+    } finally {
+      setSolicitando(false);
+    }
+  };
+
+  const cellSx = {
+    py: 1.75,
+    borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04)}`,
+  };
+
+  if (mens.estado !== 'pagado') {
+    return (
+      <TableCell sx={cellSx}>
+        <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>—</Typography>
+      </TableCell>
+    );
+  }
+
+  if (!solicitud) {
+    return (
+      <TableCell sx={cellSx}>
+        <Tooltip title="Solicitar factura al administrador">
+          <span>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={solicitando || !mens.pago_id}
+              onClick={handleSolicitar}
+              startIcon={<RequestPageRoundedIcon sx={{ fontSize: 14 }} />}
+              sx={{
+                borderRadius: '10px',
+                fontSize: 11,
+                fontWeight: 700,
+                py: 0.4,
+                px: 1.25,
+                borderColor: alpha(gold, 0.4),
+                color: isDark ? gold : '#d97706',
+                textTransform: 'none',
+                minWidth: 'unset',
+                '&:hover': { borderColor: gold, bgcolor: alpha(gold, 0.08) },
+                '&:disabled': { opacity: 0.5 },
+              }}
+            >
+              {solicitando ? 'Enviando...' : 'Solicitar'}
+            </Button>
+          </span>
+        </Tooltip>
+      </TableCell>
+    );
+  }
+
+  if (solicitud.estado === 'pendiente') {
+    return (
+      <TableCell sx={cellSx}>
+        <Tooltip title={`Solicitada el ${new Date(solicitud.fecha_solicitud).toLocaleDateString('es-BO')}`}>
+          <Chip
+            label="En proceso"
+            size="small"
+            icon={<AccessTimeRoundedIcon sx={{ fontSize: 12 }} />}
+            sx={{
+              height: 22, fontSize: 10, fontWeight: 700,
+              bgcolor: isDark ? alpha('#f59e0b', 0.15) : alpha('#f59e0b', 0.1),
+              color: '#f59e0b', borderRadius: 1.5,
+              '& .MuiChip-icon': { color: '#f59e0b', ml: 0.5 },
+            }}
+          />
+        </Tooltip>
+      </TableCell>
+    );
+  }
+
+  return (
+    <TableCell sx={cellSx}>
+      <Tooltip title="Descargar factura">
+        <IconButton
+          size="small"
+          onClick={() => window.open(solicitud.factura_url, '_blank')}
+          sx={{
+            bgcolor: isDark ? alpha('#10b981', 0.12) : alpha('#10b981', 0.08),
+            borderRadius: '10px',
+            '&:hover': { bgcolor: isDark ? alpha('#10b981', 0.22) : alpha('#10b981', 0.15) },
+          }}
+        >
+          <DownloadRoundedIcon sx={{ fontSize: 16, color: '#10b981' }} />
+        </IconButton>
+      </Tooltip>
+    </TableCell>
+  );
+};
+
+// ─── FilaHistorial ────────────────────────────────────────────────────────────
 const FilaHistorial: React.FC<{
-  mens:  MensualidadHijo;
+  mens: MensualidadHijo;
   index: number;
   isDark: boolean;
-  gold:   string;
-}> = ({ mens, index, isDark, gold }) => {
-  const mesLabel = MESES_LABELS[mens.mes_correspondiente] ?? mens.mes_correspondiente;
+  gold: string;
+  solicitud?: SolicitudFactura;
+  solicitarFactura: (pago_id: number) => Promise<boolean>;
+  descargarRecibo: (pago_id: number) => Promise<void>;
+  onExito: (msg: string) => void;
+  onError: (msg: string) => void;
+}> = ({ mens, index, isDark, gold, solicitud, solicitarFactura, descargarRecibo, onExito, onError }) => {
 
-  // Determinar método de pago desde qr_estado
+  const mesLabel = MESES_LABELS[mens.mes_correspondiente] ?? mens.mes_correspondiente;
   const metodo = mens.qr_estado === 'pagado' ? 'QR' : 'Efectivo/Transferencia';
-  const esQR   = mens.qr_estado === 'pagado';
+  const esQR = mens.qr_estado === 'pagado';
+
+  const cellSx = {
+    py: 1.75,
+    borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04)}`,
+  };
 
   return (
     <TableRow
@@ -118,10 +308,7 @@ const FilaHistorial: React.FC<{
       }}
     >
       {/* Fecha */}
-      <TableCell sx={{
-        py: 1.75,
-        borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04)}`,
-      }}>
+      <TableCell sx={cellSx}>
         <Typography variant="body2" fontWeight={700} sx={{ fontSize: 13 }}>
           {formatFechaPago(mens.fecha_pago)}
         </Typography>
@@ -133,10 +320,7 @@ const FilaHistorial: React.FC<{
       </TableCell>
 
       {/* Concepto */}
-      <TableCell sx={{
-        py: 1.75,
-        borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04)}`,
-      }}>
+      <TableCell sx={cellSx}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
           <Box sx={{
             width: 30, height: 30, borderRadius: '9px', flexShrink: 0,
@@ -157,10 +341,7 @@ const FilaHistorial: React.FC<{
       </TableCell>
 
       {/* Monto */}
-      <TableCell sx={{
-        py: 1.75,
-        borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04)}`,
-      }}>
+      <TableCell sx={cellSx}>
         <Typography variant="body2" fontWeight={900} sx={{ color: '#10b981', fontSize: 14 }}>
           Bs {parseFloat(String(mens.monto_pagado || mens.monto_final)).toFixed(2)}
         </Typography>
@@ -172,10 +353,7 @@ const FilaHistorial: React.FC<{
       </TableCell>
 
       {/* Método */}
-      <TableCell sx={{
-        py: 1.75,
-        borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04)}`,
-      }}>
+      <TableCell sx={cellSx}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
           {esQR
             ? <QrCode2RoundedIcon sx={{ fontSize: 15, color: isDark ? gold : '#d97706' }} />
@@ -190,10 +368,7 @@ const FilaHistorial: React.FC<{
       </TableCell>
 
       {/* Estado */}
-      <TableCell sx={{
-        py: 1.75,
-        borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04)}`,
-      }}>
+      <TableCell sx={cellSx}>
         <Chip
           label="Pagado"
           size="small"
@@ -205,11 +380,8 @@ const FilaHistorial: React.FC<{
         />
       </TableCell>
 
-      {/* Comprobante */}
-      <TableCell sx={{
-        py: 1.75,
-        borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04)}`,
-      }}>
+      {/* Referencia */}
+      <TableCell sx={cellSx}>
         <Tooltip title="Referencia del pago">
           <Box sx={{
             display: 'inline-flex', alignItems: 'center', gap: 0.5,
@@ -226,6 +398,25 @@ const FilaHistorial: React.FC<{
           </Box>
         </Tooltip>
       </TableCell>
+
+      {/* Recibo digital */}
+      <CeldaRecibo
+        mens={mens}
+        isDark={isDark}
+        descargarRecibo={descargarRecibo}
+        onError={onError}
+      />
+
+      {/* Factura */}
+      <CeldaFactura
+        mens={mens}
+        solicitud={solicitud}
+        isDark={isDark}
+        gold={gold}
+        solicitarFactura={solicitarFactura}
+        onExito={onExito}
+        onError={onError}
+      />
     </TableRow>
   );
 };
@@ -245,41 +436,50 @@ export default function HistorialPagosPage() {
   const { mensualidades, isLoading: loadingMens, refrescar: refrescarMens } =
     useMensualidadesHijo(hijoActivo?.estudiante_id ?? null);
 
-  // Filtros
-  const [filtroEstado, setFiltroEstado] = useState<'todos' | 'pagado' | 'pendiente'>('todos');
+  const {
+    solicitudMap,
+    cargar: cargarSolicitudes,
+    solicitarFactura,
+    descargarRecibo,
+  } = useSolicitudesFactura();
 
-  // Solo las pagadas para el historial
-  const pagadas = useMemo(() =>
-    mensualidades.filter(m => m.estado === 'pagado'),
-    [mensualidades]
-  );
+  const [snack, setSnack] = useState<{ open: boolean; msg: string; tipo: 'success' | 'error' }>
+    ({ open: false, msg: '', tipo: 'success' });
 
-  // Filtradas según selector
+  const handleExito = (msg: string) => setSnack({ open: true, msg, tipo: 'success' });
+  const handleError = (msg: string) => setSnack({ open: true, msg, tipo: 'error' });
+
+  const [filtroEstado, setFiltroEstado] = useState<'todos' | 'pagado'>('todos');
+
+  const pagadas = useMemo(() => mensualidades.filter(m => m.estado === 'pagado'), [mensualidades]);
+
   const historialFiltrado = useMemo(() => {
     if (filtroEstado === 'todos') return pagadas;
     return pagadas.filter(m => m.estado === filtroEstado);
   }, [pagadas, filtroEstado]);
 
-  // Estadísticas
   const totalPagado = pagadas.reduce(
     (acc, m) => acc + parseFloat(String(m.monto_pagado || m.monto_final)), 0
   );
-  const pagosQR     = pagadas.filter(m => m.qr_estado === 'pagado').length;
-  const pagosOtros  = pagadas.length - pagosQR;
+  const pagosQR = pagadas.filter(m => m.qr_estado === 'pagado').length;
+  const pagosOtros = pagadas.length - pagosQR;
+
   const porcentajePuntual = mensualidades.length > 0
-    ? Math.round((pagadas.filter(m => {
+    ? Math.round(
+      (pagadas.filter(m => {
         if (!m.fecha_pago || !m.fecha_vencimiento) return false;
         return new Date(m.fecha_pago) <= new Date(m.fecha_vencimiento);
-      }).length / Math.max(pagadas.length, 1)) * 100)
+      }).length / Math.max(pagadas.length, 1)) * 100
+    )
     : 0;
 
-  // Método preferido
   const metodoPreferido = pagosQR >= pagosOtros ? 'QR' : 'Efectivo/Transf.';
 
   const handleRefrescar = useCallback(() => {
     refrescar();
     refrescarMens();
-  }, [refrescar, refrescarMens]);
+    cargarSolicitudes();
+  }, [refrescar, refrescarMens, cargarSolicitudes]);
 
   return (
     <Box sx={{
@@ -316,7 +516,6 @@ export default function HistorialPagosPage() {
                   justifyContent: 'space-between', flexWrap: 'wrap', gap: 2,
                   position: 'relative', zIndex: 1,
                 }}>
-                  {/* Título */}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Tooltip title="Volver">
                       <IconButton
@@ -357,9 +556,7 @@ export default function HistorialPagosPage() {
                     </Box>
                   </Box>
 
-                  {/* Acciones */}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                    {/* Selector hijo */}
                     {hijos.length > 1 && (
                       <FormControl size="small">
                         <Select
@@ -392,7 +589,6 @@ export default function HistorialPagosPage() {
                       </FormControl>
                     )}
 
-                    {/* Refrescar */}
                     <Tooltip title="Actualizar">
                       <IconButton
                         onClick={handleRefrescar}
@@ -417,7 +613,7 @@ export default function HistorialPagosPage() {
             </Box>
           </Fade>
 
-          {/* ══ CARDS DE STATS ══ */}
+          {/* ══ STAT CARDS ══ */}
           {hijoActivo && (
             <Box sx={{
               display: 'grid',
@@ -474,7 +670,7 @@ export default function HistorialPagosPage() {
             </Box>
           )}
 
-          {/* ══ TABLA HISTORIAL ══ */}
+          {/* ══ TABLA ══ */}
           <Fade in timeout={500}>
             <Box sx={{
               borderRadius: '20px',
@@ -485,6 +681,7 @@ export default function HistorialPagosPage() {
               boxShadow: isDark ? 'none' : '0 4px 24px rgba(0,0,0,0.05)',
               overflow: 'hidden',
             }}>
+
               {/* Header tabla */}
               <Box sx={{
                 px: 3, py: 2,
@@ -511,7 +708,6 @@ export default function HistorialPagosPage() {
                   )}
                 </Box>
 
-                {/* Filtros */}
                 {!loadingMens && pagadas.length > 0 && (
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     {(['todos', 'pagado'] as const).map(f => (
@@ -538,7 +734,7 @@ export default function HistorialPagosPage() {
                 )}
               </Box>
 
-              {/* Sin hijo */}
+              {/* Sin hijo seleccionado */}
               {!hijoActivo && !loadingHijos && (
                 <Box sx={{ textAlign: 'center', py: 8 }}>
                   <SchoolRoundedIcon sx={{ fontSize: 48, color: alpha(gold, 0.3), mb: 1.5 }} />
@@ -575,7 +771,7 @@ export default function HistorialPagosPage() {
                 </Box>
               )}
 
-              {/* Tabla */}
+              {/* Tabla con datos */}
               {hijoActivo && !loadingMens && historialFiltrado.length > 0 && (
                 <TableContainer>
                   <Table>
@@ -597,6 +793,13 @@ export default function HistorialPagosPage() {
                         <TableCell>Método</TableCell>
                         <TableCell>Estado</TableCell>
                         <TableCell>Referencia</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <ArticleRoundedIcon sx={{ fontSize: 13, color: '#3b82f6' }} />
+                            Recibo
+                          </Box>
+                        </TableCell>
+                        <TableCell>Factura</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -607,6 +810,11 @@ export default function HistorialPagosPage() {
                           index={i}
                           isDark={isDark}
                           gold={gold}
+                          solicitud={m.pago_id ? solicitudMap[m.pago_id] : undefined}
+                          solicitarFactura={solicitarFactura}
+                          descargarRecibo={descargarRecibo}
+                          onExito={handleExito}
+                          onError={handleError}
                         />
                       ))}
                     </TableBody>
@@ -614,7 +822,7 @@ export default function HistorialPagosPage() {
                 </TableContainer>
               )}
 
-              {/* Footer con total */}
+              {/* Footer total */}
               {hijoActivo && !loadingMens && historialFiltrado.length > 0 && (
                 <Box sx={{
                   px: 3, py: 2,
@@ -648,6 +856,22 @@ export default function HistorialPagosPage() {
 
         </Box>
       </Container>
+
+      {/* ══ SNACKBAR FEEDBACK ══ */}
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={4500}
+        onClose={() => setSnack(s => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity={snack.tipo}
+          onClose={() => setSnack(s => ({ ...s, open: false }))}
+          sx={{ borderRadius: '14px', fontWeight: 700, fontSize: 13 }}
+        >
+          {snack.msg}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

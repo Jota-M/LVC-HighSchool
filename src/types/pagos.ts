@@ -604,3 +604,65 @@ export interface InfoSistema {
   descripcion: string;
   beneficio: string;
 }
+export interface FiltrosAjusteCosto {
+  periodo_academico_id: number;
+  nivel_academico_id: number;
+  nuevo_monto_base: number;
+  fecha_corte?: string; // ISO date, default: hoy
+  grado_id?: number;
+  paralelo_id?: number;
+}
+
+export interface AjusteCostoDetalleItem {
+  mensualidad_id: number;
+  numero_cuota: number;
+  mes_correspondiente: string;
+  fecha_vencimiento: string;
+  estado: EstadoMensualidad;
+  monto_actual: number;
+  monto_nuevo: number;
+  diferencia: number;
+  total_pagado: number;
+  saldo_nuevo: number;
+  queda_saldado: boolean;
+  estudiante_id: number;
+  estudiante_codigo: string;
+  nombres: string;
+  apellidos: string;
+  grado: string;
+  paralelo: string;
+  porcentaje_beca: number;
+}
+
+export interface AjusteCostoResumen {
+  total_cuotas: number;
+  total_estudiantes: number;
+  monto_actual_total: number;
+  monto_nuevo_total: number;
+  diferencia_total: number;
+  cuotas_que_quedan_saldadas: number;
+}
+
+export interface AjusteCostoPreviewResponse {
+  success: boolean;
+  data: {
+    detalle: AjusteCostoDetalleItem[];
+    resumen: AjusteCostoResumen;
+  };
+}
+
+export interface AjusteCostoAplicarResponse {
+  success: boolean;
+  message: string;
+  data: {
+    total_cuotas: number;
+    monto_anterior_total: number;
+    monto_nuevo_total: number;
+    cuotas: Array<{
+      id: number;
+      numero_cuota: number;
+      mes_correspondiente: string;
+      monto_final: number;
+    }>;
+  };
+}

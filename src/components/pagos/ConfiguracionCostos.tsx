@@ -42,10 +42,12 @@ import {
   Info,
   LocalOffer,
   CalendarMonth,
+  PriceChange,
 } from '@mui/icons-material';
 import pagosService from '@/services/pagos';
 import academicosService, { PeriodoAcademico, NivelAcademico } from '@/services/academicos';
 import { CostoMensualidad } from '@/types/pagos';
+import { AjusteCostoModal } from './AjusteCostoModal';
 
 export const ConfiguracionCostos: React.FC = () => {
   const theme = useTheme();
@@ -59,6 +61,8 @@ export const ConfiguracionCostos: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [costoEditando, setCostoEditando] = useState<CostoMensualidad | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ajusteModalOpen, setAjusteModalOpen] = useState(false);
+  const [costoParaAjuste, setCostoParaAjuste] = useState<CostoMensualidad | null>(null);
 
   const [formData, setFormData] = useState({
     periodo_academico_id: 0,
@@ -75,7 +79,7 @@ export const ConfiguracionCostos: React.FC = () => {
   const cargarDatosIniciales = async () => {
     try {
       setLoadingData(true);
-      
+
       const periodoResponse = await academicosService.obtenerPeriodoActivo();
       const periodo = periodoResponse.data.periodo;
       setPeriodoActivo(periodo);
@@ -158,9 +162,18 @@ export const ConfiguracionCostos: React.FC = () => {
       };
 
       if (costoEditando) {
-        await pagosService.actualizarCosto(costoEditando.id, data);
+        const response = await pagosService.actualizarCosto(costoEditando.id, data);
+        setDialogOpen(false);
+        await cargarCostos();
+
+        if (data.monto_base !== costoEditando.monto_base) {
+          setCostoParaAjuste(response.data.costo);
+          setAjusteModalOpen(true);
+        }
       } else {
         await pagosService.crearCosto(data);
+        setDialogOpen(false);
+        await cargarCostos();
       }
 
       setDialogOpen(false);
@@ -215,11 +228,11 @@ export const ConfiguracionCostos: React.FC = () => {
   return (
     <Box>
       {/* 🔧 NUEVO: Alert informativo sobre el sistema de 10 meses */}
-      <Alert 
-        severity="info" 
+      <Alert
+        severity="info"
         icon={<Info />}
-        sx={{ 
-          mb: 3, 
+        sx={{
+          mb: 3,
           borderRadius: '16px',
           background: alpha(isDark ? '#3b82f6' : '#3b82f6', 0.1),
           border: `1px solid ${alpha('#3b82f6', 0.3)}`,
@@ -416,6 +429,15 @@ export const ConfiguracionCostos: React.FC = () => {
                         >
                           <DeleteIcon />
                         </IconButton>
+                        <Tooltip title="Aplicar a alumnos existentes">
+                          <IconButton
+                            size="small"
+                            onClick={() => { setCostoParaAjuste(costo); setAjusteModalOpen(true); }}
+                            sx={{ color: '#10b981' }}
+                          >
+                            <PriceChange fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   );
@@ -446,46 +468,85 @@ export const ConfiguracionCostos: React.FC = () => {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: '20px',
-            background: isDark ? alpha('#0f172a', 0.95) : alpha('#fff', 0.98),
-            backdropFilter: 'blur(20px)',
+            borderRadius: '20px !important',
+            overflow: 'hidden',
+            background: isDark ? '#09101dff' : '#ffffff',
+            border: `1.5px solid ${isDark ? 'rgba(250,204,21,0.25)' : 'rgba(2,136,209,0.25)'}`,
+            boxShadow: isDark
+              ? '0 0 0 1px rgba(250,204,21,0.06), 0 32px 64px rgba(0,0,0,0.8)'
+              : '0 32px 64px rgba(0,0,0,0.18)',
           },
         }}
       >
-        <DialogTitle>
-          <Box display="flex" alignItems="center" gap={2}>
+        {/* ── HEADER ── */}
+        <Box
+          sx={{
+            px: 3, pt: 2.5, pb: 2,
+            borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`,
+            background: isDark ? 'rgba(250,204,21,0.12)' : 'rgba(2,136,209,0.10)',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.5 }}>
+            <Box>
+              <Typography sx={{
+                fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: alpha(isDark ? '#facc15' : '#0288d1', 0.7),
+                mb: 0.4,
+              }}>
+                {costoEditando ? 'Editando configuración' : 'Nueva configuración'}
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                <Box sx={{
+                  width: 34, height: 34, borderRadius: '9px', flexShrink: 0,
+                  background: alpha(isDark ? '#facc15' : '#0288d1', 0.15),
+                  border: `1px solid ${alpha(isDark ? '#facc15' : '#0288d1', 0.3)}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <AttachMoney sx={{ color: isDark ? '#facc15' : '#0288d1', fontSize: 18 }} />
+                </Box>
+                <Box>
+                  <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', lineHeight: 1.1, color: 'text.primary' }}>
+                    {costoEditando ? 'Editar Costo' : 'Nuevo Costo'}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.72rem', color: alpha(theme.palette.text.primary, 0.45), mt: 0.2 }}>
+                    Sistema de 10 mensualidades (Feb - Nov)
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
             <Box
+              onClick={() => setDialogOpen(false)}
               sx={{
-                width: 48,
-                height: 48,
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                width: 32, height: 32, borderRadius: '9px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(255,255,255,0.05)',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`,
+                color: 'text.secondary',
+                transition: 'all 0.15s',
+                '&:hover': {
+                  background: alpha(isDark ? '#facc15' : '#0288d1', 0.12),
+                  borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.4),
+                  color: isDark ? '#facc15' : '#0288d1',
+                },
               }}
             >
-              <AttachMoney sx={{ color: '#fff', fontSize: 28 }} />
-            </Box>
-            <Box>
-              <Typography variant="h6" fontWeight={700}>
-                {costoEditando ? 'Editar Costo' : 'Nuevo Costo'}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Sistema de 10 mensualidades (Feb - Nov)
-              </Typography>
+              <Cancel sx={{ fontSize: 16 }} />
             </Box>
           </Box>
-        </DialogTitle>
+        </Box>
 
-        <DialogContent sx={{ pt: 3 }}>
+        {/* ── BODY ── */}
+        <DialogContent sx={{ px: 3, py: 3 }}>
           {error && (
-            <Alert severity="error" sx={{ mb: 3, borderRadius: '12px' }}>
+            <Alert severity="error" sx={{ mb: 3, borderRadius: '14px' }}>
               {error}
             </Alert>
           )}
 
-          <Grid container spacing={3}>
+          <Grid container spacing={2.5}>
+            {/* Período */}
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
@@ -495,40 +556,40 @@ export const ConfiguracionCostos: React.FC = () => {
                 helperText="Período académico activo"
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
+                    borderRadius: '14px',
+                    background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                    '& fieldset': { borderColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)', borderRadius: '14px' },
                   },
                 }}
               />
             </Grid>
 
+            {/* Nivel */}
             <Grid size={{ xs: 12, md: 6 }}>
               <FormControl
                 fullWidth
+                disabled={costoEditando !== null}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
+                    borderRadius: '14px',
+                    background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                    '& fieldset': { borderColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)', borderRadius: '14px' },
+                    '&:hover fieldset': { borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.5) },
+                    '&.Mui-focused fieldset': { borderColor: isDark ? '#facc15' : '#0288d1', borderWidth: '1.5px' },
+                    '&.Mui-focused': { boxShadow: `0 0 0 3px ${alpha(isDark ? '#facc15' : '#0288d1', 0.12)}` },
                   },
+                  '& .MuiInputLabel-root.Mui-focused': { color: isDark ? '#facc15' : '#0288d1' },
                 }}
-                disabled={costoEditando !== null}
               >
                 <InputLabel>Nivel Académico</InputLabel>
                 <Select
                   value={formData.nivel_academico_id}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      nivel_academico_id: Number(e.target.value),
-                    }))
-                  }
+                  onChange={(e) => setFormData((prev) => ({ ...prev, nivel_academico_id: Number(e.target.value) }))}
                   label="Nivel Académico"
                 >
-                  <MenuItem value={0} disabled>
-                    Seleccione un nivel
-                  </MenuItem>
+                  <MenuItem value={0} disabled>Seleccione un nivel</MenuItem>
                   {nivelesAcademicos.map((nivel) => (
-                    <MenuItem key={nivel.id} value={nivel.id}>
-                      {nivel.nombre}
-                    </MenuItem>
+                    <MenuItem key={nivel.id} value={nivel.id}>{nivel.nombre}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -539,65 +600,59 @@ export const ConfiguracionCostos: React.FC = () => {
               )}
             </Grid>
 
+            {/* Monto */}
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Monto Mensual"
                 type="number"
                 value={formData.monto_base}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, monto_base: e.target.value }))
-                }
+                onChange={(e) => setFormData((prev) => ({ ...prev, monto_base: e.target.value }))}
                 InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <AttachMoney />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <Typography variant="caption" color="text.secondary">
-                        Bs
-                      </Typography>
-                    </InputAdornment>
-                  ),
+                  startAdornment: <InputAdornment position="start"><AttachMoney /></InputAdornment>,
+                  endAdornment: <InputAdornment position="end"><Typography variant="caption" color="text.secondary">Bs</Typography></InputAdornment>,
                 }}
-                inputProps={{
-                  step: '0.01',
-                  min: '0',
-                }}
+                inputProps={{ step: '0.01', min: '0' }}
                 helperText="Costo por cada mes (10 meses)"
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
+                    borderRadius: '14px',
+                    background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                    '& fieldset': { borderColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)', borderRadius: '14px' },
+                    '&:hover fieldset': { borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.5) },
+                    '&.Mui-focused fieldset': { borderColor: isDark ? '#facc15' : '#0288d1', borderWidth: '1.5px' },
+                    '&.Mui-focused': { boxShadow: `0 0 0 3px ${alpha(isDark ? '#facc15' : '#0288d1', 0.12)}` },
                   },
+                  '& .MuiInputLabel-root.Mui-focused': { color: isDark ? '#facc15' : '#0288d1' },
                 }}
               />
             </Grid>
 
+            {/* Descuento */}
             <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Descuento Pago Anual (%)"
                 type="number"
                 value={formData.descuento_pago_completo}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, descuento_pago_completo: e.target.value }))
-                }
-                inputProps={{
-                  step: '0.01',
-                  min: '0',
-                  max: '100',
-                }}
+                onChange={(e) => setFormData((prev) => ({ ...prev, descuento_pago_completo: e.target.value }))}
+                inputProps={{ step: '0.01', min: '0', max: '100' }}
                 helperText="10% = 1 mes gratis (recomendado)"
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
+                    borderRadius: '14px',
+                    background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                    '& fieldset': { borderColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)', borderRadius: '14px' },
+                    '&:hover fieldset': { borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.5) },
+                    '&.Mui-focused fieldset': { borderColor: isDark ? '#facc15' : '#0288d1', borderWidth: '1.5px' },
+                    '&.Mui-focused': { boxShadow: `0 0 0 3px ${alpha(isDark ? '#facc15' : '#0288d1', 0.12)}` },
                   },
+                  '& .MuiInputLabel-root.Mui-focused': { color: isDark ? '#facc15' : '#0288d1' },
                 }}
               />
             </Grid>
 
+            {/* Observaciones */}
             <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
@@ -605,29 +660,30 @@ export const ConfiguracionCostos: React.FC = () => {
                 multiline
                 rows={3}
                 value={formData.observaciones}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, observaciones: e.target.value }))
-                }
+                onChange={(e) => setFormData((prev) => ({ ...prev, observaciones: e.target.value }))}
                 placeholder="Ej: Incluye materiales, seguro escolar, etc."
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
+                    borderRadius: '14px',
+                    background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                    '& fieldset': { borderColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)', borderRadius: '14px' },
+                    '&:hover fieldset': { borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.5) },
+                    '&.Mui-focused fieldset': { borderColor: isDark ? '#facc15' : '#0288d1', borderWidth: '1.5px' },
+                    '&.Mui-focused': { boxShadow: `0 0 0 3px ${alpha(isDark ? '#facc15' : '#0288d1', 0.12)}` },
                   },
+                  '& .MuiInputLabel-root.Mui-focused': { color: isDark ? '#facc15' : '#0288d1' },
                 }}
               />
             </Grid>
 
-            {/* 🔧 MEJORADO: Ejemplo de cálculo con 10 meses */}
+            {/* Simulación */}
             {ejemplo && (
               <Grid size={{ xs: 12 }}>
-                <Box
-                  sx={{
-                    p: 3,
-                    borderRadius: '16px',
-                    background: `linear-gradient(135deg, ${alpha('#10b981', 0.1)} 0%, ${alpha('#059669', 0.05)} 100%)`,
-                    border: `2px solid ${alpha('#10b981', 0.3)}`,
-                  }}
-                >
+                <Box sx={{
+                  p: 3, borderRadius: '16px',
+                  background: `linear-gradient(135deg, ${alpha('#10b981', 0.1)} 0%, ${alpha('#059669', 0.05)} 100%)`,
+                  border: `2px solid ${alpha('#10b981', 0.3)}`,
+                }}>
                   <Box display="flex" alignItems="center" gap={1} mb={2}>
                     <CalendarMonth sx={{ color: '#10b981' }} />
                     <Typography variant="body2" fontWeight={700} color="#10b981">
@@ -636,85 +692,52 @@ export const ConfiguracionCostos: React.FC = () => {
                   </Box>
 
                   <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Box
-                        sx={{
-                          p: 2,
-                          borderRadius: '12px',
-                          background: alpha('#fff', isDark ? 0.05 : 0.5),
-                          textAlign: 'center',
-                        }}
-                      >
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          Monto por Mes
-                        </Typography>
-                        <Typography variant="h6" fontWeight={700}>
-                          Bs {parseFloat(formData.monto_base || '0').toFixed(2)}
-                        </Typography>
-                      </Box>
-                    </Grid>
-
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Box
-                        sx={{
-                          p: 2,
-                          borderRadius: '12px',
-                          background: alpha('#fff', isDark ? 0.05 : 0.5),
-                          textAlign: 'center',
-                        }}
-                      >
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          {ejemplo.cantidadMeses} Meses sin Desc.
-                        </Typography>
-                        <Typography variant="h6" fontWeight={700}>
-                          Bs {ejemplo.totalSinDescuento.toFixed(2)}
-                        </Typography>
-                      </Box>
-                    </Grid>
-
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Box
-                        sx={{
-                          p: 2,
-                          borderRadius: '12px',
-                          background: alpha('#ef4444', 0.1),
-                          textAlign: 'center',
-                        }}
-                      >
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          Descuento
-                        </Typography>
-                        <Typography variant="h6" fontWeight={700} color="#ef4444">
-                          - Bs {ejemplo.montoDescuento.toFixed(2)}
-                        </Typography>
-                        <Typography variant="caption" color="success.main">
-                          ≈ {ejemplo.mesesGratis.toFixed(1)} mes gratis
-                        </Typography>
-                      </Box>
-                    </Grid>
-
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                      <Box
-                        sx={{
-                          p: 2,
-                          borderRadius: '12px',
-                          background: alpha('#10b981', 0.2),
-                          textAlign: 'center',
-                        }}
-                      >
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          Total a Pagar
-                        </Typography>
-                        <Typography variant="h5" fontWeight={700} color="#10b981">
-                          Bs {ejemplo.totalConDescuento.toFixed(2)}
-                        </Typography>
-                      </Box>
-                    </Grid>
+                    {[
+                      {
+                        label: 'Monto por Mes',
+                        value: `Bs ${parseFloat(formData.monto_base || '0').toFixed(2)}`,
+                        bg: alpha('#fff', isDark ? 0.05 : 0.5),
+                      },
+                      {
+                        label: `${ejemplo.cantidadMeses} Meses sin Desc.`,
+                        value: `Bs ${ejemplo.totalSinDescuento.toFixed(2)}`,
+                        bg: alpha('#fff', isDark ? 0.05 : 0.5),
+                      },
+                      {
+                        label: 'Descuento',
+                        value: `- Bs ${ejemplo.montoDescuento.toFixed(2)}`,
+                        sub: `≈ ${ejemplo.mesesGratis.toFixed(1)} mes gratis`,
+                        valueColor: '#ef4444',
+                        subColor: 'success.main',
+                        bg: alpha('#ef4444', 0.1),
+                      },
+                      {
+                        label: 'Total a Pagar',
+                        value: `Bs ${ejemplo.totalConDescuento.toFixed(2)}`,
+                        valueColor: '#10b981',
+                        valueVariant: 'h5' as const,
+                        bg: alpha('#10b981', 0.2),
+                      },
+                    ].map(({ label, value, sub, valueColor, subColor, bg, valueVariant }) => (
+                      <Grid key={label} size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Box sx={{ p: 2, borderRadius: '12px', background: bg, textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            {label}
+                          </Typography>
+                          <Typography variant={valueVariant ?? 'h6'} fontWeight={700} color={valueColor}>
+                            {value}
+                          </Typography>
+                          {sub && (
+                            <Typography variant="caption" color={subColor}>{sub}</Typography>
+                          )}
+                        </Box>
+                      </Grid>
+                    ))}
                   </Grid>
 
                   <Alert severity="success" sx={{ mt: 2, borderRadius: '12px' }}>
                     <Typography variant="caption">
-                      <strong>Beneficio para padres:</strong> Pagando los 10 meses completos de una vez, 
+                      <strong>Beneficio para padres:</strong> Pagando los 10 meses completos de una vez,
                       ahorran Bs {ejemplo.montoDescuento.toFixed(2)} (equivalente a {ejemplo.mesesGratis.toFixed(1)} mes de estudio)
                     </Typography>
                   </Alert>
@@ -724,14 +747,19 @@ export const ConfiguracionCostos: React.FC = () => {
           </Grid>
         </DialogContent>
 
-        <DialogActions sx={{ p: 3, gap: 2 }}>
+        {/* ── FOOTER ── */}
+        <Box sx={{
+          px: 3, pb: 3, pt: 2,
+          display: 'flex', alignItems: 'center', gap: 1,
+          borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'}`,
+        }}>
+          <Box sx={{ flex: 1 }} />
           <Button
             onClick={() => setDialogOpen(false)}
-            variant="outlined"
             sx={{
-              borderRadius: '12px',
-              textTransform: 'none',
-              fontWeight: 600,
+              borderRadius: '10px', color: 'text.secondary', px: 2,
+              textTransform: 'none', fontWeight: 600,
+              '&:hover': { background: 'rgba(255,255,255,0.05)' },
             }}
           >
             Cancelar
@@ -741,19 +769,30 @@ export const ConfiguracionCostos: React.FC = () => {
             variant="contained"
             disabled={!formData.monto_base || parseFloat(formData.monto_base) <= 0}
             sx={{
-              borderRadius: '12px',
-              textTransform: 'none',
-              fontWeight: 600,
-              background: isDark
-                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              borderRadius: '10px', px: 3, fontWeight: 700, textTransform: 'none',
+              background: `linear-gradient(135deg, #10b981 0%, #059669 100%)`,
               color: '#fff',
+              boxShadow: '0 4px 16px rgba(16,185,129,0.4)',
+              '&:hover': { boxShadow: '0 6px 20px rgba(16,185,129,0.5)' },
+              '&.Mui-disabled': { opacity: 0.4, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff' },
             }}
           >
             Guardar Configuración
           </Button>
-        </DialogActions>
+        </Box>
       </Dialog>
+      {costoParaAjuste && (
+        <AjusteCostoModal
+          open={ajusteModalOpen}
+          onClose={() => setAjusteModalOpen(false)}
+          periodoAcademicoId={costoParaAjuste.periodo_academico_id}
+          periodoNombre={costoParaAjuste.periodo_nombre ?? ''}
+          nivelAcademicoId={costoParaAjuste.nivel_academico_id}
+          nivelNombre={costoParaAjuste.nivel_nombre ?? ''}
+          montoBaseActual={costoParaAjuste.monto_base}
+          onAplicado={cargarCostos}
+        />
+      )}
     </Box>
   );
 };

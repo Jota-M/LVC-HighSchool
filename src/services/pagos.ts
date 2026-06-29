@@ -43,12 +43,15 @@ import type {
   FiltrosExportarIngresos,
   FormatoReporte,
   TipoReportePagos,
-  DescargaReportePagos
+  DescargaReportePagos,
+  FiltrosAjusteCosto,
+  AjusteCostoPreviewResponse,
+  AjusteCostoAplicarResponse,
 } from '../types/pagos';
 
 class PagosService {
   // ============== PAGO DISTRIBUIDO ==============
-  
+
   async calcularDistribucion(params: {
     matricula_id: number;
     monto_total: number;
@@ -113,7 +116,7 @@ class PagosService {
   }
 
   // ============== PAGO MÚLTIPLE ==============
-  
+
   async obtenerResumenPendientes(matriculaIds: number[]): Promise<ResumenPendientesResponse> {
     const { data } = await api.get<ResumenPendientesResponse>('/api/pago-multiple/resumen', {
       params: { matricula_ids: matriculaIds.join(',') }
@@ -269,7 +272,7 @@ class PagosService {
   }
 
   async obtenerIngresos(filtros?: FiltrosIngresos): Promise<IngresosResponse> {
-    const { data} = await api.get<IngresosResponse>('/api/reportes-pagos/ingresos', { params: filtros });
+    const { data } = await api.get<IngresosResponse>('/api/reportes-pagos/ingresos', { params: filtros });
     return data;
   }
 
@@ -353,7 +356,7 @@ class PagosService {
       `estado-cuenta-${filtros.periodo_academico_id}`
     );
   }
- 
+
   async exportarMorosos(filtros: FiltrosExportarMorosos): Promise<DescargaReportePagos> {
     return this.descargarReportePagos(
       '/api/reportes-pagos/exportar/morosos',
@@ -362,7 +365,7 @@ class PagosService {
       `morosos-${filtros.periodo_academico_id}`
     );
   }
- 
+
   async exportarIngresos(filtros: FiltrosExportarIngresos): Promise<DescargaReportePagos> {
     return this.descargarReportePagos(
       '/api/reportes-pagos/exportar/ingresos',
@@ -371,11 +374,11 @@ class PagosService {
       `ingresos-${filtros.periodo_academico_id}`
     );
   }
- 
+
   // ============================================================
   // PDF COMPROBANTES INDIVIDUALES
   // ============================================================
- 
+
   abrirPDFPago(pagoId: number): void {
     window.open(`/api/pago-mensualidad/${pagoId}/pdf`, '_blank');
   }
@@ -513,8 +516,8 @@ class PagosService {
     );
 
     if (pendientes.length < 10) {
-      return { 
-        puede: false, 
+      return {
+        puede: false,
         razon: `Solo hay ${pendientes.length} de 10 mensualidades pendientes`
       };
     }
@@ -538,7 +541,7 @@ class PagosService {
       valido: cantidadActual === cantidadEsperada,
       cantidad_actual: cantidadActual,
       cantidad_esperada: cantidadEsperada,
-      mensaje: cantidadActual !== cantidadEsperada 
+      mensaje: cantidadActual !== cantidadEsperada
         ? `Se esperaban ${cantidadEsperada} mensualidades pero hay ${cantidadActual}`
         : undefined
     };
@@ -564,7 +567,7 @@ class PagosService {
    */
   obtenerMesesAcademicos(): readonly string[] {
     return [
-      'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+      'febrero', 'marzo', 'abril', 'mayo', 'junio',
       'julio', 'agosto', 'septiembre', 'octubre', 'noviembre'
     ];
   }
@@ -610,6 +613,18 @@ class PagosService {
       minute: '2-digit'
     });
   }
+  // ============== AJUSTE RETROACTIVO DE COSTO ==============
+
+  async previsualizarAjusteCosto(filtros: FiltrosAjusteCosto): Promise<AjusteCostoPreviewResponse> {
+    const { data } = await api.post<AjusteCostoPreviewResponse>('/api/ajuste-costo/previsualizar', filtros);
+    return data;
+  }
+
+  async aplicarAjusteCosto(filtros: FiltrosAjusteCosto): Promise<AjusteCostoAplicarResponse> {
+    const { data } = await api.post<AjusteCostoAplicarResponse>('/api/ajuste-costo/aplicar', filtros);
+    return data;
+  }
 }
+
 
 export default new PagosService();

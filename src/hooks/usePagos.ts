@@ -25,6 +25,9 @@ import type {
   RegistrarPagoMensualidadRequest,
   RegistrarPagoAnualRequest,
   GenerarMensualidadesRequest,
+  FiltrosAjusteCosto,
+  AjusteCostoPreviewResponse,
+  AjusteCostoAplicarResponse,
 } from '../types/pagos';
 
 interface UsePagosOptions {
@@ -90,6 +93,11 @@ interface UsePagosReturn {
   anularPago: (id: number, motivo: string) => Promise<void>;
   generarMensualidades: (data: GenerarMensualidadesRequest) => Promise<void>;
   limpiarMensualidades: () => void;
+  loadingAjusteCosto: boolean;
+  ajustePreview: AjusteCostoPreviewResponse['data'] | null;
+  previsualizarAjusteCosto: (filtros: FiltrosAjusteCosto) => Promise<AjusteCostoPreviewResponse['data']>;
+  aplicarAjusteCosto: (filtros: FiltrosAjusteCosto) => Promise<AjusteCostoAplicarResponse['data']>;
+  limpiarAjustePreview: () => void;
 
   // Utilidades
   refetch: () => Promise<void>;
@@ -107,24 +115,26 @@ export const usePagos = (options: UsePagosOptions = {}): UsePagosReturn => {
   } = options;
 
   // ── Estado ─────────────────────────────────────────────────
-  const [costos, setCostos]                         = useState<CostoMensualidad[]>([]);
-  const [mensualidades, setMensualidades]           = useState<Mensualidad[]>([]);
-  const [pagos, setPagos]                           = useState<PagoMensualidad[]>([]);
-  const [pagosAnuales, setPagosAnuales]             = useState<PagoAnualCompleto[]>([]);
-  const [estadoEstudiantes, setEstadoEstudiantes]   = useState<EstadoPagosEstudiante[]>([]);
-  const [ingresos, setIngresos]                     = useState<IngresosPorPeriodo[]>([]);
-  const [morosos, setMorosos]                       = useState<EstudianteMoroso[]>([]);
-  const [resumen, setResumen]                       = useState<ResumenPagos | null>(null);
-  const [infoSistema, setInfoSistema]               = useState<InfoSistema | null>(null);
+  const [costos, setCostos] = useState<CostoMensualidad[]>([]);
+  const [mensualidades, setMensualidades] = useState<Mensualidad[]>([]);
+  const [pagos, setPagos] = useState<PagoMensualidad[]>([]);
+  const [pagosAnuales, setPagosAnuales] = useState<PagoAnualCompleto[]>([]);
+  const [estadoEstudiantes, setEstadoEstudiantes] = useState<EstadoPagosEstudiante[]>([]);
+  const [ingresos, setIngresos] = useState<IngresosPorPeriodo[]>([]);
+  const [morosos, setMorosos] = useState<EstudianteMoroso[]>([]);
+  const [resumen, setResumen] = useState<ResumenPagos | null>(null);
+  const [infoSistema, setInfoSistema] = useState<InfoSistema | null>(null);
 
-  const [loadingCostos, setLoadingCostos]           = useState(false);
-  const [loadingMensualidades, setLoadingMens]      = useState(false);
-  const [loadingPagos, setLoadingPagos]             = useState(false);
-  const [loadingPagosAnuales, setLoadingAnuales]    = useState(false);
-  const [loadingReportes, setLoadingReportes]       = useState(false);
+  const [loadingCostos, setLoadingCostos] = useState(false);
+  const [loadingMensualidades, setLoadingMens] = useState(false);
+  const [loadingPagos, setLoadingPagos] = useState(false);
+  const [loadingPagosAnuales, setLoadingAnuales] = useState(false);
+  const [loadingReportes, setLoadingReportes] = useState(false);
   const [loadingExportacionReportes, setLoadingExportacionReportes] = useState(false);
-  const [error, setError]                           = useState<string | null>(null);
-  const [paginacion, setPaginacion]                 = useState<UsePagosReturn['paginacion']>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [paginacion, setPaginacion] = useState<UsePagosReturn['paginacion']>(null);
+  const [loadingAjusteCosto, setLoadingAjusteCosto] = useState(false);
+  const [ajustePreview, setAjustePreview] = useState<AjusteCostoPreviewResponse['data'] | null>(null);
 
   const loading =
     loadingCostos || loadingMensualidades || loadingPagos ||
@@ -325,6 +335,34 @@ export const usePagos = (options: UsePagosOptions = {}): UsePagosReturn => {
     },
     [cargarMensualidadesPorMatricula]
   );
+  const previsualizarAjusteCosto = useCallback(
+    async (filtros: FiltrosAjusteCosto): Promise<AjusteCostoPreviewResponse['data']> => {
+      try {
+        setLoadingAjusteCosto(true); setError(null);
+        const res = await pagosService.previsualizarAjusteCosto(filtros);
+        setAjustePreview(res.data);
+        return res.data;
+      } catch (err) {
+        throw new Error(handleError(err, 'Error al previsualizar el ajuste de costo'));
+      } finally { setLoadingAjusteCosto(false); }
+    },
+    []
+  );
+
+  const aplicarAjusteCosto = useCallback(
+    async (filtros: FiltrosAjusteCosto): Promise<AjusteCostoAplicarResponse['data']> => {
+      try {
+        setLoadingAjusteCosto(true); setError(null);
+        const res = await pagosService.aplicarAjusteCosto(filtros);
+        return res.data;
+      } catch (err) {
+        throw new Error(handleError(err, 'Error al aplicar el ajuste de costo'));
+      } finally { setLoadingAjusteCosto(false); }
+    },
+    []
+  );
+
+  const limpiarAjustePreview = useCallback(() => setAjustePreview(null), []);
 
   const limpiarMensualidades = useCallback(() => {
     setMensualidades([]);
@@ -335,13 +373,13 @@ export const usePagos = (options: UsePagosOptions = {}): UsePagosReturn => {
 
   const refetch = useCallback(async () => {
     const promises: Promise<void>[] = [];
-    if (loadCostos)        promises.push(cargarCostos());
+    if (loadCostos) promises.push(cargarCostos());
     if (loadMensualidades) promises.push(cargarMensualidades());
-    if (loadPagos)         promises.push(cargarPagos());
-    if (loadPagosAnuales)  promises.push(cargarPagosAnuales());
+    if (loadPagos) promises.push(cargarPagos());
+    if (loadPagosAnuales) promises.push(cargarPagosAnuales());
     await Promise.all(promises);
   }, [loadCostos, loadMensualidades, loadPagos, loadPagosAnuales,
-      cargarCostos, cargarMensualidades, cargarPagos, cargarPagosAnuales]);
+    cargarCostos, cargarMensualidades, cargarPagos, cargarPagosAnuales]);
 
   useEffect(() => {
     cargarInfoSistema();
@@ -352,7 +390,7 @@ export const usePagos = (options: UsePagosOptions = {}): UsePagosReturn => {
   // ── Utilidades ─────────────────────────────────────────────
 
   const obtenerMensualidadPorId = (id: number) => mensualidades.find((m) => m.id === id);
-  const obtenerPagoPorId        = (id: number) => pagos.find((p) => p.id === id);
+  const obtenerPagoPorId = (id: number) => pagos.find((p) => p.id === id);
 
   return {
     // Datos
@@ -373,6 +411,8 @@ export const usePagos = (options: UsePagosOptions = {}): UsePagosReturn => {
     // Acciones
     registrarPago, registrarPagoAnual, anularPago,
     generarMensualidades, limpiarMensualidades,
+    previsualizarAjusteCosto, aplicarAjusteCosto, loadingAjusteCosto,
+    ajustePreview, limpiarAjustePreview,
     // Utilidades
     refetch, obtenerMensualidadPorId, obtenerPagoPorId,
   };
