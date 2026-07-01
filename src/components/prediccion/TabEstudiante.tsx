@@ -13,6 +13,7 @@ import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
 import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
+import CampaignRoundedIcon from '@mui/icons-material/CampaignRounded';
 
 import {
     usePrediccionClase,
@@ -20,6 +21,7 @@ import {
 } from '@/hooks/usePrediccion';
 import { EstudianteClase } from '@/types/prediccionTypes';
 import RecursoMaterialCard from '@/components/prediccion/RecursoMaterialCard';
+import ModalNotificarPadre from '@/components/prediccion/ModalNotificarPadre';
 import {
     fadeUp, getNivel, getClasif, getInitials, NivelChip, ProbBar,
 } from '@/components/prediccion/prediccionShared';
@@ -34,8 +36,13 @@ interface TabEstudianteProps {
 
 const TabEstudiante: React.FC<TabEstudianteProps> = ({ asignacionId, periodoId, paraleloId, accent, isDark }) => {
     const { estudiantes, analizar: cargarClase } = usePrediccionClase();
-    const { resultado, analisis, meta, isLoading, error, predecir, limpiar } = usePrediccionEstudiante();
+    const {
+        resultado, analisis, meta, candidatoNotificacionPadre,
+        isLoading, error, predecir, limpiar,
+    } = usePrediccionEstudiante();
     const [seleccionado, setSeleccionado] = useState<EstudianteClase | null>(null);
+    const [modalNotificarOpen, setModalNotificarOpen] = useState(false);
+    const [padreNotificado, setPadreNotificado] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -50,6 +57,7 @@ const TabEstudiante: React.FC<TabEstudianteProps> = ({ asignacionId, periodoId, 
 
     const handleSeleccionar = async (est: EstudianteClase | null) => {
         setSeleccionado(est);
+        setPadreNotificado(false);
         limpiar();
         if (!est) return;
         await predecir({
@@ -60,6 +68,12 @@ const TabEstudiante: React.FC<TabEstudianteProps> = ({ asignacionId, periodoId, 
     };
 
     const cfg = resultado ? getNivel(resultado.nivel_riesgo) : null;
+
+    // El backend arma el candidato con los datos de la predicción, pero no
+    // conoce el nombre — lo completamos acá con el estudiante seleccionado.
+    const candidatoConNombre = candidatoNotificacionPadre && seleccionado
+        ? { ...candidatoNotificacionPadre, nombre_completo: seleccionado.nombre_completo }
+        : null;
 
     return (
         <Box>
@@ -168,6 +182,44 @@ const TabEstudiante: React.FC<TabEstudianteProps> = ({ asignacionId, periodoId, 
                         </Box>
                     </Box>
 
+                    {/* Notificar al padre — solo aparece si el backend marcó al estudiante
+                        como candidato (riesgo crítico). No se envía nada hasta confirmar. */}
+                    {candidatoConNombre && (
+                        <Box sx={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            gap: 1.5, mb: 2, p: 2, borderRadius: '16px',
+                            border: `1.5px solid ${alpha('#dc2626', 0.25)}`,
+                            bgcolor: isDark ? alpha('#dc2626', 0.06) : alpha('#fee2e2', 0.4),
+                        }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                                <CampaignRoundedIcon sx={{ color: '#dc2626', fontSize: 20 }} />
+                                <Box>
+                                    <Typography variant="body2" fontWeight={700}>
+                                        Riesgo crítico detectado
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {padreNotificado ? 'Padre/madre ya notificado' : '¿Avisar al padre/madre por WhatsApp?'}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                            {padreNotificado ? (
+                                <Chip size="small" icon={<CheckCircleRoundedIcon sx={{ fontSize: 14 }} />}
+                                    label="Notificado" sx={{ bgcolor: alpha('#16a34a', 0.15), color: '#16a34a', fontWeight: 700 }} />
+                            ) : (
+                                <Button
+                                    variant="contained" size="small"
+                                    onClick={() => setModalNotificarOpen(true)}
+                                    sx={{
+                                        borderRadius: '10px', fontWeight: 700, flexShrink: 0,
+                                        bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' },
+                                    }}
+                                >
+                                    Notificar al padre
+                                </Button>
+                            )}
+                        </Box>
+                    )}
+
                     {analisis && (
                         <Box sx={{
                             bgcolor: isDark ? alpha('#f59e0b', 0.07) : alpha('#fef9c3', 0.9),
@@ -237,6 +289,21 @@ const TabEstudiante: React.FC<TabEstudianteProps> = ({ asignacionId, periodoId, 
                         Visualizá su análisis predictivo y recomendaciones
                     </Typography>
                 </Box>
+            )}
+
+            {candidatoConNombre && (
+                <ModalNotificarPadre
+                    open={modalNotificarOpen}
+                    onClose={() => setModalNotificarOpen(false)}
+                    candidatos={[candidatoConNombre]}
+                    asignacionId={asignacionId}
+                    accent={accent}
+                    isDark={isDark}
+                    onNotificado={() => {
+                        setPadreNotificado(true);
+                        setModalNotificarOpen(false);
+                    }}
+                />
             )}
         </Box>
     );

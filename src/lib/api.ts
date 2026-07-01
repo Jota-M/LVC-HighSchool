@@ -1,45 +1,48 @@
-import axios from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+
+interface RetryableRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api-highschool-5ujz.onrender.com',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
   withCredentials: true,
-  timeout: 120000, // ⭐ AGREGAR ESTO
+  timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+let refreshRequest: Promise<unknown> | null = null;
 
-// api.interceptors.response.use(
-//   (response) => response,
-//   async (error) => {
-//     const originalRequest = error.config;
+api.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as RetryableRequestConfig | undefined;
+    const requestUrl = originalRequest?.url ?? '';
 
-//     // Si es 401 y NO es login/me y no hemos reintentado
-//     if (
-//       error.response?.status === 401 && 
-//       !originalRequest._retry &&
-//       !originalRequest.url?.includes('/auth/login') &&
-//       !originalRequest.url?.includes('/auth/me')
-//     ) {
-//       originalRequest._retry = true;
+    if (
+      error.response?.status !== 401 ||
+      !originalRequest ||
+      originalRequest._retry ||
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/refresh')
+    ) {
+      return Promise.reject(error);
+    }
 
-//       try {
-//         // Intentar refrescar el token
-//         await api.post('/auth/refresh');
-//         // Reintentar la petición original
-//         return api(originalRequest);
-//       } catch (refreshError) {
-//         // Si falla el refresh, solo rechazar
-//         // ProtectedRoute se encargará de redirigir a /login
-//         return Promise.reject(refreshError);
-//       }
-//     }
+    originalRequest._retry = true;
 
-//     // Para cualquier otro error, simplemente rechazar
-//     // NO redirigir manualmente aquí
-//     return Promise.reject(error);
-//   }
-// );
+    try {
+      refreshRequest ??= api.post('/auth/refresh');
+      await refreshRequest;
+      return api(originalRequest);
+    } catch (refreshError) {
+      return Promise.reject(refreshError);
+    } finally {
+      refreshRequest = null;
+    }
+  }
+);
 
 export default api;

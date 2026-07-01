@@ -2,8 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { getRoleBasedRoute } from '../../lib/roleRoutes';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { isAxiosError } from 'axios';
 import {
   Box,
   Card,
@@ -30,7 +31,7 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import Header from './Header';
 
 export default function LoginPage() {
-  const { login, loading: authLoading } = useAuth();
+  const { user, login, loading: authLoading } = useAuth();
   const router = useRouter();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -41,21 +42,35 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (authLoading || !user) return;
+
+    const roles = user.roles?.map((role) => role.nombre) ?? [];
+    router.replace(getRoleBasedRoute(roles));
+  }, [authLoading, router, user]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      await login(credential, password);
-      router.replace('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Error al iniciar sesión');
+      const fullUser = await login(credential, password);
+      const roles = fullUser?.roles?.map((role) => role.nombre) ?? [];
+      router.replace(getRoleBasedRoute(roles));
+    } catch (err: unknown) {
+      const message = isAxiosError<{ message?: string }>(err)
+        ? err.response?.data?.message || err.message
+        : err instanceof Error
+          ? err.message
+          : 'Error al iniciar sesión';
+
+      setError(message || 'Error al iniciar sesión');
       setLoading(false);
     }
   };
 
-  if (authLoading) {
+  if (authLoading || user) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
         <CircularProgress sx={{ color: '#facc15' }} />
@@ -202,7 +217,7 @@ export default function LoginPage() {
                       fontStyle: 'italic',
                     }}
                   >
-                    "Educación con valores y excelencia"
+                    &quot;Educación con valores y excelencia&quot;
                   </Typography>
                 </Box>
 

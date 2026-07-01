@@ -9,10 +9,11 @@ import {
   PlanRecuperacionResponse,
   MLHealthResponse,
   EscenarioSimulacion,
-  SimulacionOptimoDTO, 
+  SimulacionOptimoDTO,
   SimulacionOptimoResponse,
   SimulacionOptimoV2Response,
-  SimulacionOptimoV2DTO
+  SimulacionOptimoV2DTO,
+  NotificarPadreDTO,
 } from '@/types/prediccionTypes';
 
 // ============================================
@@ -21,13 +22,13 @@ import {
 
 interface OpcionesPrediccion {
   incluirGemini?: boolean;
-  incluirPlan?:   boolean;
-  usarXgboost?:   boolean;
+  incluirPlan?: boolean;
+  usarXgboost?: boolean;
 }
 
 interface OpcionesClase {
   incluirGemini?: boolean;
-  usarXgboost?:   boolean;
+  usarXgboost?: boolean;
 }
 
 // ============================================
@@ -81,6 +82,18 @@ export const prediccionService = {
   },
 
   /**
+   * Notifica al padre/madre de un estudiante en riesgo crítico — SOLO se
+   * llama cuando el docente confirma desde ModalNotificarPadre. No se
+   * dispara automáticamente desde predecirEstudiante ni predecirClase.
+   */
+  async notificarPadre(
+    data: NotificarPadreDTO,
+  ): Promise<{ success: boolean; data: any }> {
+    const response = await api.post('/prediccion/notificar-padre', data);
+    return response.data;
+  },
+
+  /**
    * Plan de recuperación semana a semana (requiere Gemini).
    * Retorna plan: null si riesgo es bajo o quedan < 2 semanas.
    */
@@ -118,26 +131,26 @@ export const prediccionService = {
     const params = new URLSearchParams();
     if (opciones.usarXgboost !== undefined)
       params.append('usar_xgboost', String(opciones.usarXgboost));
- 
+
     const response = await api.post(
       `/prediccion/simular/optimo?${params}`,
       data,
     );
     return response.data;
   },
-  
+
   async simularOptimoV2(
-  data: SimulacionOptimoV2DTO,
-  opciones: { usarXgboost?: boolean } = {},
-): Promise<{ success: boolean; data: SimulacionOptimoV2Response }> {
-  const params = new URLSearchParams();
-  if (opciones.usarXgboost !== undefined)
-    params.append('usar_xgboost', String(opciones.usarXgboost));
-  const response = await api.post(`/prediccion/simular/optimo/v2?${params}`, data);
-  return response.data;
-},
- 
-  
+    data: SimulacionOptimoV2DTO,
+    opciones: { usarXgboost?: boolean } = {},
+  ): Promise<{ success: boolean; data: SimulacionOptimoV2Response }> {
+    const params = new URLSearchParams();
+    if (opciones.usarXgboost !== undefined)
+      params.append('usar_xgboost', String(opciones.usarXgboost));
+    const response = await api.post(`/prediccion/simular/optimo/v2?${params}`, data);
+    return response.data;
+  },
+
+
   /**
    * Estado del microservicio ML.
    * Útil para mostrar un indicador en el dashboard.

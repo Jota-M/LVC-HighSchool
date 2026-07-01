@@ -8,14 +8,14 @@ import {
   Fade, Alert, LinearProgress, Chip, Tooltip,
   TextField,
 } from '@mui/material';
-import EventAvailableIcon    from '@mui/icons-material/EventAvailable';
-import ChevronRightIcon      from '@mui/icons-material/ChevronRight';
-import SchoolRoundedIcon     from '@mui/icons-material/SchoolRounded';
-import GroupsRoundedIcon     from '@mui/icons-material/GroupsRounded';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import SchoolRoundedIcon from '@mui/icons-material/SchoolRounded';
+import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
-import CalendarTodayIcon     from '@mui/icons-material/CalendarToday';
-import TodayIcon             from '@mui/icons-material/Today';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import TodayIcon from '@mui/icons-material/Today';
 
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -36,14 +36,14 @@ function agruparPorMateria(asignaciones: AsignacionDocente[]) {
 // ─── Selector de fecha simple ─────────────────────────────────────────────────
 
 const SelectorFecha: React.FC<{ fecha: string; onChange: (f: string) => void }> = ({ fecha, onChange }) => {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const hoy    = new Date().toISOString().slice(0, 10);
-  const esHoy  = fecha === hoy;
+  const hoy = new Date().toISOString().slice(0, 10);
+  const esHoy = fecha === hoy;
 
-  const gold    = isDark ? '#facc15' : '#0288d1';
+  const gold = isDark ? '#facc15' : '#0288d1';
   const goldEnd = isDark ? '#f59e0b' : '#01579b';
-  const gradBg  = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
+  const gradBg = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
 
   const fechaDisplay = new Date(fecha + 'T12:00:00').toLocaleDateString('es-BO', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -90,14 +90,14 @@ const SelectorFecha: React.FC<{ fecha: string; onChange: (f: string) => void }> 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export default function DocenteAsistenciaPage() {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const router = useRouter();
   const { user } = useAuth();
 
-  const gold    = isDark ? '#facc15' : '#0288d1';
+  const gold = isDark ? '#facc15' : '#0288d1';
   const goldEnd = isDark ? '#f59e0b' : '#01579b';
-  const gradBg  = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
+  const gradBg = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
 
   const { asignaciones, fecha, isLoading, sinAsignaciones, cambiarFecha } = useMisAsignaciones();
 
@@ -155,7 +155,13 @@ export default function DocenteAsistenciaPage() {
             Contactá al administrador si esto es un error.
           </Alert>
         )}
-
+        {/* <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 2,
+          }}
+        > */}
         {/* ══ GRUPOS DE MATERIAS ══ */}
         {grupos.map((grupo, gi) => {
           const base = grupo[0];
@@ -279,15 +285,15 @@ export default function DocenteAsistenciaPage() {
                   {/* Contadores de estado */}
                   <Box sx={{ display: 'flex', gap: 0.8, mb: 2, flexWrap: 'wrap' }}>
                     {[
-                      { label: 'P', val: base.presentes,    color: '#10b981' },
-                      { label: 'A', val: base.ausentes,     color: '#ef4444' },
-                      { label: 'T', val: base.tardanzas,    color: '#f59e0b' },
+                      { label: 'P', val: base.presentes, color: '#10b981' },
+                      { label: 'A', val: base.ausentes, color: '#ef4444' },
+                      { label: 'T', val: base.tardanzas, color: '#f59e0b' },
                       { label: 'J', val: base.justificados, color: '#3b82f6' },
                     ].map(s => (
                       <Tooltip key={s.label} title={
                         s.label === 'P' ? 'Presentes' :
-                        s.label === 'A' ? 'Ausentes' :
-                        s.label === 'T' ? 'Tardanzas' : 'Justificados'
+                          s.label === 'A' ? 'Ausentes' :
+                            s.label === 'T' ? 'Tardanzas' : 'Justificados'
                       }>
                         <Box sx={{
                           px: 1, py: 0.3, borderRadius: 1.5,
@@ -336,10 +342,11 @@ export default function DocenteAsistenciaPage() {
                   </Box>
                 </Box>
               </Box>
+
             </Box>
           );
         })}
-
+        {/* </Box> */}
       </Container>
     </Box>
   );

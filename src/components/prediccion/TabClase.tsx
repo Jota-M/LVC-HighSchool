@@ -14,10 +14,12 @@ import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import CampaignRoundedIcon from '@mui/icons-material/CampaignRounded';
 
 import { usePrediccionClase } from '@/hooks/usePrediccion';
 import { EstudianteClase } from '@/types/prediccionTypes';
 import StudentPanel from '@/components/prediccion/StudentPanel';
+import ModalNotificarPadre from '@/components/prediccion/ModalNotificarPadre';
 import {
     fadeUp, pulse, getNivel, getInitials, NivelChip,
 } from '@/components/prediccion/prediccionShared';
@@ -31,11 +33,16 @@ interface TabClaseProps {
 }
 
 const TabClase: React.FC<TabClaseProps> = ({ asignacionId, periodoId, paraleloId, accent, isDark }) => {
-    const { estudiantes, resumen, analisisGemini, isLoading, error, analizar } = usePrediccionClase();
+    const {
+        estudiantes, resumen, analisisGemini, candidatosNotificacionPadre,
+        isLoading, error, analizar,
+    } = usePrediccionClase();
     const [cargado, setCargado] = useState(false);
     const [panelEst, setPanelEst] = useState<EstudianteClase | null>(null);
     const [filtroNivel, setFiltroNivel] = useState<string>('todos');
     const [busqueda, setBusqueda] = useState('');
+    const [modalNotificarOpen, setModalNotificarOpen] = useState(false);
+    const [yaNotificados, setYaNotificados] = useState<Set<number>>(new Set());
 
     // Guard para evitar doble petición (useEffect + click simultáneo)
     const peticionEnCurso = useRef(false);
@@ -52,6 +59,7 @@ const TabClase: React.FC<TabClaseProps> = ({ asignacionId, periodoId, paraleloId
                 paralelo_id: paraleloId,
             });
             setCargado(true);
+            setYaNotificados(new Set());
         } finally {
             peticionEnCurso.current = false;
         }
@@ -66,6 +74,11 @@ const TabClase: React.FC<TabClaseProps> = ({ asignacionId, periodoId, paraleloId
         .filter(e => filtroNivel === 'todos' || e.nivel_riesgo === filtroNivel)
         .filter(e => !busqueda || e.nombre_completo.toLowerCase().includes(busqueda.toLowerCase()))
         .sort((a, b) => (ordenRiesgo[a.nivel_riesgo] ?? 4) - (ordenRiesgo[b.nivel_riesgo] ?? 4));
+
+    // Candidatos pendientes — sacamos los que ya se notificaron en esta sesión
+    const candidatosPendientes = candidatosNotificacionPadre
+        .filter(c => !yaNotificados.has(c.matricula_id))
+        .map(c => ({ ...c, nombre_completo: c.nombre_completo ?? `Estudiante ${c.estudiante_id}` }));
 
     return (
         <Box>
@@ -95,6 +108,38 @@ const TabClase: React.FC<TabClaseProps> = ({ asignacionId, periodoId, paraleloId
 
             {cargado && !isLoading && resumen && (
                 <Box sx={{ animation: `${fadeUp} 0.35s ease-out` }}>
+
+                    {/* ── Banner notificar padres ──────────────────────── */}
+                    {candidatosPendientes.length > 0 && (
+                        <Box sx={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            gap: 1.5, mb: 3, p: 2, borderRadius: '18px',
+                            border: `1.5px solid ${alpha('#dc2626', 0.25)}`,
+                            bgcolor: isDark ? alpha('#dc2626', 0.06) : alpha('#fee2e2', 0.4),
+                        }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                                <CampaignRoundedIcon sx={{ color: '#dc2626', fontSize: 22 }} />
+                                <Box>
+                                    <Typography variant="body2" fontWeight={700}>
+                                        {candidatosPendientes.length} estudiante(s) en riesgo crítico sin notificar
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Elegí a quién avisarle por WhatsApp — no se envía nada automáticamente
+                                    </Typography>
+                                </Box>
+                            </Box>
+                            <Button
+                                variant="contained"
+                                onClick={() => setModalNotificarOpen(true)}
+                                sx={{
+                                    borderRadius: '10px', fontWeight: 700, flexShrink: 0,
+                                    bgcolor: '#dc2626', '&:hover': { bgcolor: '#b91c1c' },
+                                }}
+                            >
+                                Notificar padres
+                            </Button>
+                        </Box>
+                    )}
 
                     {/* ── Stats grandes con icon-badge ─────────────────── */}
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 2, mb: 4 }}>
@@ -402,6 +447,26 @@ const TabClase: React.FC<TabClaseProps> = ({ asignacionId, periodoId, paraleloId
                     onClose={() => setPanelEst(null)}
                 />
             </Drawer>
+
+            {/* Modal de notificación a padres — selección múltiple */}
+            <ModalNotificarPadre
+                open={modalNotificarOpen}
+                onClose={() => setModalNotificarOpen(false)}
+                candidatos={candidatosPendientes}
+                asignacionId={asignacionId}
+                accent={accent}
+                isDark={isDark}
+                onNotificado={() => {
+                    // Marcamos como notificados (el detalle de éxito/error por
+                    // candidato queda visible dentro del modal mientras está
+                    // abierto; acá solo sacamos del banner los que ya se procesaron
+                    // una vez el modal termina de enviar).
+                    setYaNotificados(prev => new Set([
+                        ...prev,
+                        ...candidatosPendientes.map(c => c.matricula_id),
+                    ]));
+                }}
+            />
         </Box>
     );
 };

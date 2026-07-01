@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (credential: string, password: string) => Promise<void>;
+  login: (credential: string, password: string) => Promise<User | null>;
   logout: () => Promise<void>;
   hasRole: (roles: string[]) => boolean;
   hasPermission: (permission: string) => boolean;
@@ -37,12 +37,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (credential: string, password: string) => {
-  await authService.login({ credential, password });
-  // En vez de usar el user del login, pedir el user completo
-  const fullUser = await authService.getCurrentUser();
-  setUser(fullUser);
-  // ahora fullUser tiene roles y permisos
-};
+    await authService.login({ credential, password });
+    const fullUser = await authService.getCurrentUser();
+    setUser(fullUser);
+    return fullUser;
+  };
 
   const logout = async () => {
     try {
