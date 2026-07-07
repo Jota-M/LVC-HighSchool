@@ -7,20 +7,21 @@ import {
   CircularProgress, Chip, Button, Divider,
   alpha, IconButton, Tooltip,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  InputAdornment, Fade,
+  InputAdornment,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 
-import AutoAwesomeRoundedIcon  from '@mui/icons-material/AutoAwesomeRounded';
-import MenuBookRoundedIcon     from '@mui/icons-material/MenuBookRounded';
-import SearchRoundedIcon       from '@mui/icons-material/SearchRounded';
-import AddRoundedIcon          from '@mui/icons-material/AddRounded';
-import DeleteRoundedIcon       from '@mui/icons-material/DeleteRounded';
-import CheckCircleRoundedIcon  from '@mui/icons-material/CheckCircleRounded';
-import StarRoundedIcon         from '@mui/icons-material/StarRounded';
-import OpenInNewRoundedIcon    from '@mui/icons-material/OpenInNewRounded';
+import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
+import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import StarRoundedIcon from '@mui/icons-material/StarRounded';
+import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import PersonSearchRoundedIcon from '@mui/icons-material/PersonSearchRounded';
-import LinkRoundedIcon         from '@mui/icons-material/LinkRounded';
+import LinkRoundedIcon from '@mui/icons-material/LinkRounded';
+import SmartDisplayRoundedIcon from '@mui/icons-material/SmartDisplayRounded';
 
 import { EstudianteClase } from '@/types/prediccionTypes';
 import { usePrediccionClase, usePrediccionEstudiante } from '@/hooks/usePrediccion';
@@ -37,29 +38,43 @@ const fadeUp = keyframes`
 
 // ── Tipos locales ─────────────────────────────────────────────
 interface MaterialAsignado {
-  id:                    number;
-  material_id:           number;
-  titulo:                string;
-  descripcion?:          string | null;
-  tipo_nombre:           string;
-  tipo_codigo:           string;
-  tipo_icono:            string;
-  tipo_color:            string;
-  url_archivo?:          string | null;
-  url_externa?:          string | null;
-  es_enlace_externo:     boolean;
-  origen:                'gemini' | 'manual';
-  mensaje_docente?:      string | null;
-  visto_por_estudiante:  boolean;
-  fecha_vista?:          string | null;
-  created_at:            string;
+  id: number;
+  material_id?: number | null;
+  titulo?: string | null;
+  descripcion?: string | null;
+  tipo_nombre?: string | null;
+  tipo_codigo?: string | null;
+  tipo_icono?: string | null;
+  tipo_color?: string | null;
+  url_archivo?: string | null;
+  url_externa?: string | null;
+  url_recurso_externo?: string | null;
+  titulo_recurso_externo?: string | null;
+  origen_externo?: string | null;
+  tipo_recurso?: 'interno' | 'externo';
+  es_enlace_externo: boolean;
+  origen: 'gemini' | 'manual' | 'web_search';
+  mensaje_docente?: string | null;
+  visto_por_estudiante: boolean;
+  fecha_vista?: string | null;
+  created_at: string;
 }
+
+type RecursoExternoIA = {
+  titulo: string;
+  tipo?: string | null;
+  tema_titulo?: string | null;
+  tema_id?: number | null;
+  url?: string | null;
+  search_query?: string | null;
+  razon?: string | null;
+};
 
 // ── Helpers ───────────────────────────────────────────────────
 function getInitials(nombre: string) {
   return nombre.split(',')[0].trim().split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
-function buildSearchUrl(rec: { url?: string | null; search_query?: string | null; tipo?: string }): string | null {
+function buildSearchUrl(rec: { url?: string | null; search_query?: string | null; tipo?: string | null }): string | null {
   if (rec.url) return rec.url;
   if (!rec.search_query) return null;
   const q = encodeURIComponent(rec.search_query);
@@ -73,57 +88,78 @@ function buildSearchUrl(rec: { url?: string | null; search_query?: string | null
 function getIconEmoji(codigo?: string): string {
   if (!codigo) return '📄';
   const t = codigo.toUpperCase();
-  if (t === 'PDF')   return '📕';
+  if (t === 'PDF') return '📕';
   if (t === 'VIDEO') return '🎬';
-  if (t === 'PPT')   return '📊';
-  if (t === 'DOC')   return '📝';
-  if (t === 'LINK')  return '🔗';
-  if (t === 'IMG')   return '🖼️';
+  if (t === 'PPT') return '📊';
+  if (t === 'DOC') return '📝';
+  if (t === 'LINK') return '🔗';
+  if (t === 'IMG') return '🖼️';
   if (t === 'AUDIO') return '🎵';
   return '📄';
 }
 
+function getApiErrorMessage(err: unknown, fallback: string): string {
+  const maybeError = err as { response?: { data?: { message?: string } } };
+  return maybeError.response?.data?.message || fallback;
+}
+
 // ── Card de material asignado ─────────────────────────────────
 const MaterialAsignadoCard: React.FC<{
-  m:        MaterialAsignado;
-  isDark:   boolean;
-  accent:   string;
+  m: MaterialAsignado;
+  isDark: boolean;
+  accent: string;
   onQuitar: (id: number) => void;
   quitando: number | null;
 }> = ({ m, isDark, accent, onQuitar, quitando }) => {
-  const urlVer = m.url_externa || m.url_archivo;
+  const esExterno = m.tipo_recurso === 'externo' || !m.material_id;
+  const titulo = m.titulo || m.titulo_recurso_externo || 'Recurso externo';
+  const urlVer = m.url_externa || m.url_archivo || m.url_recurso_externo;
+  const tipoColor = esExterno ? '#ef4444' : (m.tipo_color || accent);
+  const origenLabel = esExterno
+    ? (m.origen_externo === 'youtube' ? 'YouTube' : 'Web')
+    : m.origen === 'gemini' ? 'Gemini' : null;
 
   return (
     <Box sx={{
-      p:            1.5,
+      p: 1.5,
       borderRadius: '12px',
-      border:       `1.5px solid ${m.origen === 'gemini' ? alpha('#f59e0b', 0.35) : alpha(accent, 0.25)}`,
-      bgcolor:      m.origen === 'gemini'
+      border: `1.5px solid ${m.origen === 'gemini' ? alpha('#f59e0b', 0.35) : alpha(accent, 0.25)}`,
+      bgcolor: m.origen === 'gemini'
         ? isDark ? alpha('#f59e0b', 0.05) : alpha('#fef9c3', 0.5)
         : isDark ? alpha(accent, 0.04) : alpha(accent, 0.03),
-      display:      'flex',
-      gap:          1.2,
-      animation:    `${fadeUp} 0.2s ease-out`,
+      display: 'flex',
+      gap: 1.2,
+      animation: `${fadeUp} 0.2s ease-out`,
     }}>
       <Box sx={{
         width: 36, height: 36, borderRadius: '9px', flexShrink: 0,
-        bgcolor: alpha(m.tipo_color || accent, 0.12),
+        bgcolor: alpha(tipoColor, 0.12),
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: '1rem',
       }}>
-        {getIconEmoji(m.tipo_codigo)}
+        {esExterno
+          ? <SmartDisplayRoundedIcon sx={{ fontSize: 18, color: tipoColor }} />
+          : getIconEmoji(m.tipo_codigo || undefined)}
       </Box>
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mb: 0.3, flexWrap: 'wrap' }}>
           <Typography variant="caption" fontWeight={700} noWrap sx={{ flex: 1, fontSize: 11 }}>
-            {m.titulo}
+            {titulo}
           </Typography>
-          {m.origen === 'gemini' && (
+          {origenLabel && (
             <Chip size="small"
-              icon={<AutoAwesomeRoundedIcon sx={{ fontSize: '9px !important', color: '#f59e0b !important' }} />}
-              label="Gemini"
-              sx={{ height: 16, fontSize: '0.58rem', fontWeight: 700, bgcolor: alpha('#f59e0b', 0.12), color: '#f59e0b' }}
+              icon={esExterno
+                ? <SmartDisplayRoundedIcon sx={{ fontSize: '9px !important', color: '#ef4444 !important' }} />
+                : <AutoAwesomeRoundedIcon sx={{ fontSize: '9px !important', color: '#f59e0b !important' }} />}
+              label={origenLabel}
+              sx={{
+                height: 16,
+                fontSize: '0.58rem',
+                fontWeight: 700,
+                bgcolor: alpha(esExterno ? '#ef4444' : '#f59e0b', 0.12),
+                color: esExterno ? '#ef4444' : '#f59e0b',
+              }}
             />
           )}
           {m.visto_por_estudiante && (
@@ -137,7 +173,7 @@ const MaterialAsignadoCard: React.FC<{
 
         {m.mensaje_docente && (
           <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, fontStyle: 'italic', display: 'block', mb: 0.3 }}>
-            "{m.mensaje_docente}"
+            {`"${m.mensaje_docente}"`}
           </Typography>
         )}
 
@@ -174,22 +210,22 @@ const MaterialAsignadoCard: React.FC<{
 
 // ── Card de resultado de búsqueda ─────────────────────────────
 const MaterialBusquedaCard: React.FC<{
-  m:          MaterialAcademico;
-  isDark:     boolean;
-  accent:     string;
+  m: MaterialAcademico;
+  isDark: boolean;
+  accent: string;
   yaAsignado: boolean;
-  onAsignar:  (m: MaterialAcademico) => void;
-  asignando:  number | null;
+  onAsignar: (m: MaterialAcademico) => void;
+  asignando: number | null;
 }> = ({ m, isDark, accent, yaAsignado, onAsignar, asignando }) => (
   <Box sx={{
-    p:            1.5,
+    p: 1.5,
     borderRadius: '12px',
-    border:       `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.07)}`,
-    bgcolor:      yaAsignado ? alpha(accent, 0.04) : isDark ? alpha('#fff', 0.02) : '#fff',
-    display:      'flex',
-    gap:          1.2,
-    alignItems:   'flex-start',
-    opacity:      yaAsignado ? 0.7 : 1,
+    border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.07)}`,
+    bgcolor: yaAsignado ? alpha(accent, 0.04) : isDark ? alpha('#fff', 0.02) : '#fff',
+    display: 'flex',
+    gap: 1.2,
+    alignItems: 'flex-start',
+    opacity: yaAsignado ? 0.7 : 1,
   }}>
     <Box sx={{
       width: 32, height: 32, borderRadius: '8px', flexShrink: 0,
@@ -250,34 +286,37 @@ const MaterialBusquedaCard: React.FC<{
 // ══════════════════════════════════════════════════════════════
 interface TabRecursosIAProps {
   asignacionId: number;
-  periodoId:    number;
-  paraleloId:   number;
-  accent:       string;
-  isDark:       boolean;
+  periodoId: number;
+  paraleloId: number;
+  accent: string;
+  isDark: boolean;
 }
 
 const TabRecursosIA: React.FC<TabRecursosIAProps> = ({
   asignacionId, periodoId, paraleloId, accent, isDark,
 }) => {
-  const { estudiantes, analizar: cargarClase }                          = usePrediccionClase();
-  const { analisis, predecir, limpiar, isLoading: analizando }          = usePrediccionEstudiante();
+  const { estudiantes, analizar: cargarClase } = usePrediccionClase();
+  const { analisis, predecir, limpiar, isLoading: analizando } = usePrediccionEstudiante();
 
   const [seleccionado, setSeleccionado] = useState<EstudianteClase | null>(null);
-  const [asignados, setAsignados]       = useState<MaterialAsignado[]>([]);
-  const [loadingAsig, setLoadingAsig]   = useState(false);
-  const [quitando, setQuitando]         = useState<number | null>(null);
-  const [asignando, setAsignando]       = useState<number | null>(null);
+  const [asignados, setAsignados] = useState<MaterialAsignado[]>([]);
+  const [loadingAsig, setLoadingAsig] = useState(false);
+  const [loadingVideos, setLoadingVideos] = useState(false);
+  const [quitando, setQuitando] = useState<number | null>(null);
+  const [asignando, setAsignando] = useState<number | null>(null);
+  const [asignandoExterno, setAsignandoExterno] = useState<string | null>(null);
+  const [videosRecomendados, setVideosRecomendados] = useState<RecursoExternoIA[]>([]);
 
   // Búsqueda manual
-  const [busqueda, setBusqueda]   = useState('');
+  const [busqueda, setBusqueda] = useState('');
   const [resultados, setResultados] = useState<MaterialAcademico[]>([]);
-  const [buscando, setBuscando]   = useState(false);
+  const [buscando, setBuscando] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Dialog asignación con mensaje
-  const [dlgMensaje, setDlgMensaje]               = useState(false);
+  const [dlgMensaje, setDlgMensaje] = useState(false);
   const [materialPendiente, setMaterialPendiente] = useState<MaterialAcademico | null>(null);
-  const [mensajeDocente, setMensajeDocente]       = useState('');
+  const [mensajeDocente, setMensajeDocente] = useState('');
 
   // Cargar lista de estudiantes
   useEffect(() => {
@@ -287,7 +326,7 @@ const TabRecursosIA: React.FC<TabRecursosIAProps> = ({
         { incluirGemini: false },
       );
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Seleccionar estudiante
@@ -295,13 +334,14 @@ const TabRecursosIA: React.FC<TabRecursosIAProps> = ({
     setSeleccionado(est);
     limpiar();
     setAsignados([]);
+    setVideosRecomendados([]);
     setBusqueda('');
     setResultados([]);
 
     if (!est) return;
 
     predecir({
-      matricula_id:          est.matricula_id,
+      matricula_id: est.matricula_id,
       asignacion_docente_id: asignacionId,
       periodo_evaluacion_id: periodoId,
     }, { incluirGemini: true, silencioso: true });
@@ -316,6 +356,18 @@ const TabRecursosIA: React.FC<TabRecursosIAProps> = ({
       setAsignados([]);
     } finally {
       setLoadingAsig(false);
+    }
+
+    setLoadingVideos(true);
+    try {
+      const res = await api.get(
+        `/prediccion/videos-recomendados/${est.matricula_id}?asignacion_docente_id=${asignacionId}&periodo_evaluacion_id=${periodoId}`
+      );
+      setVideosRecomendados(res.data.data.recursos ?? []);
+    } catch {
+      setVideosRecomendados([]);
+    } finally {
+      setLoadingVideos(false);
     }
   }, [asignacionId, periodoId, limpiar, predecir]);
 
@@ -348,16 +400,16 @@ const TabRecursosIA: React.FC<TabRecursosIAProps> = ({
     }
     try {
       await api.post('/prediccion/asignar-material', {
-        material_ids:          idsReales,
-        matricula_id:          seleccionado.matricula_id,
+        material_ids: idsReales,
+        matricula_id: seleccionado.matricula_id,
         asignacion_docente_id: asignacionId,
-        origen:                'gemini',
+        origen: 'gemini',
       });
       toast.success(`${idsReales.length} material(es) asignados`);
       const res = await api.get(`/prediccion/materiales-asignados/${seleccionado.matricula_id}?asignacion_docente_id=${asignacionId}`);
       setAsignados(res.data.data.materiales);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Error al asignar materiales');
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, 'Error al asignar materiales'));
     }
   }, [seleccionado, analisis, asignacionId]);
 
@@ -366,16 +418,50 @@ const TabRecursosIA: React.FC<TabRecursosIAProps> = ({
     if (!seleccionado) return;
     try {
       await api.post('/prediccion/asignar-material', {
-        material_ids:          [materialId],
-        matricula_id:          seleccionado.matricula_id,
+        material_ids: [materialId],
+        matricula_id: seleccionado.matricula_id,
         asignacion_docente_id: asignacionId,
-        origen:                'gemini',
+        origen: 'gemini',
       });
       toast.success('Material asignado');
       const res = await api.get(`/prediccion/materiales-asignados/${seleccionado.matricula_id}?asignacion_docente_id=${asignacionId}`);
       setAsignados(res.data.data.materiales);
     } catch {
       toast.error('Error al asignar');
+    }
+  }, [seleccionado, asignacionId]);
+
+  // Asignar un video/recurso externo sugerido por IA
+  const asignarRecursoExterno = useCallback(async (rec: RecursoExternoIA) => {
+    if (!seleccionado) return;
+
+    const referencia = rec.url || rec.search_query || rec.titulo;
+    if (!rec.url && !rec.search_query) {
+      toast.error('Este recurso no tiene datos suficientes para buscar un video');
+      return;
+    }
+
+    setAsignandoExterno(referencia);
+    try {
+      await api.post('/prediccion/asignar-material', {
+        recursos_externos: [{
+          url: rec.url || null,
+          search_query: rec.search_query || null,
+          titulo: rec.titulo,
+          origen_externo: rec.tipo?.toUpperCase() === 'VIDEO' || rec.url?.includes('youtube') ? 'youtube' : 'web',
+        }],
+        matricula_id: seleccionado.matricula_id,
+        asignacion_docente_id: asignacionId,
+        origen: 'web_search',
+        mensaje_docente: rec.razon || null,
+      });
+      toast.success('Video asignado al estudiante');
+      const res = await api.get(`/prediccion/materiales-asignados/${seleccionado.matricula_id}?asignacion_docente_id=${asignacionId}`);
+      setAsignados(res.data.data.materiales);
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, 'Error al asignar el video'));
+    } finally {
+      setAsignandoExterno(null);
     }
   }, [seleccionado, asignacionId]);
 
@@ -392,19 +478,19 @@ const TabRecursosIA: React.FC<TabRecursosIAProps> = ({
     setAsignando(materialPendiente.id);
     try {
       await api.post('/prediccion/asignar-material', {
-        material_ids:          [materialPendiente.id],
-        matricula_id:          seleccionado.matricula_id,
+        material_ids: [materialPendiente.id],
+        matricula_id: seleccionado.matricula_id,
         asignacion_docente_id: asignacionId,
-        origen:                'manual',
-        mensaje_docente:       mensajeDocente.trim() || null,
+        origen: 'manual',
+        mensaje_docente: mensajeDocente.trim() || null,
       });
       toast.success(`"${materialPendiente.titulo}" asignado`);
       const res = await api.get(`/prediccion/materiales-asignados/${seleccionado.matricula_id}?asignacion_docente_id=${asignacionId}`);
       setAsignados(res.data.data.materiales);
       setDlgMensaje(false);
       setMaterialPendiente(null);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Error al asignar material');
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, 'Error al asignar material'));
     } finally {
       setAsignando(null);
     }
@@ -417,20 +503,25 @@ const TabRecursosIA: React.FC<TabRecursosIAProps> = ({
       await api.delete(`/prediccion/asignar-material/${id}`);
       setAsignados(prev => prev.filter(m => m.id !== id));
       toast.success('Asignación eliminada');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Error al quitar asignación');
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, 'Error al quitar asignación'));
     } finally {
       setQuitando(null);
     }
   }, []);
 
   // ── Datos derivados ───────────────────────────────────────
-  const idsAsignados = new Set(asignados.map(a => a.material_id));
+  const idsAsignados = new Set(asignados.map(a => a.material_id).filter(Boolean));
+  const urlsExternasAsignadas = new Set(
+    asignados
+      .map(a => a.url_recurso_externo || a.url_externa || a.url_archivo)
+      .filter(Boolean)
+  );
 
   // Recursos del repositorio (con material_id real)
   const recursosSugeridos = analisis?.recursos_sugeridos?.filter(r => r.material_id != null) ?? [];
   // Recursos externos sugeridos por Gemini (sin material_id)
-  const recursosExternos  = analisis?.recursos_sugeridos?.filter(r => r.material_id == null) ?? [];
+  const recursosExternos = (analisis?.recursos_sugeridos?.filter(r => r.material_id == null) ?? []) as RecursoExternoIA[];
 
   const todosSugeridosAsignados =
     recursosSugeridos.length > 0 &&
@@ -494,6 +585,116 @@ const TabRecursosIA: React.FC<TabRecursosIAProps> = ({
 
           {/* ════ Columna izquierda ════ */}
           <Box>
+
+            {/* ── Videos recomendados por notas/temas ── */}
+            <Box sx={{
+              p: 2, mb: 2, borderRadius: '14px',
+              bgcolor: isDark ? alpha('#ef4444', 0.06) : alpha('#fee2e2', 0.45),
+              border: `1.5px solid ${alpha('#ef4444', 0.28)}`,
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mb: 1.5 }}>
+                <SmartDisplayRoundedIcon sx={{ color: '#ef4444', fontSize: 17 }} />
+                <Typography variant="caption" fontWeight={800}>Videos recomendados</Typography>
+                {loadingVideos && <CircularProgress size={12} sx={{ color: '#ef4444' }} />}
+              </Box>
+
+              {loadingVideos && (
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>
+                  Buscando videos según notas y temas del estudiante...
+                </Typography>
+              )}
+
+              {!loadingVideos && videosRecomendados.length === 0 && (
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>
+                  No se encontraron videos para este estudiante. Verificá que existan temas en evaluaciones o que YouTube API esté configurado.
+                </Typography>
+              )}
+
+              {!loadingVideos && videosRecomendados.length > 0 && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {videosRecomendados.map((rec, i) => {
+                    const url = rec.url || buildSearchUrl(rec);
+                    const yaAsignado = !!url && urlsExternasAsignadas.has(url);
+                    const referencia = rec.url || rec.search_query || rec.titulo;
+                    const cargando = asignandoExterno === referencia;
+
+                    return (
+                      <Box key={`${rec.url || rec.search_query || rec.titulo}-${i}`} sx={{
+                        display: 'flex', gap: 1, p: 1.2, borderRadius: '10px',
+                        bgcolor: yaAsignado ? alpha('#16a34a', 0.06) : isDark ? alpha('#fff', 0.04) : alpha('#fff', 0.78),
+                        border: `1px solid ${yaAsignado ? alpha('#16a34a', 0.25) : alpha('#ef4444', 0.18)}`,
+                        alignItems: 'flex-start',
+                      }}>
+                        <Box sx={{
+                          width: 34, height: 34, borderRadius: '9px', flexShrink: 0,
+                          bgcolor: alpha('#ef4444', 0.12),
+                          color: '#ef4444',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <SmartDisplayRoundedIcon sx={{ fontSize: 18 }} />
+                        </Box>
+
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mb: 0.3 }}>
+                            <Typography variant="caption" fontWeight={800} sx={{ fontSize: 11, flex: 1 }}>
+                              {rec.titulo}
+                            </Typography>
+                            <Chip
+                              size="small"
+                              label="YouTube"
+                              sx={{
+                                height: 16, fontSize: '0.55rem', fontWeight: 800, flexShrink: 0,
+                                bgcolor: alpha('#ef4444', 0.12), color: '#ef4444',
+                              }}
+                            />
+                          </Box>
+                          {rec.tema_titulo && (
+                            <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10 }}>
+                              📚 {rec.tema_titulo}
+                            </Typography>
+                          )}
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, display: 'block' }}>
+                            {rec.razon}
+                          </Typography>
+                        </Box>
+
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, flexShrink: 0 }}>
+                          {url && (
+                            <Tooltip title="Abrir video">
+                              <IconButton size="small" href={url} target="_blank" rel="noopener noreferrer" sx={{ p: 0.45, color: '#ef4444' }}>
+                                <OpenInNewRoundedIcon sx={{ fontSize: 15 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          <Button
+                            size="small"
+                            variant={yaAsignado ? 'outlined' : 'contained'}
+                            disabled={!url || yaAsignado || cargando}
+                            onClick={() => asignarRecursoExterno(rec)}
+                            startIcon={
+                              yaAsignado
+                                ? <CheckCircleRoundedIcon sx={{ fontSize: '12px !important' }} />
+                                : cargando
+                                  ? <CircularProgress size={12} color="inherit" />
+                                  : <AddRoundedIcon sx={{ fontSize: '12px !important' }} />
+                            }
+                            sx={{
+                              fontSize: '0.6rem', py: 0.3, px: 0.8, borderRadius: '7px',
+                              fontWeight: 800, flexShrink: 0, minWidth: 82,
+                              ...(yaAsignado
+                                ? { borderColor: alpha('#16a34a', 0.4), color: '#16a34a' }
+                                : { bgcolor: '#ef4444', color: '#fff', '&:hover': { bgcolor: alpha('#ef4444', 0.85) } }),
+                            }}
+                          >
+                            {yaAsignado ? 'Asignado' : 'Asignar'}
+                          </Button>
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
+            </Box>
 
             {/* ── Sugerencias del repositorio (Gemini) ── */}
             <Box sx={{
@@ -600,59 +801,86 @@ const TabRecursosIA: React.FC<TabRecursosIAProps> = ({
                 </Box>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {recursosExternos.map((rec, i) => (
-                    <Box key={i} sx={{
-                      display: 'flex', gap: 1, p: 1.2, borderRadius: '10px',
-                      bgcolor: isDark ? alpha('#fff', 0.04) : alpha('#fff', 0.8),
-                      border: `1px solid ${alpha('#8b5cf6', 0.15)}`,
-                      alignItems: 'flex-start',
-                    }}>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mb: 0.3 }}>
-                          <Typography variant="caption" fontWeight={700} sx={{ fontSize: 11, flex: 1 }}>
-                            {rec.titulo}
-                          </Typography>
-                          <Chip
-                            size="small"
-                            label={rec.tipo}
-                            sx={{
-                              height: 16, fontSize: '0.55rem', fontWeight: 700, flexShrink: 0,
-                              bgcolor: alpha('#8b5cf6', 0.1), color: '#8b5cf6',
-                            }}
-                          />
-                        </Box>
-                        {rec.tema_titulo && (
-                          <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10 }}>
-                            📚 {rec.tema_titulo}
-                          </Typography>
-                        )}
-                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, display: 'block' }}>
-                          {rec.razon}
-                        </Typography>
-                      </Box>
+                  {recursosExternos.map((rec, i) => {
+                    const url = buildSearchUrl(rec);
+                    const yaAsignado = !!url && urlsExternasAsignadas.has(url);
+                    const referencia = rec.url || rec.search_query || rec.titulo;
+                    const cargando = asignandoExterno === referencia;
 
-                      {(() => {
-  const searchUrl = buildSearchUrl(rec);
-  return searchUrl ? (
-    <Button
-      size="small"
-      variant="outlined"
-      href={searchUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      startIcon={<OpenInNewRoundedIcon sx={{ fontSize: '11px !important' }} />}
-      sx={{
-        fontSize: '0.6rem', py: 0.3, px: 0.8, borderRadius: '7px',
-        fontWeight: 700, flexShrink: 0, minWidth: 0,
-        borderColor: alpha('#8b5cf6', 0.4), color: '#8b5cf6',
-      }}
-    >
-      {rec.tipo?.toUpperCase() === 'VIDEO' ? 'Buscar en YouTube' : 'Buscar'}
-    </Button>
-  ) : null;
-})()}
-                    </Box>
-                  ))}
+                    return (
+                      <Box key={i} sx={{
+                        display: 'flex', gap: 1, p: 1.2, borderRadius: '10px',
+                        bgcolor: yaAsignado ? alpha('#16a34a', 0.06) : isDark ? alpha('#fff', 0.04) : alpha('#fff', 0.8),
+                        border: `1px solid ${yaAsignado ? alpha('#16a34a', 0.25) : alpha('#8b5cf6', 0.15)}`,
+                        alignItems: 'flex-start',
+                      }}>
+                        <Box sx={{
+                          width: 32, height: 32, borderRadius: '8px', flexShrink: 0,
+                          bgcolor: alpha('#ef4444', 0.1),
+                          color: '#ef4444',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <SmartDisplayRoundedIcon sx={{ fontSize: 17 }} />
+                        </Box>
+
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mb: 0.3 }}>
+                            <Typography variant="caption" fontWeight={700} sx={{ fontSize: 11, flex: 1 }}>
+                              {rec.titulo}
+                            </Typography>
+                            <Chip
+                              size="small"
+                              label={rec.tipo?.toUpperCase() === 'VIDEO' ? 'YouTube' : rec.tipo || 'Web'}
+                              sx={{
+                                height: 16, fontSize: '0.55rem', fontWeight: 700, flexShrink: 0,
+                                bgcolor: alpha('#ef4444', 0.1), color: '#ef4444',
+                              }}
+                            />
+                          </Box>
+                          {rec.tema_titulo && (
+                            <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10 }}>
+                              📚 {rec.tema_titulo}
+                            </Typography>
+                          )}
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, display: 'block' }}>
+                            {rec.razon}
+                          </Typography>
+                        </Box>
+
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, flexShrink: 0 }}>
+                          {url && (
+                            <Tooltip title={rec.url ? 'Abrir video' : 'Buscar en YouTube'}>
+                              <IconButton size="small" href={url} target="_blank" rel="noopener noreferrer" sx={{ p: 0.45, color: '#8b5cf6' }}>
+                                <OpenInNewRoundedIcon sx={{ fontSize: 15 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          <Button
+                            size="small"
+                            variant={yaAsignado ? 'outlined' : 'contained'}
+                            disabled={(!rec.url && !rec.search_query) || yaAsignado || cargando}
+                            onClick={() => asignarRecursoExterno(rec)}
+                            startIcon={
+                              yaAsignado
+                                ? <CheckCircleRoundedIcon sx={{ fontSize: '12px !important' }} />
+                                : cargando
+                                  ? <CircularProgress size={12} color="inherit" />
+                                  : <AddRoundedIcon sx={{ fontSize: '12px !important' }} />
+                            }
+                            sx={{
+                              fontSize: '0.6rem', py: 0.3, px: 0.8, borderRadius: '7px',
+                              fontWeight: 700, flexShrink: 0, minWidth: 82,
+                              ...(yaAsignado
+                                ? { borderColor: alpha('#16a34a', 0.4), color: '#16a34a' }
+                                : { bgcolor: '#8b5cf6', color: '#fff', '&:hover': { bgcolor: alpha('#8b5cf6', 0.85) } }),
+                            }}
+                          >
+                            {yaAsignado ? 'Asignado' : 'Asignar'}
+                          </Button>
+                        </Box>
+                      </Box>
+                    );
+                  })}
                 </Box>
               </Box>
             )}

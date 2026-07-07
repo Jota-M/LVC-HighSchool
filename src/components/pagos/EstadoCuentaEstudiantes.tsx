@@ -24,6 +24,10 @@ import {
   Collapse,
   Alert,
   Button,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -174,7 +178,7 @@ const EstudianteRow: React.FC<RowProps> = ({ estudiante, isDark }) => {
                   </Box>
                 </Grid>
 
-                <Grid size={{xs:12, sm:6, md:3}}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Box
                     sx={{
                       p: 2,
@@ -192,7 +196,7 @@ const EstudianteRow: React.FC<RowProps> = ({ estudiante, isDark }) => {
                   </Box>
                 </Grid>
 
-                <Grid size={{xs:12, sm:6, md:3}}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Box
                     sx={{
                       p: 2,
@@ -210,7 +214,7 @@ const EstudianteRow: React.FC<RowProps> = ({ estudiante, isDark }) => {
                   </Box>
                 </Grid>
 
-                <Grid size={{xs:12, sm:6, md:3}}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                   <Box
                     sx={{
                       p: 2,
@@ -247,29 +251,42 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
     exportarEstadoCuenta
   } = usePagos({});
   const { enqueueSnackbar } = useSnackbar();
-  
-  // 🔧 AGREGAR: Obtener período activo
-  const { periodoActivo, loading: loadingPeriodo } = useAcademicos({
+
+  // 🔧 AGREGAR: Obtener período activo, grados y paralelos
+  const {
+    periodoActivo,
+    grados,
+    paralelos,
+    loading: loadingPeriodo
+  } = useAcademicos({
     autoLoad: true,
     loadPeriodos: true,
     loadTurnos: false,
     loadNiveles: false,
-    loadGrados: false,
-    loadParalelos: false,
+    loadGrados: true,
+    loadParalelos: true,
     loadMaterias: false,
     loadGradoMaterias: false
   });
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [gradoId, setGradoId] = useState<number | ''>('');
+  const [paraleloId, setParaleloId] = useState<number | ''>('');
 
-  // 🔧 MODIFICADO: Usar periodo_academico_id del período activo
+  const paralelosFiltrados = gradoId
+    ? paralelos.filter((p) => p.grado_id === gradoId)
+    : paralelos;
+
+  // 🔧 MODIFICADO: Cargar estado filtrando por curso si se selecciona
   useEffect(() => {
     if (periodoActivo) {
-      cargarEstadoEstudiantes({ 
-        periodo_academico_id: periodoActivo.id 
+      cargarEstadoEstudiantes({
+        periodo_academico_id: periodoActivo.id,
+        grado_id: gradoId || undefined,
+        paralelo_id: paraleloId || undefined
       });
     }
-  }, [periodoActivo, cargarEstadoEstudiantes]);
+  }, [periodoActivo, gradoId, paraleloId, cargarEstadoEstudiantes]);
 
   const estudiantesFiltrados = estadoEstudiantes.filter(
     (est) =>
@@ -288,6 +305,8 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
       await exportarEstadoCuenta({
         periodo_academico_id: periodoActivo.id,
         formato,
+        grado_id: gradoId || undefined,
+        paralelo_id: paraleloId || undefined
       });
       enqueueSnackbar(`Estado de cuenta descargado (${formato.toUpperCase()})`, { variant: 'success' });
     } catch (error) {
@@ -343,10 +362,10 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
   return (
     <Box>
       {/* 🔧 AGREGAR: Banner con período activo */}
-      <Alert 
-        severity="info" 
+      <Alert
+        severity="info"
         icon={<CalendarMonth />}
-        sx={{ 
+        sx={{
           mb: 3,
           borderRadius: '16px',
           background: alpha(isDark ? '#facc15' : '#0288d1', 0.1),
@@ -377,7 +396,7 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
 
       {/* Resumen */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{xs:12, sm:4}}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <Card
             sx={{
               borderRadius: '16px',
@@ -415,7 +434,7 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid size={{xs:12, sm:4}}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <Card
             sx={{
               borderRadius: '16px',
@@ -453,7 +472,7 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
           </Card>
         </Grid>
 
-        <Grid size={{xs:12, sm:4}}>
+        <Grid size={{ xs: 12, sm: 4 }}>
           <Card
             sx={{
               borderRadius: '16px',
@@ -516,36 +535,71 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
               Estado de Cuenta por Estudiante
             </Typography>
 
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                size="small"
-                placeholder="Buscar estudiante..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                  },
-                }}
-              />
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+              {/* Filtros Grado / Paralelo */}
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel id="select-grado-morosos-label">Grado</InputLabel>
+                <Select
+                  labelId="select-grado-morosos-label"
+                  id="select-grado-morosos"
+                  value={gradoId}
+                  label="Grado"
+                  onChange={(e) => {
+                    setGradoId(e.target.value as number | '');
+                    setParaleloId('');
+                  }}
+                  sx={{ borderRadius: '12px' }}
+                >
+                  <MenuItem value=""><em>Todos los grados</em></MenuItem>
+                  {grados.map((g) => (
+                    <MenuItem key={g.id} value={g.id}>{g.nombre}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
+              <FormControl size="small" sx={{ minWidth: 140 }} disabled={!gradoId}>
+                <InputLabel id="select-paralelo-morosos-label">Paralelo</InputLabel>
+                <Select
+                  labelId="select-paralelo-morosos-label"
+                  id="select-paralelo-morosos"
+                  value={paraleloId}
+                  label="Paralelo"
+                  onChange={(e) => setParaleloId(e.target.value as number | '')}
+                  sx={{ borderRadius: '12px' }}
+                >
+                  <MenuItem value=""><em>Todos</em></MenuItem>
+                  {paralelosFiltrados.map((p) => (
+                    <MenuItem key={p.id} value={p.id}>{p.nombre}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {/* 🔧 CORREGIDO: color e ícono explícitos */}
               <Button
                 variant="outlined"
-                size="small"
                 startIcon={<DownloadIcon />}
                 onClick={() => handleExportar('pdf')}
                 disabled={loadingExportacionReportes}
                 sx={{
-                  border: `1px solid ${alpha(isDark ? '#facc15' : '#0288d1', 0.3)}`,
+                  color: isDark ? '#facc15' : '#0288d1',
+                  borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.5),
                   borderRadius: '12px',
                   textTransform: 'none',
+                  fontWeight: 600,
+                  '& .MuiSvgIcon-root': {
+                    color: isDark ? '#facc15' : '#0288d1',
+                  },
+                  '&:hover': {
+                    borderColor: isDark ? '#facc15' : '#0288d1',
+                    backgroundColor: alpha(isDark ? '#facc15' : '#0288d1', 0.1),
+                  },
+                  '&.Mui-disabled': {
+                    color: alpha(isDark ? '#facc15' : '#0288d1', 0.3),
+                    borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.15),
+                    '& .MuiSvgIcon-root': {
+                      color: alpha(isDark ? '#facc15' : '#0288d1', 0.3),
+                    },
+                  },
                 }}
               >
                 PDF
@@ -553,14 +607,29 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
 
               <Button
                 variant="outlined"
-                size="small"
                 startIcon={<DownloadIcon />}
                 onClick={() => handleExportar('excel')}
                 disabled={loadingExportacionReportes}
                 sx={{
-                  border: `1px solid ${alpha(isDark ? '#facc15' : '#0288d1', 0.3)}`,
+                  color: isDark ? '#facc15' : '#0288d1',
+                  borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.5),
                   borderRadius: '12px',
                   textTransform: 'none',
+                  fontWeight: 600,
+                  '& .MuiSvgIcon-root': {
+                    color: isDark ? '#facc15' : '#0288d1',
+                  },
+                  '&:hover': {
+                    borderColor: isDark ? '#facc15' : '#0288d1',
+                    backgroundColor: alpha(isDark ? '#facc15' : '#0288d1', 0.1),
+                  },
+                  '&.Mui-disabled': {
+                    color: alpha(isDark ? '#facc15' : '#0288d1', 0.3),
+                    borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.15),
+                    '& .MuiSvgIcon-root': {
+                      color: alpha(isDark ? '#facc15' : '#0288d1', 0.3),
+                    },
+                  },
                 }}
               >
                 Excel

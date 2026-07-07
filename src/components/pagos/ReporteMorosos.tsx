@@ -1,4 +1,4 @@
-// components/pagos/ReporteMorosos.tsx - CORREGIDO
+// components/pagos/ReporteMorosos.tsx - CON FILTROS DE GRADO/PARALELO
 'use client';
 import React, { useEffect, useState } from 'react';
 import {
@@ -19,6 +19,10 @@ import {
   Grid,
   Button,
   Alert,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   Download as DownloadIcon,
@@ -27,7 +31,7 @@ import {
   CalendarMonth,
 } from '@mui/icons-material';
 import { usePagos } from '@/hooks/usePagos';
-import { useAcademicos } from '@/hooks/useAcademicos'; // 🔧 AGREGAR
+import { useAcademicos } from '@/hooks/useAcademicos';
 import { FormatoReporte } from '@/types/pagos';
 import { useSnackbar } from 'notistack';
 
@@ -43,34 +47,44 @@ export const ReporteMorosos: React.FC = () => {
   } = usePagos({});
   const { enqueueSnackbar } = useSnackbar();
 
-  // 🔧 AGREGAR: Obtener período activo
-  const { periodoActivo, loading: loadingPeriodo } = useAcademicos({
+  // Período activo + grados/paralelos (mismo patrón que EstadoCuentaEstudiantes)
+  const {
+    periodoActivo,
+    grados,
+    paralelos,
+    loading: loadingPeriodo
+  } = useAcademicos({
     autoLoad: true,
     loadPeriodos: true,
     loadTurnos: false,
     loadNiveles: false,
-    loadGrados: false,
-    loadParalelos: false,
+    loadGrados: true,
+    loadParalelos: true,
     loadMaterias: false,
     loadGradoMaterias: false
   });
 
-  const [filtros] = useState({
-  dias_mora_minimo: 1,
-});
+  const [diasMoraMinimo] = useState(1);
+  const [gradoId, setGradoId] = useState<number | ''>('');
+  const [paraleloId, setParaleloId] = useState<number | ''>('');
 
-// 🔧 MODIFICADO: Solo cargar cuando haya período activo
-useEffect(() => {
-  if (!periodoActivo) return;
+  const paralelosFiltrados = gradoId
+    ? paralelos.filter((p) => p.grado_id === gradoId)
+    : paralelos;
 
-  cargarMorosos({
-    ...filtros,
-    periodo_academico_id: periodoActivo.id,
-  });
-}, [periodoActivo, filtros, cargarMorosos]);
+  // Recargar cuando cambie período, grado o paralelo
+  useEffect(() => {
+    if (!periodoActivo) return;
+
+    cargarMorosos({
+      periodo_academico_id: periodoActivo.id,
+      dias_mora_minimo: diasMoraMinimo,
+      grado_id: gradoId || undefined,
+      paralelo_id: paraleloId || undefined,
+    });
+  }, [periodoActivo, gradoId, paraleloId, diasMoraMinimo, cargarMorosos]);
 
   const deudaTotal = morosos.reduce((sum, m) => {
-    // 🔧 USAR monto_final
     return sum + parseFloat(m.monto_final.toString());
   }, 0);
 
@@ -90,7 +104,9 @@ useEffect(() => {
       await exportarMorosos({
         periodo_academico_id: periodoActivo.id,
         formato,
-        dias_mora_minimo: filtros.dias_mora_minimo,
+        dias_mora_minimo: diasMoraMinimo,
+        grado_id: gradoId || undefined,
+        paralelo_id: paraleloId || undefined,
       });
       enqueueSnackbar(`Reporte de morosos descargado (${formato.toUpperCase()})`, { variant: 'success' });
     } catch (error) {
@@ -99,7 +115,6 @@ useEffect(() => {
     }
   };
 
-  // 🔧 AGREGAR: Loading período
   if (loadingPeriodo) {
     return (
       <Box sx={{ textAlign: 'center', py: 8 }}>
@@ -111,7 +126,6 @@ useEffect(() => {
     );
   }
 
-  // 🔧 AGREGAR: Validación período
   if (!periodoActivo) {
     return (
       <Alert severity="error" sx={{ borderRadius: '16px', maxWidth: 600, mx: 'auto', mt: 4 }}>
@@ -135,11 +149,11 @@ useEffect(() => {
 
   return (
     <Box>
-      {/* 🔧 AGREGAR: Banner período activo */}
-      <Alert 
-        severity="info" 
+      {/* Banner período activo */}
+      <Alert
+        severity="info"
         icon={<CalendarMonth />}
-        sx={{ 
+        sx={{
           mb: 3,
           borderRadius: '16px',
           background: alpha(isDark ? '#facc15' : '#0288d1', 0.1),
@@ -170,7 +184,7 @@ useEffect(() => {
 
       {/* Resumen */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{xs:12, sm:6}} >
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Card
             sx={{
               borderRadius: '16px',
@@ -207,7 +221,7 @@ useEffect(() => {
           </Card>
         </Grid>
 
-        <Grid size={{xs:12, sm:6}} >
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Card
             sx={{
               borderRadius: '16px',
@@ -251,34 +265,109 @@ useEffect(() => {
               justifyContent: 'space-between',
               alignItems: 'center',
               mb: 3,
+              gap: 2,
+              flexWrap: 'wrap',
             }}
           >
             <Typography variant="h6" fontWeight={700}>
               Lista de Morosos
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+              {/* Filtros Grado / Paralelo */}
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel id="select-grado-morosos-label">Grado</InputLabel>
+                <Select
+                  labelId="select-grado-morosos-label"
+                  id="select-grado-morosos"
+                  value={gradoId}
+                  label="Grado"
+                  onChange={(e) => {
+                    setGradoId(e.target.value as number | '');
+                    setParaleloId('');
+                  }}
+                  sx={{ borderRadius: '12px' }}
+                >
+                  <MenuItem value=""><em>Todos los grados</em></MenuItem>
+                  {grados.map((g) => (
+                    <MenuItem key={g.id} value={g.id}>{g.nombre}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" sx={{ minWidth: 140 }} disabled={!gradoId}>
+                <InputLabel id="select-paralelo-morosos-label">Paralelo</InputLabel>
+                <Select
+                  labelId="select-paralelo-morosos-label"
+                  id="select-paralelo-morosos"
+                  value={paraleloId}
+                  label="Paralelo"
+                  onChange={(e) => setParaleloId(e.target.value as number | '')}
+                  sx={{ borderRadius: '12px' }}
+                >
+                  <MenuItem value=""><em>Todos</em></MenuItem>
+                  {paralelosFiltrados.map((p) => (
+                    <MenuItem key={p.id} value={p.id}>{p.nombre}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {/* 🔧 CORREGIDO: color e ícono explícitos */}
               <Button
                 variant="outlined"
                 startIcon={<DownloadIcon />}
                 onClick={() => handleExportar('pdf')}
                 disabled={loadingExportacionReportes}
                 sx={{
+                  color: isDark ? '#facc15' : '#0288d1',
+                  borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.5),
                   borderRadius: '12px',
                   textTransform: 'none',
                   fontWeight: 600,
+                  '& .MuiSvgIcon-root': {
+                    color: isDark ? '#facc15' : '#0288d1',
+                  },
+                  '&:hover': {
+                    borderColor: isDark ? '#facc15' : '#0288d1',
+                    backgroundColor: alpha(isDark ? '#facc15' : '#0288d1', 0.1),
+                  },
+                  '&.Mui-disabled': {
+                    color: alpha(isDark ? '#facc15' : '#0288d1', 0.3),
+                    borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.15),
+                    '& .MuiSvgIcon-root': {
+                      color: alpha(isDark ? '#facc15' : '#0288d1', 0.3),
+                    },
+                  },
                 }}
               >
                 PDF
               </Button>
+
               <Button
                 variant="outlined"
                 startIcon={<DownloadIcon />}
                 onClick={() => handleExportar('excel')}
                 disabled={loadingExportacionReportes}
                 sx={{
+                  color: isDark ? '#facc15' : '#0288d1',
+                  borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.5),
                   borderRadius: '12px',
                   textTransform: 'none',
                   fontWeight: 600,
+                  '& .MuiSvgIcon-root': {
+                    color: isDark ? '#facc15' : '#0288d1',
+                  },
+                  '&:hover': {
+                    borderColor: isDark ? '#facc15' : '#0288d1',
+                    backgroundColor: alpha(isDark ? '#facc15' : '#0288d1', 0.1),
+                  },
+                  '&.Mui-disabled': {
+                    color: alpha(isDark ? '#facc15' : '#0288d1', 0.3),
+                    borderColor: alpha(isDark ? '#facc15' : '#0288d1', 0.15),
+                    '& .MuiSvgIcon-root': {
+                      color: alpha(isDark ? '#facc15' : '#0288d1', 0.3),
+                    },
+                  },
                 }}
               >
                 Excel
@@ -304,14 +393,12 @@ useEffect(() => {
                     <TableCell>Vencimiento</TableCell>
                     <TableCell align="right">Saldo Pendiente</TableCell>
                     <TableCell align="center">Días Mora</TableCell>
-                    <TableCell align="center">Contacto</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {morosos.map((moroso, idx) => {
-                    // 🔧 USAR monto_final como saldo pendiente
                     const saldoPendiente = parseFloat(moroso.monto_final.toString());
-                    
+
                     return (
                       <TableRow
                         key={`${moroso.estudiante_id}-${moroso.numero_cuota}-${idx}`}
@@ -367,18 +454,6 @@ useEffect(() => {
                               )}`,
                             }}
                           />
-                        </TableCell>
-                        <TableCell align="center">
-                          <Button
-                            size="small"
-                            startIcon={<PhoneIcon />}
-                            sx={{
-                              textTransform: 'none',
-                              borderRadius: '8px',
-                            }}
-                          >
-                            Contactar
-                          </Button>
                         </TableCell>
                       </TableRow>
                     );

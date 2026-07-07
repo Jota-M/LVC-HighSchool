@@ -125,14 +125,22 @@ export const CursoDocente: React.FC<CursoDocenteProps> = ({
     const [dlgEliminarUnidad, setDlgEliminarUnidad] = useState<UnidadTematica | null>(null);
 
     return (
-        <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
+        <Box sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: { xs: 2, md: 3 },
+            alignItems: { xs: 'stretch', md: 'flex-start' },
+        }}>
 
             {/* ── Sidebar ── */}
             <Box sx={{
-                width: 300, flexShrink: 0, borderRadius: '14px',
+                width: { xs: '100%', md: 300 },
+                flexShrink: 0, borderRadius: '14px',
                 border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
                 bgcolor: isDark ? alpha('#fff', 0.02) : '#fff',
-                overflow: 'hidden', position: 'sticky', top: 16,
+                overflow: 'hidden',
+                position: { xs: 'static', md: 'sticky' },
+                top: 16,
             }}>
                 {/* Header sidebar */}
                 <Box sx={{
@@ -170,7 +178,10 @@ export const CursoDocente: React.FC<CursoDocenteProps> = ({
                         </Button>
                     </Box>
                 ) : (
-                    <List disablePadding sx={{ maxHeight: 'calc(100vh - 240px)', overflowY: 'auto' }}>
+                    <List disablePadding sx={{
+                        maxHeight: { xs: 320, md: 'calc(100vh - 240px)' },
+                        overflowY: 'auto',
+                    }}>
                         {unidades.map(u => (
                             <UnidadItem
                                 key={u.id}
@@ -191,7 +202,7 @@ export const CursoDocente: React.FC<CursoDocenteProps> = ({
             </Box>
 
             {/* ── Panel principal ── */}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ flex: 1, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
                 {temaSeleccionado && unidadDelTema ? (
                     <EditorTema
                         key={temaSeleccionado.id}

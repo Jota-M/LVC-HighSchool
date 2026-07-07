@@ -10,29 +10,29 @@ import {
   Collapse, IconButton, ToggleButton, ToggleButtonGroup,
   InputAdornment, Alert, Snackbar,
 } from '@mui/material';
-import EventAvailableIcon            from '@mui/icons-material/EventAvailable';
-import ArrowBackRoundedIcon          from '@mui/icons-material/ArrowBackRounded';
-import CheckCircleRoundedIcon        from '@mui/icons-material/CheckCircleRounded';
-import CancelRoundedIcon             from '@mui/icons-material/CancelRounded';
-import AccessTimeRoundedIcon         from '@mui/icons-material/AccessTimeRounded';
-import VerifiedRoundedIcon           from '@mui/icons-material/VerifiedRounded';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
+import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
+import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded';
 import RemoveCircleOutlineRoundedIcon from '@mui/icons-material/RemoveCircleOutlineRounded';
-import SaveRoundedIcon               from '@mui/icons-material/SaveRounded';
-import CommentRoundedIcon            from '@mui/icons-material/CommentRounded';
-import SearchRoundedIcon             from '@mui/icons-material/SearchRounded';
-import ExpandMoreIcon                from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon                from '@mui/icons-material/ExpandLess';
-import RefreshRoundedIcon            from '@mui/icons-material/RefreshRounded';
-import EditRoundedIcon               from '@mui/icons-material/EditRounded';
-import CloseRoundedIcon              from '@mui/icons-material/CloseRounded';
-import NotificationsActiveIcon       from '@mui/icons-material/NotificationsActive';
-import CalendarMonthIcon             from '@mui/icons-material/CalendarMonth';
-import AttachFileIcon                from '@mui/icons-material/AttachFile';
-import PictureAsPdfRoundedIcon       from '@mui/icons-material/PictureAsPdfRounded';
-import TableChartRoundedIcon         from '@mui/icons-material/TableChartRounded';
-import WarningAmberRoundedIcon       from '@mui/icons-material/WarningAmberRounded';
-import PeopleAltRoundedIcon          from '@mui/icons-material/PeopleAltRounded';
-import AutoGraphRoundedIcon          from '@mui/icons-material/AutoGraphRounded';
+import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
+import CommentRoundedIcon from '@mui/icons-material/CommentRounded';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import EditRoundedIcon from '@mui/icons-material/EditRounded';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import PictureAsPdfRoundedIcon from '@mui/icons-material/PictureAsPdfRounded';
+import TableChartRoundedIcon from '@mui/icons-material/TableChartRounded';
+import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
+import PeopleAltRoundedIcon from '@mui/icons-material/PeopleAltRounded';
+import AutoGraphRoundedIcon from '@mui/icons-material/AutoGraphRounded';
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -56,28 +56,28 @@ import { toast } from 'react-hot-toast';
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
 const usePalette = () => {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const gold    = isDark ? '#facc15' : '#0288d1';
+  const gold = isDark ? '#facc15' : '#0288d1';
   const goldEnd = isDark ? '#f59e0b' : '#01579b';
-  const gradBg  = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
+  const gradBg = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
   return { isDark, gold, goldEnd, gradBg };
 };
 
 // ─── Config de tabs ───────────────────────────────────────────────────────────
 const TABS = [
   { label: 'Pase de Lista', key: 'lista' },
-  { label: 'Resumen',       key: 'resumen' },
-  { label: 'Permisos',      key: 'permisos' },
+  { label: 'Resumen', key: 'resumen' },
+  { label: 'Permisos', key: 'permisos' },
 ];
 
 // ─── Config estados asistencia ────────────────────────────────────────────────
 const ESTADOS_CONFIG = [
-  { value: 'presente'      as EstadoAsistencia, label: 'Presente',     labelCorto: 'P',  color: '#10b981' },
-  { value: 'ausente'       as EstadoAsistencia, label: 'Ausente',      labelCorto: 'A',  color: '#ef4444' },
-  { value: 'tardanza'      as EstadoAsistencia, label: 'Tardanza',     labelCorto: 'T',  color: '#f59e0b' },
-  { value: 'justificado'   as EstadoAsistencia, label: 'Justificado',  labelCorto: 'J',  color: '#3b82f6' },
-  { value: 'falta_parcial' as EstadoAsistencia, label: 'F. Parcial',   labelCorto: 'FP', color: '#8b5cf6' },
+  { value: 'presente' as EstadoAsistencia, label: 'Presente', labelCorto: 'P', color: '#10b981' },
+  { value: 'ausente' as EstadoAsistencia, label: 'Ausente', labelCorto: 'A', color: '#ef4444' },
+  { value: 'tardanza' as EstadoAsistencia, label: 'Tardanza', labelCorto: 'T', color: '#f59e0b' },
+  { value: 'justificado' as EstadoAsistencia, label: 'Justificado', labelCorto: 'J', color: '#3b82f6' },
+  { value: 'falta_parcial' as EstadoAsistencia, label: 'F. Parcial', labelCorto: 'FP', color: '#8b5cf6' },
 ];
 
 const getEstCfg = (v?: EstadoAsistencia) => ESTADOS_CONFIG.find(e => e.value === v);
@@ -125,11 +125,11 @@ const FilaEstudianteLista: React.FC<{
 }> = ({ est, num, marcacion, onMarcar }) => {
   const { isDark } = usePalette();
   const [showObs, setShowObs] = useState(false);
-  const [obs, setObs]         = useState(marcacion?.observaciones ?? '');
+  const [obs, setObs] = useState(marcacion?.observaciones ?? '');
 
   const estadoActual = marcacion?.estado;
-  const cfg          = getEstCfg(estadoActual);
-  const iniciales    = `${est.estudiante_nombres[0]}${est.estudiante_apellidos[0]}`;
+  const cfg = getEstCfg(estadoActual);
+  const iniciales = `${est.estudiante_nombres[0]}${est.estudiante_apellidos[0]}`;
 
   const handleEstado = (valor: EstadoAsistencia) => {
     if (estadoActual === valor) {
@@ -149,47 +149,63 @@ const FilaEstudianteLista: React.FC<{
       overflow: 'hidden',
       transition: 'border-color 0.15s',
     }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1.5 }}>
-        {/* Número */}
-        <Typography variant="caption" fontWeight={800} color="text.disabled" sx={{ minWidth: 22, textAlign: 'center' }}>
-          {num}
-        </Typography>
-
-        {/* Avatar */}
-        <Avatar src={est.estudiante_foto ?? undefined} sx={{
-          width: 36, height: 36, fontSize: 12, fontWeight: 800,
-          bgcolor: estadoActual ? alpha(cfg!.color, 0.7) : alpha('#9ca3af', 0.5),
-        }}>
-          {iniciales}
-        </Avatar>
-
-        {/* Nombre */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="body2" fontWeight={700} noWrap sx={{ color: estadoActual ? cfg!.color : 'text.primary' }}>
-            {est.estudiante_apellidos}, {est.estudiante_nombres}
+      <Box sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
+        alignItems: { xs: 'stretch', sm: 'center' },
+        gap: { xs: 1, sm: 1.5 },
+        px: 2, py: 1.5,
+      }}>
+        {/* Fila superior: número + avatar + nombre + observación */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, minWidth: 0 }}>
+          {/* Número */}
+          <Typography variant="caption" fontWeight={800} color="text.disabled" sx={{ minWidth: 22, textAlign: 'center', flexShrink: 0 }}>
+            {num}
           </Typography>
-          <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>
-            {est.estudiante_codigo}
-          </Typography>
+
+          {/* Avatar */}
+          <Avatar src={est.estudiante_foto ?? undefined} sx={{
+            width: 36, height: 36, fontSize: 12, fontWeight: 800, flexShrink: 0,
+            bgcolor: estadoActual ? alpha(cfg!.color, 0.7) : alpha('#9ca3af', 0.5),
+          }}>
+            {iniciales}
+          </Avatar>
+
+          {/* Nombre — ahora con espacio real para respirar */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="body2" fontWeight={700} noWrap sx={{ color: estadoActual ? cfg!.color : 'text.primary' }}>
+              {est.estudiante_apellidos}, {est.estudiante_nombres}
+            </Typography>
+            <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>
+              {est.estudiante_codigo}
+            </Typography>
+          </Box>
+
+          {/* Observación toggle — se mueve acá arriba en mobile */}
+          <Tooltip title="Observación">
+            <IconButton size="small" onClick={() => setShowObs(s => !s)} sx={{
+              flexShrink: 0,
+              color: obs ? '#f59e0b' : 'text.disabled',
+              bgcolor: obs ? alpha('#f59e0b', 0.1) : 'transparent',
+              '&:hover': { color: '#f59e0b', bgcolor: alpha('#f59e0b', 0.08) },
+            }}>
+              {showObs ? <ExpandLessIcon fontSize="small" /> : <CommentRoundedIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
         </Box>
 
-        {/* Botones estado */}
-        <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+        {/* Fila inferior en mobile / misma fila en desktop: botones de estado */}
+        <Box sx={{
+          display: 'flex',
+          gap: 0.5,
+          flexShrink: 0,
+          justifyContent: { xs: 'space-between', sm: 'flex-end' },
+          pl: { xs: '52px', sm: 0 }, // alinea con el nombre (22px num + 36px avatar aprox + gaps)
+        }}>
           {ESTADOS_CONFIG.map(op => (
             <BtnEstado key={op.value} cfg={op} selected={estadoActual === op.value} onClick={() => handleEstado(op.value)} />
           ))}
         </Box>
-
-        {/* Observación toggle */}
-        <Tooltip title="Observación">
-          <IconButton size="small" onClick={() => setShowObs(s => !s)} sx={{
-            color: obs ? '#f59e0b' : 'text.disabled',
-            bgcolor: obs ? alpha('#f59e0b', 0.1) : 'transparent',
-            '&:hover': { color: '#f59e0b', bgcolor: alpha('#f59e0b', 0.08) },
-          }}>
-            {showObs ? <ExpandLessIcon fontSize="small" /> : <CommentRoundedIcon fontSize="small" />}
-          </IconButton>
-        </Tooltip>
       </Box>
 
       <Collapse in={showObs}>
@@ -225,9 +241,9 @@ const SeccionLista: React.FC<{
 
   const listaFiltrada = busqueda.trim()
     ? lista.filter(e =>
-        `${e.estudiante_nombres} ${e.estudiante_apellidos} ${e.estudiante_codigo}`
-          .toLowerCase().includes(busqueda.toLowerCase())
-      )
+      `${e.estudiante_nombres} ${e.estudiante_apellidos} ${e.estudiante_codigo}`
+        .toLowerCase().includes(busqueda.toLowerCase())
+    )
     : lista;
 
   const marcados = Object.keys(marcaciones).length;
@@ -296,11 +312,13 @@ const SeccionLista: React.FC<{
         <TextField
           size="small" placeholder="Buscar estudiante..."
           value={busqueda} onChange={e => setBusqueda(e.target.value)}
-          InputProps={{ startAdornment: (
-            <InputAdornment position="start">
-              <SearchRoundedIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-            </InputAdornment>
-          )}}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchRoundedIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+              </InputAdornment>
+            )
+          }}
           sx={{ flex: 1, minWidth: 200, '& .MuiOutlinedInput-root': { borderRadius: 2.5 } }}
         />
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -381,10 +399,10 @@ const SeccionLista: React.FC<{
 // ═══════════════════════════════════════════════════════
 
 const getPctColor = (p: number) => p >= 80 ? '#10b981' : p >= 65 ? '#f59e0b' : '#ef4444';
-const getPctGrad  = (p: number) =>
+const getPctGrad = (p: number) =>
   p >= 80 ? 'linear-gradient(90deg,#10b981,#34d399)' :
-  p >= 65 ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' :
-            'linear-gradient(90deg,#ef4444,#f87171)';
+    p >= 65 ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' :
+      'linear-gradient(90deg,#ef4444,#f87171)';
 
 // Modal de corrección individual
 const ModalCorreccion: React.FC<{
@@ -395,10 +413,10 @@ const ModalCorreccion: React.FC<{
   onExito: () => void;
 }> = ({ open, estudiante, asignacionId, onClose, onExito }) => {
   const { isDark, gold, gradBg } = usePalette();
-  const [registros, setRegistros]     = useState<Asistencia[]>([]);
-  const [isLoading, setIsLoading]     = useState(false);
+  const [registros, setRegistros] = useState<Asistencia[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [descargando, setDescargando] = useState<'pdf' | 'excel' | null>(null);
-  const { corregir, isSubmitting }    = useCorregirAsistencia(onExito);
+  const { corregir, isSubmitting } = useCorregirAsistencia(onExito);
 
   useEffect(() => {
     if (!open || !estudiante) return;
@@ -421,12 +439,12 @@ const ModalCorreccion: React.FC<{
       });
       toast.success(`Reporte descargado (${formato.toUpperCase()})`);
     } catch { toast.error('Error al generar el reporte'); }
-    finally   { setDescargando(null); }
+    finally { setDescargando(null); }
   };
 
   if (!open || !estudiante) return null;
 
-  const pct   = Number(estudiante.porcentaje_asistencia ?? 0);
+  const pct = Number(estudiante.porcentaje_asistencia ?? 0);
   const color = getPctColor(pct);
 
   return (
@@ -473,9 +491,9 @@ const ModalCorreccion: React.FC<{
           {/* Mini stats */}
           <Box sx={{ display: 'flex', gap: 0.8, mt: 2, flexWrap: 'wrap' }}>
             {[
-              { v: estudiante.presentes,    c: '#10b981', l: 'P' },
-              { v: estudiante.ausentes,     c: '#ef4444', l: 'A' },
-              { v: estudiante.tardanzas,    c: '#f59e0b', l: 'T' },
+              { v: estudiante.presentes, c: '#10b981', l: 'P' },
+              { v: estudiante.ausentes, c: '#ef4444', l: 'A' },
+              { v: estudiante.tardanzas, c: '#f59e0b', l: 'T' },
               { v: estudiante.justificados, c: '#3b82f6', l: 'J' },
             ].map(s => (
               <Box key={s.l} sx={{
@@ -570,12 +588,12 @@ const FilaRegistroEditable: React.FC<{
   isSaving: boolean;
 }> = ({ registro, onGuardar, isSaving }) => {
   const { isDark } = usePalette();
-  const [editando, setEditando]         = useState(false);
-  const [estadoEdit, setEstadoEdit]     = useState<EstadoAsistencia>(registro.estado);
+  const [editando, setEditando] = useState(false);
+  const [estadoEdit, setEstadoEdit] = useState<EstadoAsistencia>(registro.estado);
   const [justificacion, setJustificacion] = useState(registro.justificacion ?? '');
   const [observaciones, setObservaciones] = useState(registro.observaciones ?? '');
 
-  const cfg   = getEstCfg(registro.estado);
+  const cfg = getEstCfg(registro.estado);
   const color = cfg?.color ?? '#9ca3af';
 
   const fecha = new Date(registro.fecha + 'T12:00:00').toLocaleDateString('es-BO', {
@@ -661,16 +679,16 @@ const SeccionResumen: React.FC<{
 }> = ({ asignacionId, triggerRecarga }) => {
   const { isDark, gold, gradBg } = usePalette();
   const { estudiantes, resumen, isLoading, cargar, refrescar } = useReporteClase();
-  const [busqueda, setBusqueda]         = useState('');
-  const [filtro, setFiltro]             = useState<'todos' | 'criticos' | 'perfectos'>('todos');
+  const [busqueda, setBusqueda] = useState('');
+  const [filtro, setFiltro] = useState<'todos' | 'criticos' | 'perfectos'>('todos');
   const [estudianteModal, setEstudianteModal] = useState<EstudianteReporteClase | null>(null);
-  const [descargando, setDescargando]   = useState<'pdf' | 'excel' | null>(null);
+  const [descargando, setDescargando] = useState<'pdf' | 'excel' | null>(null);
 
   useEffect(() => { cargar(asignacionId); }, [asignacionId, triggerRecarga]);
 
   const filtrados = React.useMemo(() => {
     let lista = [...estudiantes];
-    if (filtro === 'criticos')  lista = lista.filter(e => Number(e.porcentaje_asistencia) < 70);
+    if (filtro === 'criticos') lista = lista.filter(e => Number(e.porcentaje_asistencia) < 70);
     if (filtro === 'perfectos') lista = lista.filter(e => Number(e.porcentaje_asistencia) === 100);
     if (busqueda.trim()) {
       const q = busqueda.toLowerCase();
@@ -687,7 +705,7 @@ const SeccionResumen: React.FC<{
       await descargarPeriodoClase({ asignacion_docente_id: asignacionId, formato });
       toast.success(`Reporte descargado (${formato.toUpperCase()})`);
     } catch { toast.error('Error al generar el reporte'); }
-    finally   { setDescargando(null); }
+    finally { setDescargando(null); }
   };
 
   if (isLoading) {
@@ -759,12 +777,12 @@ const SeccionResumen: React.FC<{
         display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 1.5, mb: 3,
       }}>
         {[
-          { label: 'Estudiantes',      value: resumen.total_estudiantes,  color: '#3b82f6' },
+          { label: 'Estudiantes', value: resumen.total_estudiantes, color: '#3b82f6' },
           { label: 'Días registrados', value: resumen.total_dias_registrados, color: '#8b5cf6' },
-          { label: 'Presentes',        value: resumen.presentes,          color: '#10b981' },
-          { label: 'Ausentes',         value: resumen.ausentes,           color: '#ef4444' },
-          { label: 'Tardanzas',        value: resumen.tardanzas,          color: '#f59e0b' },
-          { label: 'Críticos <70%',    value: resumen.estudiantes_criticos, color: '#ef4444' },
+          { label: 'Presentes', value: resumen.presentes, color: '#10b981' },
+          { label: 'Ausentes', value: resumen.ausentes, color: '#ef4444' },
+          { label: 'Tardanzas', value: resumen.tardanzas, color: '#f59e0b' },
+          { label: 'Críticos <70%', value: resumen.estudiantes_criticos, color: '#ef4444' },
         ].map(s => (
           <Box key={s.label} sx={{
             p: 2, borderRadius: '12px',
@@ -823,11 +841,13 @@ const SeccionResumen: React.FC<{
       }}>
         <TextField size="small" placeholder="Buscar estudiante..." value={busqueda}
           onChange={e => setBusqueda(e.target.value)}
-          InputProps={{ startAdornment: (
-            <InputAdornment position="start">
-              <SearchRoundedIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-            </InputAdornment>
-          )}}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchRoundedIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+              </InputAdornment>
+            )
+          }}
           sx={{ flex: 1, minWidth: 180, '& .MuiOutlinedInput-root': { borderRadius: 2.5, fontSize: 14 } }}
         />
         <ToggleButtonGroup value={filtro} exclusive onChange={(_, v) => v && setFiltro(v)} size="small"
@@ -846,75 +866,104 @@ const SeccionResumen: React.FC<{
       {/* Lista estudiantes */}
       <Stack spacing={1} sx={{ mb: 2 }}>
         {filtrados.map((est, i) => {
-          const pct   = Number(est.porcentaje_asistencia ?? 0);
+          const pct = Number(est.porcentaje_asistencia ?? 0);
           const color = getPctColor(pct);
           return (
             <Box key={est.matricula_id} sx={{
-              display: 'flex', alignItems: 'center', gap: 2, p: 1.5, borderRadius: '12px',
+              display: 'flex',
+              flexDirection: { xs: 'column', md: 'row' },
+              alignItems: { xs: 'stretch', md: 'center' },
+              gap: { xs: 1.2, md: 2 },
+              p: 1.5, borderRadius: '12px',
               border: `1.5px solid ${alpha(color, Number(pct) < 70 ? 0.25 : 0.1)}`,
               bgcolor: isDark ? alpha(color, 0.05) : alpha(color, 0.02),
               transition: 'all 0.15s',
-              '&:hover': { transform: 'translateX(4px)', '& .btn-corregir': { opacity: 1 } },
+              '&:hover': { transform: { md: 'translateX(4px)' }, '& .btn-corregir': { opacity: 1 } },
             }}>
-              <Typography variant="caption" fontWeight={800} color="text.disabled" sx={{ minWidth: 22, textAlign: 'center' }}>
-                {i + 1}
-              </Typography>
-              <Avatar src={est.estudiante_foto ?? undefined} sx={{
-                width: 36, height: 36, fontSize: 12, fontWeight: 800,
-                background: getPctGrad(pct), border: `2px solid ${alpha(color, 0.3)}`,
-              }}>
-                {est.estudiante_nombres[0]}{est.estudiante_apellidos[0]}
-              </Avatar>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                  <Typography variant="body2" fontWeight={800} noWrap>
-                    {est.estudiante_apellidos}, {est.estudiante_nombres}
-                  </Typography>
-                  {Number(pct) < 70 && (
-                    <WarningAmberRoundedIcon sx={{ fontSize: 14, color: '#ef4444', flexShrink: 0 }} />
-                  )}
-                </Box>
-                <Typography variant="caption" color="text.disabled">{est.estudiante_codigo}</Typography>
-              </Box>
-              {/* Stats mini */}
-              <Box sx={{ display: 'flex', gap: 0.7, flexShrink: 0 }}>
-                {[
-                  { v: est.presentes,    c: '#10b981', l: 'P' },
-                  { v: est.ausentes,     c: '#ef4444', l: 'A' },
-                  { v: est.tardanzas,    c: '#f59e0b', l: 'T' },
-                  { v: est.justificados, c: '#3b82f6', l: 'J' },
-                ].map(s => (
-                  <Box key={s.l} sx={{
-                    px: 1, py: 0.3, borderRadius: 1.5,
-                    bgcolor: alpha(s.c, isDark ? 0.15 : 0.1),
-                    border: `1px solid ${alpha(s.c, 0.22)}`,
-                    display: 'flex', alignItems: 'center', gap: 0.4,
-                  }}>
-                    <Typography variant="caption" fontWeight={800} sx={{ color: s.c, fontSize: 11 }}>{s.v}</Typography>
-                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: 9, fontWeight: 700 }}>{s.l}</Typography>
-                  </Box>
-                ))}
-              </Box>
-              {/* Barra % */}
-              <Box sx={{ width: 90, flexShrink: 0 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.4 }}>
-                  <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10 }}>Asistencia</Typography>
-                  <Typography variant="caption" fontWeight={800} sx={{ color, fontSize: 10 }}>{pct}%</Typography>
-                </Box>
-                <Box sx={{ height: 6, borderRadius: 3, bgcolor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06), overflow: 'hidden' }}>
-                  <Box sx={{ height: '100%', width: `${pct}%`, background: getPctGrad(pct), borderRadius: 3 }} />
-                </Box>
-              </Box>
-              {/* Botón corregir */}
-              <Tooltip title="Ver historial / corregir">
-                <Box className="btn-corregir" onClick={() => setEstudianteModal(est)} sx={{
-                  opacity: 0, transition: 'opacity 0.15s',
-                  width: 30, height: 30, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  bgcolor: isDark ? alpha(gold, 0.12) : alpha(gold, 0.08),
-                  border: `1px solid ${alpha(gold, 0.25)}`,
-                  cursor: 'pointer', flexShrink: 0,
-                  '&:hover': { transform: 'scale(1.1)' },
+
+              {/* Bloque 1: número + avatar + nombre — order 1 en ambos */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0, order: 1, flex: { md: '1 1 auto' } }}>
+                <Typography variant="caption" fontWeight={800} color="text.disabled" sx={{ minWidth: 22, textAlign: 'center', flexShrink: 0 }}>
+                  {i + 1}
+                </Typography>
+                <Avatar src={est.estudiante_foto ?? undefined} sx={{
+                  width: 36, height: 36, fontSize: 12, fontWeight: 800, flexShrink: 0,
+                  background: getPctGrad(pct), border: `2px solid ${alpha(color, 0.3)}`,
                 }}>
+                  {est.estudiante_nombres[0]}{est.estudiante_apellidos[0]}
+                </Avatar>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                    <Typography variant="body2" fontWeight={800} noWrap>
+                      {est.estudiante_apellidos}, {est.estudiante_nombres}
+                    </Typography>
+                    {Number(pct) < 70 && (
+                      <WarningAmberRoundedIcon sx={{ fontSize: 14, color: '#ef4444', flexShrink: 0 }} />
+                    )}
+                  </Box>
+                  <Typography variant="caption" color="text.disabled">{est.estudiante_codigo}</Typography>
+                </Box>
+              </Box>
+
+              {/* Bloque 2: stats + barra — order 2 en ambos */}
+              <Box sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: { xs: 1.5, md: 2 },
+                pl: { xs: '52px', md: 0 },
+                flexWrap: { xs: 'wrap', md: 'nowrap' },
+                order: 2,
+                flexShrink: 0,
+              }}>
+                {/* Stats mini */}
+                <Box sx={{ display: 'flex', gap: 0.7, flexShrink: 0 }}>
+                  {[
+                    { v: est.presentes, c: '#10b981', l: 'P' },
+                    { v: est.ausentes, c: '#ef4444', l: 'A' },
+                    { v: est.tardanzas, c: '#f59e0b', l: 'T' },
+                    { v: est.justificados, c: '#3b82f6', l: 'J' },
+                  ].map(s => (
+                    <Box key={s.l} sx={{
+                      px: 1, py: 0.3, borderRadius: 1.5,
+                      bgcolor: alpha(s.c, isDark ? 0.15 : 0.1),
+                      border: `1px solid ${alpha(s.c, 0.22)}`,
+                      display: 'flex', alignItems: 'center', gap: 0.4,
+                    }}>
+                      <Typography variant="caption" fontWeight={800} sx={{ color: s.c, fontSize: 11 }}>{s.v}</Typography>
+                      <Typography variant="caption" color="text.disabled" sx={{ fontSize: 9, fontWeight: 700 }}>{s.l}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+
+                {/* Barra % */}
+                <Box sx={{ flex: { xs: 1, md: 'unset' }, width: { xs: 'auto', md: 90 }, minWidth: { xs: 100, md: 90 } }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.4 }}>
+                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10 }}>Asistencia</Typography>
+                    <Typography variant="caption" fontWeight={800} sx={{ color, fontSize: 10 }}>{pct}%</Typography>
+                  </Box>
+                  <Box sx={{ height: 6, borderRadius: 3, bgcolor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06), overflow: 'hidden' }}>
+                    <Box sx={{ height: '100%', width: `${pct}%`, background: getPctGrad(pct), borderRadius: 3 }} />
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Botón corregir — order 0 en mobile (aparece pegado al nombre arriba), order 3 en desktop (al final) */}
+              <Tooltip title="Ver historial / corregir">
+                <Box
+                  className="btn-corregir"
+                  onClick={() => setEstudianteModal(est)}
+                  sx={{
+                    opacity: { xs: 1, md: 0 },
+                    transition: 'opacity 0.15s',
+                    width: 30, height: 30, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    bgcolor: isDark ? alpha(gold, 0.12) : alpha(gold, 0.08),
+                    border: `1px solid ${alpha(gold, 0.25)}`,
+                    cursor: 'pointer', flexShrink: 0,
+                    order: { xs: -1, md: 3 },
+                    alignSelf: { xs: 'flex-start', md: 'center' },
+                    '&:hover': { transform: 'scale(1.1)' },
+                  }}
+                >
                   <EditRoundedIcon sx={{ fontSize: 15, color: gold }} />
                 </Box>
               </Tooltip>
@@ -945,10 +994,10 @@ const SeccionPermisos: React.FC<{ asignacionId: number }> = ({ asignacionId }) =
     solicitudes, isLoading, isSubmitting, cambiarEstado,
   } = useSolicitudesPermiso({ estado: 'pendiente', asignacion_docente_id: asignacionId, limit: 50 });
 
-  const [rechazarId, setRechazarId]     = useState<number | null>(null);
+  const [rechazarId, setRechazarId] = useState<number | null>(null);
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [historialMap, setHistorialMap] = useState<Record<number, HistorialPermiso[]>>({});
-  const [expandidos, setExpandidos]     = useState<Set<number>>(new Set());
+  const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
 
   const handleAprobar = async (id: number) => {
     await cambiarEstado(id, { estado: 'aprobada' });
@@ -969,7 +1018,7 @@ const SeccionPermisos: React.FC<{ asignacionId: number }> = ({ asignacionId }) =
         try {
           const res = await solicitudPermisoService.obtenerHistorial(id);
           setHistorialMap(prev => ({ ...prev, [id]: res.data.historial }));
-        } catch {}
+        } catch { }
       }
     }
     setExpandidos(next);
@@ -999,12 +1048,12 @@ const SeccionPermisos: React.FC<{ asignacionId: number }> = ({ asignacionId }) =
   return (
     <Stack spacing={2}>
       {solicitudes.map(s => {
-        const motivo    = MOTIVOS_PERMISO.find(m => m.value === s.motivo);
+        const motivo = MOTIVOS_PERMISO.find(m => m.value === s.motivo);
         const nombreEst = `${s.estudiante_apellidos}, ${s.estudiante_nombres}`;
-        const fecha     = new Date(s.fecha_ausencia + 'T12:00:00').toLocaleDateString('es-BO', {
+        const fecha = new Date(s.fecha_ausencia + 'T12:00:00').toLocaleDateString('es-BO', {
           weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
         });
-        const diff    = Math.ceil((new Date(s.fecha_ausencia + 'T12:00:00').getTime() - Date.now()) / 86400000);
+        const diff = Math.ceil((new Date(s.fecha_ausencia + 'T12:00:00').getTime() - Date.now()) / 86400000);
         const urgente = diff <= 1;
         const expandido = expandidos.has(s.id);
 
@@ -1193,17 +1242,17 @@ const SeccionPermisos: React.FC<{ asignacionId: number }> = ({ asignacionId }) =
 
 export default function DocenteAsistenciaDetailPage() {
   const { isDark, gold, goldEnd, gradBg } = usePalette();
-  const router       = useRouter();
-  const params       = useParams();
+  const router = useRouter();
+  const params = useParams();
   const searchParams = useSearchParams();
 
   const asignacionId = Number(params.id);
-  const fecha        = searchParams.get('fecha') ?? new Date().toISOString().slice(0, 10);
+  const fecha = searchParams.get('fecha') ?? new Date().toISOString().slice(0, 10);
 
   const { asignaciones, isLoading: loadingAsig } = useMisAsignaciones();
   const asignacion: AsignacionDocente | undefined = asignaciones.find(a => a.asignacion_id === asignacionId);
 
-  const [tab, setTab]                     = useState(0);
+  const [tab, setTab] = useState(0);
   const [triggerResumen, setTriggerResumen] = useState(0);
 
   useEffect(() => {

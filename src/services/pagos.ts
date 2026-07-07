@@ -47,6 +47,10 @@ import type {
   FiltrosAjusteCosto,
   AjusteCostoPreviewResponse,
   AjusteCostoAplicarResponse,
+  FiltrosCursos,
+  CursosResponse,
+  FiltrosFacturas,
+  FacturasResponse,
 } from '../types/pagos';
 
 class PagosService {
@@ -287,6 +291,16 @@ class PagosService {
     });
     return data;
   }
+
+  async obtenerCursos(filtros?: FiltrosCursos): Promise<CursosResponse> {
+    const { data } = await api.get<CursosResponse>('/api/reportes-pagos/cursos', { params: filtros });
+    return data;
+  }
+
+  async obtenerFacturas(filtros?: FiltrosFacturas): Promise<FacturasResponse> {
+    const { data } = await api.get<FacturasResponse>('/api/reportes-pagos/facturas', { params: filtros });
+    return data;
+  }
   private getExtensionReporte(formato: FormatoReporte): string {
     return formato === 'excel' ? 'xlsx' : 'pdf';
   }
@@ -372,6 +386,30 @@ class PagosService {
       filtros,
       'ingresos',
       `ingresos-${filtros.periodo_academico_id}`
+    );
+  }
+
+  async exportarCursos(filtros: { periodo_academico_id: number; formato: FormatoReporte }): Promise<DescargaReportePagos> {
+    return this.descargarReportePagos(
+      '/api/reportes-pagos/exportar/cursos',
+      filtros,
+      'cursos',
+      `reporte-cursos-${filtros.periodo_academico_id}`
+    );
+  }
+
+  async exportarFacturas(filtros: {
+    periodo_academico_id: number;
+    formato: FormatoReporte;
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    metodo_pago?: MetodoPago;
+  }): Promise<DescargaReportePagos> {
+    return this.descargarReportePagos(
+      '/api/reportes-pagos/exportar/facturas',
+      filtros,
+      'facturas',
+      `reporte-facturas-${filtros.periodo_academico_id}`
     );
   }
 

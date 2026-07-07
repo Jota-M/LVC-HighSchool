@@ -9,14 +9,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   return (
-    
+
     <ProtectedRoute>
       <Box display="flex" height="100vh" minHeight="100vh" overflow="hidden">
         <ModernSidebar />
-        <Box flex={1} display="flex" flexDirection="column" minHeight="100vh">
+        <Box flex={1} display="flex" flexDirection="column" minHeight="100vh" minWidth={0}>
           <Topbar />
-          <Box flex={1} overflow="auto" sx={{ p: { xs: 2, md: 4 } , background: isDark? "#020518": "ffffff"}}>
-            {children} 
+          <Box flex={1} overflow="auto" sx={{ p: { xs: 2, md: 4 }, background: isDark ? "#020518" : "ffffff" }}>
+            {children}
           </Box>
         </Box>
       </Box>

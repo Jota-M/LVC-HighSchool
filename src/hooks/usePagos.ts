@@ -28,6 +28,12 @@ import type {
   FiltrosAjusteCosto,
   AjusteCostoPreviewResponse,
   AjusteCostoAplicarResponse,
+  CursoReporteItem,
+  FacturaReporteItem,
+  FiltrosCursos,
+  FiltrosFacturas,
+  FormatoReporte,
+  MetodoPago,
 } from '../types/pagos';
 
 interface UsePagosOptions {
@@ -49,6 +55,9 @@ interface UsePagosReturn {
   morosos: EstudianteMoroso[];
   resumen: ResumenPagos | null;
   infoSistema: InfoSistema | null;
+  cursosReport: CursoReporteItem[];
+  facturasReport: FacturaReporteItem[];
+  facturasStats: { totalInvoiced: number; invoiceCount: number } | null;
 
   // Estados de carga
   loading: boolean;
@@ -58,6 +67,8 @@ interface UsePagosReturn {
   loadingPagosAnuales: boolean;
   loadingReportes: boolean;
   loadingExportacionReportes: boolean;
+  loadingCursosReport: boolean;
+  loadingFacturasReport: boolean;
   error: string | null;
 
   // Paginación
@@ -80,12 +91,22 @@ interface UsePagosReturn {
   cargarIngresos: (filtros?: FiltrosIngresos) => Promise<void>;
   cargarMorosos: (filtros?: FiltrosMorosos) => Promise<void>;
   cargarResumen: (periodoAcademicoId: number) => Promise<void>;
+  cargarCursosReport: (filtros?: FiltrosCursos) => Promise<void>;
+  cargarFacturasReport: (filtros?: FiltrosFacturas) => Promise<void>;
   cargarInfoSistema: () => void;
 
   // Métodos de exportación PDF / Excel
   exportarEstadoCuenta: (filtros: FiltrosExportarEstadoCuenta) => Promise<DescargaReportePagos>;
   exportarMorosos: (filtros: FiltrosExportarMorosos) => Promise<DescargaReportePagos>;
   exportarIngresos: (filtros: FiltrosExportarIngresos) => Promise<DescargaReportePagos>;
+  exportarCursos: (filtros: { periodo_academico_id: number; formato: FormatoReporte }) => Promise<DescargaReportePagos>;
+  exportarFacturas: (filtros: {
+    periodo_academico_id: number;
+    formato: FormatoReporte;
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    metodo_pago?: MetodoPago;
+  }) => Promise<DescargaReportePagos>;
 
   // Acciones
   registrarPago: (data: RegistrarPagoMensualidadRequest) => Promise<PagoMensualidad>;
@@ -124,6 +145,9 @@ export const usePagos = (options: UsePagosOptions = {}): UsePagosReturn => {
   const [morosos, setMorosos] = useState<EstudianteMoroso[]>([]);
   const [resumen, setResumen] = useState<ResumenPagos | null>(null);
   const [infoSistema, setInfoSistema] = useState<InfoSistema | null>(null);
+  const [cursosReport, setCursosReport] = useState<CursoReporteItem[]>([]);
+  const [facturasReport, setFacturasReport] = useState<FacturaReporteItem[]>([]);
+  const [facturasStats, setFacturasStats] = useState<{ totalInvoiced: number; invoiceCount: number } | null>(null);
 
   const [loadingCostos, setLoadingCostos] = useState(false);
   const [loadingMensualidades, setLoadingMens] = useState(false);
@@ -131,6 +155,8 @@ export const usePagos = (options: UsePagosOptions = {}): UsePagosReturn => {
   const [loadingPagosAnuales, setLoadingAnuales] = useState(false);
   const [loadingReportes, setLoadingReportes] = useState(false);
   const [loadingExportacionReportes, setLoadingExportacionReportes] = useState(false);
+  const [loadingCursosReport, setLoadingCursosReport] = useState(false);
+  const [loadingFacturasReport, setLoadingFacturasReport] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paginacion, setPaginacion] = useState<UsePagosReturn['paginacion']>(null);
   const [loadingAjusteCosto, setLoadingAjusteCosto] = useState(false);
@@ -233,6 +259,27 @@ export const usePagos = (options: UsePagosOptions = {}): UsePagosReturn => {
     } finally { setLoadingReportes(false); }
   }, []);
 
+  const cargarCursosReport = useCallback(async (filtros?: FiltrosCursos) => {
+    try {
+      setLoadingCursosReport(true); setError(null);
+      const res = await pagosService.obtenerCursos(filtros);
+      setCursosReport(res.data.cursos || []);
+    } catch (err) {
+      handleError(err, 'Error al cargar reporte por cursos'); setCursosReport([]);
+    } finally { setLoadingCursosReport(false); }
+  }, []);
+
+  const cargarFacturasReport = useCallback(async (filtros?: FiltrosFacturas) => {
+    try {
+      setLoadingFacturasReport(true); setError(null);
+      const res = await pagosService.obtenerFacturas(filtros);
+      setFacturasReport(res.data.facturas || []);
+      setFacturasStats(res.data.stats || null);
+    } catch (err) {
+      handleError(err, 'Error al cargar reporte de facturas'); setFacturasReport([]); setFacturasStats(null);
+    } finally { setLoadingFacturasReport(false); }
+  }, []);
+
   const cargarResumen = useCallback(async (periodoAcademicoId: number) => {
     try {
       setLoadingReportes(true); setError(null);
@@ -274,6 +321,30 @@ export const usePagos = (options: UsePagosOptions = {}): UsePagosReturn => {
       return await pagosService.exportarIngresos(filtros);
     } catch (err) {
       throw new Error(handleError(err, 'Error al descargar reporte de ingresos'));
+    } finally { setLoadingExportacionReportes(false); }
+  }, []);
+
+  const exportarCursos = useCallback(async (filtros: { periodo_academico_id: number; formato: FormatoReporte }) => {
+    try {
+      setLoadingExportacionReportes(true); setError(null);
+      return await pagosService.exportarCursos(filtros);
+    } catch (err) {
+      throw new Error(handleError(err, 'Error al descargar reporte por cursos'));
+    } finally { setLoadingExportacionReportes(false); }
+  }, []);
+
+  const exportarFacturas = useCallback(async (filtros: {
+    periodo_academico_id: number;
+    formato: FormatoReporte;
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    metodo_pago?: MetodoPago;
+  }) => {
+    try {
+      setLoadingExportacionReportes(true); setError(null);
+      return await pagosService.exportarFacturas(filtros);
+    } catch (err) {
+      throw new Error(handleError(err, 'Error al descargar reporte de facturas'));
     } finally { setLoadingExportacionReportes(false); }
   }, []);
 
@@ -396,18 +467,21 @@ export const usePagos = (options: UsePagosOptions = {}): UsePagosReturn => {
     // Datos
     costos, mensualidades, pagos, pagosAnuales,
     estadoEstudiantes, ingresos, morosos, resumen, infoSistema,
+    cursosReport, facturasReport, facturasStats,
     // Estados
     loading, loadingCostos, loadingMensualidades: loadingMensualidades,
     loadingPagos, loadingPagosAnuales, loadingReportes,
     loadingExportacionReportes, error, paginacion,
+    loadingCursosReport, loadingFacturasReport,
     // Métodos de carga
     cargarCostos, cargarMensualidades, cargarMensualidadesPorMatricula,
     cargarPagos, cargarPagosAnuales,
     // Métodos de reportes
     cargarEstadoEstudiantes, cargarIngresos, cargarMorosos,
-    cargarResumen, cargarInfoSistema,
+    cargarResumen, cargarCursosReport, cargarFacturasReport, cargarInfoSistema,
     // Exportación
     exportarEstadoCuenta, exportarMorosos, exportarIngresos,
+    exportarCursos, exportarFacturas,
     // Acciones
     registrarPago, registrarPagoAnual, anularPago,
     generarMensualidades, limpiarMensualidades,

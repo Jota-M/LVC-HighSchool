@@ -1030,12 +1030,12 @@ import {
   Fade, LinearProgress, CircularProgress, Collapse, useTheme, alpha,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
-import EditNoteRoundedIcon        from '@mui/icons-material/EditNoteRounded';
-import ArrowBackRoundedIcon       from '@mui/icons-material/ArrowBackRounded';
-import CheckCircleRoundedIcon     from '@mui/icons-material/CheckCircleRounded';
-import InfoOutlinedIcon           from '@mui/icons-material/InfoOutlined';
+import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
-import KeyboardArrowUpRoundedIcon   from '@mui/icons-material/KeyboardArrowUpRounded';
+import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
 
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -1076,9 +1076,9 @@ async function enriquecerConProgreso(
   const results = await Promise.allSettled(
     evaluaciones.map(ev =>
       calificacionesService.listarPorEvaluacion(ev.id).then(res => ({
-        con_nota:      res.data.con_nota,
+        con_nota: res.data.con_nota,
         total_alumnos: res.data.total,
-        ausentes:      res.data.calificaciones.filter((c: any) => c.esta_ausente).length,
+        ausentes: res.data.calificaciones.filter((c: any) => c.esta_ausente).length,
       }))
     )
   );
@@ -1098,14 +1098,14 @@ type NotasGrid = Record<string, RegistroCalificacionItem & { evaluacion_id: numb
 // PÁGINA PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
 export default function CalificacionesDetailPage() {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const router = useRouter();
   const params = useParams();
 
-  const gold    = isDark ? '#facc15' : '#0288d1';
+  const gold = isDark ? '#facc15' : '#0288d1';
   const goldEnd = isDark ? '#f59e0b' : '#01579b';
-  const gradBg  = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
+  const gradBg = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
 
   const [asignacionId, periodoId] = String(params.id ?? '').split('-').map(Number);
 
@@ -1156,7 +1156,7 @@ export default function CalificacionesDetailPage() {
 
   useEffect(() => {
     cargarProgreso(evaluaciones);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [evaluaciones]);
 
   // ── Lista de estudiantes (compartida para toda la dimensión) ───────────────
@@ -1200,19 +1200,19 @@ export default function CalificacionesDetailPage() {
           if (c.puntaje_obtenido !== null && c.puntaje_obtenido !== undefined) {
             const key = `${ev.id}_${c.matricula_id}`;
             nuevo[key] = {
-              evaluacion_id:    ev.id,
-              matricula_id:     c.matricula_id,
+              evaluacion_id: ev.id,
+              matricula_id: c.matricula_id,
               puntaje_obtenido: c.puntaje_obtenido,
-              esta_ausente:     c.esta_ausente ?? false,
-              observacion:      c.observacion,
+              esta_ausente: c.esta_ausente ?? false,
+              observacion: c.observacion,
             };
           } else if (c.esta_ausente) {
             const key = `${ev.id}_${c.matricula_id}`;
             nuevo[key] = {
-              evaluacion_id:    ev.id,
-              matricula_id:     c.matricula_id,
+              evaluacion_id: ev.id,
+              matricula_id: c.matricula_id,
               puntaje_obtenido: 0,
-              esta_ausente:     true,
+              esta_ausente: true,
             };
           }
         });
@@ -1291,10 +1291,10 @@ export default function CalificacionesDetailPage() {
         );
         if (valido) {
           porEv[n.evaluacion_id].push({
-            matricula_id:     n.matricula_id,
+            matricula_id: n.matricula_id,
             puntaje_obtenido: n.esta_ausente ? 0 : Number(n.puntaje_obtenido),
-            esta_ausente:     n.esta_ausente ?? false,
-            observacion:      n.observacion,
+            esta_ausente: n.esta_ausente ?? false,
+            observacion: n.observacion,
           });
         }
       });
@@ -1366,7 +1366,7 @@ export default function CalificacionesDetailPage() {
   }
 
   const evDimActiva = evConProgreso[dimensionActiva] ?? [];
-  const cfg         = DIMENSIONES_CONFIG[dimensionActiva];
+  const cfg = DIMENSIONES_CONFIG[dimensionActiva];
 
   return (
     <Box sx={{ minHeight: '100vh', py: 4 }}>
@@ -1415,55 +1415,92 @@ export default function CalificacionesDetailPage() {
         {/* ══ TABS DE DIMENSIÓN ══ */}
         <Fade in timeout={450}>
           <Box sx={{ mb: 3 }}>
-            <Tabs
-              value={dimTab}
-              onChange={handleDimTabChange}
+            <Box
               sx={{
-                background: gradBg, borderRadius: '16px', p: 1,
-                '& .MuiTab-root': {
-                  borderRadius: '12px', textTransform: 'none', fontWeight: 600, minHeight: 48,
-                  color: isDark ? alpha('#000', 0.7) : alpha('#fff', 0.8),
-                  '&:hover': { color: isDark ? '#000' : '#fff' },
-                },
-                '& .Mui-selected': { color: `${isDark ? '#000' : '#fff'} !important` },
-                '& .MuiTabs-indicator': {
-                  backgroundColor: isDark ? '#000' : '#fff', height: 3, borderRadius: '3px 3px 0 0',
-                },
+                maxWidth: '100%',
+                borderRadius: '16px',
+                background: gradBg,
+                p: { xs: 0.5, md: 1 },
               }}
             >
-              {DIMENSIONES_ORDEN.map(k => {
-                const c    = DIMENSIONES_CONFIG[k];
-                const evs  = evConProgreso[k] ?? [];
-                const count = evs.length;
-                const todas = count > 0 && evs.every(e => e.total_alumnos > 0 && e.con_nota >= e.total_alumnos);
-                return (
-                  <Tab key={k} label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <span>{c.label}</span>
-                      <Box sx={{
-                        fontSize: 10, fontWeight: 700,
-                        bgcolor: isDark ? alpha('#000', 0.25) : alpha('#fff', 0.25),
-                        color: isDark ? '#000' : '#fff',
-                        borderRadius: '8px', px: 0.8, py: 0.2, lineHeight: 1.4,
-                      }}>{c.porcentaje}%</Box>
-                      {count > 0 && (
+              <Tabs
+                value={dimTab}
+                onChange={handleDimTabChange}
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
+                sx={{
+                  minHeight: { xs: 36, md: 48 },
+                  '& .MuiTabs-scroller': {
+                    borderRadius: '10px',
+                  },
+                  '& .MuiTabs-flexContainer': {
+                    flexWrap: 'nowrap',
+                  },
+                  '& .MuiTabs-scrollButtons': {
+                    color: isDark ? '#000' : '#fff',
+                    width: { xs: 28, md: 40 },
+                    flexShrink: 0,
+                    '&.Mui-disabled': { opacity: 0.3 },
+                  },
+                  '& .MuiTab-root': {
+                    borderRadius: '10px',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    minWidth: 'max-content',
+                    maxWidth: 'none',
+                    flexShrink: 0,
+                    minHeight: { xs: 36, md: 48 },
+                    fontSize: { xs: '0.7rem', md: '0.95rem' },
+                    px: { xs: 1.2, md: 3 },
+                    color: isDark ? '#000' : '#fff',
+                    whiteSpace: 'nowrap',
+                    '&:hover': { color: isDark ? '#000' : '#fff' },
+                  },
+                  '& .Mui-selected': {
+                    color: `${isDark ? '#000' : '#fff'} !important`,
+                  },
+                  '& .MuiTabs-indicator': {
+                    backgroundColor: isDark ? '#000' : '#fff',
+                    height: { xs: 2, md: 3 },
+                    borderRadius: '3px 3px 0 0',
+                  },
+                }}
+              >
+                {DIMENSIONES_ORDEN.map(k => {
+                  const c = DIMENSIONES_CONFIG[k];
+                  const evs = evConProgreso[k] ?? [];
+                  const count = evs.length;
+                  const todas = count > 0 && evs.every(e => e.total_alumnos > 0 && e.con_nota >= e.total_alumnos);
+                  return (
+                    <Tab key={k} label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.6, md: 1 }, whiteSpace: 'nowrap' }}>
+                        <span>{c.label}</span>
                         <Box sx={{
-                          fontSize: 9, fontWeight: 800,
-                          bgcolor: todas ? alpha('#16a34a', 0.4) : isDark ? alpha('#000', 0.35) : alpha('#fff', 0.35),
-                          color: todas ? '#fff' : isDark ? '#000' : '#fff',
-                          borderRadius: '6px', px: 0.7, py: 0.1, lineHeight: 1.4,
-                          minWidth: 16, textAlign: 'center',
-                          display: 'flex', alignItems: 'center', gap: 0.3,
-                        }}>
-                          {todas && <CheckCircleRoundedIcon sx={{ fontSize: '9px !important' }} />}
-                          {count}
-                        </Box>
-                      )}
-                    </Box>
-                  } />
-                );
-              })}
-            </Tabs>
+                          fontSize: { xs: 9, md: 10 }, fontWeight: 700,
+                          bgcolor: isDark ? alpha('#000', 0.25) : alpha('#fff', 0.25),
+                          color: isDark ? '#000' : '#fff',
+                          borderRadius: '8px', px: 0.8, py: 0.2, lineHeight: 1.4,
+                        }}>{c.porcentaje}%</Box>
+                        {count > 0 && (
+                          <Box sx={{
+                            fontSize: { xs: 8, md: 9 }, fontWeight: 800,
+                            bgcolor: todas ? alpha('#16a34a', 0.4) : isDark ? alpha('#000', 0.35) : alpha('#fff', 0.35),
+                            color: todas ? '#fff' : isDark ? '#000' : '#fff',
+                            borderRadius: '6px', px: 0.7, py: 0.1, lineHeight: 1.4,
+                            minWidth: 16, textAlign: 'center',
+                            display: 'flex', alignItems: 'center', gap: 0.3,
+                          }}>
+                            {todas && <CheckCircleRoundedIcon sx={{ fontSize: '9px !important' }} />}
+                            {count}
+                          </Box>
+                        )}
+                      </Box>
+                    } />
+                  );
+                })}
+              </Tabs>
+            </Box>
           </Box>
         </Fade>
 

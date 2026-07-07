@@ -7,27 +7,27 @@ import {
   CircularProgress, Tooltip,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
-import GradeRoundedIcon           from '@mui/icons-material/GradeRounded';
-import ArrowBackRoundedIcon       from '@mui/icons-material/ArrowBackRounded';
-import AddRoundedIcon             from '@mui/icons-material/AddRounded';
-import AssignmentRoundedIcon      from '@mui/icons-material/AssignmentRounded';
-import HourglassEmptyRoundedIcon  from '@mui/icons-material/HourglassEmptyRounded';
+import GradeRoundedIcon from '@mui/icons-material/GradeRounded';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
+import HourglassEmptyRoundedIcon from '@mui/icons-material/HourglassEmptyRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
-import KeyboardArrowUpRoundedIcon  from '@mui/icons-material/KeyboardArrowUpRounded';
-import ImageRoundedIcon           from '@mui/icons-material/ImageRounded';
-import PictureAsPdfRoundedIcon    from '@mui/icons-material/PictureAsPdfRounded';
-import CalendarTodayRoundedIcon   from '@mui/icons-material/CalendarTodayRounded';
-import ScoreRoundedIcon           from '@mui/icons-material/ScoreRounded';
-import InfoOutlinedIcon           from '@mui/icons-material/InfoOutlined';
-import DescriptionOutlinedIcon    from '@mui/icons-material/DescriptionOutlined';
-import MenuBookRoundedIcon        from '@mui/icons-material/MenuBookRounded';
-import AccessTimeRoundedIcon      from '@mui/icons-material/AccessTimeRounded';
-import OpenInNewRoundedIcon       from '@mui/icons-material/OpenInNewRounded';
-import CheckRoundedIcon           from '@mui/icons-material/CheckRounded';
-import VisibilityIcon             from '@mui/icons-material/Visibility';
-import VisibilityOffIcon          from '@mui/icons-material/VisibilityOff';
-import DeleteRoundedIcon          from '@mui/icons-material/DeleteRounded';
-import RefreshRoundedIcon         from '@mui/icons-material/RefreshRounded';
+import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
+import ImageRoundedIcon from '@mui/icons-material/ImageRounded';
+import PictureAsPdfRoundedIcon from '@mui/icons-material/PictureAsPdfRounded';
+import CalendarTodayRoundedIcon from '@mui/icons-material/CalendarTodayRounded';
+import ScoreRoundedIcon from '@mui/icons-material/ScoreRounded';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
+import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
+import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 
 import { useParams, useRouter } from 'next/navigation';
 import { useMisMateriasNotas, useEvaluaciones } from '@/hooks/useNotas';
@@ -55,11 +55,11 @@ const cardIn = keyframes`
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
 const usePalette = () => {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const gold    = isDark ? '#facc15' : '#0288d1';
+  const gold = isDark ? '#facc15' : '#0288d1';
   const goldEnd = isDark ? '#f59e0b' : '#01579b';
-  const gradBg  = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
+  const gradBg = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
   return { isDark, gold, goldEnd, gradBg };
 };
 
@@ -69,7 +69,7 @@ const DetallePanel: React.FC<{
   dimColor: string;
   isDark: boolean;
 }> = ({ ev, dimColor, isDark }) => {
-  const [criterios, setCriterios]           = useState<CriterioRubrica[]>([]);
+  const [criterios, setCriterios] = useState<CriterioRubrica[]>([]);
   const [loadingRubrica, setLoadingRubrica] = useState(false);
   const fetched = useRef(false);
 
@@ -79,7 +79,7 @@ const DetallePanel: React.FC<{
     setLoadingRubrica(true);
     rubricaService.listar(ev.id)
       .then(res => setCriterios(res.data.criterios))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingRubrica(false));
   }, [ev.id]);
 
@@ -94,12 +94,12 @@ const DetallePanel: React.FC<{
   };
   const valSx = { fontSize: 13, lineHeight: 1.55 };
 
-  const tipo        = TIPOS_EVALUACION.find(t => t.value === ev.tipo);
+  const tipo = TIPOS_EVALUACION.find(t => t.value === ev.tipo);
   const fechaLimite = ev.fecha_limite
     ? new Date(ev.fecha_limite).toLocaleString('es-BO', {
-        day: '2-digit', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-      })
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    })
     : null;
 
   return (
@@ -557,11 +557,31 @@ export default function DocenteNotasDetailPage() {
         {/* ══ TABS ══ */}
         <Fade in timeout={450}>
           <Box sx={{ mb: 3 }}>
-            <Tabs value={dimTab} onChange={(_, v) => setDimTab(v)}
+            <Tabs
+              value={dimTab}
+              onChange={(_, v) => setDimTab(v)}
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
               sx={{
-                background: gradBg, borderRadius: '16px', p: 1,
+                background: gradBg, borderRadius: '16px', p: { xs: 0.5, md: 1 },
+                minHeight: { xs: 36, md: 48 },
+                '& .MuiTabs-flexContainer': {
+                  flexWrap: 'nowrap',
+                },
+                '& .MuiTabs-scrollButtons': {
+                  color: isDark ? '#000' : '#fff',
+                  width: { xs: 28, md: 40 },
+                  flexShrink: 0,
+                  '&.Mui-disabled': { opacity: 0.3 },
+                },
                 '& .MuiTab-root': {
-                  borderRadius: '12px', textTransform: 'none', fontWeight: 600, minHeight: 48,
+                  borderRadius: '12px', textTransform: 'none', fontWeight: 600,
+                  minWidth: 'max-content',
+                  flexShrink: 0,
+                  minHeight: { xs: 36, md: 48 },
+                  fontSize: { xs: '0.75rem', md: '0.95rem' },
+                  whiteSpace: 'nowrap',
                   color: isDark ? alpha('#000', 0.7) : alpha('#fff', 0.8),
                   '&:hover': { color: isDark ? '#000' : '#fff' },
                 },

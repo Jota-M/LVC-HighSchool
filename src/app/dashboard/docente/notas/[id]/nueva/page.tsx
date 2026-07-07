@@ -9,20 +9,20 @@ import {
   CircularProgress, Alert,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
-import ArrowBackRoundedIcon      from '@mui/icons-material/ArrowBackRounded';
-import CheckCircleRoundedIcon    from '@mui/icons-material/CheckCircleRounded';
-import ImageRoundedIcon          from '@mui/icons-material/ImageRounded';
-import PictureAsPdfRoundedIcon   from '@mui/icons-material/PictureAsPdfRounded';
-import AddCircleOutlineIcon      from '@mui/icons-material/AddCircleOutline';
-import DeleteOutlineIcon         from '@mui/icons-material/DeleteOutline';
-import CloseIcon                 from '@mui/icons-material/Close';
-import VisibilityRoundedIcon     from '@mui/icons-material/VisibilityRounded';
-import AssignmentRoundedIcon     from '@mui/icons-material/AssignmentRounded';
-import CalendarTodayRoundedIcon  from '@mui/icons-material/CalendarTodayRounded';
-import ScaleRoundedIcon          from '@mui/icons-material/ScaleRounded';
-import GroupsRoundedIcon         from '@mui/icons-material/GroupsRounded';
-import BookmarkRoundedIcon       from '@mui/icons-material/BookmarkRounded';
-import AutoAwesomeRoundedIcon    from '@mui/icons-material/AutoAwesomeRounded';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import ImageRoundedIcon from '@mui/icons-material/ImageRounded';
+import PictureAsPdfRoundedIcon from '@mui/icons-material/PictureAsPdfRounded';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import CloseIcon from '@mui/icons-material/Close';
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
+import CalendarTodayRoundedIcon from '@mui/icons-material/CalendarTodayRounded';
+import ScaleRoundedIcon from '@mui/icons-material/ScaleRounded';
+import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
+import BookmarkRoundedIcon from '@mui/icons-material/BookmarkRounded';
+import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
 
 import { useParams, useRouter } from 'next/navigation';
 import { useMisMateriasNotas, useDimensiones, useEvaluaciones, useTemario } from '@/hooks/useNotas';
@@ -49,11 +49,11 @@ const bounceIcon = keyframes`
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
 const usePalette = () => {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const gold    = isDark ? '#facc15' : '#0288d1';
+  const gold = isDark ? '#facc15' : '#0288d1';
   const goldEnd = isDark ? '#f59e0b' : '#01579b';
-  const gradBg  = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
+  const gradBg = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
   return { isDark, gold, goldEnd, gradBg };
 };
 
@@ -110,9 +110,9 @@ const EditorRubrica: React.FC<{
   onChange: (c: CriterioRubrica[]) => void;
 }> = ({ criterios, puntajeMaximo, accentColor, onChange }) => {
   const { isDark } = usePalette();
-  const suma   = criterios.reduce((s, c) => s + Number(c.puntos_posibles || 0), 0);
+  const suma = criterios.reduce((s, c) => s + Number(c.puntos_posibles || 0), 0);
   const excede = suma > puntajeMaximo;
-  const pct    = puntajeMaximo > 0 ? Math.min((suma / puntajeMaximo) * 100, 100) : 0;
+  const pct = puntajeMaximo > 0 ? Math.min((suma / puntajeMaximo) * 100, 100) : 0;
 
   const agregar = () => onChange([...criterios, { orden: criterios.length + 1, criterio: '', puntos_posibles: 0 }]);
   const upd = (i: number, k: keyof CriterioRubrica, v: any) => {
@@ -222,19 +222,19 @@ const DetalleEvaluacion: React.FC<{
 }> = ({ evaluacion, materia, onNueva, onVolver }) => {
   const { isDark, gold, gradBg } = usePalette();
   const codigo = evaluacion.dimension_codigo as CodigoDimension;
-  const cfg    = DIMENSIONES_CONFIG[codigo] ?? DIMENSIONES_CONFIG['SAB'];
-  const tipo   = TIPOS_EVALUACION.find(t => t.value === evaluacion.tipo);
+  const cfg = DIMENSIONES_CONFIG[codigo] ?? DIMENSIONES_CONFIG['SAB'];
+  const tipo = TIPOS_EVALUACION.find(t => t.value === evaluacion.tipo);
 
   const filas = [
-    { label: 'Materia',       value: materia.materia_nombre },
-    { label: 'Grado',         value: `${materia.grado_nombre} "${materia.paralelo_nombre}"` },
-    { label: 'Trimestre',     value: materia.trimestre_nombre ?? '—' },
-    { label: 'Dimensión',     value: `${cfg.label} (${cfg.porcentaje}%)` },
-    { label: 'Tipo',          value: tipo ? `${tipo.icon} ${tipo.label}` : '—' },
-    { label: 'Puntaje máx',   value: `${evaluacion.puntaje_maximo} pts` },
-    { label: 'Peso',          value: evaluacion.peso_en_dimension ?? '—' },
-    { label: 'Fecha',         value: evaluacion.fecha ?? '—' },
-    { label: 'Visible',       value: evaluacion.visible_para_padres ? 'Sí, publicada' : 'No publicada' },
+    { label: 'Materia', value: materia.materia_nombre },
+    { label: 'Grado', value: `${materia.grado_nombre} "${materia.paralelo_nombre}"` },
+    { label: 'Trimestre', value: materia.trimestre_nombre ?? '—' },
+    { label: 'Dimensión', value: `${cfg.label} (${cfg.porcentaje}%)` },
+    { label: 'Tipo', value: tipo ? `${tipo.icon} ${tipo.label}` : '—' },
+    { label: 'Puntaje máx', value: `${evaluacion.puntaje_maximo} pts` },
+    { label: 'Peso', value: evaluacion.peso_en_dimension ?? '—' },
+    { label: 'Fecha', value: evaluacion.fecha ?? '—' },
+    { label: 'Visible', value: evaluacion.visible_para_padres ? 'Sí, publicada' : 'No publicada' },
     ...(evaluacion.tema_titulo
       ? [{ label: 'Tema', value: `${evaluacion.unidad_titulo ? `U${evaluacion.numero_unidad} · ` : ''}T${evaluacion.numero_tema} — ${evaluacion.tema_titulo}` }]
       : []
@@ -315,9 +315,9 @@ const DetalleEvaluacion: React.FC<{
               {/* Stats rápidos */}
               <Box sx={{ display: 'flex', gap: 1.5 }}>
                 {[
-                  { icon: <ScaleRoundedIcon sx={{ fontSize: 16 }} />,        label: 'Puntaje',     value: `${evaluacion.puntaje_maximo} pts` },
-                  { icon: <CalendarTodayRoundedIcon sx={{ fontSize: 16 }} />, label: 'Fecha',       value: evaluacion.fecha ?? 'Sin fecha' },
-                  { icon: <GroupsRoundedIcon sx={{ fontSize: 16 }} />,        label: 'Estudiantes', value: `${materia.total_estudiantes}` },
+                  { icon: <ScaleRoundedIcon sx={{ fontSize: 16 }} />, label: 'Puntaje', value: `${evaluacion.puntaje_maximo} pts` },
+                  { icon: <CalendarTodayRoundedIcon sx={{ fontSize: 16 }} />, label: 'Fecha', value: evaluacion.fecha ?? 'Sin fecha' },
+                  { icon: <GroupsRoundedIcon sx={{ fontSize: 16 }} />, label: 'Estudiantes', value: `${materia.total_estudiantes}` },
                 ].map(stat => (
                   <Box key={stat.label} sx={{
                     px: 1.5, py: 1, borderRadius: '10px', textAlign: 'center', minWidth: 72,
@@ -624,8 +624,8 @@ export default function NuevaEvaluacionPage() {
   const [asignacionId, periodoId] = String(params.id ?? '').split('-').map(Number);
 
   const { materias, isLoading: loadingMaterias } = useMisMateriasNotas();
-  const { dimensiones }                          = useDimensiones();
-  const { crear, isSubmitting }                  = useEvaluaciones({
+  const { dimensiones } = useDimensiones();
+  const { crear, isSubmitting } = useEvaluaciones({
     asignacion_docente_id: asignacionId,
     periodo_evaluacion_id: periodoId,
   });
@@ -635,14 +635,14 @@ export default function NuevaEvaluacionPage() {
   );
 
   // ── Estado del formulario ──────────────────────────────────────────────────
-  const [dimTab, setDimTab]   = useState(0);
+  const [dimTab, setDimTab] = useState(0);
   const [created, setCreated] = useState<Evaluacion | null>(null);
 
   const dimActiva: CodigoDimension = DIMENSIONES_ORDEN[dimTab];
-  const cfg         = DIMENSIONES_CONFIG[dimActiva];
+  const cfg = DIMENSIONES_CONFIG[dimActiva];
   const accentColor = cfg.color;
-  const esAUT       = dimActiva === 'AUT';
-  const esSER       = dimActiva === 'SER';
+  const esAUT = dimActiva === 'AUT';
+  const esSER = dimActiva === 'SER';
 
   const dimActObj = dimensiones.find(d => d.codigo === dimActiva);
 
@@ -654,16 +654,16 @@ export default function NuevaEvaluacionPage() {
   const [form, setForm] = useState<Partial<CrearEvaluacionDTO>>({
     asignacion_docente_id: asignacionId,
     periodo_evaluacion_id: periodoId,
-    puntaje_maximo:        100,
-    peso_en_dimension:     1,
-    visible_para_padres:   false,
+    puntaje_maximo: 100,
+    peso_en_dimension: 1,
+    visible_para_padres: false,
   });
-  const [tipo, setTipo]           = useState<string>('examen');
+  const [tipo, setTipo] = useState<string>('examen');
   const [criterios, setCriterios] = useState<CriterioRubrica[]>([]);
-  const [foto, setFoto]           = useState<File | null>(null);
-  const [pdf, setPdf]             = useState<File | null>(null);
+  const [foto, setFoto] = useState<File | null>(null);
+  const [pdf, setPdf] = useState<File | null>(null);
   const fotoRef = useRef<HTMLInputElement>(null);
-  const pdfRef  = useRef<HTMLInputElement>(null);
+  const pdfRef = useRef<HTMLInputElement>(null);
 
   const set = (k: keyof CrearEvaluacionDTO, v: any) => setForm(p => ({ ...p, [k]: v }));
 
@@ -683,7 +683,7 @@ export default function NuevaEvaluacionPage() {
       tipo: esAUT ? undefined : (tipo as any),
       dimension_evaluacion_id: dimActObj!.id,
       // AUT no necesita puntaje complejo
-      puntaje_maximo:    esAUT ? 5 : (form.puntaje_maximo ?? 100),
+      puntaje_maximo: esAUT ? 5 : (form.puntaje_maximo ?? 100),
       peso_en_dimension: esAUT ? 1 : (form.peso_en_dimension ?? 1),
     };
     const ev = await crear(
@@ -700,9 +700,9 @@ export default function NuevaEvaluacionPage() {
     setForm({
       asignacion_docente_id: asignacionId,
       periodo_evaluacion_id: periodoId,
-      puntaje_maximo:        100,
-      peso_en_dimension:     1,
-      visible_para_padres:   false,
+      puntaje_maximo: 100,
+      peso_en_dimension: 1,
+      visible_para_padres: false,
     });
     setTipo('examen');
     setCriterios([]);
@@ -730,16 +730,26 @@ export default function NuevaEvaluacionPage() {
       backdropFilter: 'blur(20px)',
       display: 'flex', gap: 0.5,
       overflowX: 'auto',
+      flexWrap: 'nowrap',              // 👈 nuevo
+      scrollSnapType: 'x proximity',   // 👈 nuevo
+      WebkitOverflowScrolling: 'touch',// 👈 nuevo, scroll suave en iOS
+      '&::-webkit-scrollbar': { height: 4 }, // 👈 opcional, prolijo
+      '&::-webkit-scrollbar-thumb': {
+        backgroundColor: isDark ? alpha('#000', 0.3) : alpha('#fff', 0.4),
+        borderRadius: 4,
+      },
     }}>
       {DIMENSIONES_ORDEN.map((k, i) => {
-        const c        = DIMENSIONES_CONFIG[k];
+        const c = DIMENSIONES_CONFIG[k];
         const isActive = i === dimTab;
         return (
           <Box
             key={k}
             onClick={() => !created && setDimTab(i)}
             sx={{
-              flex: 1, minWidth: 0,
+              flexShrink: 0,
+              minWidth: 'max-content',
+              scrollSnapAlign: 'start',   // 👈 nuevo
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
               px: 1.5, py: 1.2, borderRadius: '12px',
               cursor: created ? 'default' : 'pointer',
@@ -759,7 +769,7 @@ export default function NuevaEvaluacionPage() {
             <Box sx={{
               fontSize: 10, fontWeight: 700,
               bgcolor: isDark ? alpha('#000', 0.25) : alpha('#fff', 0.25),
-              color:   isDark ? '#000' : '#fff',
+              color: isDark ? '#000' : '#fff',
               borderRadius: '8px', px: 0.8, py: 0.2, lineHeight: 1.4, flexShrink: 0,
             }}>
               {c.porcentaje}%
@@ -852,8 +862,8 @@ export default function NuevaEvaluacionPage() {
                   title="Información básica"
                   subtitle={
                     esAUT ? 'El estudiante completa la autoevaluación desde la app' :
-                    esSER ? 'Observación de actitudes y valores — sin examen' :
-                    'Nombre, tipo y configuración principal'
+                      esSER ? 'Observación de actitudes y valores — sin examen' :
+                        'Nombre, tipo y configuración principal'
                   }
                   accent={accentColor}
                   isDark={isDark}
@@ -914,8 +924,8 @@ export default function NuevaEvaluacionPage() {
                       fullWidth size="small"
                       placeholder={
                         esAUT ? 'Ej: Autoevaluación trimestre 1...' :
-                        esSER ? 'Ej: Observación semana 3, Conducta mayo...' :
-                        'Ej: Práctica de laboratorio U2, Examen parcial...'
+                          esSER ? 'Ej: Observación semana 3, Conducta mayo...' :
+                            'Ej: Práctica de laboratorio U2, Examen parcial...'
                       }
                       value={form.nombre ?? ''}
                       onChange={e => set('nombre', e.target.value)}
@@ -1104,8 +1114,8 @@ export default function NuevaEvaluacionPage() {
                           {esAUT ? 'Visible para el estudiante' : 'Publicar para padres'}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {esSER  && 'Los padres verán el comentario, sin nota numérica'}
-                          {esAUT  && 'El estudiante accede desde la app para completarla'}
+                          {esSER && 'Los padres verán el comentario, sin nota numérica'}
+                          {esAUT && 'El estudiante accede desde la app para completarla'}
                           {!esSER && !esAUT && 'Los padres podrán ver esta evaluación desde el inicio'}
                         </Typography>
                       </Box>
@@ -1247,8 +1257,8 @@ export default function NuevaEvaluacionPage() {
                     cursor: (!canSubmit || isSubmitting) ? 'default' : 'pointer',
                     transition: 'opacity .15s, transform .15s',
                     '&:hover': {
-                      opacity:    (!canSubmit || isSubmitting) ? 1 : 0.88,
-                      transform:  (!canSubmit || isSubmitting) ? 'none' : 'translateY(-1px)',
+                      opacity: (!canSubmit || isSubmitting) ? 1 : 0.88,
+                      transform: (!canSubmit || isSubmitting) ? 'none' : 'translateY(-1px)',
                     },
                   }}
                 >

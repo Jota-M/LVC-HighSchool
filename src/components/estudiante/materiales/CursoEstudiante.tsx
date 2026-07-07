@@ -95,17 +95,25 @@ export const CursoEstudiante: React.FC<CursoEstudianteProps> = ({
     const isLoading = loadingUnidades || loadingProgreso;
 
     return (
-        <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start' }}>
+        <Box sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: { xs: 2, md: 3 },
+            alignItems: { xs: 'stretch', md: 'flex-start' },
+        }}>
 
             {/* ── Sidebar ── */}
             <Box sx={{
-                width: 300, flexShrink: 0, borderRadius: '14px',
+                width: { xs: '100%', md: 300 },
+                flexShrink: 0, borderRadius: '14px',
                 border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
                 bgcolor: isDark ? alpha('#fff', 0.02) : '#fff',
-                overflow: 'hidden', position: 'sticky', top: 16,
+                overflow: 'hidden',
+                position: { xs: 'static', md: 'sticky' },
+                top: 16,
             }}>
 
-                {/* Header con progreso global */}
+                {/* Header con progreso global — sin cambios */}
                 <Box sx={{
                     px: 2, py: 1.5,
                     borderBottom: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06)}`,
@@ -122,7 +130,6 @@ export const CursoEstudiante: React.FC<CursoEstudianteProps> = ({
                         )}
                     </Box>
 
-                    {/* Barra de progreso global */}
                     {!isLoading && totalTemas > 0 && (
                         <Box>
                             <LinearProgress
@@ -159,7 +166,10 @@ export const CursoEstudiante: React.FC<CursoEstudianteProps> = ({
                         </Typography>
                     </Box>
                 ) : (
-                    <List disablePadding sx={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
+                    <List disablePadding sx={{
+                        maxHeight: { xs: 320, md: 'calc(100vh - 280px)' }, // 👈 acotado en mobile
+                        overflowY: 'auto',
+                    }}>
                         {unidades.map(u => (
                             <UnidadItemEstudiante
                                 key={u.id}
@@ -179,7 +189,7 @@ export const CursoEstudiante: React.FC<CursoEstudianteProps> = ({
             </Box>
 
             {/* ── Panel principal ── */}
-            <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ flex: 1, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
                 {temaSeleccionado && unidadDelTema ? (
                     <LectorTema
                         key={temaSeleccionado.id}
@@ -195,7 +205,6 @@ export const CursoEstudiante: React.FC<CursoEstudianteProps> = ({
                         onNavegar={(nav) => seleccionarTema(nav.tema, nav.unidad)}
                     />
                 ) : (
-                    /* Empty state */
                     <Box sx={{
                         textAlign: 'center', py: 14, borderRadius: '14px',
                         border: `1px dashed ${alpha(accent, 0.2)}`,
@@ -212,6 +221,7 @@ export const CursoEstudiante: React.FC<CursoEstudianteProps> = ({
             </Box>
         </Box>
     );
+
 };
 
 // ════════════════════════════════════════════════════════════

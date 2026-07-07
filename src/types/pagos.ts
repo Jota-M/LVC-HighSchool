@@ -6,7 +6,7 @@ export type EstadoMensualidad = 'pendiente' | 'pagado' | 'pagado_parcial' | 'ven
 export type MetodoPago = 'efectivo' | 'transferencia' | 'qr' | 'tarjeta';
 export type EstadoQR = 'generado' | 'pagado' | 'expirado' | 'cancelado';
 export type FormatoReporte = 'pdf' | 'excel';
-export type TipoReportePagos = 'estado-cuenta' | 'morosos' | 'ingresos';
+export type TipoReportePagos = 'estado-cuenta' | 'morosos' | 'ingresos' | 'cursos' | 'facturas';
 
 // ============== INTERFACES PRINCIPALES ==============
 
@@ -407,6 +407,69 @@ export interface FiltrosMorosos {
   grado_id?: number;
   paralelo_id?: number;
   dias_mora_minimo?: number;
+}
+
+export interface CursoReporteItem {
+  grado_id: number;
+  grado: string;
+  paralelo_id: number;
+  paralelo: string;
+  total_estudiantes: number;
+  total_mensualidades: number;
+  mensualidades_pagadas: number;
+  mensualidades_pendientes: number;
+  mensualidades_vencidas: number;
+  monto_total: number;
+  monto_pagado: number;
+  monto_pendiente: number;
+}
+
+export interface FacturaReporteItem {
+  pago_id: number;
+  codigo_pago: string;
+  fecha_pago: string;
+  monto_pagado: number;
+  metodo_pago: MetodoPago;
+  numero_comprobante?: string;
+  entrego_factura: boolean;
+  numero_factura?: string;
+  mes_correspondiente: string;
+  numero_cuota: number;
+  estudiante_codigo: string;
+  estudiante_nombres: string;
+  estudiante_apellidos: string;
+  grado: string;
+  paralelo: string;
+}
+
+export interface CursosResponse {
+  success: boolean;
+  data: {
+    cursos: CursoReporteItem[];
+    total: number;
+  };
+}
+
+export interface FacturasResponse {
+  success: boolean;
+  data: {
+    facturas: FacturaReporteItem[];
+    stats: {
+      totalInvoiced: number;
+      invoiceCount: number;
+    };
+  };
+}
+
+export interface FiltrosCursos {
+  periodo_academico_id?: number;
+}
+
+export interface FiltrosFacturas {
+  periodo_academico_id?: number;
+  fecha_inicio?: string;
+  fecha_fin?: string;
+  metodo_pago?: MetodoPago;
 }
 
 // ============== TIPOS AUXILIARES ==============
