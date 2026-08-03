@@ -102,6 +102,44 @@ export const estudiantesService = {
 // =============================================
 
 export const registroCompletoService = {
+  async registrarFamiliar(data: {
+    estudiantes: unknown[];
+    tutores: unknown[];
+    relaciones: unknown[];
+    matriculas?: unknown[];
+    documentos?: Array<{ file: File; tipo_documento: string; estudiante_referencia: string; observaciones?: string }>;
+    crear_usuarios_estudiantes?: boolean;
+    crear_usuarios_tutores?: boolean;
+  }) {
+    const formData = new FormData();
+    formData.append('estudiantes', JSON.stringify(data.estudiantes));
+    formData.append('tutores', JSON.stringify(data.tutores));
+    formData.append('relaciones', JSON.stringify(data.relaciones));
+    formData.append('matriculas', JSON.stringify(data.matriculas || []));
+    formData.append('crear_usuarios_estudiantes', String(data.crear_usuarios_estudiantes || false));
+    formData.append('crear_usuarios_tutores', String(data.crear_usuarios_tutores || false));
+
+    const metadata: Array<{ tipo_documento: string; estudiante_referencia: string; observaciones?: string }> = [];
+    for (const documento of data.documentos || []) {
+      formData.append('documentos', documento.file);
+      metadata.push({
+        tipo_documento: documento.tipo_documento,
+        estudiante_referencia: documento.estudiante_referencia,
+        observaciones: documento.observaciones,
+      });
+    }
+    if (metadata.length) formData.append('documentos_metadata', JSON.stringify(metadata));
+
+    try {
+      const response = await api.post('/registro-completo/familiar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Error al registrar la familia');
+    }
+  },
+
   /**
    * 🔍 Buscar padre/tutor por CI
    */
@@ -172,14 +210,20 @@ export const registroCompletoService = {
   } 
   
   else if (data.modo === 'existente') {
-    // MODO 2: Tutor existente + 1 estudiante
+    // MODO 2: Tutor existente + otros tutores opcionales
     formData.append('estudiante', JSON.stringify(data.estudiante));
     if (data.foto) formData.append('foto', data.foto);
     formData.append('padre_existente_id', data.padre_existente_id.toString());
+    if (data.tutores && data.tutores.length > 0) {
+      formData.append('tutores', JSON.stringify(data.tutores));
+    }
 
     // 🔧 FIX: Credenciales (backend espera "credenciales_estudiantes" plural)
     if (data.credenciales_estudiante) {
       formData.append('credenciales_estudiantes', JSON.stringify(data.credenciales_estudiante));
+    }
+    if (data.credenciales_tutores && data.credenciales_tutores.length > 0) {
+      formData.append('credenciales_tutores', JSON.stringify(data.credenciales_tutores));
     }
 
     // 🔧 FIX: Matrícula (backend espera "matriculas" plural)

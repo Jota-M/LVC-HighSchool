@@ -224,6 +224,7 @@ export interface RegistroExistente extends RegistroCompletoBase {
   padre_existente_id: number;
   estudiante: EstudianteCreate;
   foto?: File | null;
+  tutores?: TutorCreate[];
 }
 
 // ============================================

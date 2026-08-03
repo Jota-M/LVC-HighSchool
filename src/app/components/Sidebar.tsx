@@ -673,7 +673,7 @@ const sections = [
         roles: ['estudiante'],
       },
       {
-        title: 'Tareas',
+        title: 'Actividades Pedagogicas',
         to: '/dashboard/estudiante/tareas',
         icon: <AssessmentOutlinedIcon />,
         roles: ['estudiante'],

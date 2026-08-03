@@ -1,5 +1,5 @@
 // components/estudiantes/registro/TutoresStep.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Grid,
   TextField,
@@ -13,6 +13,8 @@ import {
   Switch,
   Divider,
   useTheme,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { BorderColor, CameraAlt as CameraIcon, Person as PersonIcon } from '@mui/icons-material';
@@ -22,6 +24,7 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { Dayjs } from 'dayjs';
+import { registroCompletoService } from '@/services/estudiantesService';
 
 interface Tutor {
   nombres: string;
@@ -46,11 +49,13 @@ interface Tutor {
   recibe_notificaciones: boolean;
   prioridad_contacto: number;
   observaciones: string;
+  es_existente?: boolean;
 }
 
 interface TutoresStepProps {
   tutores: Tutor[];
   onChange: (tutores: Tutor[]) => void;
+  tutorExistenteNombre?: string;
 }
 
 const parentescoOptions = [
@@ -78,14 +83,65 @@ const nivelesEducacion = [
   { value: 'postgrado', label: 'Postgrado' },
 ];
 
-export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) => {
+export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange, tutorExistenteNombre }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const [buscandoCI, setBuscandoCI] = useState<Record<number, boolean>>({});
+  const [estadoCI, setEstadoCI] = useState<Record<number, { encontrado: boolean; mensaje: string }>>({});
 
   const handleTutorChange = (index: number, field: keyof Tutor, value: any) => {
     const newTutores = [...tutores];
-    newTutores[index] = { ...newTutores[index], [field]: value };
+    newTutores[index] = {
+      ...newTutores[index],
+      [field]: value,
+      ...(field === 'ci' ? { es_existente: false } : {}),
+    };
     onChange(newTutores);
+    if (field === 'ci') {
+      setEstadoCI((prev) => {
+        const next = { ...prev };
+        delete next[index];
+        return next;
+      });
+    }
+  };
+
+  const buscarTutorPorCI = async (index: number) => {
+    const ci = tutores[index]?.ci?.trim();
+    if (!ci || ci.length < 4 || buscandoCI[index]) return;
+
+    setBuscandoCI((prev) => ({ ...prev, [index]: true }));
+    try {
+      const resultado = await registroCompletoService.buscarPadrePorCI(ci);
+      const padre = resultado.data?.padre;
+      if (!resultado.success || !padre) return;
+
+      const nuevos = [...tutores];
+      nuevos[index] = {
+        ...nuevos[index],
+        nombres: padre.nombres,
+        apellido_paterno: padre.apellido_paterno,
+        apellido_materno: padre.apellido_materno || '',
+        telefono: padre.telefono || '',
+        celular: padre.celular || '',
+        email: padre.email || '',
+        direccion: padre.direccion || '',
+        ocupacion: padre.ocupacion || '',
+        es_existente: true,
+      };
+      onChange(nuevos);
+      setEstadoCI((prev) => ({
+        ...prev,
+        [index]: { encontrado: true, mensaje: `Tutor existente: ${padre.nombres} ${padre.apellido_paterno}. Sus datos se reutilizarán.` },
+      }));
+    } catch {
+      setEstadoCI((prev) => ({
+        ...prev,
+        [index]: { encontrado: false, mensaje: 'CI nuevo: complete los datos para crear al tutor.' },
+      }));
+    } finally {
+      setBuscandoCI((prev) => ({ ...prev, [index]: false }));
+    }
   };
 
   const agregarTutor = () => {
@@ -212,6 +268,12 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
         </Button>
       </Box>
 
+      {tutorExistenteNombre && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          {tutorExistenteNombre} ya quedará relacionado con el estudiante. Agrega otro tutor solo si corresponde.
+        </Alert>
+      )}
+
       {tutores.map((tutor, index) => (
         <Paper
           key={index}
@@ -281,10 +343,24 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange }) =
                 label="CI"
                 value={tutor.ci}
                 onChange={(e) => handleTutorChange(index, 'ci', e.target.value)}
+                onBlur={() => buscarTutorPorCI(index)}
                 sx={fieldStyle}
                 required
+                helperText={buscandoCI[index] ? 'Buscando tutor...' : 'Al salir del campo, se buscará automáticamente'}
+                slotProps={{
+                  input: {
+                    endAdornment: buscandoCI[index] ? <CircularProgress size={18} /> : undefined,
+                  },
+                }}
               />
             </Grid>
+            {estadoCI[index] && (
+              <Grid size={{ xs: 12 }}>
+                <Alert severity={estadoCI[index].encontrado ? 'success' : 'info'}>
+                  {estadoCI[index].mensaje}
+                </Alert>
+              </Grid>
+            )}
             <Grid size={{xs:12, md:3}}>
               <DatePicker
                 format="DD/MM/YYYY"

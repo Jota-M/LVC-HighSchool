@@ -1,587 +1,274 @@
-// pages/RegistroCompleto.tsx
 'use client';
+
 import React, { useState } from 'react';
-import {
-  Box,
-  Container,
-  Paper,
-  Stepper,
-  Step,
-  StepLabel,
-  Button,
-  Typography,
-  useTheme,
-  Fade,
-  CircularProgress,
-} from '@mui/material';
-import {
-  ArrowBack as ArrowBackIcon,
-  ArrowForward as ArrowForwardIcon,
-  CheckCircle as CheckIcon,
-} from '@mui/icons-material';
+import { useRouter } from 'next/navigation';
+import { Alert, Box, Button, Container, Divider, FormControlLabel, Paper, Step, StepLabel, Stepper, Switch, Typography } from '@mui/material';
+import { ArrowBack, ArrowForward, CheckCircle } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import '@fontsource/roboto';
+import { useSnackbar } from 'notistack';
+import { Dayjs } from 'dayjs';
 
-import dayjs, { Dayjs } from 'dayjs';
-import { useRouter } from 'next/navigation';
-
-// Components
-import ModoRegistroSelector from '@/components/estudiantes/registro/ModoRegistroSelector';
 import { EstudianteStep } from '@/components/estudiantes/registro/EstudianteStep';
 import { TutoresStep } from '@/components/estudiantes/registro/TutoresStep';
-import { UsuariosStep } from '@/components/estudiantes/registro/UsuariosStep';
+import { RelacionesFamiliaStep } from '@/components/estudiantes/registro/RelacionesFamiliaStep';
 import { MatriculaStep } from '@/components/estudiantes/registro/MatriculaStep';
 import { DocumentosStep } from '@/components/estudiantes/registro/DocumentosStep';
 import { ConfirmacionStep } from '@/components/estudiantes/registro/ConfirmacionStep';
 import { CredencialesModal } from '@/components/estudiantes/CredencialesModal';
+import { registroCompletoService } from '@/services/estudiantesService';
+import { EstudianteCreate, MatriculaCreate, RegistroCompletoResponse } from '@/types/estudianteTypes';
 
-// Hooks
-import { useRegistroCompleto } from '@/hooks/useRegistroCompleto';
-
-// Types
-import {
-  EstudianteCreate,
-  TutorCreate,
-  CredencialesUsuario,
-  MatriculaCreate,
-  ModoRegistro,
-  PadreEncontrado,
-} from '@/types/estudianteTypes';
-
-const steps = ['Estudiante(s)', 'Tutores', 'Usuarios', 'Matrícula', 'Documentos', 'Confirmación'];
-
-interface EstudianteFormData extends Omit<EstudianteCreate, 'fecha_nacimiento'> {
+type EstudianteForm = Omit<EstudianteCreate, 'fecha_nacimiento'> & { fecha_nacimiento: Dayjs | null };
+type TutorForm = {
+  nombres: string;
+  apellido_paterno: string;
+  apellido_materno: string;
+  ci: string;
   fecha_nacimiento: Dayjs | null;
-}
-
-interface TutorFormData extends Omit<TutorCreate, 'fecha_nacimiento'> {
-  fecha_nacimiento: Dayjs | null;
-}
-
-interface FormData {
-  // MODO
-  modo: ModoRegistro | null;
-  padre_existente_id: number | null;
-  padre_existente: PadreEncontrado | null;
-
-  // ESTUDIANTES (array para modo múltiple)
-  estudiantes: EstudianteFormData[];
-  fotos: (File | null)[];
-
-  // TUTORES (array)
-  tutores: TutorFormData[];
-
-  // USUARIOS
-  crear_usuario_estudiante: boolean;
-  crear_usuarios_tutores: boolean;
-  credenciales_estudiantes: CredencialesUsuario[];
-  credenciales_tutores: CredencialesUsuario[];
-
-  // MATRÍCULA (array para modo múltiple)
-  incluir_matricula: boolean;
-  matriculas: MatriculaCreate[];
-
-  // DOCUMENTOS
-  documentos_archivos: Array<{
-    file: File;
-    tipo_documento: string;
-    observaciones?: string;
-  }>;
-}
-
-export const RegistroCompleto: React.FC = () => {
-  const theme = useTheme();
-  const router = useRouter();
-  const isDark = theme.palette.mode === 'dark';
-  const [modoSeleccionado, setModoSeleccionado] = useState(false);
-  const [activeStep, setActiveStep] = useState(0);
-
-  const { registrar, isRegistrando, credencialesGeneradas, limpiarCredenciales } = useRegistroCompleto();
-
-  // Estado del formulario
-  const [formData, setFormData] = useState<FormData>({
-    modo: null,
-    padre_existente_id: null,
-    padre_existente: null,
-    estudiantes: [
-      {
-        nombres: '',
-        apellido_paterno: '',
-        apellido_materno: '',
-        fecha_nacimiento: null,
-        ci: '',
-        lugar_nacimiento: '',
-        genero: undefined,
-        direccion: '',
-        zona: '',
-        ciudad: '',
-        telefono: '',
-        email: '',
-        contacto_emergencia: '',
-        rude: '',
-        tiene_discapacidad: false,
-        tipo_discapacidad: '',
-        observaciones: '',
-      },
-    ],
-    fotos: [null],
-    tutores: [
-      {
-        nombres: '',
-        apellido_paterno: '',
-        apellido_materno: '',
-        ci: '',
-        fecha_nacimiento: null,
-        telefono: '',
-        celular: '',
-        email: '',
-        direccion: '',
-        ocupacion: '',
-        // lugar_trabajo: '',
-        // telefono_trabajo: '',
-        parentesco: '',
-        estado_civil: '',
-        // nivel_educacion: '',
-        es_tutor_principal: true,
-        vive_con_estudiante: true,
-        autorizado_recoger: true,
-        puede_autorizar_salidas: true,
-        recibe_notificaciones: true,
-        prioridad_contacto: 1,
-        observaciones: '',
-      },
-    ],
-    crear_usuario_estudiante: false,
-    crear_usuarios_tutores: false,
-    credenciales_estudiantes: [{ username: '', password: '', email: '' }],
-    credenciales_tutores: [{ username: '', password: '', email: '' }],
-    incluir_matricula: false,
-    matriculas: [
-      {
-        paralelo_id: 0,
-        periodo_academico_id: 0,
-        numero_matricula: '',
-        es_repitente: false,
-        es_becado: false,
-        porcentaje_beca: 0,
-        tipo_beca: '',
-        observaciones: '',
-      },
-    ],
-    documentos_archivos: [],
-  });
-
-  const handleModoSeleccionado = (data: { modo: string; padre: PadreEncontrado | null }) => {
-    console.log('📌 Modo seleccionado:', data);
-
-    setFormData((prev) => ({
-      ...prev,
-      modo: data.modo as ModoRegistro,
-      padre_existente_id: data.padre?.id || null,
-      padre_existente: data.padre,
-      // Si es modo existente, limpiar tutores ya que usaremos el padre existente
-      tutores: data.modo === 'existente' ? [] : prev.tutores,
-    }));
-
-    setModoSeleccionado(true);
-  };
-
-  const handleNext = () => {
-    setActiveStep((prev) => Math.min(prev + 1, steps.length - 1));
-  };
-
-  const handleBack = () => {
-    setActiveStep((prev) => Math.max(prev - 1, 0));
-  };
-
-  const handleSubmit = async () => {
-  try {
-    if (!formData.modo) {
-      console.error('❌ No hay modo seleccionado');
-      return;
-    }
-
-    // Base común para todos los modos
-    const baseData = {
-      modo: formData.modo,
-      crear_usuario_estudiante: formData.crear_usuario_estudiante,
-      crear_usuarios_tutores: formData.crear_usuarios_tutores,
-      documentos_archivos: formData.documentos_archivos,
-    };
-
-    let dataToSend: any = {};
-
-    // ========================================
-    // MODO 1: NUEVO
-    // ========================================
-    if (formData.modo === 'nuevo') {
-      dataToSend = {
-        ...baseData,
-        estudiante: {
-          ...formData.estudiantes[0],
-          fecha_nacimiento: formData.estudiantes[0].fecha_nacimiento?.format('YYYY-MM-DD'),
-        },
-        foto: formData.fotos[0],
-        tutores: formData.tutores.map((t) => ({
-          ...t,
-          fecha_nacimiento: t.fecha_nacimiento?.format('YYYY-MM-DD'),
-        })),
-        credenciales_estudiante: formData.crear_usuario_estudiante
-          ? formData.credenciales_estudiantes[0]
-          : undefined,
-        credenciales_tutores: formData.crear_usuarios_tutores
-          ? formData.credenciales_tutores
-          : undefined,
-        // 🔧 FIX: Solo enviar si incluir_matricula es true Y tiene datos válidos
-        matricula: formData.incluir_matricula && 
-                   formData.matriculas[0]?.paralelo_id > 0 && 
-                   formData.matriculas[0]?.periodo_academico_id > 0
-          ? formData.matriculas[0]
-          : undefined,
-      };
-    }
-
-    // ========================================
-    // MODO 2: EXISTENTE
-    // ========================================
-    else if (formData.modo === 'existente') {
-      dataToSend = {
-        ...baseData,
-        padre_existente_id: formData.padre_existente_id,
-        estudiante: {
-          ...formData.estudiantes[0],
-          fecha_nacimiento: formData.estudiantes[0].fecha_nacimiento?.format('YYYY-MM-DD'),
-        },
-        foto: formData.fotos[0],
-        credenciales_estudiante: formData.crear_usuario_estudiante
-          ? formData.credenciales_estudiantes[0]
-          : undefined,
-        // 🔧 FIX: Solo enviar si incluir_matricula es true Y tiene datos válidos
-        matricula: formData.incluir_matricula && 
-                   formData.matriculas[0]?.paralelo_id > 0 && 
-                   formData.matriculas[0]?.periodo_academico_id > 0
-          ? formData.matriculas[0]
-          : undefined,
-      };
-    }
-
-    // ========================================
-    // MODO 3: MÚLTIPLE
-    // ========================================
-    else if (formData.modo === 'multiple') {
-      // 🔧 FIX: Filtrar solo matrículas válidas
-      const matriculasValidas = formData.incluir_matricula
-        ? formData.matriculas.filter(
-            (m) => m.paralelo_id > 0 && m.periodo_academico_id > 0
-          )
-        : [];
-
-      dataToSend = {
-        ...baseData,
-        estudiantes: formData.estudiantes.map((e) => ({
-          ...e,
-          fecha_nacimiento: e.fecha_nacimiento?.format('YYYY-MM-DD'),
-        })),
-        fotos: formData.fotos,
-        tutores: formData.tutores.map((t) => ({
-          ...t,
-          fecha_nacimiento: t.fecha_nacimiento?.format('YYYY-MM-DD'),
-        })),
-        credenciales_estudiantes: formData.crear_usuario_estudiante
-          ? formData.credenciales_estudiantes
-          : undefined,
-        credenciales_tutores: formData.crear_usuarios_tutores
-          ? formData.credenciales_tutores
-          : undefined,
-        // 🔧 FIX: Solo enviar si hay matrículas válidas
-        matriculas: matriculasValidas.length > 0 ? matriculasValidas : undefined,
-      };
-    }
-
-    console.log('📤 DATOS A ENVIAR:', JSON.stringify(dataToSend, null, 2));
-
-    await registrar(dataToSend);
-  } catch (error) {
-    console.error('❌ Error en registro:', error);
-  }
+  telefono: string;
+  celular: string;
+  email: string;
+  direccion: string;
+  ocupacion: string;
+  parentesco: string;
+  estado_civil: string;
+  es_tutor_principal: boolean;
+  vive_con_estudiante: boolean;
+  autorizado_recoger: boolean;
+  puede_autorizar_salidas: boolean;
+  recibe_notificaciones: boolean;
+  prioridad_contacto: number;
+  observaciones: string;
+  es_existente?: boolean;
 };
 
-  const handleCredencialesClose = () => {
-    limpiarCredenciales();
+type Documento = { file: File; tipo_documento: string; observaciones?: string; estudiante_index?: number };
+type CredencialGenerada = { referencia: string; nombre_completo: string; username: string; password: string; email: string };
+
+const pasos = ['Estudiantes', 'Tutores y relaciones', 'Usuarios', 'Matrículas', 'Documentos', 'Confirmación'];
+
+const estudianteVacio = (): EstudianteForm => ({
+  nombres: '', apellido_paterno: '', apellido_materno: '', fecha_nacimiento: null,
+  ci: '', rude: '', lugar_nacimiento: '', genero: undefined, direccion: '', zona: '', ciudad: '',
+  telefono: '', email: '', contacto_emergencia: '', tiene_discapacidad: false,
+  tipo_discapacidad: '', observaciones: '',
+});
+
+export default function RegistroFamiliarPage() {
+  const router = useRouter();
+  const { enqueueSnackbar } = useSnackbar();
+  const [paso, setPaso] = useState(0);
+  const [enviando, setEnviando] = useState(false);
+  const [estudiantes, setEstudiantes] = useState<EstudianteForm[]>([estudianteVacio()]);
+  const [fotos, setFotos] = useState<(File | null)[]>([null]);
+  const [tutores, setTutores] = useState<TutorForm[]>([]);
+  const [relaciones, setRelaciones] = useState<Record<string, boolean>>({});
+  const [principal, setPrincipal] = useState<string | null>(null);
+  const [crearUsuariosEstudiantes, setCrearUsuariosEstudiantes] = useState(false);
+  const [crearUsuariosTutores, setCrearUsuariosTutores] = useState(false);
+  const [incluirMatricula, setIncluirMatricula] = useState(true);
+  const [matriculas, setMatriculas] = useState<MatriculaCreate[]>([]);
+  const [documentos, setDocumentos] = useState<Documento[]>([]);
+  const [credencialesGeneradas, setCredencialesGeneradas] = useState<CredencialGenerada[]>([]);
+  const [resultadoModal, setResultadoModal] = useState<RegistroCompletoResponse['data'] | null>(null);
+  const [modalExitoOpen, setModalExitoOpen] = useState(false);
+  const [errorRegistro, setErrorRegistro] = useState<string | null>(null);
+  const hayTutoresNuevos = tutores.some((tutor) => !tutor.es_existente);
+
+  const cambiarRelacion = (key: string, seleccionada: boolean) => {
+    setRelaciones((prev) => ({ ...prev, [key]: seleccionada }));
+    if (!seleccionada && principal === key) setPrincipal(null);
+  };
+
+  const handleCerrarModal = () => {
+    setModalExitoOpen(false);
     router.push('/dashboard/estudiantes');
   };
 
-  const renderStep = () => {
-    if (!formData.modo) return null;
+  const confirmar = async () => {
+    const relacionesSeleccionadas = Object.entries(relaciones).filter(([, marcada]) => marcada);
+    if (!relacionesSeleccionadas.length) {
+      const mensaje = 'Relaciona al menos un tutor con cada estudiante.';
+      setErrorRegistro(mensaje);
+      enqueueSnackbar(mensaje, { variant: 'warning' });
+      setPaso(1);
+      return;
+    }
+    const sinTutor = estudiantes.some((_, estudianteIndex) =>
+      !relacionesSeleccionadas.some(([key]) => key.startsWith(`${estudianteIndex}:`))
+    );
+    if (sinTutor) {
+      const mensaje = 'Cada estudiante debe tener al menos un tutor.';
+      setErrorRegistro(mensaje);
+      enqueueSnackbar(mensaje, { variant: 'warning' });
+      setPaso(1);
+      return;
+    }
+    if (documentos.length && !incluirMatricula) {
+      enqueueSnackbar('Para adjuntar documentos, incluye la matrícula de cada estudiante.', { variant: 'warning' });
+      setPaso(3);
+      return;
+    }
+    const documentoSinMatricula = documentos.some((documento) => {
+      const matricula = matriculas[documento.estudiante_index || 0];
+      return !matricula?.paralelo_id || !matricula?.periodo_academico_id;
+    });
+    if (documentoSinMatricula) {
+      enqueueSnackbar('Completa la matrícula de cada estudiante que tenga documentos adjuntos.', { variant: 'warning' });
+      setPaso(3);
+      return;
+    }
 
-    switch (activeStep) {
-      case 0:
-        return (
-          <EstudianteStep
-            modo={formData.modo}
-            estudiantes={formData.estudiantes}
-            fotos={formData.fotos}
-            onEstudiantesChange={(estudiantes) => setFormData((prev) => ({ ...prev, estudiantes }))}
-            onFotosChange={(fotos) => setFormData((prev) => ({ ...prev, fotos }))}
-          />
-        );
-      case 1:
-        // Ocultar paso de tutores si es modo existente
-        if (formData.modo === 'existente') {
-          return (
-            <Box textAlign="center" py={4}>
-              <Typography variant="h6" color="text.secondary">
-                ℹ️ Usando padre/tutor existente
-              </Typography>
-              <Typography variant="body2" color="text.secondary" mt={2}>
-                {formData.padre_existente?.nombres} {formData.padre_existente?.apellido_paterno}
-              </Typography>
-            </Box>
-          );
-        }
-        return (
-          <TutoresStep
-            tutores={formData.tutores as any}
-            onChange={(tutores) => setFormData((prev) => ({ ...prev, tutores }))}
-          />
-        );
-      case 2:
-        return (
-          <UsuariosStep
-            modo={formData.modo}
-            crearUsuarioEstudiante={formData.crear_usuario_estudiante}
-            crearUsuariosTutores={formData.crear_usuarios_tutores}
-            credencialesEstudiantes={formData.credenciales_estudiantes}
-            credencialesTutores={formData.credenciales_tutores}
-            estudiantes={formData.estudiantes}
-            tutores={formData.tutores}
-            onToggleEstudiante={(value) =>
-              setFormData((prev) => ({ ...prev, crear_usuario_estudiante: value }))
-            }
-            onToggleTutores={(value) =>
-              setFormData((prev) => ({ ...prev, crear_usuarios_tutores: value }))
-            }
-            onCredencialesEstudiantesChange={(creds) =>
-              setFormData((prev) => ({ ...prev, credenciales_estudiantes: creds }))
-            }
-            onCredencialesTutoresChange={(creds) =>
-              setFormData((prev) => ({ ...prev, credenciales_tutores: creds }))
-            }
-          />
-        );
-      case 3:
-        return (
-          <MatriculaStep
-            modo={formData.modo}
-            incluirMatricula={formData.incluir_matricula}
-            matriculas={formData.matriculas}
-            estudiantes={formData.estudiantes}
-            onToggleIncluir={(value) => setFormData((prev) => ({ ...prev, incluir_matricula: value }))}
-            onMatriculasChange={(matriculas) => setFormData((prev) => ({ ...prev, matriculas }))}
-          />
-        );
-      case 4:
-        return (
-          <DocumentosStep
-            documentos={formData.documentos_archivos}
-            onChange={(docs) => setFormData((prev) => ({ ...prev, documentos_archivos: docs }))}
-            modo={formData.modo || 'nuevo'} // 🆕 Pasar modo
-            estudiantes={formData.estudiantes} // 🆕 Pasar estudiantes
-          />
-      );
-      case 5:
-        return (
-          <ConfirmacionStep
-            modo={formData.modo}
-            estudiantes={formData.estudiantes}
-            fotos={formData.fotos}
-            tutores={formData.tutores}
-            padreExistente={formData.padre_existente}
-            crearUsuarioEstudiante={formData.crear_usuario_estudiante}
-            crearUsuariosTutores={formData.crear_usuarios_tutores}
-            credencialesEstudiantes={formData.credenciales_estudiantes}
-            credencialesTutores={formData.credenciales_tutores}
-            incluirMatricula={formData.incluir_matricula}
-            matriculas={formData.matriculas}
-            documentos={formData.documentos_archivos}
-          />
-        );
-      default:
-        return null;
+    try {
+      setEnviando(true);
+      setErrorRegistro(null);
+      const respuesta = await registroCompletoService.registrarFamiliar({
+        estudiantes: estudiantes.map((estudiante, index) => ({
+          ...estudiante,
+          referencia: `estudiante-${index}`,
+          fecha_nacimiento: estudiante.fecha_nacimiento?.format('YYYY-MM-DD'),
+        })),
+        tutores: tutores.map((tutor, index) => ({
+          ...tutor,
+          referencia: `tutor-${index}`,
+          fecha_nacimiento: tutor.fecha_nacimiento?.format('YYYY-MM-DD'),
+        })),
+        relaciones: relacionesSeleccionadas.map(([key]) => {
+          const [estudianteIndex, tutorIndex] = key.split(':');
+          return {
+            estudiante_referencia: `estudiante-${estudianteIndex}`,
+            tutor_referencia: `tutor-${tutorIndex}`,
+            es_tutor_principal: principal === key,
+          };
+        }),
+        matriculas: incluirMatricula ? matriculas.map((matricula, index) => ({
+          ...matricula,
+          estudiante_referencia: `estudiante-${index}`,
+        })).filter((matricula) => matricula.paralelo_id > 0 && matricula.periodo_academico_id > 0) : [],
+        documentos: documentos.map((documento) => ({
+          file: documento.file,
+          tipo_documento: documento.tipo_documento,
+          observaciones: documento.observaciones,
+          estudiante_referencia: `estudiante-${documento.estudiante_index || 0}`,
+        })),
+        crear_usuarios_estudiantes: crearUsuariosEstudiantes,
+        crear_usuarios_tutores: crearUsuariosTutores && hayTutoresNuevos,
+      });
+
+      setCredencialesGeneradas([
+        ...(respuesta.data?.credenciales_estudiantes || []),
+        ...(respuesta.data?.credenciales_tutores || []),
+      ]);
+
+      const modalData: RegistroCompletoResponse['data'] = {
+        modo: 'multiple',
+        estudiantes: respuesta.data?.estudiantes || [],
+        tutores: respuesta.data?.tutores || [],
+        matriculas: respuesta.data?.matriculas || [],
+        credenciales_estudiantes: respuesta.data?.credenciales_estudiantes || [],
+        credenciales_tutores: respuesta.data?.credenciales_tutores || [],
+      };
+      setResultadoModal(modalData);
+      setModalExitoOpen(true);
+      enqueueSnackbar('Registro familiar completado exitosamente.', { variant: 'success' });
+    } catch (error) {
+      const mensaje = error instanceof Error ? error.message : 'No se pudo completar el registro.';
+      setErrorRegistro(mensaje);
+      if (mensaje.toLowerCase().includes('usuario')) setPaso(2);
+      else if (mensaje.toLowerCase().includes('estudiante')) setPaso(0);
+      else if (mensaje.toLowerCase().includes('tutor') || mensaje.toLowerCase().includes('ci')) setPaso(1);
+      enqueueSnackbar(mensaje, { variant: 'error' });
+    } finally {
+      setEnviando(false);
     }
   };
 
-  const isLastStep = activeStep === steps.length - 1;
-  const isFirstStep = activeStep === 0;
-
-  // Si no se ha seleccionado modo, mostrar selector
-  if (!modoSeleccionado) {
-    return <ModoRegistroSelector onModoSeleccionado={handleModoSeleccionado} />;
-  }
+  const contenido = [
+    <EstudianteStep key="estudiantes" modo="multiple" estudiantes={estudiantes} fotos={fotos} onEstudiantesChange={setEstudiantes} onFotosChange={setFotos} />,
+    <Box key="tutores-relaciones">
+      <TutoresStep tutores={tutores} onChange={setTutores} />
+      <Divider sx={{ my: 4 }} />
+      <RelacionesFamiliaStep estudiantes={estudiantes} tutores={tutores} relaciones={relaciones} principal={principal} onRelacionChange={cambiarRelacion} onPrincipalChange={setPrincipal} />
+    </Box>,
+    <Box key="usuarios">
+      <Typography variant="h5" fontWeight={700} mb={1}>Cuentas de acceso</Typography>
+      <Typography color="text.secondary" mb={3}>
+        Puedes crear cuentas de acceso ahora. El sistema generará credenciales temporales y las mostrará al finalizar.
+      </Typography>
+      <Alert severity="info" sx={{ mb: 2 }}>
+        Las cuentas de tutores se crean únicamente para tutores nuevos; nunca se duplica un usuario de un tutor existente.
+      </Alert>
+      <FormControlLabel
+        control={<Switch checked={crearUsuariosEstudiantes} onChange={(event) => setCrearUsuariosEstudiantes(event.target.checked)} />}
+        label="Crear cuentas para los estudiantes nuevos"
+      />
+      {hayTutoresNuevos ? (
+        <FormControlLabel
+          control={<Switch checked={crearUsuariosTutores} onChange={(event) => setCrearUsuariosTutores(event.target.checked)} />}
+          label="Crear cuentas para los tutores nuevos"
+        />
+      ) : (
+        <Alert severity="success" sx={{ mt: 1 }}>
+          Todos los tutores seleccionados ya existen; no se crearán cuentas duplicadas.
+        </Alert>
+      )}
+    </Box>,
+    <MatriculaStep key="matriculas" modo="multiple" incluirMatricula={incluirMatricula} matriculas={matriculas} estudiantes={estudiantes} onToggleIncluir={setIncluirMatricula} onMatriculasChange={setMatriculas} />,
+    <DocumentosStep key="documentos" documentos={documentos} onChange={setDocumentos} modo="multiple" estudiantes={estudiantes} />,
+    <ConfirmacionStep
+      key="confirmacion"
+      modo="multiple"
+      estudiantes={estudiantes}
+      fotos={fotos}
+      tutores={tutores}
+      padreExistente={null}
+      crearUsuarioEstudiante={crearUsuariosEstudiantes}
+      crearUsuariosTutores={crearUsuariosTutores}
+      credencialesEstudiantes={[]}
+      credencialesTutores={[]}
+      incluirMatricula={incluirMatricula}
+      matriculas={matriculas}
+      documentos={documentos}
+    />,
+  ];
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box sx={{ minHeight: '100vh', py: 4 }}>
-        <Container maxWidth="lg">
-          <Fade in timeout={500}>
-            <Box>
-              {/* Header */}
-              <Box sx={{ mb: 4, textAlign: 'center' }}>
-                <Typography
-                  variant="h3"
-                  sx={{
-                    fontFamily: "'Roboto', sans-serif",
-                    fontWeight: 800,
-                    letterSpacing: 1,
-                    background: isDark
-                      ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                      : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    textShadow: isDark
-                      ? '0 3px 12px rgba(250, 204, 21, 0.35)'
-                      : '0 3px 12px rgba(2, 136, 209, 0.35)',
-                    mb: 1,
-                    transition: '0.3s ease',
-                  }}
-                >
-                  Registro Completo de Estudiante
-                </Typography>
-
-                <Typography variant="body1" sx={{ color: 'text.secondary', fontSize: '1.05rem' }}>
-                  Modo: <strong>{formData.modo}</strong> • Completa todos los pasos
-                </Typography>
-              </Box>
-
-              {/* Stepper */}
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 3,
-                  borderRadius: '20px',
-                  backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
-                  backdropFilter: 'blur(20px)',
-                  mb: 4,
-                }}
-              >
-                <Stepper activeStep={activeStep} alternativeLabel>
-                  {steps.map((label, index) => {
-                    // Ocultar visualmente el paso de tutores en modo existente
-                    if (index === 1 && formData.modo === 'existente') {
-                      return (
-                        <Step key={label}>
-                          <StepLabel>Tutor (Existente)</StepLabel>
-                        </Step>
-                      );
-                    }
-                    return (
-                      <Step key={label}>
-                        <StepLabel>{label}</StepLabel>
-                      </Step>
-                    );
-                  })}
-                </Stepper>
-              </Paper>
-
-              {/* Content */}
-              <Paper
-                elevation={0}
-                sx={{
-                  p: { xs: 3, md: 5 },
-                  borderRadius: '24px',
-                  backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
-                  backdropFilter: 'blur(20px)',
-                  mb: 4,
-                }}
-              >
-                {renderStep()}
-              </Paper>
-
-              {/* Navigation Buttons */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<ArrowBackIcon />}
-                  onClick={handleBack}
-                  disabled={isFirstStep || isRegistrando}
-                  sx={{
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    px: 4,
-                    py: 1.5,
-                    borderColor: isDark ? '#facc15' : '#0288d1',
-                    color: isDark ? '#facc15' : '#0288d1',
-                    transition: '0.25s ease',
-                    '&:hover': {
-                      borderColor: isDark ? '#f59e0b' : '#01579b',
-                      backgroundColor: isDark ? 'rgba(250, 204, 21, 0.1)' : 'rgba(2, 136, 209, 0.1)',
-                    },
-                    '&.Mui-disabled': {
-                      borderColor: 'rgba(128,128,128,0.3)',
-                      color: 'rgba(128,128,128,0.5)',
-                    },
-                  }}
-                >
-                  Atrás
-                </Button>
-
-                {isLastStep ? (
-                  <Button
-                    variant="contained"
-                    startIcon={isRegistrando ? <CircularProgress size={20} color="inherit" /> : <CheckIcon />}
-                    onClick={handleSubmit}
-                    disabled={isRegistrando}
-                    sx={{
-                      borderRadius: '12px',
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      px: 5,
-                      py: 1.5,
-                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                      color: '#fff',
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)',
-                      },
-                      transition: 'all 0.3s ease',
-                    }}
-                  >
-                    {isRegistrando ? 'Registrando...' : 'Confirmar y Registrar'}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="contained"
-                    endIcon={<ArrowForwardIcon />}
-                    onClick={handleNext}
-                    sx={{
-                      borderRadius: '12px',
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      px: 4,
-                      py: 1.5,
-                      background: isDark
-                        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                      color: isDark ? '#000' : '#fff',
-                    }}
-                  >
-                    Siguiente
-                  </Button>
-                )}
-              </Box>
-            </Box>
-          </Fade>
-        </Container>
-
-        {/* Modal de credenciales */}
-        {credencialesGeneradas && (
-          <CredencialesModal open={true} onClose={handleCredencialesClose} data={credencialesGeneradas} />
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Typography variant="h4" fontWeight={800} mb={1}>Registro familiar</Typography>
+        <Typography color="text.secondary" mb={4}>Registra varios estudiantes, sus tutores y las relaciones familiares en una sola operación.</Typography>
+        {errorRegistro && (
+          <Alert severity="error" onClose={() => setErrorRegistro(null)} sx={{ mb: 3 }}>
+            {errorRegistro}
+          </Alert>
         )}
-      </Box>
+        <Paper sx={{ p: { xs: 2, md: 4 }, borderRadius: 3 }}>
+          <Stepper activeStep={paso} alternativeLabel sx={{ mb: 4 }}>
+            {pasos.map((etiqueta) => <Step key={etiqueta}><StepLabel>{etiqueta}</StepLabel></Step>)}
+          </Stepper>
+          {contenido[paso]}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+            <Button startIcon={<ArrowBack />} disabled={paso === 0 || enviando} onClick={() => setPaso((actual) => actual - 1)}>Atrás</Button>
+            {paso === pasos.length - 1 ? (
+              <Button variant="contained" startIcon={<CheckCircle />} disabled={enviando} onClick={confirmar}>
+                {enviando ? 'Registrando...' : 'Confirmar registro'}
+              </Button>
+            ) : (
+              <Button variant="contained" endIcon={<ArrowForward />} onClick={() => setPaso((actual) => actual + 1)}>Siguiente</Button>
+            )}
+          </Box>
+        </Paper>
+
+        {resultadoModal && (
+          <CredencialesModal
+            open={modalExitoOpen}
+            onClose={handleCerrarModal}
+            data={resultadoModal}
+          />
+        )}
+      </Container>
     </LocalizationProvider>
   );
-};
+}
 
-export default RegistroCompleto;
