@@ -1,4 +1,10 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import {
+  clearAuthTokens,
+  getAccessToken,
+  getRefreshToken,
+  setAccessToken,
+} from '@/lib/tokenStorage';
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -14,10 +20,24 @@ const api = axios.create({
   },
 });
 
-let refreshRequest: Promise<unknown> | null = null;
+let refreshRequest: Promise<string | null> | null = null;
+
+api.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token && !config.headers.Authorization) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const newToken = response.headers['x-access-token'];
+    if (typeof newToken === 'string' && newToken) {
+      setAccessToken(newToken);
+    }
+    return response;
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as RetryableRequestConfig | undefined;
     const requestUrl = originalRequest?.url ?? '';
@@ -35,15 +55,42 @@ api.interceptors.response.use(
     originalRequest._retry = true;
 
     try {
-      refreshRequest ??= api.post('/auth/refresh');
-      await refreshRequest;
+      refreshRequest ??= refreshAccessToken();
+      const newAccessToken = await refreshRequest;
+
+      if (!newAccessToken) {
+        clearAuthTokens();
+        return Promise.reject(error);
+      }
+
+      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
       return api(originalRequest);
     } catch (refreshError) {
+      clearAuthTokens();
       return Promise.reject(refreshError);
     } finally {
       refreshRequest = null;
     }
   }
 );
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = getRefreshToken();
+  const headers: Record<string, string> = {};
+  if (refreshToken) {
+    headers['X-Refresh-Token'] = refreshToken;
+  }
+
+  const { data } = await api.post<{
+    success: boolean;
+    data?: { accessToken?: string; token?: string };
+  }>('/auth/refresh', refreshToken ? { refreshToken } : {}, { headers });
+
+  const accessToken = data?.data?.accessToken ?? data?.data?.token ?? null;
+  if (accessToken) {
+    setAccessToken(accessToken);
+  }
+  return accessToken;
+}
 
 export default api;

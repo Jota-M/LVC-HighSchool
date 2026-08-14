@@ -9,22 +9,22 @@ import {
   IconButton,
   Paper,
   Button,
-  FormControlLabel,
-  Switch,
-  Divider,
   useTheme,
   Alert,
   CircularProgress,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { BorderColor, CameraAlt as CameraIcon, Person as PersonIcon } from '@mui/icons-material';
+import { Person as PersonIcon } from '@mui/icons-material';
 import {
-  People as PeopleIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
-import { Dayjs } from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+dayjs.extend(customParseFormat);
 import { registroCompletoService } from '@/services/estudiantesService';
+import { CIScanner } from '@/components/shared/CIScanner';
+import { CIData } from '@/services/ocrService';
 
 interface Tutor {
   nombres: string;
@@ -37,11 +37,8 @@ interface Tutor {
   email: string;
   direccion: string;
   ocupacion: string;
-  // lugar_trabajo: string;
-  // telefono_trabajo: string;
   parentesco: string;
   estado_civil: string;
-  // nivel_educacion: string;
   es_tutor_principal: boolean;
   vive_con_estudiante: boolean;
   autorizado_recoger: boolean;
@@ -73,14 +70,6 @@ const estadosCiviles = [
   { value: 'divorciado', label: 'Divorciado/a' },
   { value: 'viudo', label: 'Viudo/a' },
   { value: 'union_libre', label: 'Unión Libre' },
-];
-
-const nivelesEducacion = [
-  { value: 'primaria', label: 'Primaria' },
-  { value: 'secundaria', label: 'Secundaria' },
-  { value: 'tecnico', label: 'Técnico' },
-  { value: 'universitario', label: 'Universitario' },
-  { value: 'postgrado', label: 'Postgrado' },
 ];
 
 export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange, tutorExistenteNombre }) => {
@@ -158,11 +147,8 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange, tut
         email: '',
         direccion: '',
         ocupacion: '',
-        // lugar_trabajo: '',
-        // telefono_trabajo: '',
         parentesco: '',
         estado_civil: '',
-        // nivel_educacion: '',
         es_tutor_principal: false,
         vive_con_estudiante: true,
         autorizado_recoger: true,
@@ -181,40 +167,31 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange, tut
   };
 
   const fieldStyle = {
-  width: '100%',
-
-  // Label
-  '& .MuiInputLabel-root': {
-    color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
-    fontWeight: 500,
-    fontSize: '0.95rem',
-    '&.Mui-focused': {
-      color: isDark ? '#facc15' : '#0288d1',
+    width: '100%',
+    '& .MuiInputLabel-root': {
+      color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+      fontWeight: 500,
+      fontSize: '0.95rem',
+      '&.Mui-focused': {
+        color: isDark ? '#facc15' : '#0288d1',
+      },
     },
-  },
-
-  // Caja del input (fondo)
-  '& .MuiInputBase-root': {
-    borderRadius: '12px',
-    
-    transition: '0.2s ease',
-    border: '1px solid transparent',
-
-    '&:hover': {
-      borderColor: isDark ? '#facc15' : '#0288d1',
+    '& .MuiInputBase-root': {
+      borderRadius: '12px',
+      transition: '0.2s ease',
+      border: '1px solid transparent',
+      '&:hover': {
+        borderColor: isDark ? '#facc15' : '#0288d1',
+      },
+      '&.Mui-focused': {
+        borderColor: isDark ? '#facc15' : '#0288d1',
+        boxShadow: `0 0 0 2px ${isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(2, 136, 209, 0.25)'}`,
+      },
     },
-
-    '&.Mui-focused': {
-      borderColor: isDark ? '#facc15' : '#0288d1',
-      boxShadow: `0 0 0 2px ${isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(2, 136, 209, 0.25)'}`,
+    '& .MuiInputBase-input': {
+      color: isDark ? '#fff' : '#000',
     },
-  },
-
-  // Texto dentro del input
-  '& .MuiInputBase-input': {
-    color: isDark ? '#fff' : '#000',
-  },
-};
+  };
 
   return (
     <Box>
@@ -227,9 +204,7 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange, tut
             mb: 4,
             p: 2,
             borderRadius: 3,
-            background: isDark
-              ? 'rgba(250, 204, 21, 0.08)'
-              : 'rgba(2, 136, 209, 0.08)',
+            background: isDark ? 'rgba(250, 204, 21, 0.08)' : 'rgba(2, 136, 209, 0.08)',
             transition: '0.3s ease',
           }}
         >
@@ -240,7 +215,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange, tut
               filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.4))',
             }}
           />
-  
           <Typography
             variant="h4"
             fontWeight={700}
@@ -301,9 +275,32 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange, tut
             </IconButton>
           )}
 
-          <Typography variant="h6" fontWeight={700} mb={3}>
+          <Typography variant="h6" fontWeight={700} mb={2}>
             Tutor #{index + 1}
           </Typography>
+
+          {/* Scanner de Cédula del Tutor */}
+          <CIScanner
+            label="Escanear Cédula del Tutor"
+            onDatosExtraidos={(datos: CIData) => {
+              const nuevos = [...tutores];
+              const updates: Partial<Tutor> = {
+                ci: datos.ci || tutores[index].ci,
+                nombres: datos.nombres || tutores[index].nombres,
+                apellido_paterno: datos.apellido_paterno || tutores[index].apellido_paterno,
+                apellido_materno: datos.apellido_materno || tutores[index].apellido_materno,
+                direccion: datos.direccion || tutores[index].direccion,
+                ocupacion: datos.ocupacion || tutores[index].ocupacion,
+                estado_civil: datos.estado_civil || tutores[index].estado_civil,
+              };
+              if (datos.fecha_nacimiento) {
+                const parsed = dayjs(datos.fecha_nacimiento, 'DD/MM/YYYY', true);
+                if (parsed.isValid()) updates.fecha_nacimiento = parsed;
+              }
+              nuevos[index] = { ...nuevos[index], ...updates };
+              onChange(nuevos);
+            }}
+          />
 
           <Grid container spacing={2}>
             <Grid size={{xs:12, md:6}} >
@@ -477,64 +474,6 @@ export const TutoresStep: React.FC<TutoresStepProps> = ({ tutores, onChange, tut
               />
             </Grid>
           </Grid>
-
-          {/* <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={tutor.es_tutor_principal}
-                  onChange={(e) =>
-                    handleTutorChange(index, 'es_tutor_principal', e.target.checked)
-                  }
-                />
-              }
-              label="Tutor Principal"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={tutor.vive_con_estudiante}
-                  onChange={(e) =>
-                    handleTutorChange(index, 'vive_con_estudiante', e.target.checked)
-                  }
-                />
-              }
-              label="Vive con el estudiante"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={tutor.autorizado_recoger}
-                  onChange={(e) =>
-                    handleTutorChange(index, 'autorizado_recoger', e.target.checked)
-                  }
-                />
-              }
-              label="Autorizado a recoger"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={tutor.puede_autorizar_salidas}
-                  onChange={(e) =>
-                    handleTutorChange(index, 'puede_autorizar_salidas', e.target.checked)
-                  }
-                />
-              }
-              label="Puede autorizar salidas"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={tutor.recibe_notificaciones}
-                  onChange={(e) =>
-                    handleTutorChange(index, 'recibe_notificaciones', e.target.checked)
-                  }
-                />
-              }
-              label="Recibe notificaciones"
-            />
-          </Box> */}
         </Paper>
       ))}
     </Box>

@@ -46,6 +46,7 @@ import {
   useMaterialesEstudiante,
   useNotasPorMateriaEstudiante,
   useProgresoEstudiante,
+  usePeriodosEstudiante,
 } from '@/hooks/useEstudiante';
 import type {
   MateriaResumen, TemarioItem, MaterialEstudiante,
@@ -141,20 +142,15 @@ const ListaMaterias: React.FC<ListaMateriasProps> = ({ onSelect }) => {
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
+  const { periodos, periodoActivo, isLoading: loadingPeriodos } = usePeriodosEstudiante();
   const [busqueda, setBusqueda] = useState('');
   const [gridMode, setGridMode] = useState(true);
   const [filtroPeriodo, setFiltroPeriodo] = useState<number | undefined>();
 
-  const { materias, isLoading, refrescar } = useMisMaterias(filtroPeriodo);
+  const periodoEfectivo = filtroPeriodo ?? periodoActivo ?? undefined;
 
-  // Períodos únicos
-  const periodos = useMemo(() => {
-    const m = new Map<number, string>();
-    for (const mat of materias)
-      if (mat.periodo_evaluacion_id && mat.trimestre_nombre)
-        m.set(mat.periodo_evaluacion_id, mat.trimestre_nombre);
-    return Array.from(m.entries()).map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.id - b.id);
-  }, [materias]);
+  const { materias, isLoading: loadingMaterias, refrescar } = useMisMaterias(periodoEfectivo);
+  const isLoading = loadingMaterias || loadingPeriodos;
 
   const filtradas = useMemo(() => {
     if (!busqueda.trim()) return materias;
@@ -178,6 +174,7 @@ const ListaMaterias: React.FC<ListaMateriasProps> = ({ onSelect }) => {
 
   const accent = isDark ? '#818CF8' : '#6366F1';
   const gradient = `linear-gradient(135deg,${accent} 0%,${alpha(accent,.6)} 100%)`;
+  const nombreTrimestreActivo = periodos.find(p => p.id === periodoEfectivo)?.nombre;
 
   return (
     <Box sx={{ pb:6 }}>
@@ -208,7 +205,7 @@ const ListaMaterias: React.FC<ListaMateriasProps> = ({ onSelect }) => {
                   Mis Materias
                 </Typography>
                 <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ mt:.25 }}>
-                  {materias.length} materias activas este período
+                  {materias.length} materias activas {nombreTrimestreActivo ? `· ${nombreTrimestreActivo}` : ''}
                 </Typography>
               </Box>
             </Box>
@@ -268,15 +265,18 @@ const ListaMaterias: React.FC<ListaMateriasProps> = ({ onSelect }) => {
           }}
           InputProps={{ startAdornment:<InputAdornment position="start"><SearchIcon sx={{fontSize:18,color:'text.disabled'}}/></InputAdornment> }}
         />
-        {periodos.map(p => (
-          <Chip key={p.id} label={p.nombre} onClick={() => setFiltroPeriodo(prev => prev === p.id ? undefined : p.id)}
-            sx={{ fontWeight:600, cursor:'pointer',
-              bgcolor: filtroPeriodo === p.id ? accent : 'transparent',
-              color:   filtroPeriodo === p.id ? '#fff' : 'text.secondary',
-              border:`1px solid ${alpha(accent,.3)}`,
-              '&:hover':{ bgcolor: filtroPeriodo === p.id ? accent : alpha(accent,.1) },
-            }} />
-        ))}
+        {periodos.map(p => {
+          const isSelected = periodoEfectivo === p.id;
+          return (
+            <Chip key={p.id} label={p.nombre} onClick={() => setFiltroPeriodo(p.id)}
+              sx={{ fontWeight:700, cursor:'pointer',
+                bgcolor: isSelected ? accent : 'transparent',
+                color:   isSelected ? '#fff' : 'text.secondary',
+                border:`1px solid ${alpha(accent,.3)}`,
+                '&:hover':{ bgcolor: isSelected ? accent : alpha(accent,.1) },
+              }} />
+          );
+        })}
       </Box>
 
       {/* ── Grid/List de materias ── */}
@@ -946,15 +946,17 @@ const MaterialItem: React.FC<{
 const TabNotas: React.FC<{
   materia: MateriaResumen; color: string; isDark: boolean;
 }> = ({ materia, color, isDark }) => {
-  // Necesitamos periodo_evaluacion_id — si la materia tiene uno lo usamos
-  const periodoId = materia.periodo_evaluacion_id;
+  const { periodos, periodoActivo } = usePeriodosEstudiante();
+  const [periodoSel, setPeriodoSel] = useState<number | null>(materia.periodo_evaluacion_id ?? null);
+
+  const periodoId = periodoSel ?? materia.periodo_evaluacion_id ?? periodoActivo;
 
   const { notas, isLoading } = useNotasPorMateriaEstudiante(
     materia.grado_materia_id,
     periodoId ?? null
   );
 
-  if (!periodoId) return (
+  if (!periodoId && !isLoading) return (
     <Paper elevation={0} sx={{ p:6, textAlign:'center', borderRadius:3, bgcolor:alpha(color,.05), border:`2px dashed ${alpha(color,.2)}` }}>
       <SinNotaIcon sx={{fontSize:48,color:alpha(color,.3),mb:1}}/>
       <Typography color="text.secondary">Seleccioná un trimestre desde "Mis Materias" para ver las notas</Typography>
@@ -967,13 +969,6 @@ const TabNotas: React.FC<{
     </Stack>
   );
 
-  if (!notas) return (
-    <Paper elevation={0} sx={{ p:6, textAlign:'center', borderRadius:3, bgcolor:alpha(color,.05), border:`2px dashed ${alpha(color,.2)}` }}>
-      <SinNotaIcon sx={{fontSize:48,color:alpha(color,.3),mb:1}}/>
-      <Typography color="text.secondary">No hay notas disponibles para este período</Typography>
-    </Paper>
-  );
-
   const DIMENSIONES: Record<string,{label:string;color:string;gradient:string}> = {
     SER:  {label:'Ser',  color:'#10B981',gradient:'linear-gradient(135deg,#10B981,#34D399)'},
     SAB:  {label:'Saber',color:'#3B82F6',gradient:'linear-gradient(135deg,#3B82F6,#60A5FA)'},
@@ -983,6 +978,31 @@ const TabNotas: React.FC<{
 
   return (
     <Box>
+      {/* Selector de Trimestre en TabNotas */}
+      {periodos.length > 0 && (
+        <Box sx={{ display:'flex', gap:1, mb:2.5, alignItems:'center', flexWrap:'wrap' }}>
+          <Typography variant="caption" color="text.secondary" fontWeight={700}>Trimestre:</Typography>
+          {periodos.map(p => {
+            const isSel = periodoId === p.id;
+            return (
+              <Chip
+                key={p.id}
+                label={p.nombre}
+                size="small"
+                onClick={() => setPeriodoSel(p.id)}
+                sx={{
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  bgcolor: isSel ? color : 'transparent',
+                  color: isSel ? '#fff' : 'text.secondary',
+                  border: `1px solid ${alpha(color, .3)}`,
+                  '&:hover': { bgcolor: isSel ? color : alpha(color, .1) },
+                }}
+              />
+            );
+          })}
+        </Box>
+      )}
       {/* Nota final */}
       {notas.nota_final && (
         <Paper elevation={0} sx={{

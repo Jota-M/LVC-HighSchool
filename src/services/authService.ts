@@ -1,4 +1,5 @@
 import api from '../lib/api';
+import { setAuthTokens } from '../lib/tokenStorage';
 
 export interface LoginCredentials {
   credential: string;
@@ -29,24 +30,34 @@ export interface AuthResponse {
   message: string;
   data: {
     user: User;
+    accessToken?: string;
+    refreshToken?: string;
   };
 }
 
 class AuthService {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const { data } = await api.post<AuthResponse>('/auth/login', credentials);
+
+    // Guardamos accessToken/refreshToken en sessionStorage como respaldo del
+    // flujo de cookies httpOnly. Esto es lo que faltaba: antes se descartaban
+    // y el interceptor de refresh (X-Refresh-Token) nunca tenía nada que enviar.
+    const { accessToken, refreshToken } = data.data;
+    if (accessToken && refreshToken) {
+      setAuthTokens(accessToken, refreshToken);
+    }
+
     return data;
   }
 
   async getCurrentUser(): Promise<User | null> {
-  try {
-    const { data } = await api.get<AuthResponse>('/auth/me');
-    // console.log('📦 RESPUESTA COMPLETA /auth/me:', JSON.stringify(data, null, 2));
-    return data.data.user;
-  } catch (error) {
-    return null;
+    try {
+      const { data } = await api.get<AuthResponse>('/auth/me');
+      return data.data.user;
+    } catch (error) {
+      return null;
+    }
   }
-}
 
   async logout(): Promise<void> {
     await api.post('/auth/logout');

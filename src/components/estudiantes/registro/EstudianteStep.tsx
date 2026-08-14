@@ -21,9 +21,13 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
-import { Dayjs } from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+dayjs.extend(customParseFormat);
 import '@fontsource/roboto';
 import { ModoRegistro, EstudianteCreate } from '@/types/estudianteTypes';
+import { CIScanner } from '@/components/shared/CIScanner';
+import { CIData } from '@/services/ocrService';
 
 // Tipo con Dayjs para el formulario
 type EstudianteFormData = Omit<EstudianteCreate, 'fecha_nacimiento'> & {
@@ -239,6 +243,32 @@ export const EstudianteStep: React.FC<EstudianteStepProps> = ({
               Estudiante #{index + 1}
             </Typography>
           )}
+
+          {/* Scanner de Cédula */}
+          <CIScanner
+            label="Escanear Cédula del Estudiante"
+            onDatosExtraidos={(datos: CIData) => {
+              const updates: Partial<EstudianteFormData> = {
+                ci: datos.ci || estudiante.ci,
+                nombres: datos.nombres || estudiante.nombres,
+                apellido_paterno: datos.apellido_paterno || estudiante.apellido_paterno,
+                apellido_materno: datos.apellido_materno || estudiante.apellido_materno,
+                lugar_nacimiento: datos.lugar_nacimiento || estudiante.lugar_nacimiento,
+                direccion: datos.direccion || estudiante.direccion,
+                zona: datos.zona || estudiante.zona,
+                ciudad: datos.ciudad || estudiante.ciudad,
+                ...(datos.genero ? { genero: datos.genero as EstudianteFormData['genero'] } : {}),
+              };
+              // Parsear fecha de nacimiento si viene en DD/MM/YYYY
+              if (datos.fecha_nacimiento) {
+                const parsed = dayjs(datos.fecha_nacimiento, 'DD/MM/YYYY', true);
+                if (parsed.isValid()) updates.fecha_nacimiento = parsed;
+              }
+              const newEstudiantes = [...estudiantes];
+              newEstudiantes[index] = { ...newEstudiantes[index], ...updates };
+              onEstudiantesChange(newEstudiantes);
+            }}
+          />
 
           {/* Foto */}
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
