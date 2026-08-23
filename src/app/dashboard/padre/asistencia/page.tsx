@@ -1,12 +1,15 @@
 'use client';
 // app/dashboard/padre/asistencia/page.tsx
+// Restyled: header sin contenedor (mismo patrón que financiero/seguimiento/notas),
+// azul fijo de página reemplazado por el token de marca compartido
+// (ámbar en modo oscuro / azul en modo claro). Los chips de riesgo/pendientes
+// y el botón "Solicitar permiso" son de urgencia/acción, no de marca — intactos.
 
 import React, { useState, useCallback } from 'react';
 import {
   Box,
   Container,
   Typography,
-  Grid,
   Chip,
   Button,
   Tab,
@@ -20,12 +23,12 @@ import {
   Tooltip,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
-import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
+import FamilyRestroomRoundedIcon from '@mui/icons-material/FamilyRestroomRounded';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
-import RefreshIcon from '@mui/icons-material/Refresh';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
 
@@ -52,15 +55,20 @@ const fadeSlideUp = keyframes`
   to   { opacity: 1; transform: translateY(0); }
 `;
 
-const bounceIcon = keyframes`
+const bounce = keyframes`
   0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-6px); }
+  50% { transform: translateY(-6px); }
 `;
 
-const shimmer = keyframes`
-  0%   { background-position: -1000px 0; }
-  100% { background-position:  1000px 0; }
-`;
+// ─── Paleta — misma lógica dual que financiero/seguimiento/notas ───────────
+const usePalette = () => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const primary = isDark ? '#facc15' : '#0288d1';
+  const primaryEnd = isDark ? '#f59e0b' : '#01579b';
+  const gradBg = `linear-gradient(135deg, ${primary} 0%, ${primaryEnd} 100%)`;
+  return { isDark, primary, primaryEnd, gradBg };
+};
 
 // ──────────────────────────────────────────────
 // SELECTOR DE HIJO
@@ -71,10 +79,10 @@ const SelectorHijo: React.FC<{
   hijoActivo: any;
   onSeleccionar: (hijo: any) => void;
   isLoading: boolean;
-}> = ({ hijos, hijoActivo, onSeleccionar, isLoading }) => {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-
+  isDark: boolean;
+  primary: string;
+  gradBg: string;
+}> = ({ hijos, hijoActivo, onSeleccionar, isLoading, isDark, primary, gradBg }) => {
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
@@ -100,18 +108,14 @@ const SelectorHijo: React.FC<{
               p: 1.5,
               borderRadius: 3,
               cursor: 'pointer',
-              border: `2px solid ${activo
-                ? (isDark ? '#60a5fa' : '#3b82f6')
-                : (isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08))}`,
+              border: `2px solid ${activo ? primary : (isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08))}`,
               background: activo
-                ? isDark
-                  ? alpha('#3b82f6', 0.15)
-                  : alpha('#3b82f6', 0.06)
+                ? (isDark ? alpha(primary, 0.15) : alpha(primary, 0.06))
                 : 'transparent',
               transition: 'all 0.2s ease',
               '&:hover': {
-                border: `2px solid ${isDark ? '#60a5fa' : '#3b82f6'}`,
-                background: isDark ? alpha('#3b82f6', 0.1) : alpha('#3b82f6', 0.04),
+                border: `2px solid ${primary}`,
+                background: isDark ? alpha(primary, 0.1) : alpha(primary, 0.04),
               },
             }}
           >
@@ -122,9 +126,8 @@ const SelectorHijo: React.FC<{
                 height: 36,
                 fontSize: 14,
                 fontWeight: 800,
-                bgcolor: activo
-                  ? isDark ? '#2563eb' : '#3b82f6'
-                  : isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08),
+                background: activo ? gradBg : (isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)),
+                color: activo ? (isDark ? '#000' : '#fff') : undefined,
               }}
             >
               {hijo.nombres.charAt(0)}{hijo.apellidos.charAt(0)}
@@ -149,8 +152,7 @@ const SelectorHijo: React.FC<{
 // ──────────────────────────────────────────────
 
 export default function PadreAsistenciaPage() {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { isDark, primary, gradBg } = usePalette();
   const { user } = useAuth();
 
   // ─── Estado de UI ───
@@ -219,227 +221,173 @@ export default function PadreAsistenciaPage() {
   })) ?? [];
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: isDark
-          ? 'radial-gradient(circle at top right, rgba(59,130,246,0.04), transparent 60%)'
-          : 'radial-gradient(circle at top right, rgba(59,130,246,0.02), transparent 60%)',
-      }}
-    >
-      <Container maxWidth="xl" disableGutters>
-        {/* ══════════ HEADER ══════════ */}
-        <Fade in timeout={400}>
-          <Box sx={{ mb: 4, pt: 3 }}>
+    <Box sx={{ minHeight: '100vh', py: 4 }}>
+      <Container maxWidth="xl">
+
+        {/* ══ HEADER — mismo patrón que financiero/seguimiento/notas: sin contenedor ══ */}
+        <Fade in timeout={500}>
+          <Box sx={{ mb: 4 }}>
             <Box
               sx={{
-                p: 3.5,
-                borderRadius: 4,
-                background: isDark
-                  ? 'linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)'
-                  : '#fff',
-                backdropFilter: 'blur(20px)',
-                border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.05)}`,
-                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.06)',
-                position: 'relative',
-                overflow: 'hidden',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: { xs: 'flex-start', md: 'center' },
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: { xs: 2, md: 0 },
+                mb: 3,
               }}
             >
-              {/* Shimmer */}
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: `linear-gradient(90deg, transparent, ${alpha('#fff', isDark ? 0.03 : 0.08)}, transparent)`,
-                  backgroundSize: '1000px 100%',
-                  animation: `${shimmer} 4s linear infinite`,
-                  pointerEvents: 'none',
-                }}
-              />
-
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: 2,
-                  position: 'relative',
-                  zIndex: 1,
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <FamilyRestroomRoundedIcon
+                    sx={{ color: primary, fontSize: 36, animation: `${bounce} 1.5s infinite` }}
+                  />
+                  <Typography
+                    variant="h1"
                     sx={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: 3,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: isDark
-                        ? 'linear-gradient(135deg, #3b82f6, #2563eb)'
-                        : 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                      boxShadow: '0 6px 20px rgba(59,130,246,0.4)',
-                      animation: `${bounceIcon} 4s ease-in-out infinite`,
-                    }}
-                  >
-                    <FamilyRestroomIcon sx={{ fontSize: 30, color: '#fff' }} />
-                  </Box>
-
-                  <Box>
-                    <Typography
-                      variant="h4"
-                      fontWeight={900}
-                      sx={{
-                        background: isDark
-                          ? 'linear-gradient(135deg, #60a5fa, #3b82f6)'
-                          : 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        letterSpacing: -0.5,
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      Asistencia escolar
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ mt: 0.25 }}>
-                      {user?.username && <>Hola, <strong>{user.username}</strong> · </>}
-                      {hijoActivo ? (
-                        <>
-                          Seguimiento de{' '}
-                          <Box
-                            component="span"
-                            sx={{
-                              color: isDark ? '#60a5fa' : '#3b82f6',
-                              fontWeight: 800,
-                            }}
-                          >
-                            {hijoActivo.nombres} {hijoActivo.apellidos}
-                          </Box>
-                        </>
-                      ) : 'Cargando datos...'}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                  {/* Badge de materias en riesgo */}
-                  {materiasEnRiesgo.length > 0 && (
-                    <Chip
-                      icon={<WarningAmberIcon sx={{ fontSize: '16px !important' }} />}
-                      label={`${materiasEnRiesgo.length} materia${materiasEnRiesgo.length > 1 ? 's' : ''} en riesgo`}
-                      size="small"
-                      sx={{
-                        height: 28,
-                        fontWeight: 800,
-                        fontSize: 12,
-                        bgcolor: isDark ? alpha('#f59e0b', 0.15) : alpha('#f59e0b', 0.1),
-                        color: isDark ? '#fbbf24' : '#d97706',
-                        border: `1px solid ${alpha('#f59e0b', 0.3)}`,
-                        borderRadius: 2,
-                        '& .MuiChip-icon': { color: isDark ? '#fbbf24' : '#d97706' },
-                      }}
-                    />
-                  )}
-
-                  {/* Badge de permisos pendientes */}
-                  {pendientes.length > 0 && (
-                    <Chip
-                      icon={<AccessTimeRoundedIcon sx={{ fontSize: '16px !important' }} />}
-                      label={`${pendientes.length} permiso${pendientes.length > 1 ? 's' : ''} pendiente${pendientes.length > 1 ? 's' : ''}`}
-                      size="small"
-                      sx={{
-                        height: 28,
-                        fontWeight: 800,
-                        fontSize: 12,
-                        bgcolor: isDark ? alpha('#f59e0b', 0.12) : alpha('#f59e0b', 0.08),
-                        color: isDark ? '#fbbf24' : '#d97706',
-                        border: `1px solid ${alpha('#f59e0b', 0.25)}`,
-                        borderRadius: 2,
-                        '& .MuiChip-icon': { color: isDark ? '#fbbf24' : '#d97706' },
-                      }}
-                    />
-                  )}
-
-                  {/* Botón solicitar permiso */}
-                  <Button
-                    variant="contained"
-                    startIcon={<NoteAddIcon />}
-                    onClick={() => setModalPermisoOpen(true)}
-                    disabled={!hijoActivo}
-                    sx={{
-                      borderRadius: 2.5,
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      px: 2.5,
-                      background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-                      boxShadow: '0 4px 12px rgba(245,158,11,0.3)',
-                      '&:hover': {
-                        boxShadow: '0 6px 16px rgba(245,158,11,0.4)',
-                        transform: 'translateY(-1px)',
+                      fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                      fontWeight: 800,
+                      background: gradBg,
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      animation: 'fadeIn 1s ease-out',
+                      '@keyframes fadeIn': {
+                        from: { opacity: 0, transform: 'translateY(-10px)' },
+                        to: { opacity: 1, transform: 'translateY(0)' },
                       },
-                      '&.Mui-disabled': { opacity: 0.5 },
                     }}
                   >
-                    Solicitar permiso
-                  </Button>
-
-                  <Tooltip title="Actualizar datos">
-                    <IconButton
-                      onClick={() => { refrescarResumen(); refrescarPermisos(); }}
-                      size="small"
-                      sx={{
-                        bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04),
-                        border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
-                        borderRadius: 2,
-                        '&:hover': { bgcolor: isDark ? alpha('#3b82f6', 0.15) : alpha('#3b82f6', 0.08), transform: 'rotate(180deg)' },
-                        transition: 'all 0.3s ease',
-                      }}
-                    >
-                      <RefreshIcon sx={{ fontSize: 18, color: isDark ? '#60a5fa' : '#3b82f6' }} />
-                    </IconButton>
-                  </Tooltip>
+                    Asistencia Escolar
+                  </Typography>
                 </Box>
-              </Box>
 
-              {/* Info del hijo activo */}
-              {hijoActivo && (
-                <Box
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
                   sx={{
-                    mt: 2.5,
-                    pt: 2.5,
-                    borderTop: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.5,
-                    flexWrap: 'wrap',
-                    position: 'relative',
-                    zIndex: 1,
+                    fontWeight: 500,
+                    letterSpacing: 0.3,
+                    animation: 'fadeInText 1.2s ease-out',
+                    '@keyframes fadeInText': {
+                      from: { opacity: 0, transform: 'translateY(5px)' },
+                      to: { opacity: 1, transform: 'translateY(0)' },
+                    },
                   }}
                 >
-                  {[
-                    { label: hijoActivo.nivel_nombre },
-                    { label: `${hijoActivo.grado_nombre} "${hijoActivo.paralelo_nombre}"` },
-                    { label: hijoActivo.turno_nombre },
-                    { label: hijoActivo.periodo_nombre },
-                  ].map((item, i) => (
-                    <Chip
-                      key={i}
-                      label={item.label}
-                      size="small"
-                      sx={{
-                        height: 24,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04),
-                        borderRadius: 1.5,
-                      }}
-                    />
-                  ))}
-                </Box>
-              )}
+                  {user?.username ? (
+                    <>Hola, <strong>{user.username}</strong> — </>
+                  ) : null}
+                  {hijoActivo
+                    ? <>seguimiento de <strong>{hijoActivo.nombres} {hijoActivo.apellidos}</strong></>
+                    : 'Cargando datos...'}
+                </Typography>
+              </Box>
+
+              <Box
+                sx={{
+                  display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap',
+                  width: { xs: '100%', md: 'auto' },
+                  justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                }}
+              >
+                {/* Badge de materias en riesgo (urgencia — ámbar fijo) */}
+                {materiasEnRiesgo.length > 0 && (
+                  <Chip
+                    icon={<WarningAmberIcon sx={{ fontSize: '16px !important' }} />}
+                    label={`${materiasEnRiesgo.length} materia${materiasEnRiesgo.length > 1 ? 's' : ''} en riesgo`}
+                    size="small"
+                    sx={{
+                      height: 28,
+                      fontWeight: 800,
+                      fontSize: 12,
+                      bgcolor: isDark ? alpha('#f59e0b', 0.15) : alpha('#f59e0b', 0.1),
+                      color: isDark ? '#fbbf24' : '#d97706',
+                      border: `1px solid ${alpha('#f59e0b', 0.3)}`,
+                      borderRadius: 2,
+                      '& .MuiChip-icon': { color: isDark ? '#fbbf24' : '#d97706' },
+                    }}
+                  />
+                )}
+
+                {/* Badge de permisos pendientes (urgencia — ámbar fijo) */}
+                {pendientes.length > 0 && (
+                  <Chip
+                    icon={<AccessTimeRoundedIcon sx={{ fontSize: '16px !important' }} />}
+                    label={`${pendientes.length} permiso${pendientes.length > 1 ? 's' : ''} pendiente${pendientes.length > 1 ? 's' : ''}`}
+                    size="small"
+                    sx={{
+                      height: 28,
+                      fontWeight: 800,
+                      fontSize: 12,
+                      bgcolor: isDark ? alpha('#f59e0b', 0.12) : alpha('#f59e0b', 0.08),
+                      color: isDark ? '#fbbf24' : '#d97706',
+                      border: `1px solid ${alpha('#f59e0b', 0.25)}`,
+                      borderRadius: 2,
+                      '& .MuiChip-icon': { color: isDark ? '#fbbf24' : '#d97706' },
+                    }}
+                  />
+                )}
+
+                {/* Botón solicitar permiso (acción — ámbar/naranja fijo) */}
+                <Button
+                  variant="contained"
+                  startIcon={<NoteAddIcon />}
+                  onClick={() => setModalPermisoOpen(true)}
+                  disabled={!hijoActivo}
+                  sx={{
+                    borderRadius: 2.5,
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    px: 2.5,
+                    background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
+                    boxShadow: '0 4px 12px rgba(245,158,11,0.3)',
+                    '&:hover': {
+                      boxShadow: '0 6px 16px rgba(245,158,11,0.4)',
+                      transform: 'translateY(-1px)',
+                    },
+                    '&.Mui-disabled': { opacity: 0.5 },
+                  }}
+                >
+                  Solicitar permiso
+                </Button>
+
+                <Tooltip title="Actualizar">
+                  <IconButton
+                    onClick={() => { refrescarResumen(); refrescarPermisos(); }}
+                    size="small"
+                    sx={{
+                      bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
+                      border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
+                      borderRadius: '10px',
+                      '&:hover': { bgcolor: isDark ? alpha(primary, 0.15) : alpha(primary, 0.08), transform: 'rotate(180deg)' },
+                      transition: 'all 0.3s',
+                    }}
+                  >
+                    <RefreshRoundedIcon sx={{ fontSize: 16, color: primary }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Box>
+
+            {/* Chips de info del hijo activo */}
+            {hijoActivo && (
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {[
+                  hijoActivo.nivel_nombre,
+                  `${hijoActivo.grado_nombre} "${hijoActivo.paralelo_nombre}"`,
+                  hijoActivo.turno_nombre,
+                  hijoActivo.periodo_nombre,
+                ].filter(Boolean).map((label, i) => (
+                  <Chip
+                    key={i} label={label} size="small"
+                    sx={{
+                      height: 24, fontSize: 11, fontWeight: 700, borderRadius: 1.5,
+                      bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04),
+                    }}
+                  />
+                ))}
+              </Box>
+            )}
           </Box>
         </Fade>
 
@@ -449,10 +397,13 @@ export default function PadreAsistenciaPage() {
           hijoActivo={hijoActivo}
           onSeleccionar={handleSeleccionarHijo}
           isLoading={loadingHijos}
+          isDark={isDark}
+          primary={primary}
+          gradBg={gradBg}
         />
 
         {/* ══════════ TABS ══════════ */}
-        <Box sx={{ animation: `${fadeSlideUp} 0.5s ease-out 0.15s both` }}>
+        <Box sx={{ animation: `${fadeSlideUp} 0.5s ease-out 0.15s both`, pb: 6 }}>
           <Box
             sx={{
               mb: 3,
@@ -475,13 +426,11 @@ export default function PadreAsistenciaPage() {
                   color: 'text.secondary',
                   transition: 'all 0.2s ease',
                   '&.Mui-selected': {
-                    color: isDark ? '#60a5fa' : '#3b82f6',
+                    color: primary,
                   },
                 },
                 '& .MuiTabs-indicator': {
-                  background: isDark
-                    ? 'linear-gradient(90deg, #3b82f6, #60a5fa)'
-                    : 'linear-gradient(90deg, #3b82f6, #2563eb)',
+                  background: gradBg,
                   height: 3,
                   borderRadius: '3px 3px 0 0',
                 },
@@ -571,8 +520,6 @@ export default function PadreAsistenciaPage() {
           )}
         </Box>
 
-        {/* Padding final */}
-        <Box sx={{ height: 48 }} />
       </Container>
 
       {/* ══════════ MODAL SOLICITAR PERMISO ══════════ */}

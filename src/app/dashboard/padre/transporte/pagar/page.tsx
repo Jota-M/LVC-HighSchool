@@ -1,6 +1,8 @@
 'use client';
 // app/dashboard/padre/transporte/pagar/page.tsx
 // Pagar Online (Transporte) — pago individual + pago familiar (multi-hijo o multi-cuota)
+// Restyle: mismo lenguaje visual que transporte/page.tsx y financiero/pagar/page.tsx
+// (header sin contenedor, tarjetas planas sin shimmer/glow, bordes sutiles).
 
 import React, { useState, useCallback, useEffect } from 'react';
 import {
@@ -25,21 +27,21 @@ import {
     useQRPagoTransporte,
     useQRFamiliarTransporte,
 } from '@/hooks/usePadreTransportePagos';
-import { MESES_LABELS, formatFechaPagoTransporte } from '@/types/padreTransportePagosTypes';
+import { MESES_LABELS, formatMesTransporte, formatFechaPagoTransporte } from '@/types/padreTransportePagosTypes';
 import type { CuotaTransporteHijo, HijoTransporteInfo } from '@/types/padreTransportePagosTypes';
 
 // ─── Animaciones ───────────────────────────────────────────────────────────
 const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 `;
-const shimmer = keyframes`
-  0%   { background-position: -1000px 0; }
-  100% { background-position:  1000px 0; }
+const bounce = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 `;
-const pulseGreen = keyframes`
-  0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
-  50%       { box-shadow: 0 0 0 12px rgba(16,185,129,0); }
+const pulse = (color: string) => keyframes`
+  0%, 100% { box-shadow: 0 0 0 0 ${alpha(color, 0.35)}; }
+  50%       { box-shadow: 0 0 0 7px ${alpha(color, 0)}; }
 `;
 const scanLine = keyframes`
   0%   { top: 0%; }
@@ -105,31 +107,33 @@ const CuotaCard: React.FC<{
     nombreHijo?: string; // solo en modo familiar
 }> = ({ cuota, selected, onToggle, disabled, isDark, gold, index, nombreHijo }) => {
     const esVencido = cuota.estado === 'vencido';
-    const mesLabel = MESES_LABELS[cuota.mes_correspondiente] ?? cuota.mes_correspondiente;
+    const mesLabel = formatMesTransporte(cuota.mes_correspondiente);
+    const accent = esVencido ? '#ef4444' : gold;
     return (
         <Box
             onClick={() => !disabled && onToggle()}
             sx={{
-                display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: '16px',
-                border: `1.5px solid ${selected ? (esVencido ? alpha('#ef4444', 0.5) : alpha(gold, 0.5)) : isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)}`,
-                bgcolor: selected ? (esVencido ? (isDark ? alpha('#ef4444', 0.07) : alpha('#ef4444', 0.03)) : (isDark ? alpha(gold, 0.07) : alpha(gold, 0.03))) : isDark ? alpha('#fff', 0.02) : '#fafafa',
+                display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: '14px',
+                border: `1.5px solid ${selected ? alpha(accent, 0.5) : isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)}`,
+                borderLeft: `3px solid ${selected ? accent : 'transparent'}`,
+                bgcolor: selected ? alpha(accent, isDark ? 0.07 : 0.04) : isDark ? alpha('#fff', 0.02) : '#fafafa',
                 cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1,
-                transition: 'all 0.2s', animation: `${fadeUp} 0.3s ease-out ${index * 0.05}s both`,
-                '&:hover': !disabled ? { border: `1.5px solid ${esVencido ? alpha('#ef4444', 0.4) : alpha(gold, 0.4)}`, transform: 'translateY(-1px)' } : {},
+                transition: 'all 0.15s', animation: `${fadeUp} 0.3s ease-out ${index * 0.04}s both`,
+                '&:hover': !disabled ? { border: `1.5px solid ${alpha(accent, 0.4)}` } : {},
             }}
         >
             <Checkbox
                 checked={selected} disabled={disabled} onChange={onToggle}
                 onClick={e => e.stopPropagation()}
-                sx={{ p: 0, color: isDark ? alpha('#fff', 0.2) : alpha('#000', 0.15), '&.Mui-checked': { color: esVencido ? '#ef4444' : gold } }}
+                sx={{ p: 0, color: isDark ? alpha('#fff', 0.2) : alpha('#000', 0.15), '&.Mui-checked': { color: accent } }}
             />
             <Box sx={{
-                width: 36, height: 36, borderRadius: '11px', flexShrink: 0,
-                background: esVencido ? 'linear-gradient(135deg, #ef4444, #f87171)' : `linear-gradient(135deg, ${gold}, ${isDark ? '#f59e0b' : '#d97706'})`,
+                width: 34, height: 34, borderRadius: '10px', flexShrink: 0,
+                bgcolor: alpha(accent, isDark ? 0.16 : 0.1),
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: isDark && !esVencido ? '#000' : '#fff',
+                color: accent,
             }}>
-                <DirectionsBusRoundedIcon sx={{ fontSize: 17 }} />
+                <DirectionsBusRoundedIcon sx={{ fontSize: 16 }} />
             </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="body2" fontWeight={800} sx={{ fontSize: 14 }}>
@@ -140,7 +144,7 @@ const CuotaCard: React.FC<{
                 </Typography>
             </Box>
             <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-                <Typography variant="body2" fontWeight={900} sx={{ fontSize: 15, color: esVencido ? '#ef4444' : isDark ? gold : '#d97706' }}>
+                <Typography variant="body2" fontWeight={900} sx={{ fontSize: 15, color: accent }}>
                     Bs {parseFloat(String(cuota.monto_final)).toFixed(2)}
                 </Typography>
                 {cuota.monto_recargo > 0 && (
@@ -153,8 +157,7 @@ const CuotaCard: React.FC<{
                 label={esVencido ? 'Vencida' : 'Pendiente'} size="small"
                 sx={{
                     height: 20, fontSize: 10, fontWeight: 800, flexShrink: 0,
-                    bgcolor: esVencido ? (isDark ? alpha('#ef4444', 0.15) : alpha('#ef4444', 0.08)) : (isDark ? alpha(gold, 0.15) : alpha(gold, 0.08)),
-                    color: esVencido ? '#ef4444' : isDark ? gold : '#d97706', borderRadius: 1.5,
+                    bgcolor: alpha(accent, isDark ? 0.15 : 0.08), color: accent, borderRadius: 1.5,
                 }}
             />
         </Box>
@@ -170,8 +173,8 @@ const PanelQR: React.FC<{
 
     if (pagado) return (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 6, gap: 2 }}>
-            <Box sx={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, #10b981, #34d399)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: `${successPop} 0.5s ease-out both`, boxShadow: '0 8px 32px rgba(16,185,129,0.4)' }}>
-                <CheckCircleRoundedIcon sx={{ fontSize: 44, color: '#fff' }} />
+            <Box sx={{ width: 72, height: 72, borderRadius: '50%', bgcolor: alpha('#10b981', isDark ? 0.15 : 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center', animation: `${successPop} 0.5s ease-out both` }}>
+                <CheckCircleRoundedIcon sx={{ fontSize: 40, color: '#10b981' }} />
             </Box>
             <Typography variant="h6" fontWeight={900} sx={{ color: '#10b981' }}>¡Pago Confirmado!</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>{mesesLabel} — Bs {totalMonto.toFixed(2)}</Typography>
@@ -181,7 +184,7 @@ const PanelQR: React.FC<{
     if (isGenerando) return (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 6, gap: 2 }}>
             <Box sx={{ animation: `${spin} 1s linear infinite` }}>
-                <QrCode2RoundedIcon sx={{ fontSize: 48, color: isDark ? gold : '#d97706', opacity: 0.6 }} />
+                <QrCode2RoundedIcon sx={{ fontSize: 44, color: gold, opacity: 0.6 }} />
             </Box>
             <Typography variant="body2" fontWeight={700} color="text.secondary">Generando QR...</Typography>
         </Box>
@@ -189,7 +192,7 @@ const PanelQR: React.FC<{
 
     if (!qrData) return (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 6, gap: 1.5 }}>
-            <QrCode2RoundedIcon sx={{ fontSize: 56, color: isDark ? alpha(gold, 0.3) : alpha('#d97706', 0.3) }} />
+            <QrCode2RoundedIcon sx={{ fontSize: 52, color: alpha(gold, 0.3) }} />
             <Typography variant="body2" fontWeight={700} color="text.secondary">Seleccioná las cuotas y generá el QR</Typography>
             <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'center', px: 2 }}>El QR se conecta directamente con tu banco para procesar el pago de forma segura</Typography>
         </Box>
@@ -197,7 +200,7 @@ const PanelQR: React.FC<{
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-            <Box sx={{ position: 'relative', p: 1.5, borderRadius: '20px', bgcolor: '#fff', boxShadow: `0 8px 32px ${alpha(isDark ? gold : '#d97706', 0.25)}`, border: `3px solid ${isDark ? alpha(gold, 0.4) : alpha('#d97706', 0.3)}`, overflow: 'hidden' }}>
+            <Box sx={{ position: 'relative', p: 1.5, borderRadius: '16px', bgcolor: '#fff', border: `1.5px solid ${alpha(gold, 0.3)}`, overflow: 'hidden' }}>
                 <img src={`data:image/png;base64,${qrData.imagenQr}`} alt="QR de pago" style={{ width: 200, height: 200, display: 'block', borderRadius: 8 }} />
                 <Box sx={{ position: 'absolute', left: 12, right: 12, height: 2, background: `linear-gradient(90deg, transparent, ${gold}, transparent)`, animation: `${scanLine} 2s ease-in-out infinite`, opacity: 0.7 }} />
             </Box>
@@ -222,7 +225,7 @@ const PanelQR: React.FC<{
             </Box>
             <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
                 {onVerificar && (
-                    <Box onClick={onVerificar} sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.6, py: 1, borderRadius: '10px', border: `1.5px solid ${alpha(gold, 0.4)}`, color: isDark ? gold : '#d97706', fontWeight: 700, fontSize: 12, cursor: 'pointer', '&:hover': { bgcolor: alpha(gold, 0.05) } }}>
+                    <Box onClick={onVerificar} sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.6, py: 1, borderRadius: '10px', border: `1.5px solid ${alpha(gold, 0.4)}`, color: gold, fontWeight: 700, fontSize: 12, cursor: 'pointer', '&:hover': { bgcolor: alpha(gold, 0.05) } }}>
                         <RefreshRoundedIcon sx={{ fontSize: 14 }} />Verificar
                     </Box>
                 )}
@@ -244,10 +247,10 @@ const ModoToggle: React.FC<{
 }> = ({ modo, onChange, tieneMultiplesHijos, isDark, gold }) => {
     if (!tieneMultiplesHijos) return null;
     return (
-        <Box sx={{ display: 'flex', gap: 1, p: 0.5, borderRadius: '14px', bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04), border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}` }}>
+        <Box sx={{ display: 'flex', gap: 0.5, p: 0.5, borderRadius: '12px', bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04), border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}` }}>
             {([
                 { value: 'individual', icon: <PersonRoundedIcon sx={{ fontSize: 15 }} />, label: 'Un hijo' },
-                { value: 'familiar', icon: <PeopleRoundedIcon sx={{ fontSize: 15 }} />, label: 'Pago familiar' },
+                { value: 'familiar', icon: <PeopleRoundedIcon sx={{ fontSize: 15 }} />, label: 'Familiar' },
             ] as const).map(opt => {
                 const activo = modo === opt.value;
                 return (
@@ -256,12 +259,11 @@ const ModoToggle: React.FC<{
                         onClick={() => onChange(opt.value)}
                         sx={{
                             display: 'flex', alignItems: 'center', gap: 0.8,
-                            px: 1.5, py: 0.75, borderRadius: '10px', cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            bgcolor: activo ? (isDark ? alpha(gold, 0.15) : alpha(gold, 0.1)) : 'transparent',
-                            color: activo ? (isDark ? gold : '#d97706') : 'text.secondary',
+                            px: 1.5, py: 0.75, borderRadius: '9px', cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            bgcolor: activo ? alpha(gold, isDark ? 0.15 : 0.1) : 'transparent',
+                            color: activo ? gold : 'text.secondary',
                             fontWeight: activo ? 800 : 600, fontSize: 13,
-                            border: activo ? `1px solid ${alpha(gold, 0.4)}` : '1px solid transparent',
                             '&:hover': !activo ? { bgcolor: isDark ? alpha('#fff', 0.04) : alpha('#000', 0.03) } : {},
                         }}
                     >
@@ -321,7 +323,7 @@ const VistaFamiliar: React.FC<{
 
     if (isLoading) return (
         <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {[1, 2, 3, 4].map(i => <Skeleton key={i} variant="rounded" height={72} sx={{ borderRadius: '16px' }} />)}
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} variant="rounded" height={72} sx={{ borderRadius: '14px' }} />)}
         </Box>
     );
 
@@ -331,8 +333,8 @@ const VistaFamiliar: React.FC<{
     });
 
     if (hijosConPendientes.length === 0) return (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-            <CheckCircleRoundedIcon sx={{ fontSize: 52, color: '#10b981', mb: 1.5, opacity: 0.6 }} />
+        <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
+            <CheckCircleRoundedIcon sx={{ fontSize: 52, color: '#10b981', mb: 1.5, opacity: 0.7 }} />
             <Typography variant="body1" fontWeight={800} color="text.secondary">¡Toda la familia al día!</Typography>
             <Typography variant="caption" color="text.disabled">No hay cuotas de transporte pendientes</Typography>
         </Box>
@@ -352,10 +354,9 @@ const VistaFamiliar: React.FC<{
 
                 return (
                     <Box key={hijo.estudiante_id}>
-                        {/* Cabecera del hijo */}
                         <Box sx={{
                             display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5,
-                            px: 1, py: 0.75, borderRadius: '12px',
+                            px: 1, py: 0.75, borderRadius: '10px',
                             bgcolor: isDark ? alpha(gold, 0.06) : alpha(gold, 0.04),
                             border: `1px solid ${alpha(gold, 0.15)}`,
                         }}>
@@ -374,12 +375,11 @@ const VistaFamiliar: React.FC<{
                                 <Chip
                                     label={`${seleccionadasDeEsteHijo} seleccionada${seleccionadasDeEsteHijo > 1 ? 's' : ''}`}
                                     size="small"
-                                    sx={{ height: 20, fontSize: 10, fontWeight: 700, bgcolor: alpha(gold, 0.15), color: isDark ? gold : '#d97706', borderRadius: 1.5 }}
+                                    sx={{ height: 20, fontSize: 10, fontWeight: 700, bgcolor: alpha(gold, 0.15), color: gold, borderRadius: 1.5 }}
                                 />
                             )}
                         </Box>
 
-                        {/* Vencidas */}
                         {vencidas.length > 0 && (
                             <Box sx={{ mb: 1 }}>
                                 <Typography variant="caption" fontWeight={800} sx={{ color: '#ef4444', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, mb: 0.75, display: 'block', px: 0.5 }}>
@@ -398,10 +398,9 @@ const VistaFamiliar: React.FC<{
                             </Box>
                         )}
 
-                        {/* Pendientes */}
                         {pendientes.length > 0 && (
                             <Box>
-                                <Typography variant="caption" fontWeight={800} sx={{ color: isDark ? gold : '#d97706', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, mb: 0.75, display: 'block', px: 0.5 }}>
+                                <Typography variant="caption" fontWeight={800} sx={{ color: gold, fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, mb: 0.75, display: 'block', px: 0.5 }}>
                                     Pendientes
                                 </Typography>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -425,7 +424,7 @@ const VistaFamiliar: React.FC<{
 
 // ─── Página principal ──────────────────────────────────────────────────────
 export default function PagarTransporteOnlinePage() {
-    const { isDark, gold, goldEnd, gradBg } = usePalette();
+    const { isDark, gold, gradBg } = usePalette();
     const router = useRouter();
     const searchParams = useSearchParams();
     const pagoParam = searchParams.get('pago');
@@ -502,8 +501,6 @@ export default function PagarTransporteOnlinePage() {
     } = useQRFamiliarTransporte();
 
     // ── Estado unificado ──
-    // En transporte no existe un modo "múltiple del mismo hijo" separado:
-    // 2+ cuotas (mismo hijo o varios) siempre usan el hook familiar.
     const esIndividual = cuotasSeleccionadas.length === 1;
     const qrData = esIndividual ? qrIndividual : qrFamiliar;
     const estadoQR = esIndividual ? estadoIndividual : estadoFamiliar;
@@ -570,117 +567,146 @@ export default function PagarTransporteOnlinePage() {
     };
 
     return (
-        <Box sx={{ minHeight: '100vh', background: isDark ? 'radial-gradient(ellipse at top left, rgba(250,204,21,0.04) 0%, transparent 50%)' : 'radial-gradient(ellipse at top left, rgba(245,158,11,0.03) 0%, transparent 50%)' }}>
-            <Container maxWidth="lg" disableGutters sx={{ px: { xs: 2, sm: 3 } }}>
-                <Box sx={{ pt: 3, pb: 6 }}>
+        <Box sx={{ minHeight: '100vh', py: 4 }}>
+            <Container maxWidth="lg">
 
-                    {/* ══ HEADER ══ */}
-                    <Fade in timeout={400}>
-                        <Box sx={{ mb: 3 }}>
-                            <Box sx={{
-                                p: { xs: 2, sm: 3 }, borderRadius: '24px',
-                                background: isDark ? 'linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))' : '#fff',
-                                border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.05)}`,
-                                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
-                                position: 'relative', overflow: 'hidden',
-                            }}>
-                                <Box sx={{ position: 'absolute', inset: 0, background: `linear-gradient(90deg, transparent, ${alpha('#fff', isDark ? 0.02 : 0.05)}, transparent)`, backgroundSize: '1000px 100%', animation: `${shimmer} 4s linear infinite`, pointerEvents: 'none' }} />
-
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, position: 'relative', zIndex: 1, flexWrap: 'wrap' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                        <Tooltip title="Volver">
-                                            <IconButton onClick={() => router.push('/dashboard/padre/transporte')} size="small" sx={{ bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04), border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`, borderRadius: '10px' }}>
-                                                <ArrowBackRoundedIcon sx={{ fontSize: 16 }} />
-                                            </IconButton>
-                                        </Tooltip>
-                                        <Box sx={{ width: 48, height: 48, borderRadius: '14px', background: gradBg, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 16px ${alpha(gold, 0.4)}`, flexShrink: 0 }}>
-                                            <QrCode2RoundedIcon sx={{ fontSize: 24, color: isDark ? '#000' : '#fff' }} />
-                                        </Box>
-                                        <Box>
-                                            <Typography variant="h6" fontWeight={900} sx={{ background: gradBg, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: -0.3, lineHeight: 1.2 }}>
-                                                Pagar Transporte
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                                Generá un QR y pagá desde la app de tu banco
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                                        <ModoToggle
-                                            modo={modo}
-                                            onChange={handleCambioModo}
-                                            tieneMultiplesHijos={tieneMultiplesHijos}
-                                            isDark={isDark}
-                                            gold={gold}
-                                        />
-
-                                        {modo === 'individual' && hijoActivo && (
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1, borderRadius: '12px', bgcolor: isDark ? alpha('#fff', 0.04) : alpha(gold, 0.05), border: `1px solid ${alpha(gold, 0.2)}` }}>
-                                                <Box sx={{ width: 30, height: 30, borderRadius: '9px', background: gradBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: isDark ? '#000' : '#fff', flexShrink: 0 }}>
-                                                    {hijoActivo.nombres.charAt(0)}{hijoActivo.apellidos.charAt(0)}
-                                                </Box>
-                                                <Box>
-                                                    <Typography variant="body2" fontWeight={800} sx={{ fontSize: 13, lineHeight: 1.2 }}>{hijoActivo.nombres} {hijoActivo.apellidos}</Typography>
-                                                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>{hijoActivo.ruta_nombre}</Typography>
-                                                </Box>
-                                            </Box>
-                                        )}
-
-                                        {modo === 'familiar' && (
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1, borderRadius: '12px', bgcolor: isDark ? alpha(gold, 0.1) : alpha(gold, 0.06), border: `1px solid ${alpha(gold, 0.3)}` }}>
-                                                <PeopleRoundedIcon sx={{ fontSize: 16, color: isDark ? gold : '#d97706' }} />
-                                                <Typography variant="caption" fontWeight={800} sx={{ color: isDark ? gold : '#d97706', fontSize: 12 }}>
-                                                    {hijos.length} hijos · Pago familiar
-                                                </Typography>
-                                            </Box>
-                                        )}
-                                    </Box>
+                {/* ══ HEADER — mismo patrón que transporte/page.tsx: sin contenedor ══ */}
+                <Fade in timeout={500}>
+                    <Box sx={{ mb: 4 }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: { xs: 'flex-start', md: 'center' },
+                                flexDirection: { xs: 'column', md: 'row' },
+                                gap: { xs: 2, md: 0 },
+                                mb: 2,
+                            }}
+                        >
+                            <Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Tooltip title="Volver">
+                                        <IconButton
+                                            onClick={() => router.push('/dashboard/padre/transporte')}
+                                            size="small"
+                                            sx={{
+                                                bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
+                                                border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
+                                                borderRadius: '10px', mr: 0.5,
+                                            }}
+                                        >
+                                            <ArrowBackRoundedIcon sx={{ fontSize: 16 }} />
+                                        </IconButton>
+                                    </Tooltip>
+                                    <QrCode2RoundedIcon
+                                        sx={{ color: gold, fontSize: 32, animation: `${bounce} 1.5s infinite` }}
+                                    />
+                                    <Typography
+                                        variant="h1"
+                                        sx={{
+                                            fontSize: { xs: '1.4rem', sm: '1.8rem', md: '2.2rem' },
+                                            fontWeight: 800,
+                                            background: gradBg,
+                                            WebkitBackgroundClip: 'text',
+                                            WebkitTextFillColor: 'transparent',
+                                        }}
+                                    >
+                                        Pagar Transporte
+                                    </Typography>
                                 </Box>
 
-                                {modo === 'individual' && tieneMultiplesHijos && (
-                                    <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                        {hijos.map(hijo => {
-                                            const activo = hijoActivo?.estudiante_id === hijo.estudiante_id;
-                                            return (
-                                                <Box
-                                                    key={hijo.estudiante_id}
-                                                    onClick={() => { if (!hayQRActivo) { setHijoActivo(hijo); setSeleccionadas(new Set()); } }}
-                                                    sx={{
-                                                        display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75,
-                                                        borderRadius: '10px', cursor: hayQRActivo ? 'not-allowed' : 'pointer',
-                                                        border: `1.5px solid ${activo ? alpha(gold, 0.5) : alpha(isDark ? '#fff' : '#000', 0.1)}`,
-                                                        bgcolor: activo ? alpha(gold, isDark ? 0.12 : 0.07) : 'transparent',
-                                                        opacity: hayQRActivo && !activo ? 0.5 : 1,
-                                                        transition: 'all 0.15s',
-                                                    }}
-                                                >
-                                                    <Avatar sx={{ width: 22, height: 22, fontSize: '0.6rem', fontWeight: 800, background: activo ? gradBg : alpha(gold, 0.2), color: activo ? (isDark ? '#000' : '#fff') : gold }}>
-                                                        {hijo.nombres.charAt(0)}{hijo.apellidos.charAt(0)}
-                                                    </Avatar>
-                                                    <Typography variant="caption" fontWeight={activo ? 800 : 600} sx={{ color: activo ? (isDark ? gold : '#d97706') : 'text.secondary', fontSize: 12 }}>
-                                                        {hijo.nombres.split(' ')[0]}
-                                                    </Typography>
-                                                </Box>
-                                            );
-                                        })}
+                                <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500, letterSpacing: 0.3, ml: { xs: 0, md: 6.5 } }}>
+                                    Generá un QR y pagá desde la app de tu banco.
+                                </Typography>
+                            </Box>
+
+                            <Box
+                                sx={{
+                                    display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap',
+                                    width: { xs: '100%', md: 'auto' },
+                                    justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                                }}
+                            >
+                                <ModoToggle
+                                    modo={modo}
+                                    onChange={handleCambioModo}
+                                    tieneMultiplesHijos={tieneMultiplesHijos}
+                                    isDark={isDark}
+                                    gold={gold}
+                                />
+
+                                {modo === 'individual' && hijoActivo && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1, borderRadius: '12px', bgcolor: isDark ? alpha('#fff', 0.04) : alpha(gold, 0.05), border: `1px solid ${alpha(gold, 0.2)}` }}>
+                                        <Box sx={{ width: 28, height: 28, borderRadius: '9px', background: gradBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: isDark ? '#000' : '#fff', flexShrink: 0 }}>
+                                            {hijoActivo.nombres.charAt(0)}{hijoActivo.apellidos.charAt(0)}
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="body2" fontWeight={800} sx={{ fontSize: 13, lineHeight: 1.2 }}>{hijoActivo.nombres} {hijoActivo.apellidos}</Typography>
+                                            <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>{hijoActivo.ruta_nombre}</Typography>
+                                        </Box>
+                                    </Box>
+                                )}
+
+                                {modo === 'familiar' && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1, borderRadius: '12px', bgcolor: isDark ? alpha(gold, 0.1) : alpha(gold, 0.06), border: `1px solid ${alpha(gold, 0.3)}` }}>
+                                        <PeopleRoundedIcon sx={{ fontSize: 16, color: gold }} />
+                                        <Typography variant="caption" fontWeight={800} sx={{ color: gold, fontSize: 12 }}>
+                                            {hijos.length} hijos · Pago familiar
+                                        </Typography>
                                     </Box>
                                 )}
                             </Box>
                         </Box>
-                    </Fade>
 
-                    {/* ══ CUERPO ══ */}
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 380px' }, gap: 3, alignItems: 'start' }}>
+                        {/* Selector de hijo — solo modo individual con múltiples hijos */}
+                        {modo === 'individual' && tieneMultiplesHijos && (
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', ml: { xs: 0, md: 6.5 } }}>
+                                {hijos.map(hijo => {
+                                    const activo = hijoActivo?.estudiante_id === hijo.estudiante_id;
+                                    return (
+                                        <Box
+                                            key={hijo.estudiante_id}
+                                            onClick={() => { if (!hayQRActivo) { setHijoActivo(hijo); setSeleccionadas(new Set()); } }}
+                                            sx={{
+                                                display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75,
+                                                borderRadius: '10px', cursor: hayQRActivo ? 'not-allowed' : 'pointer',
+                                                border: `1.5px solid ${activo ? alpha(gold, 0.5) : isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
+                                                bgcolor: activo ? alpha(gold, isDark ? 0.12 : 0.07) : 'transparent',
+                                                opacity: hayQRActivo && !activo ? 0.5 : 1,
+                                                transition: 'all 0.15s',
+                                            }}
+                                        >
+                                            <Avatar sx={{ width: 22, height: 22, fontSize: '0.6rem', fontWeight: 800, background: activo ? gradBg : alpha(gold, 0.2), color: activo ? (isDark ? '#000' : '#fff') : gold }}>
+                                                {hijo.nombres.charAt(0)}{hijo.apellidos.charAt(0)}
+                                            </Avatar>
+                                            <Typography variant="caption" fontWeight={activo ? 800 : 600} sx={{ color: activo ? gold : 'text.secondary', fontSize: 12 }}>
+                                                {hijo.nombres.split(' ')[0]}
+                                            </Typography>
+                                        </Box>
+                                    );
+                                })}
+                            </Box>
+                        )}
+                    </Box>
+                </Fade>
+
+                {/* ══ CUERPO ══ */}
+                <Fade in timeout={700}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 380px' }, gap: 2.5, alignItems: 'start' }}>
 
                         {/* ── COLUMNA IZQUIERDA ── */}
-                        <Box sx={{ borderRadius: '20px', background: isDark ? 'linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))' : '#fff', border: `1px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)}`, boxShadow: isDark ? 'none' : '0 4px 24px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                        <Box sx={{
+                            borderRadius: '16px',
+                            bgcolor: isDark ? alpha('#fff', 0.03) : '#fff',
+                            border: `1px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)}`,
+                            overflow: 'hidden',
+                        }}>
 
-                            <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: isDark ? alpha('#fff', 0.02) : alpha('#f8f9fa', 0.5) }}>
+                            <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                     {modo === 'familiar'
-                                        ? <PeopleRoundedIcon sx={{ fontSize: 17, color: isDark ? gold : '#d97706' }} />
-                                        : <DirectionsBusRoundedIcon sx={{ fontSize: 17, color: isDark ? gold : '#d97706' }} />
+                                        ? <PeopleRoundedIcon sx={{ fontSize: 17, color: gold }} />
+                                        : <DirectionsBusRoundedIcon sx={{ fontSize: 17, color: gold }} />
                                     }
                                     <Typography variant="subtitle2" fontWeight={800}>
                                         {modo === 'familiar' ? 'Seleccioná cuotas de tus hijos' : 'Seleccioná las cuotas a pagar'}
@@ -689,13 +715,13 @@ export default function PagarTransporteOnlinePage() {
                                         <Chip
                                             label={`${seleccionadas.size} seleccionada${seleccionadas.size > 1 ? 's' : ''}`}
                                             size="small"
-                                            sx={{ height: 20, fontSize: 10, fontWeight: 700, bgcolor: isDark ? alpha(gold, 0.12) : alpha(gold, 0.08), color: isDark ? gold : '#d97706', borderRadius: 1.5 }}
+                                            sx={{ height: 20, fontSize: 10, fontWeight: 700, bgcolor: alpha(gold, isDark ? 0.12 : 0.08), color: gold, borderRadius: 1.5 }}
                                         />
                                     )}
                                 </Box>
 
                                 {modo === 'individual' && !loadingCuotas && pagables.length > 0 && !hayQRActivo && (
-                                    <Box onClick={seleccionarTodas} sx={{ fontSize: 12, fontWeight: 700, color: isDark ? gold : '#d97706', cursor: 'pointer', '&:hover': { opacity: 0.7 } }}>
+                                    <Box onClick={seleccionarTodas} sx={{ fontSize: 12, fontWeight: 700, color: gold, cursor: 'pointer', '&:hover': { opacity: 0.7 } }}>
                                         {seleccionadas.size === pagables.length ? 'Deseleccionar todas' : 'Seleccionar todas'}
                                     </Box>
                                 )}
@@ -711,12 +737,12 @@ export default function PagarTransporteOnlinePage() {
                                 <>
                                     {(loadingHijos || loadingCuotas) && (
                                         <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                            {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={72} sx={{ borderRadius: '16px' }} />)}
+                                            {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={72} sx={{ borderRadius: '14px' }} />)}
                                         </Box>
                                     )}
                                     {!loadingCuotas && pagables.length === 0 && (
-                                        <Box sx={{ textAlign: 'center', py: 8 }}>
-                                            <CheckCircleRoundedIcon sx={{ fontSize: 52, color: '#10b981', mb: 1.5, opacity: 0.6 }} />
+                                        <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
+                                            <CheckCircleRoundedIcon sx={{ fontSize: 52, color: '#10b981', mb: 1.5, opacity: 0.7 }} />
                                             <Typography variant="body1" fontWeight={800} color="text.secondary">¡Estás al día!</Typography>
                                             <Typography variant="caption" color="text.disabled">No tenés cuotas de transporte pendientes de pago</Typography>
                                         </Box>
@@ -735,7 +761,7 @@ export default function PagarTransporteOnlinePage() {
                                             )}
                                             {pagables.filter(c => c.estado === 'pendiente').length > 0 && (
                                                 <Box>
-                                                    <Typography variant="caption" fontWeight={800} sx={{ color: isDark ? gold : '#d97706', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, mb: 1, display: 'block', px: 0.5 }}>Pendientes</Typography>
+                                                    <Typography variant="caption" fontWeight={800} sx={{ color: gold, fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, mb: 1, display: 'block', px: 0.5 }}>Pendientes</Typography>
                                                     {pagables.filter(c => c.estado === 'pendiente').map((c, i) => (
                                                         <Box key={c.pago_id} sx={{ mb: 1 }}>
                                                             <CuotaCard cuota={c} selected={seleccionadas.has(c.pago_id)} onToggle={() => toggleSeleccion(c.pago_id)} disabled={hayQRActivo} isDark={isDark} gold={gold} index={i} />
@@ -757,7 +783,7 @@ export default function PagarTransporteOnlinePage() {
                             )}
 
                             {seleccionadas.size > 0 && (
-                                <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${isDark ? alpha('#fff', 0.05) : alpha('#000', 0.05)}`, bgcolor: isDark ? alpha('#fff', 0.02) : alpha('#f8f9fa', 0.5), display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
                                     <Box>
                                         <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: 10 }}>
                                             {seleccionadas.size} CUOTA{seleccionadas.size !== 1 ? 'S' : ''} SELECCIONADA{seleccionadas.size !== 1 ? 'S' : ''}
@@ -769,7 +795,7 @@ export default function PagarTransporteOnlinePage() {
                                             </Typography>
                                         )}
                                         {modo === 'familiar' && seleccionadas.size < 2 && (
-                                            <Typography variant="caption" sx={{ color: isDark ? alpha(gold, 0.7) : '#d97706', fontSize: 11, fontWeight: 600 }}>
+                                            <Typography variant="caption" sx={{ color: gold, fontSize: 11, fontWeight: 600 }}>
                                                 Necesitás al menos 2 para el QR familiar
                                             </Typography>
                                         )}
@@ -786,22 +812,21 @@ export default function PagarTransporteOnlinePage() {
 
                         {/* ── COLUMNA DERECHA: QR ── */}
                         <Box sx={{
-                            borderRadius: '20px',
-                            background: isDark ? 'linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))' : '#fff',
+                            borderRadius: '16px',
+                            bgcolor: isDark ? alpha('#fff', 0.03) : '#fff',
                             border: `1px solid ${pagado ? alpha('#10b981', 0.3) : qrData ? alpha(gold, 0.25) : isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)}`,
-                            boxShadow: pagado ? `0 4px 24px ${alpha('#10b981', 0.15)}` : isDark ? 'none' : '0 4px 24px rgba(0,0,0,0.05)',
                             overflow: 'hidden', position: { md: 'sticky' }, top: { md: 24 },
                         }}>
-                            <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`, bgcolor: isDark ? alpha('#fff', 0.02) : alpha('#f8f9fa', 0.5), display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                <QrCode2RoundedIcon sx={{ fontSize: 17, color: pagado ? '#10b981' : isDark ? gold : '#d97706' }} />
+                            <Box sx={{ px: 3, py: 2, borderBottom: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <QrCode2RoundedIcon sx={{ fontSize: 17, color: pagado ? '#10b981' : gold }} />
                                 <Typography variant="subtitle2" fontWeight={800}>
                                     {pagado ? 'Pago Confirmado' : modo === 'familiar' ? 'QR Familiar' : 'Código QR de Pago'}
                                 </Typography>
                                 {qrData && !pagado && (
-                                    <Chip label="ACTIVO" size="small" sx={{ height: 18, fontSize: 9, fontWeight: 900, bgcolor: alpha('#10b981', 0.12), color: '#10b981', borderRadius: 1.5, animation: `${pulseGreen} 2s ease-in-out infinite` }} />
+                                    <Chip label="ACTIVO" size="small" sx={{ height: 18, fontSize: 9, fontWeight: 900, bgcolor: alpha('#10b981', 0.12), color: '#10b981', borderRadius: 1.5, animation: `${pulse('#10b981')} 2.5s ease-in-out infinite` }} />
                                 )}
                                 {modo === 'familiar' && !qrData && !pagado && (
-                                    <Chip label="MULTI-HIJO" size="small" sx={{ height: 18, fontSize: 9, fontWeight: 900, bgcolor: alpha(gold, 0.12), color: isDark ? gold : '#d97706', borderRadius: 1.5 }} />
+                                    <Chip label="MULTI-HIJO" size="small" sx={{ height: 18, fontSize: 9, fontWeight: 900, bgcolor: alpha(gold, 0.12), color: gold, borderRadius: 1.5 }} />
                                 )}
                             </Box>
 
@@ -820,14 +845,16 @@ export default function PagarTransporteOnlinePage() {
                                         onClick={puedeGenerar && !isGenerando ? handleGenerarQR : undefined}
                                         sx={{
                                             mt: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
-                                            py: 1.5, borderRadius: '14px',
+                                            py: 1.5, borderRadius: '12px',
                                             background: puedeGenerar ? gradBg : isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
                                             color: puedeGenerar ? (isDark ? '#000' : '#fff') : 'text.disabled',
                                             fontWeight: 800, fontSize: 14,
                                             cursor: puedeGenerar && !isGenerando ? 'pointer' : 'not-allowed',
-                                            boxShadow: puedeGenerar ? `0 4px 16px ${alpha(gold, 0.4)}` : 'none',
                                             transition: 'all 0.2s',
-                                            '&:hover': puedeGenerar && !isGenerando ? { opacity: 0.88, transform: 'translateY(-1px)' } : {},
+                                            '&:hover': puedeGenerar && !isGenerando ? {
+                                                transform: 'translateY(-1px)',
+                                                boxShadow: isDark ? '0 8px 24px rgba(250, 204, 21, 0.3)' : '0 8px 24px rgba(245, 158, 11, 0.3)',
+                                            } : {},
                                         }}
                                     >
                                         {isGenerando ? (
@@ -852,7 +879,7 @@ export default function PagarTransporteOnlinePage() {
                                             { n: '4', t: 'Escaneá el QR y confirmá el pago' },
                                         ]).map(step => (
                                             <Box key={step.n} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                                                <Box sx={{ width: 22, height: 22, borderRadius: '7px', flexShrink: 0, bgcolor: isDark ? alpha(gold, 0.12) : alpha(gold, 0.08), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: isDark ? gold : '#d97706' }}>
+                                                <Box sx={{ width: 22, height: 22, borderRadius: '7px', flexShrink: 0, bgcolor: alpha(gold, isDark ? 0.12 : 0.08), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: gold }}>
                                                     {step.n}
                                                 </Box>
                                                 <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ fontSize: 12 }}>{step.t}</Typography>
@@ -864,7 +891,8 @@ export default function PagarTransporteOnlinePage() {
                         </Box>
 
                     </Box>
-                </Box>
+                </Fade>
+
             </Container>
         </Box>
     );

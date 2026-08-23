@@ -48,6 +48,7 @@ import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined
 import PaymentIcon from '@mui/icons-material/Payment';
 import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
 import NotificationAddOutlinedIcon from '@mui/icons-material/NotificationAddOutlined';
+import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 
 import { useAuth } from '../../context/AuthContext';
 import { title } from 'process';
@@ -426,6 +427,29 @@ const sections = [
     ],
   },
   {
+    label: 'Financiero',
+    items: [
+      {
+        title: 'Balance General',
+        to: '/dashboard/financiero',
+        icon: <CalculateIcon />,
+        roles: ['super_admin', 'secretaria']
+      },
+      {
+        title: 'Ingresos',
+        to: '/dashboard/ingresos',
+        icon: <CalculateIcon />,
+        roles: ['super_admin', 'secretaria']
+      },
+      {
+        title: 'Egresos',
+        to: '/dashboard/egresos',
+        icon: <CalculateIcon />,
+        roles: ['super_admin', 'secretaria']
+      },
+    ],
+  },
+  {
     label: 'Estructura Académica',
     items: [
       {
@@ -566,6 +590,12 @@ const sections = [
         icon: <SchoolOutlinedIcon />,
         roles: ['padre'],
       },
+      {
+        title: 'Tienda Online',
+        to: '/dashboard/padre/productos',
+        icon: <ShoppingCartOutlinedIcon />,
+        roles: ['padre'],
+      }
     ],
 
   },
@@ -573,15 +603,15 @@ const sections = [
     label: 'Financiero',
     items: [
       {
-        title: 'Estado de pagos',
+        title: 'Mensualidades',
         to: '/dashboard/padre/financiero',
         icon: <CalculateIcon />,
         roles: ['padre'],
       },
       {
-        title: 'Pagar Mensualidad',
-        to: '/dashboard/padre/financiero/pagar',
-        icon: <PaymentIcon />,
+        title: "Transporte",
+        to: '/dashboard/padre/transporte',
+        icon: <LocalShippingOutlinedIcon />,
         roles: ['padre'],
       },
       {

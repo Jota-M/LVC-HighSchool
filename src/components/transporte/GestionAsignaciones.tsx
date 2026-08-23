@@ -55,6 +55,7 @@ import {
 } from '@mui/icons-material';
 import { useTransporte } from '@/hooks/useTransporte';
 import { useEstudiantes } from '@/hooks/useEstudiantes';
+import { usePeriodos } from '@/hooks/usePeriodos';
 import transporteService from '@/services/transporte';
 import type { AsignacionTransporte, CrearAsignacionRequest } from '@/types/transporte';
 import type { Estudiante } from '@/types/estudianteTypes';
@@ -62,7 +63,7 @@ import type { Estudiante } from '@/types/estudianteTypes';
 export const GestionAsignaciones: React.FC = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  
+
   const {
     asignaciones,
     rutas,
@@ -84,11 +85,14 @@ export const GestionAsignaciones: React.FC = () => {
     loadRutas: true,
   });
 
+  // Hook para periodos académicos
+  const { periodos, periodoActivo } = usePeriodos();
+
   // Hook para buscar estudiantes
-  const { 
-    estudiantes, 
-    isLoading: loadingEstudiantes, 
-    actualizarFiltros 
+  const {
+    estudiantes,
+    isLoading: loadingEstudiantes,
+    actualizarFiltros
   } = useEstudiantes();
 
   const [openDialog, setOpenDialog] = useState(false);
@@ -99,6 +103,7 @@ export const GestionAsignaciones: React.FC = () => {
     search: '',
     estado: '',
     ruta_id: '',
+    periodo_academico_id: '',
   });
 
   // Estado para el estudiante seleccionado en el formulario
@@ -108,7 +113,7 @@ export const GestionAsignaciones: React.FC = () => {
     estudiante_id: 0,
     ruta_id: 0,
     parada_id: undefined,
-    periodo_academico_id: 3,
+    periodo_academico_id: 0,
     fecha_inicio: new Date().toISOString().split('T')[0],
     fecha_fin: undefined,
     costo_mensual: 0,
@@ -119,11 +124,21 @@ export const GestionAsignaciones: React.FC = () => {
     observaciones: '',
   });
 
+  // Establecer periodo activo por defecto cuando cargue
+  useEffect(() => {
+    if ((!formData.periodo_academico_id || formData.periodo_academico_id === 0) && (periodoActivo?.id || periodos.length > 0)) {
+      setFormData(prev => ({
+        ...prev,
+        periodo_academico_id: periodoActivo?.id || periodos[0]?.id || 1,
+      }));
+    }
+  }, [periodoActivo, periodos, formData.periodo_academico_id]);
+
   // Cargar paradas cuando cambia la ruta
   useEffect(() => {
     if (formData.ruta_id) {
       cargarParadas(formData.ruta_id);
-      
+
       // Auto-completar costo mensual si se selecciona una ruta
       const rutaSeleccionada = rutas.find(r => r.id === formData.ruta_id);
       if (rutaSeleccionada && !modoEdicion) {
@@ -142,7 +157,7 @@ export const GestionAsignaciones: React.FC = () => {
       estudiante_id: 0,
       ruta_id: 0,
       parada_id: undefined,
-      periodo_academico_id: 3,
+      periodo_academico_id: periodoActivo?.id || periodos[0]?.id || 1,
       fecha_inicio: new Date().toISOString().split('T')[0],
       fecha_fin: undefined,
       costo_mensual: 0,
@@ -169,7 +184,7 @@ export const GestionAsignaciones: React.FC = () => {
       estudiante_id: asignacion.estudiante_id,
       ruta_id: asignacion.ruta_id,
       parada_id: asignacion.parada_id,
-      periodo_academico_id: asignacion.periodo_academico_id,
+      periodo_academico_id: asignacion.periodo_academico_id || periodoActivo?.id || 1,
       fecha_inicio: asignacion.fecha_inicio,
       fecha_fin: asignacion.fecha_fin,
       costo_mensual: asignacion.costo_mensual,
@@ -179,7 +194,7 @@ export const GestionAsignaciones: React.FC = () => {
       telefono_emergencia: asignacion.telefono_emergencia || '',
       observaciones: asignacion.observaciones || '',
     });
-    
+
     // Crear un objeto estudiante para mostrar en el formulario
     setEstudianteSeleccionado({
       id: asignacion.estudiante_id,
@@ -187,8 +202,8 @@ export const GestionAsignaciones: React.FC = () => {
       apellido_paterno: asignacion.estudiante_apellido_paterno,
       codigo: asignacion.estudiante_codigo,
       foto: asignacion.estudiante_foto,
-    } as Estudiante);
-    
+    } as unknown as Estudiante);
+
     setModoEdicion(true);
     setOpenDialog(true);
   };
@@ -227,7 +242,7 @@ export const GestionAsignaciones: React.FC = () => {
     }
 
     try {
-      await generarCuotas(asignacion.id, 10);
+      await generarCuotas(asignacion.id);   // 👈 sin segundo argumento
       alert('Cuotas generadas exitosamente');
     } catch (error: any) {
       alert(error.response?.data?.message || 'Error al generar cuotas');
@@ -238,10 +253,10 @@ export const GestionAsignaciones: React.FC = () => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : 
-              name === 'ruta_id' || name === 'parada_id' || name === 'costo_mensual'
-                ? parseFloat(value) || 0
-                : value,
+      [name]: type === 'checkbox' ? checked :
+        name === 'ruta_id' || name === 'parada_id' || name === 'costo_mensual' || name === 'periodo_academico_id'
+          ? parseFloat(value) || 0
+          : value,
     }));
   };
 
@@ -249,10 +264,10 @@ export const GestionAsignaciones: React.FC = () => {
   const handleBuscarEstudiante = useCallback((value: string) => {
     const searchValue = value.trim();
     if (searchValue.length >= 2) {
-      actualizarFiltros({ 
-        search: searchValue, 
+      actualizarFiltros({
+        search: searchValue,
         limit: 10,
-        activo: true 
+        activo: true
       });
     }
   }, [actualizarFiltros]);
@@ -272,12 +287,12 @@ export const GestionAsignaciones: React.FC = () => {
       alert('Debe seleccionar un estudiante');
       return;
     }
-    
+
     if (!formData.ruta_id) {
       alert('Debe seleccionar una ruta');
       return;
     }
-    
+
     if (!formData.costo_mensual || formData.costo_mensual <= 0) {
       alert('El costo mensual debe ser mayor a 0');
       return;
@@ -303,6 +318,7 @@ export const GestionAsignaciones: React.FC = () => {
       search: filtros.search,
       estado: filtros.estado || undefined,
       ruta_id: filtros.ruta_id ? parseInt(filtros.ruta_id) : undefined,
+      periodo_academico_id: filtros.periodo_academico_id ? parseInt(filtros.periodo_academico_id) : undefined,
     });
   };
 
@@ -415,7 +431,7 @@ export const GestionAsignaciones: React.FC = () => {
         </Box>
 
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <TextField
               fullWidth
               size="small"
@@ -434,7 +450,30 @@ export const GestionAsignaciones: React.FC = () => {
               }}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <TextField
+              fullWidth
+              size="small"
+              select
+              label="Periodo"
+              value={filtros.periodo_academico_id}
+              onChange={(e) => setFiltros({ ...filtros, periodo_academico_id: e.target.value })}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '12px',
+                  backgroundColor: alpha(theme.palette.background.paper, 0.5),
+                },
+              }}
+            >
+              <MenuItem value="">Todos los periodos</MenuItem>
+              {periodos.map((p) => (
+                <MenuItem key={p.id} value={p.id.toString()}>
+                  {p.nombre} {p.activo ? '• Activo' : ''}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
             <TextField
               fullWidth
               size="small"
@@ -460,7 +499,7 @@ export const GestionAsignaciones: React.FC = () => {
               ))}
             </TextField>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
             <TextField
               fullWidth
               size="small"
@@ -475,14 +514,14 @@ export const GestionAsignaciones: React.FC = () => {
                 },
               }}
             >
-              <MenuItem value="">Todos los estados</MenuItem>
+              <MenuItem value="">Todos</MenuItem>
               <MenuItem value="activo">✓ Activo</MenuItem>
               <MenuItem value="suspendido">⏸ Suspendido</MenuItem>
               <MenuItem value="cancelado">✕ Cancelado</MenuItem>
               <MenuItem value="finalizado">⚑ Finalizado</MenuItem>
             </TextField>
           </Grid>
-          <Grid item xs={12} sm={6} md={2}>
+          <Grid size={{ xs: 12, sm: 6, md: 1.5 }}>
             <Button
               fullWidth
               variant="contained"
@@ -549,7 +588,7 @@ export const GestionAsignaciones: React.FC = () => {
       ) : (
         <Grid container spacing={3}>
           {asignaciones.map((asignacion, index) => (
-            <Grid item xs={12} md={6} lg={4} key={asignacion.id}>
+            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={asignacion.id}>
               <Zoom in={true} style={{ transitionDelay: `${index * 50}ms` }}>
                 <Card
                   sx={{
@@ -595,7 +634,7 @@ export const GestionAsignaciones: React.FC = () => {
                       >
                         <PersonIcon sx={{ fontSize: 28 }} />
                       </Avatar>
-                      
+
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5, lineHeight: 1.2 }}>
                           {asignacion.estudiante_nombres} {asignacion.estudiante_apellido_paterno}
@@ -901,9 +940,9 @@ export const GestionAsignaciones: React.FC = () => {
           },
         }}
       >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <DialogTitle sx={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
           pb: 2,
         }}>
@@ -948,7 +987,7 @@ export const GestionAsignaciones: React.FC = () => {
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mb: 2, display: 'block' }}>
                 ESTUDIANTE
               </Typography>
-              
+
               <Autocomplete
                 options={estudiantes}
                 value={estudianteSeleccionado}
@@ -989,10 +1028,10 @@ export const GestionAsignaciones: React.FC = () => {
                   return (
                     <Box component="li" key={key} {...otherProps}>
                       <Box display="flex" alignItems="center" gap={2} width="100%">
-                        <Avatar 
+                        <Avatar
                           src={option.foto}
-                          sx={{ 
-                            bgcolor: yellowColor, 
+                          sx={{
+                            bgcolor: yellowColor,
                             color: '#000',
                             width: 40,
                             height: 40,
@@ -1018,20 +1057,20 @@ export const GestionAsignaciones: React.FC = () => {
 
               {/* Preview del estudiante seleccionado */}
               {estudianteSeleccionado && (
-                <Box 
-                  sx={{ 
-                    mt: 2, 
-                    p: 2, 
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 2,
                     borderRadius: '12px',
                     backgroundColor: alpha(yellowColor, 0.1),
                     border: `1px solid ${alpha(yellowColor, 0.2)}`,
                   }}
                 >
                   <Box display="flex" alignItems="center" gap={2}>
-                    <Avatar 
+                    <Avatar
                       src={estudianteSeleccionado.foto}
-                      sx={{ 
-                        width: 48, 
+                      sx={{
+                        width: 48,
                         height: 48,
                         border: `2px solid ${yellowColor}`,
                       }}
@@ -1046,15 +1085,15 @@ export const GestionAsignaciones: React.FC = () => {
                         Código: {estudianteSeleccionado.codigo}
                       </Typography>
                     </Box>
-                    <Chip 
-                      label="Seleccionado" 
-                      size="small" 
-                      sx={{ 
+                    <Chip
+                      label="Seleccionado"
+                      size="small"
+                      sx={{
                         ml: 'auto',
                         backgroundColor: alpha('#10b981', 0.2),
                         color: '#10b981',
                         fontWeight: 600,
-                      }} 
+                      }}
                     />
                   </Box>
                 </Box>
@@ -1073,7 +1112,7 @@ export const GestionAsignaciones: React.FC = () => {
                 RUTA Y PARADA
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     select
@@ -1104,7 +1143,7 @@ export const GestionAsignaciones: React.FC = () => {
                     ))}
                   </TextField>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     select
@@ -1143,7 +1182,30 @@ export const GestionAsignaciones: React.FC = () => {
                 PERÍODO Y COSTO
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12 }}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="Periodo Académico *"
+                    name="periodo_academico_id"
+                    value={formData.periodo_academico_id || ''}
+                    onChange={handleChange}
+                    required
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px',
+                        backgroundColor: alpha(theme.palette.background.paper, 0.5),
+                      }
+                    }}
+                  >
+                    {periodos.map((periodo) => (
+                      <MenuItem key={periodo.id} value={periodo.id}>
+                        {periodo.nombre} ({periodo.codigo}) {periodo.activo ? '• Activo' : ''}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Fecha de Inicio"
@@ -1160,7 +1222,7 @@ export const GestionAsignaciones: React.FC = () => {
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Fecha de Fin"
@@ -1177,7 +1239,7 @@ export const GestionAsignaciones: React.FC = () => {
                     }}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
                     label="Costo Mensual (Bs) *"
@@ -1210,7 +1272,7 @@ export const GestionAsignaciones: React.FC = () => {
                 SERVICIOS
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Paper
                     sx={{
                       p: 2,
@@ -1237,7 +1299,7 @@ export const GestionAsignaciones: React.FC = () => {
                     </Typography>
                   </Paper>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Paper
                     sx={{
                       p: 2,
@@ -1279,7 +1341,7 @@ export const GestionAsignaciones: React.FC = () => {
                 CONTACTO DE EMERGENCIA
               </Typography>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Nombre del Contacto"
@@ -1294,7 +1356,7 @@ export const GestionAsignaciones: React.FC = () => {
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Teléfono de Emergencia"
@@ -1394,7 +1456,7 @@ export const GestionAsignaciones: React.FC = () => {
       >
         <DialogTitle
           sx={{
-            background: asignacionSeleccionada 
+            background: asignacionSeleccionada
               ? `linear-gradient(135deg, ${alpha(getEstadoColor(asignacionSeleccionada.estado), 0.2)} 0%, ${alpha(getEstadoColor(asignacionSeleccionada.estado), 0.05)} 100%)`
               : 'transparent',
             display: 'flex',
@@ -1488,7 +1550,7 @@ export const GestionAsignaciones: React.FC = () => {
 
               {/* Costo y Período */}
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Paper
                     sx={{
                       p: 2,
@@ -1507,7 +1569,7 @@ export const GestionAsignaciones: React.FC = () => {
                     </Typography>
                   </Paper>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Paper
                     sx={{
                       p: 2,
@@ -1657,7 +1719,7 @@ export const GestionAsignaciones: React.FC = () => {
                   Cambiar Estado
                 </Typography>
                 <Grid container spacing={1}>
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Button
                       fullWidth
                       variant="outlined"
@@ -1677,7 +1739,7 @@ export const GestionAsignaciones: React.FC = () => {
                       Suspender
                     </Button>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid size={{ xs: 6 }}>
                     <Button
                       fullWidth
                       variant="outlined"

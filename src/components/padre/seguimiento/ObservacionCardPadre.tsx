@@ -2,6 +2,10 @@
 // components/padre/seguimiento/ObservacionCardPadre.tsx
 // Tarjeta de observación para el padre. Muestra el contenido,
 // el estado de lectura, y permite acusar recibo con comentario opcional.
+// Restyled: el acento decorativo (antes morado) ahora usa el token de marca
+// compartido (ámbar en modo oscuro / azul en modo claro), igual que financiero
+// y seguimiento/page.tsx. Los colores semánticos (urgente=rojo, atención=ámbar-
+// alerta, leído=verde) se mantienen intactos.
 
 import React, { useState } from 'react';
 import {
@@ -9,18 +13,18 @@ import {
   Button, Collapse, TextField, Avatar, Divider,
   Tooltip, CircularProgress, useTheme, alpha,
 } from '@mui/material';
-import CheckCircleIcon   from '@mui/icons-material/CheckCircle';
-import ErrorIcon         from '@mui/icons-material/Error';
-import WarningIcon       from '@mui/icons-material/Warning';
-import InfoIcon          from '@mui/icons-material/Info';
-import SchoolIcon        from '@mui/icons-material/School';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
+import WarningIcon from '@mui/icons-material/Warning';
+import InfoIcon from '@mui/icons-material/Info';
+import SchoolIcon from '@mui/icons-material/School';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import PersonIcon        from '@mui/icons-material/Person';
-import ChatBubbleIcon    from '@mui/icons-material/ChatBubble';
+import PersonIcon from '@mui/icons-material/Person';
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
-import { keyframes }     from '@mui/system';
+import { keyframes } from '@mui/system';
 
-import { ObservacionHijo }  from '@/types/seguimientoPadreTypes';
+import { ObservacionHijo } from '@/types/seguimientoPadreTypes';
 import { getNivelRelevancia } from '@/types/seguimientoPedagogicoTypes';
 
 const slideIn = keyframes`
@@ -38,13 +42,19 @@ interface ObservacionCardPadreProps {
 const ObservacionCardPadre: React.FC<ObservacionCardPadreProps> = ({
   obs, onAcusar, isAcusando, index,
 }) => {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
-  const [expandido, setExpandido]       = useState(!obs.ya_leido); // abrir si no leído
+  // ─── Token de marca compartido (mismo criterio que financiero / seguimiento) ───
+  const primary = isDark ? '#facc15' : '#0288d1';
+  const primaryEnd = isDark ? '#f59e0b' : '#01579b';
+  const gradBg = `linear-gradient(135deg, ${primary} 0%, ${primaryEnd} 100%)`;
+  const onGrad = isDark ? '#000' : '#fff'; // texto sobre fondo con gradiente de marca
+
+  const [expandido, setExpandido] = useState(!obs.ya_leido); // abrir si no leído
   const [mostrarComentario, setMostrarComentario] = useState(false);
-  const [comentario, setComentario]     = useState('');
-  const [confirmado, setConfirmado]     = useState(obs.ya_leido);
+  const [comentario, setComentario] = useState('');
+  const [confirmado, setConfirmado] = useState(obs.ya_leido);
 
   const meta = getNivelRelevancia(obs.nivel_relevancia);
   const Icon = obs.nivel_relevancia === 'urgente'
@@ -63,8 +73,8 @@ const ObservacionCardPadre: React.FC<ObservacionCardPadreProps> = ({
 
   const fechaLectura = obs.fecha_lectura
     ? new Date(obs.fecha_lectura).toLocaleDateString('es-BO', {
-        day: '2-digit', month: 'short', year: 'numeric',
-      })
+      day: '2-digit', month: 'short', year: 'numeric',
+    })
     : null;
 
   const handleAcusar = async () => {
@@ -75,7 +85,7 @@ const ObservacionCardPadre: React.FC<ObservacionCardPadreProps> = ({
     }
   };
 
-  // Color del borde izquierdo según urgencia
+  // Color del borde izquierdo según urgencia (semántico, sin tocar)
   const borderLeftColor = obs.nivel_relevancia === 'urgente'
     ? '#dc2626'
     : obs.nivel_relevancia === 'requiere_atencion'
@@ -86,18 +96,18 @@ const ObservacionCardPadre: React.FC<ObservacionCardPadreProps> = ({
     <Card
       sx={{
         borderRadius: '16px',
-        borderLeft:  `4px solid ${borderLeftColor}`,
-        border:      `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.07)}`,
+        borderLeft: `4px solid ${borderLeftColor}`,
+        border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.07)}`,
         borderLeftWidth: 4,
         background: confirmado
           ? isDark ? alpha('#fff', 0.02) : '#fafafa'
           : isDark ? alpha('#fff', 0.04) : '#fff',
-        opacity:    confirmado ? 0.85 : 1,
+        opacity: confirmado ? 0.85 : 1,
         transition: 'all 0.3s ease',
-        animation:  `${slideIn} 0.4s ease-out ${index * 0.06}s both`,
-        '&:hover':  { boxShadow: '0 4px 20px rgba(0,0,0,0.1)' },
-        position:   'relative',
-        overflow:   'visible',
+        animation: `${slideIn} 0.4s ease-out ${index * 0.06}s both`,
+        '&:hover': { boxShadow: '0 4px 20px rgba(0,0,0,0.1)' },
+        position: 'relative',
+        overflow: 'visible',
       }}
     >
       {/* Badge "NUEVO" si no fue leído */}
@@ -105,8 +115,8 @@ const ObservacionCardPadre: React.FC<ObservacionCardPadreProps> = ({
         <Box sx={{
           position: 'absolute',
           top: -8, right: 16,
-          bgcolor: obs.nivel_relevancia === 'urgente' ? '#dc2626' : '#8b5cf6',
-          color: '#fff',
+          bgcolor: obs.nivel_relevancia === 'urgente' ? '#dc2626' : primary,
+          color: onGrad,
           fontSize: '0.6rem',
           fontWeight: 800,
           px: 1, py: 0.25,
@@ -148,7 +158,7 @@ const ObservacionCardPadre: React.FC<ObservacionCardPadreProps> = ({
                 label={obs.categoria_nombre}
                 sx={{
                   bgcolor: obs.categoria_color ? alpha(obs.categoria_color, 0.12) : alpha('#000', 0.06),
-                  color:   obs.categoria_color ?? 'text.primary',
+                  color: obs.categoria_color ?? 'text.primary',
                   fontWeight: 700, fontSize: '0.68rem', height: 20,
                 }}
               />
@@ -252,12 +262,12 @@ const ObservacionCardPadre: React.FC<ObservacionCardPadreProps> = ({
             {obs.comentario_padre && (
               <Box sx={{
                 p: 1.5, borderRadius: '10px', mb: 2,
-                bgcolor: isDark ? alpha('#8b5cf6', 0.1) : alpha('#8b5cf6', 0.06),
-                border: `1px solid ${alpha('#8b5cf6', 0.2)}`,
+                bgcolor: isDark ? alpha(primary, 0.1) : alpha(primary, 0.06),
+                border: `1px solid ${alpha(primary, 0.25)}`,
               }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
-                  <ChatBubbleIcon sx={{ fontSize: 13, color: '#8b5cf6' }} />
-                  <Typography variant="caption" fontWeight={700} sx={{ color: '#8b5cf6' }}>
+                  <ChatBubbleIcon sx={{ fontSize: 13, color: primary }} />
+                  <Typography variant="caption" fontWeight={700} sx={{ color: primary }}>
                     Tu comentario
                   </Typography>
                 </Box>
@@ -300,8 +310,8 @@ const ObservacionCardPadre: React.FC<ObservacionCardPadreProps> = ({
                       textTransform: 'none',
                       fontWeight: 700,
                       fontSize: '0.8rem',
-                      background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                      color: '#fff',
+                      background: gradBg,
+                      color: onGrad,
                       '&:hover': { transform: 'translateY(-1px)' },
                     }}
                   >
@@ -318,8 +328,8 @@ const ObservacionCardPadre: React.FC<ObservacionCardPadreProps> = ({
                       textTransform: 'none',
                       fontWeight: 600,
                       fontSize: '0.8rem',
-                      borderColor: alpha('#8b5cf6', 0.4),
-                      color: '#8b5cf6',
+                      borderColor: alpha(primary, 0.4),
+                      color: primary,
                     }}
                   >
                     {mostrarComentario ? 'Sin comentario' : 'Agregar comentario'}
@@ -328,7 +338,7 @@ const ObservacionCardPadre: React.FC<ObservacionCardPadreProps> = ({
               </Box>
             )}
 
-            {/* Confirmado: mensaje de cierre */}
+            {/* Confirmado: mensaje de cierre (verde semántico, sin tocar) */}
             {confirmado && !obs.comentario_padre && (
               <Box sx={{
                 display: 'flex', alignItems: 'center', gap: 1,

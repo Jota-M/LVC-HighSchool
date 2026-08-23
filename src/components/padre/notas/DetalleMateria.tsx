@@ -1,5 +1,8 @@
 'use client';
 // components/padre/notas/DetalleMateria.tsx
+// Restyled: el hover del botón "volver" (antes azul fijo #3b82f6) ahora usa
+// el token de marca compartido. Colores por dimensión y "ausente" (rojo)
+// son semánticos y se mantienen sin cambios.
 
 import React from 'react';
 import {
@@ -129,6 +132,9 @@ const DetalleMateria: React.FC<Props> = ({
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
+  // Token de marca compartido (mismo criterio que financiero/seguimiento/notas)
+  const primary = isDark ? '#facc15' : '#0288d1';
+
   if (isLoading) {
     return (
       <Stack spacing={1.5}>
@@ -164,7 +170,7 @@ const DetalleMateria: React.FC<Props> = ({
               bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04),
               border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`,
               borderRadius: 2,
-              '&:hover': { bgcolor: isDark ? alpha('#3b82f6', 0.15) : alpha('#3b82f6', 0.08) },
+              '&:hover': { bgcolor: isDark ? alpha(primary, 0.15) : alpha(primary, 0.08) },
             }}
           >
             <ArrowBackIcon sx={{ fontSize: 18 }} />
@@ -267,8 +273,8 @@ const DetalleMateria: React.FC<Props> = ({
                     <TableBody>
                       {evals.map((ev, i) => {
                         const nota = ev.puntaje_obtenido;
-                        const max  = ev.puntaje_maximo ?? 100;
-                        const pct  = nota !== undefined && nota !== null ? Math.round((nota / max) * 100) : null;
+                        const max = ev.puntaje_maximo ?? 100;
+                        const pct = nota !== undefined && nota !== null ? Math.round((nota / max) * 100) : null;
                         return (
                           <TableRow
                             key={ev.evaluacion_id}

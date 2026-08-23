@@ -1,5 +1,9 @@
 'use client';
 // components/padre/notas/BoletinNotas.tsx
+// Restyled: la tarjeta "Promedio" (antes azul fijo #3b82f6) ahora usa el token
+// de marca compartido (ámbar oscuro / azul claro). Aprobadas (verde),
+// Reprobadas (rojo), Sin nota (gris) y los colores por dimensión/nivel de
+// rendimiento son semánticos y se mantienen sin cambios.
 
 import React, { useState, useCallback, useEffect } from 'react';
 import {
@@ -57,9 +61,9 @@ const BarraDimension: React.FC<{ codigo: CodigoDimension; nota: number | null | 
   const isDark = theme.palette.mode === 'dark';
   const cfg = DIMENSIONES_CONFIG[codigo];
   if (!cfg) {
-  console.warn('código inválido:', JSON.stringify(codigo));
-  return null;
-}
+    console.warn('código inválido:', JSON.stringify(codigo));
+    return null;
+  }
   const valor = nota ?? 0;
   return (
     <Box sx={{ mb: 1.25 }}>
@@ -370,9 +374,9 @@ const TarjetaMateria: React.FC<TarjetaMateriaProps> = ({
                 codigo={cod}
                 nota={
                   cod === 'SER' ? materia.nota_ser :
-                  cod === 'SAB' ? materia.nota_saber :
-                  cod === 'HAC' ? materia.nota_hacer :
-                  materia.nota_auto   // AUT
+                    cod === 'SAB' ? materia.nota_saber :
+                      cod === 'HAC' ? materia.nota_hacer :
+                        materia.nota_auto   // AUT
                 }
                 delay={index * 0.06 + i * 0.05}
               />
@@ -383,8 +387,8 @@ const TarjetaMateria: React.FC<TarjetaMateriaProps> = ({
             {loadingCalif
               ? <CircularProgress size={18} sx={{ color }} />
               : <IconButton size="small" sx={{ borderRadius: 2 }}>
-                  {expandido ? <ExpandLessIcon sx={{ fontSize: 18 }} /> : <ExpandMoreIcon sx={{ fontSize: 18 }} />}
-                </IconButton>
+                {expandido ? <ExpandLessIcon sx={{ fontSize: 18 }} /> : <ExpandMoreIcon sx={{ fontSize: 18 }} />}
+              </IconButton>
             }
             <Typography variant="caption" color="text.disabled" sx={{ fontSize: 9, fontWeight: 700 }}>
               {expandido ? 'cerrar' : 'ver notas'}
@@ -439,6 +443,13 @@ const BoletinNotas: React.FC<Props> = ({
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
+  // Token de marca compartido (mismo criterio que financiero/seguimiento) —
+  // usado solo en la tarjeta "Promedio", que representa el acento de página,
+  // no un estado semántico.
+  const primary = isDark ? '#facc15' : '#0288d1';
+  const primaryEnd = isDark ? '#f59e0b' : '#01579b';
+  const primaryGrad = `linear-gradient(135deg, ${primary}, ${primaryEnd})`;
+
   const [cache, setCache] = useState<Record<string, CalificacionPorPeriodo[]>>({});
 
   useEffect(() => { setCache({}); }, [periodoEvaluacionId]);
@@ -473,10 +484,10 @@ const BoletinNotas: React.FC<Props> = ({
       {/* Resumen global */}
       <Grid container spacing={1.5} sx={{ mb: 3 }}>
         {[
-          { label: 'Aprobadas',  value: aprobadas,  color: '#10b981', gradient: 'linear-gradient(135deg,#10b981,#34d399)' },
+          { label: 'Aprobadas', value: aprobadas, color: '#10b981', gradient: 'linear-gradient(135deg,#10b981,#34d399)' },
           { label: 'Reprobadas', value: reprobadas, color: '#ef4444', gradient: 'linear-gradient(135deg,#ef4444,#f87171)' },
-          { label: 'Sin nota',   value: sinNota,    color: '#6b7280', gradient: 'linear-gradient(135deg,#6b7280,#9ca3af)' },
-          { label: 'Promedio',   value: promedio != null ? `${promedio}` : '—', color: '#3b82f6', gradient: 'linear-gradient(135deg,#3b82f6,#60a5fa)' },
+          { label: 'Sin nota', value: sinNota, color: '#6b7280', gradient: 'linear-gradient(135deg,#6b7280,#9ca3af)' },
+          { label: 'Promedio', value: promedio != null ? `${promedio}` : '—', color: primary, gradient: primaryGrad },
         ].map((stat, i) => (
           <Grid size={{ xs: 6, sm: 3 }} key={stat.label}>
             <Card sx={{ borderRadius: 3, animation: `${fadeUp} 0.4s ease-out ${i * 0.07}s both`, border: `1px solid ${alpha(stat.color, 0.2)}`, background: isDark ? alpha(stat.color, 0.1) : alpha(stat.color, 0.05), '&::before': { content: '""', display: 'block', height: '3px', background: stat.gradient } }}>

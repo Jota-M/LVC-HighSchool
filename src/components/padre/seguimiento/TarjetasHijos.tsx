@@ -2,16 +2,19 @@
 // components/padre/seguimiento/TarjetasHijos.tsx
 // Tarjetas de resumen por hijo — el padre ve cuántas observaciones
 // tiene cada uno y puede seleccionar al que quiere revisar.
+// Restyled: el acento "sin novedades" (antes morado fijo) ahora usa el token
+// de marca compartido (ámbar oscuro / azul claro). Los acentos de urgente
+// (rojo) y atención (ámbar-alerta) son semánticos y se mantienen igual.
 
 import React from 'react';
 import {
   Box, Card, CardContent, CardActionArea, Typography, Avatar,
   Chip, Stack, Skeleton, Badge, useTheme, alpha,
 } from '@mui/material';
-import ErrorIcon   from '@mui/icons-material/Error';
+import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
-import CheckIcon   from '@mui/icons-material/Check';
-import PersonIcon  from '@mui/icons-material/Person';
+import CheckIcon from '@mui/icons-material/Check';
+import PersonIcon from '@mui/icons-material/Person';
 import { keyframes } from '@mui/system';
 
 import { ResumenHijo } from '@/types/seguimientoPadreTypes';
@@ -31,8 +34,11 @@ interface TarjetasHijosProps {
 const TarjetasHijos: React.FC<TarjetasHijosProps> = ({
   resumen, isLoading, hijoSeleccionado, onSeleccionar,
 }) => {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+
+  // ─── Token de marca compartido (mismo criterio que financiero / seguimiento) ───
+  const primary = isDark ? '#facc15' : '#0288d1';
 
   if (isLoading) {
     return (
@@ -50,15 +56,15 @@ const TarjetasHijos: React.FC<TarjetasHijosProps> = ({
     <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
       {resumen.map((hijo, i) => {
         const seleccionado = hijoSeleccionado === hijo.estudiante_id;
-        const tieneUrgente  = hijo.urgentes > 0;
+        const tieneUrgente = hijo.urgentes > 0;
         const tieneAtencion = hijo.requieren_atencion > 0;
-        const iniciales     = `${hijo.estudiante_nombres.charAt(0)}${hijo.estudiante_apellidos.charAt(0)}`;
+        const iniciales = `${hijo.estudiante_nombres.charAt(0)}${hijo.estudiante_apellidos.charAt(0)}`;
 
         const accentColor = tieneUrgente
           ? '#dc2626'
           : tieneAtencion
             ? '#d97706'
-            : isDark ? '#fbbf24' : '#8b5cf6';
+            : primary;
 
         return (
           <Card
@@ -140,11 +146,11 @@ const TarjetasHijos: React.FC<TarjetasHijosProps> = ({
                     <Typography
                       variant="caption"
                       sx={{
-                        color:       'text.secondary',
-                        whiteSpace:  'nowrap',
-                        overflow:    'hidden',
-                        textOverflow:'ellipsis',
-                        display:     'block',
+                        color: 'text.secondary',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block',
                       }}
                     >
                       {hijo.estudiante_apellidos}

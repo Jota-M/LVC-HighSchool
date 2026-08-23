@@ -1,276 +1,55 @@
 'use client';
 // app/dashboard/padre/financiero/page.tsx
 // Estado de Pagos — vista principal del módulo financiero del padre
+// Header estilo Estudiantes.tsx (paleta dual, sin contenedor) + stats y tabla componentizadas.
 
 import React, { useState, useCallback } from 'react';
 import {
   Box, Container, Typography, useTheme, alpha, Fade,
-  LinearProgress, Chip, Skeleton, IconButton, Tooltip,
-  Table, TableBody, TableCell, TableContainer, TableHead,
-  TableRow, Select, MenuItem, FormControl,
+  IconButton, Tooltip, Select, MenuItem, FormControl, Skeleton,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 import AccountBalanceWalletRoundedIcon from '@mui/icons-material/AccountBalanceWalletRounded';
-import TrendingUpRoundedIcon           from '@mui/icons-material/TrendingUpRounded';
-import CalendarMonthRoundedIcon        from '@mui/icons-material/CalendarMonthRounded';
-import CheckCircleRoundedIcon          from '@mui/icons-material/CheckCircleRounded';
-import WarningAmberRoundedIcon         from '@mui/icons-material/WarningAmberRounded';
-import PaymentsRoundedIcon             from '@mui/icons-material/PaymentsRounded';
-import QrCode2RoundedIcon              from '@mui/icons-material/QrCode2Rounded';
-import RefreshRoundedIcon              from '@mui/icons-material/RefreshRounded';
-import KeyboardArrowDownRoundedIcon    from '@mui/icons-material/KeyboardArrowDownRounded';
-import SchoolRoundedIcon               from '@mui/icons-material/SchoolRounded';
+import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
+import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
+import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
+import QrCode2RoundedIcon from '@mui/icons-material/QrCode2Rounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 
 import { useRouter } from 'next/navigation';
 import { useHijosConPagos, useMensualidadesHijo, useQRMultiple } from '@/hooks/usePadrePagos';
-import {
-  ESTADO_MENSUALIDAD_CONFIG,
-  MESES_LABELS,
-  calcularProgreso,
-  formatFechaPago,
-  puedePagar,
-} from '@/types/padrePagosTypes';
-import type { HijoPagoInfo, MensualidadHijo } from '@/types/padrePagosTypes';
+import { calcularProgreso, formatFechaPago, MESES_LABELS } from '@/types/padrePagosTypes';
+import type { HijoPagoInfo } from '@/types/padrePagosTypes';
 
-// ─── Animaciones ──────────────────────────────────────────────────────────────
-const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
-`;
-const shimmer = keyframes`
-  0%   { background-position: -1000px 0; }
-  100% { background-position:  1000px 0; }
-`;
-const pulseGold = keyframes`
-  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
-  50%       { box-shadow: 0 0 0 8px rgba(245,158,11,0); }
-`;
-const pulseRed = keyframes`
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
-  50%       { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
-`;
-const slideIn = keyframes`
-  from { opacity: 0; transform: translateX(-10px); }
-  to   { opacity: 1; transform: translateX(0); }
+import { ResumenPagosCards, type ResumenPagosCardData } from '@/components/pagos/ResumenPagosCards';
+import { TablaMensualidadesVencidas } from '@/components/pagos/TablaMensualidadesVencidas';
+
+const bounce = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 `;
 
-// ─── Paleta ───────────────────────────────────────────────────────────────────
+// ─── Paleta — misma lógica dual que Estudiantes.tsx ────────────────────────
 const usePalette = () => {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const gold    = isDark ? '#facc15' : '#f59e0b';
-  const goldEnd = isDark ? '#f59e0b' : '#d97706';
-  const gradBg  = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
-  return { isDark, gold, goldEnd, gradBg };
-};
-
-// ─── Card de resumen ──────────────────────────────────────────────────────────
-const ResumenCard: React.FC<{
-  label:    string;
-  valor:    string;
-  sub:      string;
-  icon:     React.ReactNode;
-  color:    string;
-  delay?:   number;
-  isDark:   boolean;
-  urgent?:  boolean;
-}> = ({ label, valor, sub, icon, color, delay = 0, isDark, urgent }) => (
-  <Box sx={{
-    p: 2.5, borderRadius: '20px',
-    bgcolor: isDark ? alpha('#fff', 0.03) : '#fff',
-    border: `1.5px solid ${urgent ? alpha(color, 0.4) : isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)}`,
-    boxShadow: urgent
-      ? `0 0 0 0 ${alpha(color, 0.3)}, 0 4px 20px ${alpha(color, 0.1)}`
-      : isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.05)',
-    animation: `${fadeUp} 0.4s ease-out ${delay}s both`,
-    position: 'relative', overflow: 'hidden',
-    ...(urgent && { animation: `${fadeUp} 0.4s ease-out ${delay}s both, ${pulseGold} 2s ease-in-out infinite` }),
-  }}>
-    <Box sx={{
-      position: 'absolute', top: -20, right: -20,
-      width: 80, height: 80, borderRadius: '50%',
-      bgcolor: alpha(color, isDark ? 0.08 : 0.06),
-      pointerEvents: 'none',
-    }} />
-
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-      <Box sx={{
-        width: 40, height: 40, borderRadius: '12px',
-        bgcolor: alpha(color, isDark ? 0.15 : 0.1),
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color,
-      }}>
-        {icon}
-      </Box>
-      {urgent && (
-        <Chip label="URGENTE" size="small"
-          sx={{ height: 18, fontSize: 9, fontWeight: 900, bgcolor: alpha(color, 0.15), color, borderRadius: 1.5 }} />
-      )}
-    </Box>
-
-    <Typography variant="h4" fontWeight={900} sx={{ color, lineHeight: 1, mb: 0.5 }}>
-      {valor}
-    </Typography>
-    <Typography variant="body2" fontWeight={700} sx={{ mb: 0.25, fontSize: 13 }}>
-      {label}
-    </Typography>
-    <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>
-      {sub}
-    </Typography>
-  </Box>
-);
-
-// ─── Fila de mensualidad en la tabla ─────────────────────────────────────────
-const FilaMensualidad: React.FC<{
-  mens:    MensualidadHijo;
-  index:   number;
-  onPagar: () => void;
-  isDark:  boolean;
-  gold:    string;
-  gradBg:  string;
-}> = ({ mens, index, onPagar, isDark, gold, gradBg }) => {
-  const cfg      = ESTADO_MENSUALIDAD_CONFIG[mens.estado];
-  const mesLabel = MESES_LABELS[mens.mes_correspondiente] ?? mens.mes_correspondiente;
-  const puedeP   = puedePagar(mens);
-  const esPagado = mens.estado === 'pagado';
-  const esVencido = mens.estado === 'vencido';
-
-  return (
-    <TableRow
-      sx={{
-        animation: `${slideIn} 0.3s ease-out ${index * 0.04}s both`,
-        bgcolor: esVencido
-          ? isDark ? alpha('#ef4444', 0.05) : alpha('#ef4444', 0.02)
-          : esPagado
-            ? isDark ? alpha('#10b981', 0.04) : alpha('#10b981', 0.02)
-            : 'transparent',
-        '&:hover': { bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02) },
-        transition: 'background 0.15s',
-      }}
-    >
-      {/* Cuota */}
-      <TableCell sx={{ py: 1.5, borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.05)}` }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box sx={{
-            width: 32, height: 32, borderRadius: '10px', flexShrink: 0,
-            background: esPagado
-              ? 'linear-gradient(135deg, #10b981, #34d399)'
-              : esVencido
-                ? 'linear-gradient(135deg, #ef4444, #f87171)'
-                : gradBg,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11, fontWeight: 900,
-            color: isDark && !esPagado && !esVencido ? '#000' : '#fff',
-          }}>
-            {esPagado ? <CheckCircleRoundedIcon sx={{ fontSize: 16 }} /> : mens.numero_cuota}
-          </Box>
-          <Box>
-            <Typography variant="body2" fontWeight={700} sx={{ fontSize: 13 }}>
-              Mensualidad {mesLabel}
-            </Typography>
-            {mens.fecha_pago && (
-              <Typography variant="caption" sx={{ color: '#10b981', fontSize: 10, fontWeight: 600 }}>
-                Pagado el {formatFechaPago(mens.fecha_pago)}
-              </Typography>
-            )}
-          </Box>
-        </Box>
-      </TableCell>
-
-      {/* Monto */}
-      <TableCell sx={{ py: 1.5, borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.05)}` }}>
-        <Typography variant="body2" fontWeight={800} sx={{
-          color: esPagado ? '#10b981' : esVencido ? '#ef4444' : isDark ? gold : '#d97706',
-          fontSize: 14,
-        }}>
-          Bs {parseFloat(String(mens.monto_final)).toFixed(2)}
-        </Typography>
-        {mens.monto_beca > 0 && (
-          <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10, textDecoration: 'line-through' }}>
-            Bs {parseFloat(String(mens.monto_original)).toFixed(2)}
-          </Typography>
-        )}
-      </TableCell>
-
-      {/* Vencimiento */}
-      <TableCell sx={{ py: 1.5, borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.05)}` }}>
-        <Typography variant="caption" fontWeight={600}
-          sx={{ color: esVencido ? '#ef4444' : 'text.secondary', fontSize: 12 }}>
-          {formatFechaPago(mens.fecha_vencimiento)}
-        </Typography>
-        {esVencido && (
-          <Typography variant="caption" sx={{ color: '#ef4444', fontSize: 10, display: 'block', fontWeight: 700 }}>
-            ⚠ VENCIDO
-          </Typography>
-        )}
-      </TableCell>
-
-      {/* Estado */}
-      <TableCell sx={{ py: 1.5, borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.05)}` }}>
-        <Chip
-          label={cfg.label}
-          size="small"
-          sx={{
-            height: 22, fontSize: 11, fontWeight: 800,
-            bgcolor: isDark ? alpha(cfg.color, 0.15) : alpha(cfg.color, 0.1),
-            color: cfg.color, borderRadius: 1.5,
-          }}
-        />
-      </TableCell>
-
-      {/* Acción */}
-      <TableCell sx={{ py: 1.5, borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.05)}` }}>
-        {puedeP && (
-          <Box
-            onClick={onPagar}
-            sx={{
-              display: 'inline-flex', alignItems: 'center', gap: 0.6,
-              px: 1.5, py: 0.6, borderRadius: '10px',
-              background: esVencido
-                ? 'linear-gradient(135deg, #ef4444, #f87171)'
-                : gradBg,
-              color: '#fff',
-              fontWeight: 800, fontSize: 11, cursor: 'pointer',
-              boxShadow: esVencido
-                ? '0 2px 8px rgba(239,68,68,0.3)'
-                : `0 2px 8px ${alpha(gold, 0.3)}`,
-              transition: 'opacity 0.15s, transform 0.15s',
-              '&:hover': { opacity: 0.88, transform: 'scale(1.04)' },
-            }}
-          >
-            <QrCode2RoundedIcon sx={{ fontSize: 13 }} />
-            Pagar
-          </Box>
-        )}
-        {mens.tiene_qr_activo && !puedeP && (
-          <Chip label="QR activo" size="small"
-            sx={{
-              height: 20, fontSize: 10, fontWeight: 700,
-              bgcolor: isDark ? alpha(gold, 0.1) : alpha(gold, 0.08),
-              color: isDark ? gold : '#d97706',
-              border: `1px solid ${alpha(gold, 0.3)}`,
-              borderRadius: 1.5,
-            }}
-          />
-        )}
-        {esPagado && (
-          <CheckCircleRoundedIcon sx={{ fontSize: 18, color: '#10b981' }} />
-        )}
-      </TableCell>
-    </TableRow>
-  );
+  const primary = isDark ? '#facc15' : '#0288d1';
+  const primaryEnd = isDark ? '#f59e0b' : '#01579b';
+  const gradBg = `linear-gradient(135deg, ${primary} 0%, ${primaryEnd} 100%)`;
+  return { isDark, primary, primaryEnd, gradBg };
 };
 
 // ─── Selector de hijo ─────────────────────────────────────────────────────────
 const SelectorHijo: React.FC<{
-  hijos:      HijoPagoInfo[];
+  hijos: HijoPagoInfo[];
   hijoActivo: HijoPagoInfo | null;
-  onChange:   (h: HijoPagoInfo) => void;
-  isLoading:  boolean;
-  isDark:     boolean;
-  gold:       string;
-  gradBg:     string;
-}> = ({ hijos, hijoActivo, onChange, isLoading, isDark, gold, gradBg }) => {
+  onChange: (h: HijoPagoInfo) => void;
+  isLoading: boolean;
+  isDark: boolean;
+  primary: string;
+  gradBg: string;
+}> = ({ hijos, hijoActivo, onChange, isLoading, isDark, primary, gradBg }) => {
   if (isLoading) return (
     <Skeleton variant="rounded" height={56} sx={{ borderRadius: '16px', width: 320 }} />
   );
@@ -279,8 +58,8 @@ const SelectorHijo: React.FC<{
     <Box sx={{
       display: 'flex', alignItems: 'center', gap: 1.5,
       px: 2, py: 1.2, borderRadius: '14px',
-      bgcolor: isDark ? alpha('#fff', 0.05) : alpha(gold, 0.06),
-      border: `1.5px solid ${alpha(gold, 0.3)}`,
+      bgcolor: isDark ? alpha('#fff', 0.05) : alpha(primary, 0.06),
+      border: `1.5px solid ${alpha(primary, 0.3)}`,
     }}>
       <Box sx={{
         width: 32, height: 32, borderRadius: '10px',
@@ -328,9 +107,9 @@ const SelectorHijo: React.FC<{
         sx={{
           borderRadius: '14px', minWidth: 260,
           bgcolor: isDark ? alpha('#fff', 0.04) : '#fff',
-          '& .MuiOutlinedInput-notchedOutline': { borderColor: alpha(gold, 0.3) },
-          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: gold },
-          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: gold },
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: alpha(primary, 0.3) },
+          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: primary },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: primary },
         }}
       >
         {hijos.map(h => (
@@ -362,13 +141,15 @@ const SelectorHijo: React.FC<{
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function EstadoPagosPage() {
-  const { isDark, gold, goldEnd, gradBg } = usePalette();
+  const { isDark, primary, gradBg } = usePalette();
+  const theme = useTheme();
+  const errorColor = theme.palette.error.main;
+  const successColor = theme.palette.success.main;
   const router = useRouter();
 
   const { hijos, isLoading: loadingHijos, refrescar } = useHijosConPagos();
   const [hijoActivo, setHijoActivo] = useState<HijoPagoInfo | null>(null);
 
-  // Setear el primer hijo automáticamente
   React.useEffect(() => {
     if (hijos.length > 0 && !hijoActivo) {
       setHijoActivo(hijos[0]);
@@ -378,14 +159,13 @@ export default function EstadoPagosPage() {
   const { mensualidades, resumen, isLoading: loadingMens, refrescar: refrescarMens } =
     useMensualidadesHijo(hijoActivo?.estudiante_id ?? null);
 
-  // Hook para QR múltiple (pagar todas las vencidas de una)
   const { generarQR: generarQRMultiple, isGenerando: generandoMultiple } = useQRMultiple();
 
-  const progreso           = calcularProgreso(resumen);
+  const progreso = calcularProgreso(resumen);
   const proximaPendiente = mensualidades.find(m => m.estado === 'pendiente');
   const mensualidadesVencidas = mensualidades.filter(m => m.estado === 'vencido');
-  const totalVencidas      = mensualidadesVencidas.length;
-  const totalVencidoMonto  = mensualidadesVencidas.reduce(
+  const totalVencidas = mensualidadesVencidas.length;
+  const totalVencidoMonto = mensualidadesVencidas.reduce(
     (sum, m) => sum + parseFloat(String(m.monto_final)), 0
   );
 
@@ -393,6 +173,10 @@ export default function EstadoPagosPage() {
     refrescar();
     refrescarMens();
   }, [refrescar, refrescarMens]);
+
+  const handlePagarUna = useCallback((mensualidadId: number) => {
+    router.push(`/dashboard/padre/financiero/pagar?mes=${mensualidadId}`);
+  }, [router]);
 
   const handlePagarTodasVencidas = useCallback(async () => {
     if (!hijoActivo || mensualidadesVencidas.length === 0) return;
@@ -403,384 +187,178 @@ export default function EstadoPagosPage() {
     router.push('/dashboard/padre/financiero/pagar');
   }, [hijoActivo, mensualidadesVencidas, generarQRMultiple, router]);
 
+  const statsCards: ResumenPagosCardData[] = [
+    {
+      label: 'Mensualidades Vencidas',
+      valor: `Bs ${totalVencidoMonto.toFixed(2)}`,
+      sub: `${totalVencidas} mes${totalVencidas !== 1 ? 'es' : ''} vencido${totalVencidas !== 1 ? 's' : ''} sin pagar`,
+      icon: <WarningAmberRoundedIcon sx={{ fontSize: 20 }} />,
+      color: totalVencidas > 0 ? errorColor : primary,
+      urgent: totalVencidas > 0,
+    },
+    {
+      label: 'Próxima Mensualidad',
+      valor: proximaPendiente
+        ? `${MESES_LABELS[proximaPendiente.mes_correspondiente]}`
+        : totalVencidas > 0 ? '¡Regularizá!' : '¡Al día!',
+      sub: proximaPendiente
+        ? `Vence: ${formatFechaPago(proximaPendiente.fecha_vencimiento)}`
+        : totalVencidas > 0
+          ? `Tenés ${totalVencidas} mes${totalVencidas !== 1 ? 'es' : ''} vencido${totalVencidas !== 1 ? 's' : ''}`
+          : 'Todas las mensualidades pagadas',
+      icon: <CalendarMonthRoundedIcon sx={{ fontSize: 20 }} />,
+      color: totalVencidas > 0 ? errorColor : primary,
+    },
+    {
+      label: 'Total Pagado 2026',
+      valor: `Bs ${(resumen.pagadas * parseFloat(String(mensualidades[0]?.monto_final || 0))).toFixed(2)}`,
+      sub: `${resumen.pagadas} de ${resumen.total} pagos realizados · ${progreso}%`,
+      icon: <TrendingUpRoundedIcon sx={{ fontSize: 20 }} />,
+      color: successColor,
+    },
+  ];
+
   return (
-    <Box sx={{
-      minHeight: '100vh',
-      background: isDark
-        ? 'radial-gradient(ellipse at top right, rgba(250,204,21,0.05) 0%, transparent 50%)'
-        : 'radial-gradient(ellipse at top right, rgba(245,158,11,0.04) 0%, transparent 50%)',
-    }}>
-      <Container maxWidth="xl" disableGutters sx={{ px: { xs: 2, sm: 3 } }}>
-        <Box sx={{ pt: 3, pb: 6 }}>
+    <Box sx={{ minHeight: '100vh', py: 4 }}>
+      <Container maxWidth="xl">
 
-          {/* ══ HEADER ══ */}
-          <Fade in timeout={400}>
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{
-                p: { xs: 2.5, sm: 3.5 }, borderRadius: '24px',
-                background: isDark
-                  ? 'linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))'
-                  : '#fff',
-                border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.05)}`,
-                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
-                position: 'relative', overflow: 'hidden',
-              }}>
-                {/* Shimmer */}
-                <Box sx={{
-                  position: 'absolute', inset: 0,
-                  background: `linear-gradient(90deg, transparent, ${alpha('#fff', isDark ? 0.02 : 0.06)}, transparent)`,
-                  backgroundSize: '1000px 100%',
-                  animation: `${shimmer} 4s linear infinite`,
-                  pointerEvents: 'none',
-                }} />
-
-                <Box sx={{
-                  display: 'flex', alignItems: 'center',
-                  justifyContent: 'space-between', flexWrap: 'wrap', gap: 2,
-                  position: 'relative', zIndex: 1,
-                }}>
-                  {/* Título */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{
-                      width: 52, height: 52, borderRadius: '16px',
-                      background: gradBg,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: `0 6px 20px ${alpha(gold, 0.4)}`,
-                      flexShrink: 0,
-                    }}>
-                      <AccountBalanceWalletRoundedIcon sx={{ fontSize: 26, color: isDark ? '#000' : '#fff' }} />
-                    </Box>
-                    <Box>
-                      <Typography variant="h5" fontWeight={900} sx={{
-                        background: gradBg,
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        letterSpacing: -0.3, lineHeight: 1.2,
-                      }}>
-                        Estado de Pagos
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                        Gestión financiera y estado de cuenta
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  {/* Acciones */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                    <SelectorHijo
-                      hijos={hijos}
-                      hijoActivo={hijoActivo}
-                      onChange={setHijoActivo}
-                      isLoading={loadingHijos}
-                      isDark={isDark}
-                      gold={gold}
-                      gradBg={gradBg}
-                    />
-
-                    <Box
-                      onClick={() => router.push('/dashboard/padre/financiero/pagar')}
-                      sx={{
-                        display: 'flex', alignItems: 'center', gap: 0.8,
-                        px: 2, py: 1, borderRadius: '12px',
-                        background: gradBg,
-                        color: isDark ? '#000' : '#fff',
-                        fontWeight: 800, fontSize: 13, cursor: 'pointer',
-                        boxShadow: `0 4px 14px ${alpha(gold, 0.4)}`,
-                        transition: 'opacity 0.15s, transform 0.15s',
-                        '&:hover': { opacity: 0.88, transform: 'translateY(-1px)' },
-                      }}
-                    >
-                      <QrCode2RoundedIcon sx={{ fontSize: 16 }} />
-                      Pagar Online
-                    </Box>
-
-                    <Tooltip title="Actualizar">
-                      <IconButton
-                        onClick={handleRefrescar}
-                        size="small"
-                        sx={{
-                          bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
-                          border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
-                          borderRadius: '10px',
-                          '&:hover': { bgcolor: isDark ? alpha(gold, 0.15) : alpha(gold, 0.08), transform: 'rotate(180deg)' },
-                          transition: 'all 0.3s',
-                        }}
-                      >
-                        <RefreshRoundedIcon sx={{ fontSize: 16, color: isDark ? gold : '#d97706' }} />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-          </Fade>
-
-          {/* ══ CARDS DE RESUMEN ══ */}
-          {hijoActivo && (
-            <Box sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(3, 1fr)' },
-              gap: 2, mb: 3,
-            }}>
-              {loadingMens ? (
-                [1, 2, 3].map(i => (
-                  <Skeleton key={i} variant="rounded" height={120} sx={{ borderRadius: '20px' }} />
-                ))
-              ) : (
-                <>
-                  <ResumenCard
-                    label="Mensualidades Vencidas"
-                    valor={`Bs ${totalVencidoMonto.toFixed(2)}`}
-                    sub={`${totalVencidas} mes${totalVencidas !== 1 ? 'es' : ''} vencido${totalVencidas !== 1 ? 's' : ''} sin pagar`}
-                    icon={<WarningAmberRoundedIcon sx={{ fontSize: 20 }} />}
-                    color={totalVencidas > 0 ? '#ef4444' : gold}
-                    delay={0}
-                    isDark={isDark}
-                    urgent={totalVencidas > 0}
-                  />
-
-                  <ResumenCard
-                    label="Próxima Mensualidad"
-                    valor={proximaPendiente
-                      ? `${MESES_LABELS[proximaPendiente.mes_correspondiente]}`
-                      : totalVencidas > 0 ? '¡Regularizá!' : '¡Al día!'}
-                    sub={proximaPendiente
-                      ? `Vence: ${formatFechaPago(proximaPendiente.fecha_vencimiento)}`
-                      : totalVencidas > 0
-                        ? `Tenés ${totalVencidas} mes${totalVencidas !== 1 ? 'es' : ''} vencido${totalVencidas !== 1 ? 's' : ''}`
-                        : 'Todas las mensualidades pagadas'}
-                    icon={<CalendarMonthRoundedIcon sx={{ fontSize: 20 }} />}
-                    color={totalVencidas > 0 ? '#ef4444' : gold}
-                    delay={0.05}
-                    isDark={isDark}
-                  />
-
-                  <ResumenCard
-                    label="Total Pagado 2026"
-                    valor={`Bs ${(resumen.pagadas * parseFloat(String(mensualidades[0]?.monto_final || 0))).toFixed(2)}`}
-                    sub={`${resumen.pagadas} de ${resumen.total} pagos realizados · ${progreso}%`}
-                    icon={<TrendingUpRoundedIcon sx={{ fontSize: 20 }} />}
-                    color="#10b981"
-                    delay={0.1}
-                    isDark={isDark}
-                  />
-                </>
-              )}
-            </Box>
-          )}
-
-          {/* ══ TABLA: SOLO MENSUALIDADES VENCIDAS ══ */}
-          <Fade in timeout={500}>
-            <Box sx={{
-              borderRadius: '20px',
-              background: isDark
-                ? 'linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))'
-                : '#fff',
-              border: `1px solid ${
-                hijoActivo && totalVencidas > 0
-                  ? alpha('#ef4444', 0.25)
-                  : isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)
-              }`,
-              boxShadow: isDark ? 'none' : '0 4px 24px rgba(0,0,0,0.05)',
-              overflow: 'hidden',
-            }}>
-
-              {/* Header tabla */}
-              <Box sx={{
-                px: 3, py: 2,
-                borderBottom: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                bgcolor: isDark
-                  ? (totalVencidas > 0 ? alpha('#ef4444', 0.06) : alpha('#fff', 0.02))
-                  : (totalVencidas > 0 ? alpha('#ef4444', 0.03) : alpha('#f8f9fa', 0.5)),
-              }}>
+        {/* ══ HEADER — mismo patrón que Estudiantes.tsx: sin contenedor ══ */}
+        <Fade in timeout={500}>
+          <Box sx={{ mb: 4 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: { xs: 'flex-start', md: 'center' },
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: { xs: 2, md: 0 },
+                mb: 3,
+              }}
+            >
+              <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <WarningAmberRoundedIcon sx={{
-                    fontSize: 18,
-                    color: totalVencidas > 0 ? '#ef4444' : isDark ? gold : '#d97706',
-                  }} />
-                  <Typography variant="subtitle2" fontWeight={800}>
-                    Mensualidades Vencidas
+                  <AccountBalanceWalletRoundedIcon
+                    sx={{ color: primary, fontSize: 36, animation: `${bounce} 1.5s infinite` }}
+                  />
+                  <Typography
+                    variant="h1"
+                    sx={{
+                      fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+                      fontWeight: 800,
+                      background: gradBg,
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      animation: 'fadeIn 1s ease-out',
+                      '@keyframes fadeIn': {
+                        from: { opacity: 0, transform: 'translateY(-10px)' },
+                        to: { opacity: 1, transform: 'translateY(0)' },
+                      },
+                    }}
+                  >
+                    Estado de Pagos
                   </Typography>
-                  {hijoActivo && !loadingMens && (
-                    <Chip
-                      label={totalVencidas > 0
-                        ? `${totalVencidas} vencida${totalVencidas !== 1 ? 's' : ''}`
-                        : 'Al día'}
-                      size="small"
-                      sx={{
-                        height: 20, fontSize: 10, fontWeight: 700,
-                        bgcolor: totalVencidas > 0
-                          ? isDark ? alpha('#ef4444', 0.15) : alpha('#ef4444', 0.08)
-                          : isDark ? alpha('#10b981', 0.15) : alpha('#10b981', 0.08),
-                        color: totalVencidas > 0 ? '#ef4444' : '#10b981',
-                        borderRadius: 1.5,
-                      }}
-                    />
-                  )}
                 </Box>
 
-                {/* Barra de progreso */}
-                {hijoActivo && !loadingMens && resumen.total > 0 && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 200 }}>
-                    <LinearProgress
-                      variant="determinate"
-                      value={progreso}
-                      sx={{
-                        flex: 1, height: 6, borderRadius: 3,
-                        bgcolor: isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06),
-                        '& .MuiLinearProgress-bar': {
-                          background: progreso === 100
-                            ? 'linear-gradient(90deg, #10b981, #34d399)'
-                            : gradBg,
-                          borderRadius: 3,
-                        },
-                      }}
-                    />
-                    <Typography variant="caption" fontWeight={900}
-                      sx={{ color: progreso === 100 ? '#10b981' : isDark ? gold : '#d97706', fontSize: 12, minWidth: 36 }}>
-                      {progreso}%
-                    </Typography>
-                  </Box>
-                )}
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{
+                    fontWeight: 500,
+                    letterSpacing: 0.3,
+                    animation: 'fadeInText 1.2s ease-out',
+                    '@keyframes fadeInText': {
+                      from: { opacity: 0, transform: 'translateY(5px)' },
+                      to: { opacity: 1, transform: 'translateY(0)' },
+                    },
+                  }}
+                >
+                  Gestión financiera y estado de cuenta de tus hijos.
+                </Typography>
               </Box>
 
-              {/* Sin hijo seleccionado */}
-              {!hijoActivo && !loadingHijos && (
-                <Box sx={{ textAlign: 'center', py: 8 }}>
-                  <SchoolRoundedIcon sx={{ fontSize: 48, color: alpha(gold, 0.3), mb: 1.5 }} />
-                  <Typography variant="body1" fontWeight={700} color="text.secondary">
-                    Seleccioná un hijo para ver su estado de pagos
-                  </Typography>
+              <Box
+                sx={{
+                  display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap',
+                  width: { xs: '100%', md: 'auto' },
+                  justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                }}
+              >
+                <SelectorHijo
+                  hijos={hijos}
+                  hijoActivo={hijoActivo}
+                  onChange={setHijoActivo}
+                  isLoading={loadingHijos}
+                  isDark={isDark}
+                  primary={primary}
+                  gradBg={gradBg}
+                />
+
+                <Box
+                  onClick={() => router.push('/dashboard/padre/financiero/pagar')}
+                  sx={{
+                    display: 'flex', alignItems: 'center', gap: 0.8,
+                    px: 2.5, py: 1.5, borderRadius: '12px',
+                    background: gradBg,
+                    color: isDark ? '#000' : '#fff',
+                    fontWeight: 600, fontSize: '1rem', cursor: 'pointer',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: isDark
+                        ? '0 8px 24px rgba(250, 204, 21, 0.3)'
+                        : '0 8px 24px rgba(2, 136, 209, 0.3)',
+                    },
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  <QrCode2RoundedIcon sx={{ fontSize: 18 }} />
+                  Pagar Online
                 </Box>
-              )}
 
-              {/* Loading */}
-              {(loadingHijos || loadingMens) && (
-                <Box sx={{ p: 3 }}>
-                  {[1, 2, 3].map(i => (
-                    <Box key={i} sx={{ display: 'flex', gap: 2, mb: 1.5, alignItems: 'center' }}>
-                      <Skeleton variant="rounded" width={32} height={32} sx={{ borderRadius: '10px', flexShrink: 0 }} />
-                      <Skeleton variant="rounded" height={20} sx={{ flex: 1, borderRadius: 2 }} />
-                      <Skeleton variant="rounded" width={80} height={20} sx={{ borderRadius: 2 }} />
-                      <Skeleton variant="rounded" width={60} height={20} sx={{ borderRadius: 2 }} />
-                    </Box>
-                  ))}
-                </Box>
-              )}
-
-              {/* ¡Al día! — sin vencidas */}
-              {hijoActivo && !loadingMens && totalVencidas === 0 && (
-                <Box sx={{ textAlign: 'center', py: 8 }}>
-                  <CheckCircleRoundedIcon sx={{ fontSize: 52, color: '#10b981', mb: 1.5, opacity: 0.7 }} />
-                  <Typography variant="body1" fontWeight={800} color="text.secondary" sx={{ mb: 0.5 }}>
-                    ¡Estás al día!
-                  </Typography>
-                  <Typography variant="caption" color="text.disabled">
-                    No tenés mensualidades vencidas pendientes de pago
-                  </Typography>
-                </Box>
-              )}
-
-              {/* Tabla solo con vencidas */}
-              {hijoActivo && !loadingMens && totalVencidas > 0 && (
-                <>
-                  <TableContainer>
-                    <Table>
-                      <TableHead>
-                        <TableRow sx={{
-                          '& th': {
-                            fontWeight: 800, fontSize: 11,
-                            color: 'text.disabled',
-                            textTransform: 'uppercase',
-                            letterSpacing: 0.5,
-                            bgcolor: isDark ? alpha('#ef4444', 0.04) : alpha('#ef4444', 0.02),
-                            borderBottom: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06)}`,
-                            py: 1.25,
-                          },
-                        }}>
-                          <TableCell>Concepto</TableCell>
-                          <TableCell>Monto</TableCell>
-                          <TableCell>Fecha Vence</TableCell>
-                          <TableCell>Estado</TableCell>
-                          <TableCell>Acción</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {mensualidadesVencidas.map((m, i) => (
-                          <FilaMensualidad
-                            key={m.mensualidad_id}
-                            mens={m}
-                            index={i}
-                            isDark={isDark}
-                            gold={gold}
-                            gradBg={gradBg}
-                            onPagar={() => router.push(
-                              `/dashboard/padre/financiero/pagar?mes=${m.mensualidad_id}`
-                            )}
-                          />
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-
-                  {/* Footer: total vencido + botón pagar todas */}
-                  <Box sx={{
-                    px: 3, py: 2,
-                    borderTop: `1px solid ${isDark ? alpha('#ef4444', 0.12) : alpha('#ef4444', 0.08)}`,
-                    bgcolor: isDark ? alpha('#ef4444', 0.04) : alpha('#ef4444', 0.02),
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    flexWrap: 'wrap', gap: 2,
-                  }}>
-                    {/* Resumen numérico */}
-                    <Box sx={{ display: 'flex', gap: 3 }}>
-                      <Box>
-                        <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: 10 }}>
-                          VENCIDAS
-                        </Typography>
-                        <Typography variant="h6" fontWeight={900} sx={{ color: '#ef4444', lineHeight: 1 }}>
-                          {totalVencidas}
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: 10 }}>
-                          TOTAL VENCIDO
-                        </Typography>
-                        <Typography variant="h6" fontWeight={900} sx={{ color: '#ef4444', lineHeight: 1 }}>
-                          Bs {totalVencidoMonto.toFixed(2)}
-                        </Typography>
-                      </Box>
-                    </Box>
-
-                    {/* Botón pagar todas las vencidas */}
-                    <Box
-                      onClick={!generandoMultiple ? handlePagarTodasVencidas : undefined}
-                      sx={{
-                        display: 'flex', alignItems: 'center', gap: 0.8,
-                        px: 2.5, py: 1, borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #ef4444, #f87171)',
-                        color: '#fff',
-                        fontWeight: 800, fontSize: 13,
-                        cursor: generandoMultiple ? 'not-allowed' : 'pointer',
-                        opacity: generandoMultiple ? 0.7 : 1,
-                        boxShadow: '0 3px 14px rgba(239,68,68,0.35)',
-                        animation: !generandoMultiple ? `${pulseRed} 2.5s ease-in-out infinite` : 'none',
-                        transition: 'opacity 0.15s, transform 0.15s',
-                        '&:hover': { opacity: generandoMultiple ? 0.7 : 0.88, transform: generandoMultiple ? 'none' : 'translateY(-1px)' },
-                      }}
-                    >
-                      <QrCode2RoundedIcon sx={{ fontSize: 15 }} />
-                      {generandoMultiple
-                        ? 'Generando QR...'
-                        : `Pagar ${totalVencidas} vencida${totalVencidas !== 1 ? 's' : ''} — Bs ${totalVencidoMonto.toFixed(2)}`}
-                    </Box>
-                  </Box>
-                </>
-              )}
+                <Tooltip title="Actualizar">
+                  <IconButton
+                    onClick={handleRefrescar}
+                    size="small"
+                    sx={{
+                      bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
+                      border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
+                      borderRadius: '10px',
+                      '&:hover': { bgcolor: isDark ? alpha(primary, 0.15) : alpha(primary, 0.08), transform: 'rotate(180deg)' },
+                      transition: 'all 0.3s',
+                    }}
+                  >
+                    <RefreshRoundedIcon sx={{ fontSize: 16, color: primary }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Box>
-          </Fade>
+          </Box>
+        </Fade>
 
-        </Box>
+        {/* ══ STATS ══ */}
+        {hijoActivo && (
+          <ResumenPagosCards cards={statsCards} isLoading={loadingMens} />
+        )}
+
+        {/* ══ TABLA DE VENCIDAS ══ */}
+        <Fade in timeout={700}>
+          <Box>
+            <TablaMensualidadesVencidas
+              hijoSeleccionado={!!hijoActivo}
+              isLoading={loadingMens}
+              isLoadingHijos={loadingHijos}
+              mensualidadesVencidas={mensualidadesVencidas}
+              progreso={progreso}
+              totalPagos={resumen.total}
+              totalVencidoMonto={totalVencidoMonto}
+              generandoQR={generandoMultiple}
+              onPagarUna={handlePagarUna}
+              onPagarTodas={handlePagarTodasVencidas}
+              primary={primary}
+              gradBg={gradBg}
+            />
+          </Box>
+        </Fade>
+
       </Container>
     </Box>
   );

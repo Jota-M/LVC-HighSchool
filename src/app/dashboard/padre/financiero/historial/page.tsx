@@ -1,5 +1,7 @@
 'use client';
 // app/dashboard/padre/financiero/historial/page.tsx
+// Restyle: mismo lenguaje visual que financiero/page.tsx y financiero/pagar/page.tsx
+// (header sin contenedor, tarjetas planas sin shimmer/glow, ResumenPagosCards reutilizado).
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
@@ -34,73 +36,27 @@ import type { MensualidadHijo, HijoPagoInfo } from '@/types/padrePagosTypes';
 import { useSolicitudesFactura } from '@/hooks/useSolicitudesFactura';
 import type { SolicitudFactura } from '@/hooks/useSolicitudesFactura';
 
+import { ResumenPagosCards, type ResumenPagosCardData } from '@/components/pagos/ResumenPagosCards';
+
 // ─── Animaciones ──────────────────────────────────────────────────────────────
-const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
-`;
-const shimmer = keyframes`
-  0%   { background-position: -1000px 0; }
-  100% { background-position:  1000px 0; }
+const bounce = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 `;
 const slideIn = keyframes`
   from { opacity: 0; transform: translateX(-8px); }
   to   { opacity: 1; transform: translateX(0); }
 `;
 
-// ─── Paleta ───────────────────────────────────────────────────────────────────
+// ─── Paleta — misma lógica dual que el resto de financiero ────────────────
 const usePalette = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const gold = isDark ? '#facc15' : '#f59e0b';
-  const goldEnd = isDark ? '#f59e0b' : '#d97706';
-  const gradBg = `linear-gradient(135deg, ${gold} 0%, ${goldEnd} 100%)`;
-  return { isDark, gold, goldEnd, gradBg };
+  const primary = isDark ? '#facc15' : '#0288d1';
+  const primaryEnd = isDark ? '#f59e0b' : '#01579b';
+  const gradBg = `linear-gradient(135deg, ${primary} 0%, ${primaryEnd} 100%)`;
+  return { isDark, primary, primaryEnd, gradBg };
 };
-
-// ─── StatCard ─────────────────────────────────────────────────────────────────
-const StatCard: React.FC<{
-  label: string;
-  valor: string;
-  sub: string;
-  icon: React.ReactNode;
-  color: string;
-  delay?: number;
-  isDark: boolean;
-}> = ({ label, valor, sub, icon, color, delay = 0, isDark }) => (
-  <Box sx={{
-    p: 2.5, borderRadius: '18px',
-    bgcolor: isDark ? alpha('#fff', 0.03) : '#fff',
-    border: `1.5px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)}`,
-    boxShadow: isDark ? 'none' : '0 2px 12px rgba(0,0,0,0.05)',
-    animation: `${fadeUp} 0.4s ease-out ${delay}s both`,
-    position: 'relative', overflow: 'hidden',
-  }}>
-    <Box sx={{
-      position: 'absolute', top: -16, right: -16,
-      width: 64, height: 64, borderRadius: '50%',
-      bgcolor: alpha(color, isDark ? 0.08 : 0.06),
-      pointerEvents: 'none',
-    }} />
-    <Box sx={{
-      width: 38, height: 38, borderRadius: '11px', mb: 1.5,
-      bgcolor: alpha(color, isDark ? 0.15 : 0.1),
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color,
-    }}>
-      {icon}
-    </Box>
-    <Typography variant="h5" fontWeight={900} sx={{ color, lineHeight: 1, mb: 0.4 }}>
-      {valor}
-    </Typography>
-    <Typography variant="body2" fontWeight={700} sx={{ fontSize: 12, mb: 0.2 }}>
-      {label}
-    </Typography>
-    <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>
-      {sub}
-    </Typography>
-  </Box>
-);
 
 // ─── CeldaRecibo ──────────────────────────────────────────────────────────────
 const CeldaRecibo: React.FC<{
@@ -172,11 +128,11 @@ const CeldaFactura: React.FC<{
   mens: MensualidadHijo;
   solicitud?: SolicitudFactura;
   isDark: boolean;
-  gold: string;
+  primary: string;
   solicitarFactura: (pago_id: number) => Promise<boolean>;
   onExito: (msg: string) => void;
   onError: (msg: string) => void;
-}> = ({ mens, solicitud, isDark, gold, solicitarFactura, onExito, onError }) => {
+}> = ({ mens, solicitud, isDark, primary, solicitarFactura, onExito, onError }) => {
   const [solicitando, setSolicitando] = useState(false);
 
   const handleSolicitar = async () => {
@@ -222,11 +178,11 @@ const CeldaFactura: React.FC<{
                 fontWeight: 700,
                 py: 0.4,
                 px: 1.25,
-                borderColor: alpha(gold, 0.4),
-                color: isDark ? gold : '#d97706',
+                borderColor: alpha(primary, 0.4),
+                color: primary,
                 textTransform: 'none',
                 minWidth: 'unset',
-                '&:hover': { borderColor: gold, bgcolor: alpha(gold, 0.08) },
+                '&:hover': { borderColor: primary, bgcolor: alpha(primary, 0.08) },
                 '&:disabled': { opacity: 0.5 },
               }}
             >
@@ -282,13 +238,13 @@ const FilaHistorial: React.FC<{
   mens: MensualidadHijo;
   index: number;
   isDark: boolean;
-  gold: string;
+  primary: string;
   solicitud?: SolicitudFactura;
   solicitarFactura: (pago_id: number) => Promise<boolean>;
   descargarRecibo: (pago_id: number) => Promise<void>;
   onExito: (msg: string) => void;
   onError: (msg: string) => void;
-}> = ({ mens, index, isDark, gold, solicitud, solicitarFactura, descargarRecibo, onExito, onError }) => {
+}> = ({ mens, index, isDark, primary, solicitud, solicitarFactura, descargarRecibo, onExito, onError }) => {
 
   const mesLabel = MESES_LABELS[mens.mes_correspondiente] ?? mens.mes_correspondiente;
   const metodo = mens.qr_estado === 'pagado' ? 'QR' : 'Efectivo/Transferencia';
@@ -302,7 +258,8 @@ const FilaHistorial: React.FC<{
   return (
     <TableRow
       sx={{
-        animation: `${slideIn} 0.3s ease-out ${index * 0.05}s both`,
+        animation: `${slideIn} 0.3s ease-out ${index * 0.04}s both`,
+        borderLeft: `3px solid ${alpha('#10b981', 0.4)}`,
         '&:hover': { bgcolor: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.01) },
         transition: 'background 0.15s',
       }}
@@ -324,10 +281,11 @@ const FilaHistorial: React.FC<{
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
           <Box sx={{
             width: 30, height: 30, borderRadius: '9px', flexShrink: 0,
-            background: 'linear-gradient(135deg, #10b981, #34d399)',
+            bgcolor: alpha('#10b981', isDark ? 0.16 : 0.1),
+            color: '#10b981',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <CheckCircleRoundedIcon sx={{ fontSize: 16, color: '#fff' }} />
+            <CheckCircleRoundedIcon sx={{ fontSize: 16 }} />
           </Box>
           <Box>
             <Typography variant="body2" fontWeight={700} sx={{ fontSize: 13 }}>
@@ -356,10 +314,10 @@ const FilaHistorial: React.FC<{
       <TableCell sx={cellSx}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
           {esQR
-            ? <QrCode2RoundedIcon sx={{ fontSize: 15, color: isDark ? gold : '#d97706' }} />
+            ? <QrCode2RoundedIcon sx={{ fontSize: 15, color: primary }} />
             : <AccountBalanceWalletRoundedIcon sx={{ fontSize: 15, color: '#6b7280' }} />}
           <Typography variant="caption" fontWeight={700} sx={{
-            color: esQR ? (isDark ? gold : '#d97706') : 'text.secondary',
+            color: esQR ? primary : 'text.secondary',
             fontSize: 12,
           }}>
             {metodo}
@@ -412,7 +370,7 @@ const FilaHistorial: React.FC<{
         mens={mens}
         solicitud={solicitud}
         isDark={isDark}
-        gold={gold}
+        primary={primary}
         solicitarFactura={solicitarFactura}
         onExito={onExito}
         onError={onError}
@@ -423,7 +381,7 @@ const FilaHistorial: React.FC<{
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function HistorialPagosPage() {
-  const { isDark, gold, goldEnd, gradBg } = usePalette();
+  const { isDark, primary, gradBg } = usePalette();
   const router = useRouter();
 
   const { hijos, isLoading: loadingHijos, refrescar } = useHijosConPagos();
@@ -481,380 +439,334 @@ export default function HistorialPagosPage() {
     cargarSolicitudes();
   }, [refrescar, refrescarMens, cargarSolicitudes]);
 
+  const statsCards: ResumenPagosCardData[] = [
+    {
+      label: 'Total Pagado',
+      valor: `Bs ${totalPagado.toFixed(2)}`,
+      sub: `${pagadas.length} transacciones`,
+      icon: <AccountBalanceWalletRoundedIcon sx={{ fontSize: 20 }} />,
+      color: primary,
+    },
+    {
+      label: 'Pagos con QR',
+      valor: String(pagosQR),
+      sub: `${pagosOtros} por otros medios`,
+      icon: <QrCode2RoundedIcon sx={{ fontSize: 20 }} />,
+      color: '#3b82f6',
+    },
+    {
+      label: 'Pagos Puntuales',
+      valor: `${porcentajePuntual}%`,
+      sub: `${pagadas.filter(m => {
+        if (!m.fecha_pago || !m.fecha_vencimiento) return false;
+        return new Date(m.fecha_pago) <= new Date(m.fecha_vencimiento);
+      }).length} de ${pagadas.length} a tiempo`,
+      icon: <AccessTimeRoundedIcon sx={{ fontSize: 20 }} />,
+      color: '#10b981',
+    },
+    {
+      label: 'Método Preferido',
+      valor: metodoPreferido,
+      sub: `${metodoPreferido === 'QR' ? pagosQR : pagosOtros} de ${pagadas.length} pagos`,
+      icon: <TrendingUpRoundedIcon sx={{ fontSize: 20 }} />,
+      color: '#8b5cf6',
+    },
+  ];
+
   return (
-    <Box sx={{
-      minHeight: '100vh',
-      background: isDark
-        ? 'radial-gradient(ellipse at bottom right, rgba(250,204,21,0.04) 0%, transparent 50%)'
-        : 'radial-gradient(ellipse at bottom right, rgba(245,158,11,0.03) 0%, transparent 50%)',
-    }}>
-      <Container maxWidth="xl" disableGutters sx={{ px: { xs: 2, sm: 3 } }}>
-        <Box sx={{ pt: 3, pb: 6 }}>
+    <Box sx={{ minHeight: '100vh', py: 4 }}>
+      <Container maxWidth="xl">
 
-          {/* ══ HEADER ══ */}
-          <Fade in timeout={400}>
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{
-                p: { xs: 2, sm: 3 }, borderRadius: '24px',
-                background: isDark
-                  ? 'linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))'
-                  : '#fff',
-                border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.05)}`,
-                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 4px 24px rgba(0,0,0,0.06)',
-                position: 'relative', overflow: 'hidden',
-              }}>
-                <Box sx={{
-                  position: 'absolute', inset: 0,
-                  background: `linear-gradient(90deg, transparent, ${alpha('#fff', isDark ? 0.02 : 0.06)}, transparent)`,
-                  backgroundSize: '1000px 100%',
-                  animation: `${shimmer} 4s linear infinite`,
-                  pointerEvents: 'none',
-                }} />
-
-                <Box sx={{
-                  display: 'flex', alignItems: 'center',
-                  justifyContent: 'space-between', flexWrap: 'wrap', gap: 2,
-                  position: 'relative', zIndex: 1,
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Tooltip title="Volver">
-                      <IconButton
-                        onClick={() => router.push('/dashboard/padre/financiero')}
-                        size="small"
-                        sx={{
-                          bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
-                          border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
-                          borderRadius: '10px',
-                        }}
-                      >
-                        <ArrowBackRoundedIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Tooltip>
-
-                    <Box sx={{
-                      width: 50, height: 50, borderRadius: '15px',
-                      background: gradBg,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: `0 5px 18px ${alpha(gold, 0.4)}`,
-                      flexShrink: 0,
-                    }}>
-                      <HistoryRoundedIcon sx={{ fontSize: 26, color: isDark ? '#000' : '#fff' }} />
-                    </Box>
-
-                    <Box>
-                      <Typography variant="h5" fontWeight={900} sx={{
-                        background: gradBg,
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        letterSpacing: -0.3, lineHeight: 1.2,
-                      }}>
-                        Historial de Pagos
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                        Registro completo de pagos y comprobantes
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                    {hijos.length > 1 && (
-                      <FormControl size="small">
-                        <Select
-                          value={hijoActivo?.estudiante_id ?? ''}
-                          onChange={e => {
-                            const h = hijos.find(h => h.estudiante_id === Number(e.target.value));
-                            if (h) setHijoActivo(h);
-                          }}
-                          IconComponent={KeyboardArrowDownRoundedIcon}
-                          displayEmpty
-                          renderValue={() => hijoActivo
-                            ? `${hijoActivo.nombres} ${hijoActivo.apellidos}`
-                            : 'Seleccioná un hijo'
-                          }
-                          sx={{
-                            borderRadius: '12px', minWidth: 200,
-                            bgcolor: isDark ? alpha('#fff', 0.04) : '#fff',
-                            fontSize: 13, fontWeight: 700,
-                            '& .MuiOutlinedInput-notchedOutline': { borderColor: alpha(gold, 0.3) },
-                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: gold },
-                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: gold },
-                          }}
-                        >
-                          {hijos.map(h => (
-                            <MenuItem key={h.estudiante_id} value={h.estudiante_id}>
-                              {h.nombres} {h.apellidos}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    )}
-
-                    <Tooltip title="Actualizar">
-                      <IconButton
-                        onClick={handleRefrescar}
-                        size="small"
-                        sx={{
-                          bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
-                          border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
-                          borderRadius: '10px',
-                          transition: 'all 0.3s',
-                          '&:hover': {
-                            bgcolor: isDark ? alpha(gold, 0.15) : alpha(gold, 0.08),
-                            transform: 'rotate(180deg)',
-                          },
-                        }}
-                      >
-                        <RefreshRoundedIcon sx={{ fontSize: 16, color: isDark ? gold : '#d97706' }} />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-          </Fade>
-
-          {/* ══ STAT CARDS ══ */}
-          {hijoActivo && (
-            <Box sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' },
-              gap: 2, mb: 3,
-            }}>
-              {loadingMens ? (
-                [1, 2, 3, 4].map(i => (
-                  <Skeleton key={i} variant="rounded" height={110} sx={{ borderRadius: '18px' }} />
-                ))
-              ) : (
-                <>
-                  <StatCard
-                    label="Total Pagado"
-                    valor={`Bs ${totalPagado.toFixed(2)}`}
-                    sub={`${pagadas.length} transacciones`}
-                    icon={<AccountBalanceWalletRoundedIcon sx={{ fontSize: 19 }} />}
-                    color={isDark ? gold : '#d97706'}
-                    delay={0}
-                    isDark={isDark}
-                  />
-                  <StatCard
-                    label="Pagos con QR"
-                    valor={String(pagosQR)}
-                    sub={`${pagosOtros} por otros medios`}
-                    icon={<QrCode2RoundedIcon sx={{ fontSize: 19 }} />}
-                    color="#3b82f6"
-                    delay={0.05}
-                    isDark={isDark}
-                  />
-                  <StatCard
-                    label="Pagos Puntuales"
-                    valor={`${porcentajePuntual}%`}
-                    sub={`${pagadas.filter(m => {
-                      if (!m.fecha_pago || !m.fecha_vencimiento) return false;
-                      return new Date(m.fecha_pago) <= new Date(m.fecha_vencimiento);
-                    }).length} de ${pagadas.length} a tiempo`}
-                    icon={<AccessTimeRoundedIcon sx={{ fontSize: 19 }} />}
-                    color="#10b981"
-                    delay={0.1}
-                    isDark={isDark}
-                  />
-                  <StatCard
-                    label="Método Preferido"
-                    valor={metodoPreferido}
-                    sub={`${metodoPreferido === 'QR' ? pagosQR : pagosOtros} de ${pagadas.length} pagos`}
-                    icon={<TrendingUpRoundedIcon sx={{ fontSize: 19 }} />}
-                    color="#8b5cf6"
-                    delay={0.15}
-                    isDark={isDark}
-                  />
-                </>
-              )}
-            </Box>
-          )}
-
-          {/* ══ TABLA ══ */}
-          <Fade in timeout={500}>
-            <Box sx={{
-              borderRadius: '20px',
-              background: isDark
-                ? 'linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))'
-                : '#fff',
-              border: `1px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)}`,
-              boxShadow: isDark ? 'none' : '0 4px 24px rgba(0,0,0,0.05)',
-              overflow: 'hidden',
-            }}>
-
-              {/* Header tabla */}
-              <Box sx={{
-                px: 3, py: 2,
-                borderBottom: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                flexWrap: 'wrap', gap: 2,
-                bgcolor: isDark ? alpha('#fff', 0.02) : alpha('#f8f9fa', 0.5),
-              }}>
+        {/* ══ HEADER — mismo patrón que financiero/page.tsx: sin contenedor ══ */}
+        <Fade in timeout={500}>
+          <Box sx={{ mb: 4 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: { xs: 'flex-start', md: 'center' },
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: { xs: 2, md: 0 },
+                mb: 2,
+              }}
+            >
+              <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <HistoryRoundedIcon sx={{ fontSize: 17, color: isDark ? gold : '#d97706' }} />
-                  <Typography variant="subtitle2" fontWeight={800}>
-                    Resumen del Historial
-                  </Typography>
-                  {!loadingMens && (
-                    <Chip
-                      label={`${pagadas.length} pago${pagadas.length !== 1 ? 's' : ''}`}
+                  <Tooltip title="Volver">
+                    <IconButton
+                      onClick={() => router.push('/dashboard/padre/financiero')}
                       size="small"
                       sx={{
-                        height: 20, fontSize: 10, fontWeight: 700,
-                        bgcolor: isDark ? alpha('#10b981', 0.12) : alpha('#10b981', 0.08),
-                        color: '#10b981', borderRadius: 1.5,
+                        bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
+                        border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
+                        borderRadius: '10px', mr: 0.5,
                       }}
-                    />
-                  )}
-                </Box>
-
-                {!loadingMens && pagadas.length > 0 && (
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    {(['todos', 'pagado'] as const).map(f => (
-                      <Chip
-                        key={f}
-                        label={f === 'todos' ? 'Todos' : 'Pagados'}
-                        onClick={() => setFiltroEstado(f)}
-                        sx={{
-                          height: 28, fontSize: 12, fontWeight: 700,
-                          cursor: 'pointer',
-                          bgcolor: filtroEstado === f
-                            ? isDark ? alpha(gold, 0.2) : alpha(gold, 0.12)
-                            : isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
-                          color: filtroEstado === f
-                            ? isDark ? gold : '#d97706'
-                            : 'text.secondary',
-                          border: `1px solid ${filtroEstado === f ? alpha(gold, 0.4) : 'transparent'}`,
-                          borderRadius: 2,
-                          '&:hover': { bgcolor: isDark ? alpha(gold, 0.12) : alpha(gold, 0.08) },
-                        }}
-                      />
-                    ))}
-                  </Box>
-                )}
-              </Box>
-
-              {/* Sin hijo seleccionado */}
-              {!hijoActivo && !loadingHijos && (
-                <Box sx={{ textAlign: 'center', py: 8 }}>
-                  <SchoolRoundedIcon sx={{ fontSize: 48, color: alpha(gold, 0.3), mb: 1.5 }} />
-                  <Typography variant="body1" fontWeight={700} color="text.secondary">
-                    Seleccioná un hijo para ver su historial
-                  </Typography>
-                </Box>
-              )}
-
-              {/* Loading */}
-              {(loadingHijos || loadingMens) && (
-                <Box sx={{ p: 3 }}>
-                  {[1, 2, 3].map(i => (
-                    <Box key={i} sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
-                      <Skeleton variant="rounded" width={80} height={36} sx={{ borderRadius: '10px' }} />
-                      <Skeleton variant="rounded" height={20} sx={{ flex: 1, borderRadius: 2 }} />
-                      <Skeleton variant="rounded" width={80} height={20} sx={{ borderRadius: 2 }} />
-                      <Skeleton variant="rounded" width={60} height={20} sx={{ borderRadius: 2 }} />
-                    </Box>
-                  ))}
-                </Box>
-              )}
-
-              {/* Sin pagos */}
-              {hijoActivo && !loadingMens && pagadas.length === 0 && (
-                <Box sx={{ textAlign: 'center', py: 8 }}>
-                  <CalendarMonthRoundedIcon sx={{ fontSize: 48, color: alpha(gold, 0.3), mb: 1.5 }} />
-                  <Typography variant="body1" fontWeight={700} color="text.secondary" sx={{ mb: 0.5 }}>
-                    Sin pagos registrados
-                  </Typography>
-                  <Typography variant="caption" color="text.disabled">
-                    Cuando realices tu primer pago aparecerá aquí
-                  </Typography>
-                </Box>
-              )}
-
-              {/* Tabla con datos */}
-              {hijoActivo && !loadingMens && historialFiltrado.length > 0 && (
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow sx={{
-                        '& th': {
-                          fontWeight: 800, fontSize: 11,
-                          color: 'text.disabled',
-                          textTransform: 'uppercase',
-                          letterSpacing: 0.5,
-                          bgcolor: isDark ? alpha('#fff', 0.02) : alpha('#f8f9fa', 0.8),
-                          borderBottom: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06)}`,
-                          py: 1.25,
-                        },
-                      }}>
-                        <TableCell>Fecha</TableCell>
-                        <TableCell>Concepto</TableCell>
-                        <TableCell>Monto</TableCell>
-                        <TableCell>Método</TableCell>
-                        <TableCell>Estado</TableCell>
-                        <TableCell>Referencia</TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <ArticleRoundedIcon sx={{ fontSize: 13, color: '#3b82f6' }} />
-                            Recibo
-                          </Box>
-                        </TableCell>
-                        <TableCell>Factura</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {historialFiltrado.map((m, i) => (
-                        <FilaHistorial
-                          key={m.mensualidad_id}
-                          mens={m}
-                          index={i}
-                          isDark={isDark}
-                          gold={gold}
-                          solicitud={m.pago_id ? solicitudMap[m.pago_id] : undefined}
-                          solicitarFactura={solicitarFactura}
-                          descargarRecibo={descargarRecibo}
-                          onExito={handleExito}
-                          onError={handleError}
-                        />
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-
-              {/* Footer total */}
-              {hijoActivo && !loadingMens && historialFiltrado.length > 0 && (
-                <Box sx={{
-                  px: 3, py: 2,
-                  borderTop: `1px solid ${isDark ? alpha('#fff', 0.05) : alpha('#000', 0.05)}`,
-                  bgcolor: isDark ? alpha('#fff', 0.02) : alpha('#f8f9fa', 0.5),
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  flexWrap: 'wrap', gap: 2,
-                }}>
-                  <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: 11 }}>
-                    {historialFiltrado.length} registro{historialFiltrado.length !== 1 ? 's' : ''} encontrado{historialFiltrado.length !== 1 ? 's' : ''}
-                  </Typography>
-                  <Box sx={{ textAlign: 'right' }}>
-                    <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: 10, display: 'block' }}>
-                      TOTAL
-                    </Typography>
-                    <Typography variant="h6" fontWeight={900} sx={{
+                    >
+                      <ArrowBackRoundedIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <HistoryRoundedIcon
+                    sx={{ color: primary, fontSize: 32, animation: `${bounce} 1.5s infinite` }}
+                  />
+                  <Typography
+                    variant="h1"
+                    sx={{
+                      fontSize: { xs: '1.4rem', sm: '1.8rem', md: '2.2rem' },
+                      fontWeight: 800,
                       background: gradBg,
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
-                      lineHeight: 1,
-                    }}>
-                      Bs {historialFiltrado.reduce(
-                        (acc, m) => acc + parseFloat(String(m.monto_pagado || m.monto_final)), 0
-                      ).toFixed(2)}
-                    </Typography>
-                  </Box>
+                    }}
+                  >
+                    Historial de Pagos
+                  </Typography>
+                </Box>
+
+                <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500, letterSpacing: 0.3, ml: { xs: 0, md: 6.5 } }}>
+                  Registro completo de pagos y comprobantes.
+                </Typography>
+              </Box>
+
+              <Box
+                sx={{
+                  display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap',
+                  width: { xs: '100%', md: 'auto' },
+                  justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                }}
+              >
+                {hijos.length > 1 && (
+                  <FormControl size="small">
+                    <Select
+                      value={hijoActivo?.estudiante_id ?? ''}
+                      onChange={e => {
+                        const h = hijos.find(h => h.estudiante_id === Number(e.target.value));
+                        if (h) setHijoActivo(h);
+                      }}
+                      IconComponent={KeyboardArrowDownRoundedIcon}
+                      displayEmpty
+                      renderValue={() => hijoActivo
+                        ? `${hijoActivo.nombres} ${hijoActivo.apellidos}`
+                        : 'Seleccioná un hijo'
+                      }
+                      sx={{
+                        borderRadius: '14px', minWidth: 220,
+                        bgcolor: isDark ? alpha('#fff', 0.04) : '#fff',
+                        fontSize: 13, fontWeight: 700,
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: alpha(primary, 0.3) },
+                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: primary },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: primary },
+                      }}
+                    >
+                      {hijos.map(h => (
+                        <MenuItem key={h.estudiante_id} value={h.estudiante_id}>
+                          {h.nombres} {h.apellidos}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+
+                <Tooltip title="Actualizar">
+                  <IconButton
+                    onClick={handleRefrescar}
+                    size="small"
+                    sx={{
+                      bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
+                      border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
+                      borderRadius: '10px',
+                      '&:hover': { bgcolor: isDark ? alpha(primary, 0.15) : alpha(primary, 0.08), transform: 'rotate(180deg)' },
+                      transition: 'all 0.3s',
+                    }}
+                  >
+                    <RefreshRoundedIcon sx={{ fontSize: 16, color: primary }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
+          </Box>
+        </Fade>
+
+        {/* ══ STATS ══ */}
+        {hijoActivo && (
+          <ResumenPagosCards cards={statsCards} isLoading={loadingMens} />
+        )}
+
+        {/* ══ TABLA ══ */}
+        <Fade in timeout={700}>
+          <Box sx={{
+            borderRadius: '16px',
+            bgcolor: isDark ? alpha('#fff', 0.03) : '#fff',
+            border: `1px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)}`,
+            overflow: 'hidden',
+          }}>
+
+            {/* Header tabla */}
+            <Box sx={{
+              px: 3, py: 2,
+              borderBottom: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexWrap: 'wrap', gap: 1.5,
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <HistoryRoundedIcon sx={{ fontSize: 17, color: primary }} />
+                <Typography variant="subtitle2" fontWeight={800}>
+                  Resumen del Historial
+                </Typography>
+                {!loadingMens && (
+                  <Chip
+                    label={`${pagadas.length} pago${pagadas.length !== 1 ? 's' : ''}`}
+                    size="small"
+                    sx={{
+                      height: 20, fontSize: 10, fontWeight: 700,
+                      bgcolor: isDark ? alpha('#10b981', 0.12) : alpha('#10b981', 0.08),
+                      color: '#10b981', borderRadius: 1.5,
+                    }}
+                  />
+                )}
+              </Box>
+
+              {!loadingMens && pagadas.length > 0 && (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  {(['todos', 'pagado'] as const).map(f => (
+                    <Chip
+                      key={f}
+                      label={f === 'todos' ? 'Todos' : 'Pagados'}
+                      onClick={() => setFiltroEstado(f)}
+                      sx={{
+                        height: 28, fontSize: 12, fontWeight: 700,
+                        cursor: 'pointer',
+                        bgcolor: filtroEstado === f
+                          ? alpha(primary, isDark ? 0.2 : 0.12)
+                          : isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
+                        color: filtroEstado === f ? primary : 'text.secondary',
+                        border: `1px solid ${filtroEstado === f ? alpha(primary, 0.4) : 'transparent'}`,
+                        borderRadius: 2,
+                        '&:hover': { bgcolor: alpha(primary, isDark ? 0.12 : 0.08) },
+                      }}
+                    />
+                  ))}
                 </Box>
               )}
             </Box>
-          </Fade>
 
-        </Box>
+            {/* Sin hijo seleccionado */}
+            {!hijoActivo && !loadingHijos && (
+              <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
+                <SchoolRoundedIcon sx={{ fontSize: 48, color: alpha(primary, 0.3), mb: 1.5 }} />
+                <Typography variant="body1" fontWeight={700} color="text.secondary">
+                  Seleccioná un hijo para ver su historial
+                </Typography>
+              </Box>
+            )}
+
+            {/* Loading */}
+            {(loadingHijos || loadingMens) && (
+              <Box sx={{ p: 3 }}>
+                {[1, 2, 3].map(i => (
+                  <Box key={i} sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
+                    <Skeleton variant="rounded" width={80} height={36} sx={{ borderRadius: '10px' }} />
+                    <Skeleton variant="rounded" height={20} sx={{ flex: 1, borderRadius: 2 }} />
+                    <Skeleton variant="rounded" width={80} height={20} sx={{ borderRadius: 2 }} />
+                    <Skeleton variant="rounded" width={60} height={20} sx={{ borderRadius: 2 }} />
+                  </Box>
+                ))}
+              </Box>
+            )}
+
+            {/* Sin pagos */}
+            {hijoActivo && !loadingMens && pagadas.length === 0 && (
+              <Box sx={{ textAlign: 'center', py: 8, px: 2 }}>
+                <CalendarMonthRoundedIcon sx={{ fontSize: 48, color: alpha(primary, 0.3), mb: 1.5 }} />
+                <Typography variant="body1" fontWeight={700} color="text.secondary" sx={{ mb: 0.5 }}>
+                  Sin pagos registrados
+                </Typography>
+                <Typography variant="caption" color="text.disabled">
+                  Cuando realices tu primer pago aparecerá aquí
+                </Typography>
+              </Box>
+            )}
+
+            {/* Tabla con datos */}
+            {hijoActivo && !loadingMens && historialFiltrado.length > 0 && (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{
+                      '& th': {
+                        fontWeight: 800, fontSize: 11,
+                        color: 'text.disabled',
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                        borderBottom: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06)}`,
+                        py: 1.25,
+                      },
+                    }}>
+                      <TableCell>Fecha</TableCell>
+                      <TableCell>Concepto</TableCell>
+                      <TableCell>Monto</TableCell>
+                      <TableCell>Método</TableCell>
+                      <TableCell>Estado</TableCell>
+                      <TableCell>Referencia</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <ArticleRoundedIcon sx={{ fontSize: 13, color: '#3b82f6' }} />
+                          Recibo
+                        </Box>
+                      </TableCell>
+                      <TableCell>Factura</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {historialFiltrado.map((m, i) => (
+                      <FilaHistorial
+                        key={m.mensualidad_id}
+                        mens={m}
+                        index={i}
+                        isDark={isDark}
+                        primary={primary}
+                        solicitud={m.pago_id ? solicitudMap[m.pago_id] : undefined}
+                        solicitarFactura={solicitarFactura}
+                        descargarRecibo={descargarRecibo}
+                        onExito={handleExito}
+                        onError={handleError}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+
+            {/* Footer total */}
+            {hijoActivo && !loadingMens && historialFiltrado.length > 0 && (
+              <Box sx={{
+                px: 3, py: 2,
+                borderTop: `1px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)}`,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                flexWrap: 'wrap', gap: 2,
+              }}>
+                <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: 11 }}>
+                  {historialFiltrado.length} registro{historialFiltrado.length !== 1 ? 's' : ''} encontrado{historialFiltrado.length !== 1 ? 's' : ''}
+                </Typography>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: 10, display: 'block' }}>
+                    TOTAL
+                  </Typography>
+                  <Typography variant="h6" fontWeight={900} sx={{
+                    background: gradBg,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    lineHeight: 1,
+                  }}>
+                    Bs {historialFiltrado.reduce(
+                      (acc, m) => acc + parseFloat(String(m.monto_pagado || m.monto_final)), 0
+                    ).toFixed(2)}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </Fade>
+
       </Container>
 
       {/* ══ SNACKBAR FEEDBACK ══ */}

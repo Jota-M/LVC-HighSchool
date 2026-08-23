@@ -20,9 +20,11 @@ import {
   Assessment as ReportIcon,
   Dashboard,
   Payment,
+  Place as PlaceIcon,
 } from '@mui/icons-material';
 import { DashboardTransporte } from '@/components/transporte/DashboardTransporte';
 import GestionRutas from '@/components/transporte/GestionRutas';
+import { GestionParadas } from '@/components/transporte/GestionParadas';
 import { GestionAsignaciones } from '@/components/transporte/GestionAsignaciones';
 import { GestionPagosTransporte } from '@/components/transporte/GestionPagosTransporte';
 import ReportesTransporte from '@/components/transporte/Reportestransporte';
@@ -121,7 +123,7 @@ export const Transporte: React.FC = () => {
                     },
                   }}
                 >
-                  Administra rutas, asignaciones y pagos del servicio de transporte escolar.
+                  Administra rutas, paradas, asignaciones y pagos del servicio de transporte escolar.
                 </Typography>
               </Box>
             </Box>
@@ -131,8 +133,8 @@ export const Transporte: React.FC = () => {
               <Tab icon={<DashboardIcon />} iconPosition="start" label="Dashboard" />
               <Tab icon={<Payment />} iconPosition="start" label="Pago de Transporte" />
               <Tab icon={<RouteIcon />} iconPosition="start" label="Rutas" />
+              <Tab icon={<PlaceIcon />} iconPosition="start" label="Paradas" />
               <Tab icon={<AssignmentIcon />} iconPosition="start" label="Asignaciones" />
-              {/* <Tab icon={<PaymentIcon />} iconPosition="start" label="Pagos" /> */}
               <Tab icon={<ReportIcon />} iconPosition="start" label="Reportes" />
             </Tabs>
           </Box>
@@ -172,6 +174,14 @@ export const Transporte: React.FC = () => {
         <TabPanel value={activeTab} index={3}>
           <Fade in timeout={700}>
             <Box>
+              <GestionParadas />
+            </Box>
+          </Fade>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={4}>
+          <Fade in timeout={700}>
+            <Box>
               <Typography variant="h5" gutterBottom>
                 Asignaciones de Estudiantes
               </Typography>
@@ -182,22 +192,8 @@ export const Transporte: React.FC = () => {
             </Box>
           </Fade>
         </TabPanel>
-{/* 
-        <TabPanel value={activeTab} index={4}>
-          <Fade in timeout={700}>
-            <Box>
-              <Typography variant="h5" gutterBottom>
-                Pagos de Transporte
-              </Typography>
-              <Typography color="text.secondary">
-                Registra y administra los pagos del servicio de transporte
-              </Typography>
-              <GestionPagosTransporte />
-            </Box>
-          </Fade>
-        </TabPanel> */}
 
-        <TabPanel value={activeTab} index={4}>
+        <TabPanel value={activeTab} index={5}>
           <Fade in timeout={700}>
             <Box>
               <Typography variant="h5" gutterBottom>

@@ -184,8 +184,103 @@ export const ESTADO_CUOTA_TRANSPORTE_CONFIG: Record<EstadoCuotaTransporte, Estad
     },
 };
 
-// Reutilizamos los mismos labels de meses que mensualidades
-export { MESES_LABELS } from './padrePagosTypes';
+// =============================================
+// MESES Y TRADUCCIÓN ROBUSTA
+// =============================================
+
+const DICCIONARIO_MESES: Record<string, string> = {
+    // Español
+    enero: 'Enero',
+    febrero: 'Febrero',
+    marzo: 'Marzo',
+    abril: 'Abril',
+    mayo: 'Mayo',
+    junio: 'Junio',
+    julio: 'Julio',
+    agosto: 'Agosto',
+    septiembre: 'Septiembre',
+    setiembre: 'Septiembre',
+    octubre: 'Octubre',
+    noviembre: 'Noviembre',
+    diciembre: 'Diciembre',
+
+    // Inglés (procedente de PostgreSQL TO_CHAR u otros)
+    january: 'Enero',
+    february: 'Febrero',
+    march: 'Marzo',
+    april: 'Abril',
+    may: 'Mayo',
+    june: 'Junio',
+    july: 'Julio',
+    august: 'Agosto',
+    september: 'Septiembre',
+    october: 'Octubre',
+    november: 'Noviembre',
+    december: 'Diciembre',
+
+    // Números
+    '1': 'Enero',
+    '01': 'Enero',
+    '2': 'Febrero',
+    '02': 'Febrero',
+    '3': 'Marzo',
+    '03': 'Marzo',
+    '4': 'Abril',
+    '04': 'Abril',
+    '5': 'Mayo',
+    '05': 'Mayo',
+    '6': 'Junio',
+    '06': 'Junio',
+    '7': 'Julio',
+    '07': 'Julio',
+    '8': 'Agosto',
+    '08': 'Agosto',
+    '9': 'Septiembre',
+    '09': 'Septiembre',
+    '10': 'Octubre',
+    '11': 'Noviembre',
+    '12': 'Diciembre',
+};
+
+/**
+ * Formatea cualquier valor de mes (inglés, español, número, 'July 2026', '2026-09') a español legible
+ */
+export function formatMesTransporte(mes: string | null | undefined): string {
+    if (!mes) return 'Cuota';
+    const trimmed = String(mes).trim();
+
+    // Si viene como "July 2026" o "Septiembre 2026"
+    const partes = trimmed.split(/\s+/);
+    if (partes.length >= 2) {
+        const nombreMes = DICCIONARIO_MESES[partes[0].toLowerCase()] || (partes[0].charAt(0).toUpperCase() + partes[0].slice(1));
+        const resto = partes.slice(1).join(' ');
+        return `${nombreMes} ${resto}`;
+    }
+
+    // Si viene como fecha ISO "2026-09" o "2026-09-10"
+    if (/^\d{4}-\d{2}/.test(trimmed)) {
+        const partesFecha = trimmed.split('-');
+        const anio = partesFecha[0];
+        const numMes = partesFecha[1];
+        const nombreMes = DICCIONARIO_MESES[numMes] || numMes;
+        return `${nombreMes} ${anio}`;
+    }
+
+    // Si coincide directamente en el diccionario
+    if (DICCIONARIO_MESES[trimmed.toLowerCase()]) {
+        return DICCIONARIO_MESES[trimmed.toLowerCase()];
+    }
+
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+// Proxy seguro para MESES_LABELS que nunca devuelve undefined
+export const MESES_LABELS: Record<string, string> = new Proxy(DICCIONARIO_MESES, {
+    get(target, prop: string | symbol) {
+        if (typeof prop !== 'string') return undefined;
+        return formatMesTransporte(prop);
+    }
+});
 
 // =============================================
 // HELPERS

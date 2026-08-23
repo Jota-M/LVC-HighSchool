@@ -199,6 +199,7 @@ export interface CrearRutaRequest {
   modelo_vehiculo?: string;
   anio_vehiculo?: number;
   color?: string;
+  activo?: boolean;
   observaciones?: string;
 }
 
