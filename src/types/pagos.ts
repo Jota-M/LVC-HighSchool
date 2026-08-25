@@ -450,14 +450,24 @@ export interface CursosResponse {
   };
 }
 
+export interface FacturasStats {
+  totalPagos: number;
+  totalMonto: number;
+  facturasCount: number;
+  facturasMonto: number;
+  recibosCount: number;
+  recibosMonto: number;
+  porcentajeFacturado: string;
+  porcentajeRecibo: string;
+  totalInvoiced?: number;
+  invoiceCount?: number;
+}
+
 export interface FacturasResponse {
   success: boolean;
   data: {
     facturas: FacturaReporteItem[];
-    stats: {
-      totalInvoiced: number;
-      invoiceCount: number;
-    };
+    stats: FacturasStats;
   };
 }
 
@@ -470,6 +480,9 @@ export interface FiltrosFacturas {
   fecha_inicio?: string;
   fecha_fin?: string;
   metodo_pago?: MetodoPago;
+  tipo_emision?: 'todos' | 'factura' | 'recibo';
+  grado_id?: number;
+  paralelo_id?: number;
 }
 
 // ============== TIPOS AUXILIARES ==============

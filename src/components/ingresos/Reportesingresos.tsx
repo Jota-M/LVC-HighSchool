@@ -86,12 +86,36 @@ export const ReportesIngresos: React.FC = () => {
     ]);
   };
 
-  const handleExportarPDF = () => {
-    alert('Funcionalidad de exportación a PDF en desarrollo');
+  const [exportando, setExportando] = useState(false);
+
+  const handleExportarPDF = async () => {
+    try {
+      setExportando(true);
+      await ingresosService.exportarReporteIngresos({
+        fecha_desde: fechaDesde,
+        fecha_hasta: fechaHasta,
+        formato: 'pdf',
+      });
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al generar el PDF de ingresos');
+    } finally {
+      setExportando(false);
+    }
   };
 
-  const handleExportarExcel = () => {
-    alert('Funcionalidad de exportación a Excel en desarrollo');
+  const handleExportarExcel = async () => {
+    try {
+      setExportando(true);
+      await ingresosService.exportarReporteIngresos({
+        fecha_desde: fechaDesde,
+        fecha_hasta: fechaHasta,
+        formato: 'excel',
+      });
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error al generar el Excel de ingresos');
+    } finally {
+      setExportando(false);
+    }
   };
 
   const yellowColor = isDark ? '#facc15' : '#f59e0b';
@@ -194,6 +218,7 @@ export const ReportesIngresos: React.FC = () => {
                 variant="contained"
                 startIcon={<PdfIcon />}
                 onClick={handleExportarPDF}
+                disabled={exportando}
                 size={isMobile ? 'small' : 'medium'}
                 sx={{
                   background: `linear-gradient(135deg, #ef4444 0%, #dc2626 100%)`,
@@ -214,6 +239,7 @@ export const ReportesIngresos: React.FC = () => {
                 variant="contained"
                 startIcon={<ExcelIcon />}
                 onClick={handleExportarExcel}
+                disabled={exportando}
                 size={isMobile ? 'small' : 'medium'}
                 sx={{
                   background: `linear-gradient(135deg, #10b981 0%, #059669 100%)`,

@@ -32,7 +32,7 @@ import ArticleRoundedIcon from '@mui/icons-material/ArticleRounded';
 import { useRouter } from 'next/navigation';
 import { useHijosConPagos, useMensualidadesHijo } from '@/hooks/usePadrePagos';
 import { MESES_LABELS, formatFechaPago } from '@/types/padrePagosTypes';
-import type { MensualidadHijo, HijoPagoInfo } from '@/types/padrePagosTypes';
+import type { MensualidadHijo, HijoPagoInfo, GrupoPago } from '@/types/padrePagosTypes';
 import { useSolicitudesFactura } from '@/hooks/useSolicitudesFactura';
 import type { SolicitudFactura } from '@/hooks/useSolicitudesFactura';
 
@@ -379,7 +379,278 @@ const FilaHistorial: React.FC<{
   );
 };
 
-// ─── Página principal ─────────────────────────────────────────────────────────
+// ─── FilaHistorialGrupo ───────────────────────────────────────────────────────
+// Cuando 2+ cuotas comparten transaccion_id (mismo QR, o mismo lote cargado
+// por el admin), se muestran colapsadas en UNA fila en vez de una por cuota.
+// Al expandir, se ve el detalle cuota por cuota reutilizando FilaHistorial.
+const FilaHistorialGrupo: React.FC<{
+  grupo: GrupoPago;
+  items: MensualidadHijo[];
+  index: number;
+  isDark: boolean;
+  primary: string;
+  solicitudMap: Record<number, SolicitudFactura>;
+  solicitarFactura: (pago_id: number) => Promise<boolean>;
+  descargarRecibo: (pago_id: number) => Promise<void>;
+  onExito: (msg: string) => void;
+  onError: (msg: string) => void;
+}> = ({ grupo, items, index, isDark, primary, solicitudMap, solicitarFactura, descargarRecibo, onExito, onError }) => {
+  const [abierto, setAbierto] = useState(false);
+  const [solicitandoTodas, setSolicitandoTodas] = useState(false);
+  const [descargandoRecibo, setDescargandoRecibo] = useState(false);
+
+  const esQR = grupo.metodo_pago === 'qr';
+  const metodoLabel = esQR ? 'QR' : 'Efectivo/Transferencia';
+
+  const cellSx = {
+    py: 1.75,
+    borderBottom: `1px solid ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04)}`,
+  };
+
+  const solicitudesDelGrupo = grupo.pago_ids.map(id => solicitudMap[id]);
+  const todasSolicitadas = solicitudesDelGrupo.every(Boolean);
+  const todasCompletadas = solicitudesDelGrupo.length > 0 && solicitudesDelGrupo.every(s => s?.estado === 'completada');
+
+  const handleDescargarGrupo = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDescargandoRecibo(true);
+    try {
+      // Alcanza con pedir el comprobante de CUALQUIER cuota del grupo — el
+      // backend resuelve solo todas las hermanas por transaccion_id y arma
+      // un único PDF con el detalle completo.
+      await descargarRecibo(grupo.pago_ids[0]);
+    } catch {
+      onError('No se pudo descargar el comprobante del grupo');
+    } finally {
+      setDescargandoRecibo(false);
+    }
+  };
+
+  const handleSolicitarTodas = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSolicitandoTodas(true);
+    try {
+      // Con el soporte de grupo, alcanza con solicitar una sola vez para cualquiera
+      // de las cuotas del lote. El backend asocia automáticamente todo el grupo.
+      await solicitarFactura(grupo.pago_ids[0]);
+      onExito(`Solicitud enviada para las ${grupo.cuotas.length} cuotas de este pago.`);
+    } catch (err: any) {
+      onError(err.message ?? 'Error al enviar la solicitud');
+    } finally {
+      setSolicitandoTodas(false);
+    }
+  };
+
+  return (
+    <>
+      <TableRow
+        onClick={() => setAbierto(o => !o)}
+        sx={{
+          cursor: 'pointer',
+          animation: `${slideIn} 0.3s ease-out ${index * 0.04}s both`,
+          borderLeft: `3px solid ${alpha(primary, 0.5)}`,
+          bgcolor: isDark ? alpha(primary, 0.04) : alpha(primary, 0.03),
+          '&:hover': { bgcolor: isDark ? alpha(primary, 0.08) : alpha(primary, 0.06) },
+          transition: 'background 0.15s',
+        }}
+      >
+        {/* Fecha */}
+        <TableCell sx={cellSx}>
+          <Typography variant="body2" fontWeight={700} sx={{ fontSize: 13 }}>
+            {formatFechaPago(grupo.fecha_pago)}
+          </Typography>
+          <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>
+            {grupo.fecha_pago
+              ? new Date(grupo.fecha_pago).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })
+              : '—'}
+          </Typography>
+        </TableCell>
+
+        {/* Concepto */}
+        <TableCell sx={cellSx}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+            <Box sx={{
+              width: 30, height: 30, borderRadius: '9px', flexShrink: 0,
+              bgcolor: alpha(primary, isDark ? 0.18 : 0.12), color: primary,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transform: abierto ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s',
+            }}>
+              <KeyboardArrowDownRoundedIcon sx={{ fontSize: 18 }} />
+            </Box>
+            <Box>
+              <Typography variant="body2" fontWeight={700} sx={{ fontSize: 13 }}>
+                Pago agrupado
+              </Typography>
+              <Typography variant="caption" color="text.disabled" sx={{ fontSize: 11 }}>
+                {grupo.cuotas.length} cuotas · {grupo.cuotas
+                  .map(c => MESES_LABELS[c.mes_correspondiente] ?? c.mes_correspondiente)
+                  .join(', ')}
+              </Typography>
+            </Box>
+          </Box>
+        </TableCell>
+
+        {/* Monto */}
+        <TableCell sx={cellSx}>
+          <Typography variant="body2" fontWeight={900} sx={{ color: '#10b981', fontSize: 14 }}>
+            Bs {grupo.monto_total.toFixed(2)}
+          </Typography>
+        </TableCell>
+
+        {/* Método */}
+        <TableCell sx={cellSx}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            {esQR
+              ? <QrCode2RoundedIcon sx={{ fontSize: 15, color: primary }} />
+              : <AccountBalanceWalletRoundedIcon sx={{ fontSize: 15, color: '#6b7280' }} />}
+            <Typography variant="caption" fontWeight={700} sx={{
+              color: esQR ? primary : 'text.secondary',
+              fontSize: 12,
+            }}>
+              {metodoLabel}
+            </Typography>
+          </Box>
+        </TableCell>
+
+        {/* Estado */}
+        <TableCell sx={cellSx}>
+          <Chip
+            label={`Pagado · ${grupo.cuotas.length}x`}
+            size="small"
+            sx={{
+              height: 22, fontSize: 11, fontWeight: 800,
+              bgcolor: isDark ? alpha('#10b981', 0.15) : alpha('#10b981', 0.1),
+              color: '#10b981', borderRadius: 1.5,
+            }}
+          />
+        </TableCell>
+
+        {/* Referencia */}
+        <TableCell sx={cellSx}>
+          <Tooltip title="Referencia de la transacción (compartida por las cuotas del grupo)">
+            <Box sx={{
+              display: 'inline-flex', alignItems: 'center', gap: 0.5,
+              px: 1.25, py: 0.4, borderRadius: '8px',
+              bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
+              cursor: 'default',
+            }}>
+              <ReceiptLongRoundedIcon sx={{ fontSize: 13, color: 'text.disabled' }} />
+              <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10, fontFamily: 'monospace' }}>
+                {grupo.transaccion_id ? grupo.transaccion_id.slice(0, 12) + '...' : '—'}
+              </Typography>
+            </Box>
+          </Tooltip>
+        </TableCell>
+
+        {/* Recibo digital — un solo click descarga el PDF combinado del grupo */}
+        <TableCell sx={cellSx} onClick={e => e.stopPropagation()}>
+          <Tooltip title={`Descargar un solo comprobante con las ${grupo.cuotas.length} cuotas de este pago`}>
+            <span>
+              <IconButton
+                size="small"
+                disabled={descargandoRecibo}
+                onClick={handleDescargarGrupo}
+                sx={{
+                  bgcolor: isDark ? alpha('#3b82f6', 0.12) : alpha('#3b82f6', 0.08),
+                  borderRadius: '10px', width: 30, height: 30,
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    bgcolor: isDark ? alpha('#3b82f6', 0.22) : alpha('#3b82f6', 0.15),
+                    transform: 'scale(1.08)',
+                  },
+                  '&:disabled': { opacity: 0.5 },
+                }}
+              >
+                {descargandoRecibo
+                  ? <CircularProgress size={13} sx={{ color: '#3b82f6' }} />
+                  : <ArticleRoundedIcon sx={{ fontSize: 15, color: '#3b82f6' }} />
+                }
+              </IconButton>
+            </span>
+          </Tooltip>
+        </TableCell>
+
+        {/* Factura — un solo click pide para todas las cuotas del grupo */}
+        <TableCell sx={cellSx} onClick={e => e.stopPropagation()}>
+          {todasCompletadas ? (
+            <Tooltip title="Descargar factura (cubre todas las cuotas de este pago)">
+              <IconButton
+                size="small"
+                onClick={() => window.open(solicitudesDelGrupo[0]?.factura_url, '_blank')}
+                sx={{
+                  bgcolor: isDark ? alpha('#10b981', 0.12) : alpha('#10b981', 0.08),
+                  borderRadius: '10px',
+                  '&:hover': { bgcolor: isDark ? alpha('#10b981', 0.22) : alpha('#10b981', 0.15) },
+                }}
+              >
+                <DownloadRoundedIcon sx={{ fontSize: 16, color: '#10b981' }} />
+              </IconButton>
+            </Tooltip>
+          ) : todasSolicitadas ? (
+            <Tooltip title="Todas las cuotas de este pago están en proceso de facturación">
+              <Chip
+                label="En proceso"
+                size="small"
+                icon={<AccessTimeRoundedIcon sx={{ fontSize: 12 }} />}
+                sx={{
+                  height: 22, fontSize: 10, fontWeight: 700,
+                  bgcolor: isDark ? alpha('#f59e0b', 0.15) : alpha('#f59e0b', 0.1),
+                  color: '#f59e0b', borderRadius: 1.5,
+                  '& .MuiChip-icon': { color: '#f59e0b', ml: 0.5 },
+                }}
+              />
+            </Tooltip>
+          ) : (
+            <Tooltip title={`Pedí una sola vez la factura para las ${grupo.cuotas.length} cuotas de este pago`}>
+              <span>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  disabled={solicitandoTodas}
+                  onClick={handleSolicitarTodas}
+                  startIcon={<RequestPageRoundedIcon sx={{ fontSize: 14 }} />}
+                  sx={{
+                    borderRadius: '10px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    py: 0.4,
+                    px: 1.25,
+                    borderColor: alpha(primary, 0.4),
+                    color: primary,
+                    textTransform: 'none',
+                    minWidth: 'unset',
+                    '&:hover': { borderColor: primary, bgcolor: alpha(primary, 0.08) },
+                    '&:disabled': { opacity: 0.5 },
+                  }}
+                >
+                  {solicitandoTodas ? 'Enviando...' : 'Solicitar'}
+                </Button>
+              </span>
+            </Tooltip>
+          )}
+        </TableCell>
+      </TableRow>
+
+      {/* Detalle expandido: una fila real por cuota, reutilizando FilaHistorial */}
+      {abierto && items.map((m, i) => (
+        <FilaHistorial
+          key={m.mensualidad_id}
+          mens={m}
+          index={i}
+          isDark={isDark}
+          primary={primary}
+          solicitud={m.pago_id ? solicitudMap[m.pago_id] : undefined}
+          solicitarFactura={solicitarFactura}
+          descargarRecibo={descargarRecibo}
+          onExito={onExito}
+          onError={onError}
+        />
+      ))}
+    </>
+  );
+};
+
+
 export default function HistorialPagosPage() {
   const { isDark, primary, gradBg } = usePalette();
   const router = useRouter();
@@ -391,7 +662,7 @@ export default function HistorialPagosPage() {
     if (hijos.length > 0 && !hijoActivo) setHijoActivo(hijos[0]);
   }, [hijos]);
 
-  const { mensualidades, isLoading: loadingMens, refrescar: refrescarMens } =
+  const { mensualidades, gruposPago, isLoading: loadingMens, refrescar: refrescarMens } =
     useMensualidadesHijo(hijoActivo?.estudiante_id ?? null);
 
   const {
@@ -415,6 +686,46 @@ export default function HistorialPagosPage() {
     if (filtroEstado === 'todos') return pagadas;
     return pagadas.filter(m => m.estado === filtroEstado);
   }, [pagadas, filtroEstado]);
+
+  // ── Índice mensualidad_id -> grupo (solo grupos reales, de 2+ cuotas) ────
+  const grupoPorMensualidadId = useMemo(() => {
+    const map = new Map<number, GrupoPago>();
+    for (const g of gruposPago) {
+      if (g.cuotas.length < 2) continue; // grupo de 1 = pago suelto, no lo tratamos como grupo
+      for (const c of g.cuotas) map.set(c.mensualidad_id, g);
+    }
+    return map;
+  }, [gruposPago]);
+
+  // ── Filas a renderizar: colapsamos las cuotas que comparten transacción
+  //    en una sola fila "de grupo", y dejamos el resto como venían ────────
+  type FilaDisplay =
+    | { tipo: 'single'; mens: MensualidadHijo }
+    | { tipo: 'grupo'; grupo: GrupoPago; items: MensualidadHijo[] };
+
+  const filasAgrupadas = useMemo<FilaDisplay[]>(() => {
+    const clavesYaAgregadas = new Set<string>();
+    const filas: FilaDisplay[] = [];
+
+    for (const m of historialFiltrado) {
+      const grupo = grupoPorMensualidadId.get(m.mensualidad_id);
+
+      if (!grupo) {
+        filas.push({ tipo: 'single', mens: m });
+        continue;
+      }
+
+      if (clavesYaAgregadas.has(grupo.clave)) continue; // ya se agregó la fila de este grupo
+
+      clavesYaAgregadas.add(grupo.clave);
+      const items = historialFiltrado.filter(
+        x => grupoPorMensualidadId.get(x.mensualidad_id)?.clave === grupo.clave
+      );
+      filas.push({ tipo: 'grupo', grupo, items });
+    }
+
+    return filas;
+  }, [historialFiltrado, grupoPorMensualidadId]);
 
   const totalPagado = pagadas.reduce(
     (acc, m) => acc + parseFloat(String(m.monto_pagado || m.monto_final)), 0
@@ -717,20 +1028,36 @@ export default function HistorialPagosPage() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {historialFiltrado.map((m, i) => (
-                      <FilaHistorial
-                        key={m.mensualidad_id}
-                        mens={m}
-                        index={i}
-                        isDark={isDark}
-                        primary={primary}
-                        solicitud={m.pago_id ? solicitudMap[m.pago_id] : undefined}
-                        solicitarFactura={solicitarFactura}
-                        descargarRecibo={descargarRecibo}
-                        onExito={handleExito}
-                        onError={handleError}
-                      />
-                    ))}
+                    {filasAgrupadas.map((fila, i) =>
+                      fila.tipo === 'grupo' ? (
+                        <FilaHistorialGrupo
+                          key={fila.grupo.clave}
+                          grupo={fila.grupo}
+                          items={fila.items}
+                          index={i}
+                          isDark={isDark}
+                          primary={primary}
+                          solicitudMap={solicitudMap}
+                          solicitarFactura={solicitarFactura}
+                          descargarRecibo={descargarRecibo}
+                          onExito={handleExito}
+                          onError={handleError}
+                        />
+                      ) : (
+                        <FilaHistorial
+                          key={fila.mens.mensualidad_id}
+                          mens={fila.mens}
+                          index={i}
+                          isDark={isDark}
+                          primary={primary}
+                          solicitud={fila.mens.pago_id ? solicitudMap[fila.mens.pago_id] : undefined}
+                          solicitarFactura={solicitarFactura}
+                          descargarRecibo={descargarRecibo}
+                          onExito={handleExito}
+                          onError={handleError}
+                        />
+                      )
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -745,7 +1072,7 @@ export default function HistorialPagosPage() {
                 flexWrap: 'wrap', gap: 2,
               }}>
                 <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: 11 }}>
-                  {historialFiltrado.length} registro{historialFiltrado.length !== 1 ? 's' : ''} encontrado{historialFiltrado.length !== 1 ? 's' : ''}
+                  {filasAgrupadas.length} transacci{filasAgrupadas.length !== 1 ? 'ones' : 'ón'} · {historialFiltrado.length} cuota{historialFiltrado.length !== 1 ? 's' : ''}
                 </Typography>
                 <Box sx={{ textAlign: 'right' }}>
                   <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: 10, display: 'block' }}>

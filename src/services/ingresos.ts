@@ -401,6 +401,50 @@ class IngresosService {
 
     return csv;
   }
+
+  // ============== EXPORTACIÓN PDF / EXCEL ==============
+
+  private descargarArchivo(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
+  private getFilenameDesdeHeaders(contentDisposition: string | undefined, fallback: string): string {
+    if (!contentDisposition) return fallback;
+    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1].replace(/"/g, ''));
+    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+    return filenameMatch?.[1] || fallback;
+  }
+
+  async exportarReporteIngresos(filtros: {
+    fecha_desde: string;
+    fecha_hasta: string;
+    formato: 'pdf' | 'excel';
+    tipo_ingreso_id?: number;
+  }): Promise<void> {
+    const response = await api.get<Blob>('/api/ingreso/exportar/ingresos', {
+      params: filtros,
+      responseType: 'blob',
+    });
+
+    const extension = filtros.formato === 'excel' ? 'xlsx' : 'pdf';
+    const mime = filtros.formato === 'excel'
+      ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      : 'application/pdf';
+
+    const fallback = `reporte-ingresos-${filtros.fecha_desde}_${filtros.fecha_hasta}.${extension}`;
+    const filename = this.getFilenameDesdeHeaders(response.headers['content-disposition'], fallback);
+    const blob = new Blob([response.data], { type: mime });
+
+    this.descargarArchivo(blob, filename);
+  }
 }
 
 export default new IngresosService();

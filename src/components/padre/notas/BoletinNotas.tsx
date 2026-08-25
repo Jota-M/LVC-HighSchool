@@ -1,9 +1,11 @@
 'use client';
 // components/padre/notas/BoletinNotas.tsx
-// Restyled: la tarjeta "Promedio" (antes azul fijo #3b82f6) ahora usa el token
-// de marca compartido (ámbar oscuro / azul claro). Aprobadas (verde),
-// Reprobadas (rojo), Sin nota (gris) y los colores por dimensión/nivel de
-// rendimiento son semánticos y se mantienen sin cambios.
+// Rediseño: las stat cards y la tarjeta de materia ganan presencia visual
+// (íconos, elevación, sombra) para combinar con el header de marca. Las
+// barras de dimensión (SER/SABER/HACER/AUTOEVALUACIÓN) mantienen sus 4
+// colores fijos pero ahora con gradiente + glow en vez de relleno plano.
+// El semáforo Aprobadas(verde)/Reprobadas(rojo)/Sin nota(gris) se mantiene
+// — es información real, no decoración. "Promedio" usa el token de marca.
 
 import React, { useState, useCallback, useEffect } from 'react';
 import {
@@ -18,9 +20,12 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import HourglassEmptyRoundedIcon from '@mui/icons-material/HourglassEmptyRounded';
 import SchoolIcon from '@mui/icons-material/School';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded';
+import { SvgIconProps } from '@mui/material/SvgIcon';
 
 import {
   ResumenMateriaPadre,
@@ -51,7 +56,7 @@ const formatFecha = (f?: string) =>
   f ? new Date(f + 'T12:00:00').toLocaleDateString('es-BO', { day: 'numeric', month: 'short' }) : '—';
 
 // ──────────────────────────────────────────────
-// BARRA DE DIMENSIÓN
+// BARRA DE DIMENSIÓN — ahora con gradiente + glow
 // ──────────────────────────────────────────────
 
 const BarraDimension: React.FC<{ codigo: CodigoDimension; nota: number | null | undefined; delay?: number }> = ({
@@ -65,11 +70,17 @@ const BarraDimension: React.FC<{ codigo: CodigoDimension; nota: number | null | 
     return null;
   }
   const valor = nota ?? 0;
+  const tieneNota = nota != null;
+
   return (
     <Box sx={{ mb: 1.25 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-          <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: cfg.color, flexShrink: 0 }} />
+          <Box sx={{
+            width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+            background: cfg.color,
+            boxShadow: tieneNota ? `0 0 6px ${alpha(cfg.color, 0.8)}` : 'none',
+          }} />
           <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ fontSize: 11 }}>
             {cfg.label}
           </Typography>
@@ -81,10 +92,12 @@ const BarraDimension: React.FC<{ codigo: CodigoDimension; nota: number | null | 
           {nota != null ? nota : '—'}
         </Typography>
       </Box>
-      <Box sx={{ height: 5, borderRadius: 3, bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06), overflow: 'hidden' }}>
+      <Box sx={{ height: 6, borderRadius: 3, bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06), overflow: 'hidden' }}>
         <Box
           sx={{
-            height: '100%', width: `${valor}%`, borderRadius: 3, bgcolor: cfg.color,
+            height: '100%', width: `${valor}%`, borderRadius: 3,
+            background: `linear-gradient(90deg, ${cfg.color} 0%, ${alpha(cfg.color, 0.6)} 100%)`,
+            boxShadow: tieneNota ? `0 0 8px ${alpha(cfg.color, 0.5)}` : 'none',
             transformOrigin: 'left', animation: `${fillBar} 0.8s cubic-bezier(0.4,0,0.2,1) ${delay}s both`,
           }}
         />
@@ -272,7 +285,7 @@ const SelectorVista: React.FC<{ vista: 0 | 1; onChange: (v: 0 | 1) => void; colo
 };
 
 // ──────────────────────────────────────────────
-// TARJETA DE MATERIA
+// TARJETA DE MATERIA — más presencia (sombra, hover, escala)
 // ──────────────────────────────────────────────
 
 interface TarjetaMateriaProps {
@@ -322,12 +335,16 @@ const TarjetaMateria: React.FC<TarjetaMateriaProps> = ({
         borderRadius: 3,
         animation: `${fadeUp} 0.4s ease-out ${index * 0.06}s both`,
         overflow: 'hidden',
-        border: `1px solid ${alpha(color, expandido ? 0.35 : 0.2)}`,
+        border: `1px solid ${alpha(color, expandido ? 0.4 : 0.18)}`,
         background: isDark
           ? `linear-gradient(145deg, ${alpha(color, 0.1)} 0%, ${alpha(color, 0.03)} 100%)`
           : `linear-gradient(145deg, ${alpha(color, 0.05)} 0%, #fff 100%)`,
         transition: 'all 0.25s ease',
-        '&:hover': { boxShadow: `0 4px 20px ${alpha(color, 0.2)}` },
+        boxShadow: expandido ? `0 8px 28px ${alpha(color, 0.25)}` : `0 2px 10px ${alpha(color, 0.08)}`,
+        '&:hover': {
+          boxShadow: `0 10px 30px ${alpha(color, 0.3)}`,
+          transform: 'translateY(-2px)',
+        },
         '&::before': { content: '""', display: 'block', height: '3px', background: gradient },
       }}
     >
@@ -339,7 +356,9 @@ const TarjetaMateria: React.FC<TarjetaMateriaProps> = ({
             sx={{
               width: 64, height: 64, borderRadius: 3, flexShrink: 0,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              background: gradient, boxShadow: `0 4px 14px ${alpha(color, 0.35)}`,
+              background: gradient, boxShadow: `0 6px 18px ${alpha(color, 0.45)}`,
+              transition: 'transform 0.25s ease',
+              '.MuiCard-root:hover &': { transform: 'scale(1.05)' },
             }}
           >
             {materia.nota_final != null ? (
@@ -386,8 +405,8 @@ const TarjetaMateria: React.FC<TarjetaMateriaProps> = ({
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
             {loadingCalif
               ? <CircularProgress size={18} sx={{ color }} />
-              : <IconButton size="small" sx={{ borderRadius: 2 }}>
-                {expandido ? <ExpandLessIcon sx={{ fontSize: 18 }} /> : <ExpandMoreIcon sx={{ fontSize: 18 }} />}
+              : <IconButton size="small" sx={{ borderRadius: 2, bgcolor: alpha(color, isDark ? 0.15 : 0.08), '&:hover': { bgcolor: alpha(color, isDark ? 0.25 : 0.15) } }}>
+                {expandido ? <ExpandLessIcon sx={{ fontSize: 18, color }} /> : <ExpandMoreIcon sx={{ fontSize: 18, color }} />}
               </IconButton>
             }
             <Typography variant="caption" color="text.disabled" sx={{ fontSize: 9, fontWeight: 700 }}>
@@ -422,6 +441,122 @@ const TarjetaMateria: React.FC<TarjetaMateriaProps> = ({
 };
 
 // ──────────────────────────────────────────────
+// STAT CARD — mismo lenguaje que ResumenPagosCards: barra superior de color,
+// ícono en recuadro propio, número grande, etiqueta y subtítulo descriptivo.
+// ──────────────────────────────────────────────
+
+interface StatCardData {
+  label: string;
+  value: string | number;
+  subtitle: string;
+  color: string;
+  gradient: string;
+  icon: React.ReactNode;
+}
+
+const StatCard: React.FC<{ stat: StatCardData; index: number }> = ({ stat, index }) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
+  return (
+    <Card
+      sx={{
+        borderRadius: 3,
+        position: 'relative',
+        overflow: 'hidden',
+        animation: `${fadeUp} 0.4s ease-out ${index * 0.07}s both`,
+        border: `1px solid ${alpha(stat.color, 0.25)}`,
+        background: isDark
+          ? `linear-gradient(155deg, ${alpha(stat.color, 0.18)} 0%, ${alpha(stat.color, 0.04)} 55%, transparent 100%)`
+          : `linear-gradient(155deg, ${alpha(stat.color, 0.1)} 0%, #fff 60%)`,
+        boxShadow: `0 4px 18px ${alpha(stat.color, isDark ? 0.18 : 0.1)}`,
+        transition: 'all 0.25s ease',
+        '&::before': { content: '""', display: 'block', height: '3px', background: stat.gradient },
+        '&:hover': {
+          transform: 'translateY(-3px)',
+          boxShadow: `0 12px 28px ${alpha(stat.color, 0.32)}`,
+        },
+      }}
+    >
+      {/* Ícono fantasma de fondo — llena el espacio vacío a la derecha */}
+      <Box
+        sx={{
+          position: 'absolute',
+          right: -14,
+          top: -14,
+          opacity: isDark ? 0.1 : 0.06,
+          transform: 'rotate(-8deg)',
+          pointerEvents: 'none',
+        }}
+      >
+        {React.cloneElement(
+          stat.icon as React.ReactElement<SvgIconProps>,
+          {
+            sx: {
+              color: stat.color,
+              fontSize: 110,
+            },
+          }
+        )}
+      </Box>
+
+      <CardContent sx={{ p: 2.75, position: 'relative' }}>
+        <Typography
+          sx={{
+            fontSize: 10.5, fontWeight: 800, letterSpacing: '0.09em',
+            textTransform: 'uppercase', color: alpha(stat.color, 0.9),
+            mb: 1.25,
+          }}
+        >
+          {stat.label}
+        </Typography>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+          <Box
+            sx={{
+              width: 46,
+              height: 46,
+              borderRadius: '13px',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: stat.gradient,
+              boxShadow: `0 4px 14px ${alpha(stat.color, 0.45)}`,
+            }}
+          >
+            {React.cloneElement(
+              stat.icon as React.ReactElement<SvgIconProps>,
+              {
+                sx: {
+                  color: '#fff',
+                  fontSize: 24,
+                },
+              }
+            )}
+          </Box>
+          <Typography
+            variant="h2" fontWeight={900} sx={{
+              fontSize: { xs: '2.4rem', sm: '2.75rem' },
+              lineHeight: 1, letterSpacing: '-0.02em',
+              background: stat.gradient,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            {stat.value}
+          </Typography>
+        </Box>
+
+        <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ fontSize: 13, lineHeight: 1.4 }}>
+          {stat.subtitle}
+        </Typography>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ──────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
 // ──────────────────────────────────────────────
 
@@ -443,9 +578,8 @@ const BoletinNotas: React.FC<Props> = ({
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
-  // Token de marca compartido (mismo criterio que financiero/seguimiento) —
-  // usado solo en la tarjeta "Promedio", que representa el acento de página,
-  // no un estado semántico.
+  // Token de marca compartido (mismo criterio que financiero/seguimiento/notas) —
+  // usado en la tarjeta "Promedio", que representa el acento de página.
   const primary = isDark ? '#facc15' : '#0288d1';
   const primaryEnd = isDark ? '#f59e0b' : '#01579b';
   const primaryGrad = `linear-gradient(135deg, ${primary}, ${primaryEnd})`;
@@ -479,23 +613,42 @@ const BoletinNotas: React.FC<Props> = ({
     );
   }
 
+  const totalMaterias = boletin.length;
+
+  const stats: StatCardData[] = [
+    {
+      label: 'Aprobadas', value: aprobadas, color: '#10b981',
+      gradient: 'linear-gradient(135deg,#10b981,#34d399)',
+      subtitle: `${aprobadas} de ${totalMaterias} materias aprobadas este trimestre`,
+      icon: <CheckCircleRoundedIcon sx={{ color: '#fff', fontSize: 22 }} />,
+    },
+    {
+      label: 'Reprobadas', value: reprobadas, color: '#ef4444',
+      gradient: 'linear-gradient(135deg,#ef4444,#f87171)',
+      subtitle: reprobadas > 0 ? `${reprobadas} materia${reprobadas > 1 ? 's' : ''} bajo el mínimo de aprobación` : 'Ninguna materia reprobada este trimestre',
+      icon: <CancelRoundedIcon sx={{ color: '#fff', fontSize: 22 }} />,
+    },
+    {
+      label: 'Sin nota', value: sinNota, color: '#6b7280',
+      gradient: 'linear-gradient(135deg,#6b7280,#9ca3af)',
+      subtitle: sinNota > 0 ? `${sinNota} materia${sinNota > 1 ? 's' : ''} pendiente${sinNota > 1 ? 's' : ''} de calificar` : 'Todas las materias ya tienen calificación',
+      icon: <HourglassEmptyRoundedIcon sx={{ color: '#fff', fontSize: 22 }} />,
+    },
+    {
+      label: 'Promedio', value: promedio != null ? `${promedio}` : '—', color: primary,
+      gradient: primaryGrad,
+      subtitle: 'Promedio general sobre 100 puntos',
+      icon: <BarChartRoundedIcon sx={{ color: isDark ? '#000' : '#fff', fontSize: 22 }} />,
+    },
+  ];
+
   return (
     <Box>
       {/* Resumen global */}
       <Grid container spacing={1.5} sx={{ mb: 3 }}>
-        {[
-          { label: 'Aprobadas', value: aprobadas, color: '#10b981', gradient: 'linear-gradient(135deg,#10b981,#34d399)' },
-          { label: 'Reprobadas', value: reprobadas, color: '#ef4444', gradient: 'linear-gradient(135deg,#ef4444,#f87171)' },
-          { label: 'Sin nota', value: sinNota, color: '#6b7280', gradient: 'linear-gradient(135deg,#6b7280,#9ca3af)' },
-          { label: 'Promedio', value: promedio != null ? `${promedio}` : '—', color: primary, gradient: primaryGrad },
-        ].map((stat, i) => (
+        {stats.map((stat, i) => (
           <Grid size={{ xs: 6, sm: 3 }} key={stat.label}>
-            <Card sx={{ borderRadius: 3, animation: `${fadeUp} 0.4s ease-out ${i * 0.07}s both`, border: `1px solid ${alpha(stat.color, 0.2)}`, background: isDark ? alpha(stat.color, 0.1) : alpha(stat.color, 0.05), '&::before': { content: '""', display: 'block', height: '3px', background: stat.gradient } }}>
-              <CardContent sx={{ p: 2, textAlign: 'center' }}>
-                <Typography variant="h4" fontWeight={900} sx={{ background: stat.gradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{stat.value}</Typography>
-                <Typography variant="caption" color="text.secondary" fontWeight={700}>{stat.label}</Typography>
-              </CardContent>
-            </Card>
+            <StatCard stat={stat} index={i} />
           </Grid>
         ))}
       </Grid>

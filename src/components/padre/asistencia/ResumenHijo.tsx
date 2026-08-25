@@ -1,5 +1,9 @@
 'use client';
 // components/padre/asistencia/ResumenHijo.tsx
+// Rediseño de las stat cards para igualar el lenguaje visual de BoletinNotas:
+// ícono fantasma de fondo, ícono con gradiente + sombra, número grande con
+// gradient-clip, label uppercase con letter-spacing, subtítulo descriptivo.
+// El resto del archivo (alerta, tarjeta de % global, filas por materia) no cambia.
 
 import React from 'react';
 import {
@@ -10,7 +14,6 @@ import {
   Grid,
   Skeleton,
   Chip,
-  LinearProgress,
   Alert,
   Stack,
   useTheme,
@@ -21,10 +24,10 @@ import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
 import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded';
-import RemoveCircleOutlineRoundedIcon from '@mui/icons-material/RemoveCircleOutlineRounded';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import ChecklistRtlRoundedIcon from '@mui/icons-material/ChecklistRtlRounded';
 
 import {
   ResumenAsistenciaHijo,
@@ -39,7 +42,7 @@ import {
 // ──────────────────────────────────────────────
 
 const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 `;
 
@@ -48,25 +51,22 @@ const fillBar = keyframes`
   to   { transform: scaleX(1); }
 `;
 
-const pulse = keyframes`
-  0%, 100% { box-shadow: 0 0 0 0 currentColor; }
-  50%       { box-shadow: 0 0 0 8px transparent; }
-`;
-
 // ──────────────────────────────────────────────
-// TARJETA ESTADÍSTICA
+// STAT CARD — mismo lenguaje que BoletinNotas: barra superior de color,
+// ícono fantasma de fondo, ícono en recuadro propio, número grande con
+// gradiente, label uppercase y subtítulo descriptivo.
 // ──────────────────────────────────────────────
 
-interface StatProps {
+interface StatCardData {
   label: string;
   value: number;
+  subtitle: string;
   color: string;
   gradient: string;
   icon: React.ReactNode;
-  delay?: number;
 }
 
-const StatCard: React.FC<StatProps> = ({ label, value, color, gradient, icon, delay = 0 }) => {
+const StatCard: React.FC<{ stat: StatCardData; index: number }> = ({ stat, index }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
@@ -74,62 +74,67 @@ const StatCard: React.FC<StatProps> = ({ label, value, color, gradient, icon, de
     <Card
       sx={{
         borderRadius: 3,
-        animation: `${fadeUp} 0.5s ease-out ${delay}s both`,
         position: 'relative',
         overflow: 'hidden',
+        animation: `${fadeUp} 0.4s ease-out ${index * 0.07}s both`,
+        border: `1px solid ${alpha(stat.color, 0.25)}`,
         background: isDark
-          ? `linear-gradient(145deg, ${alpha(color, 0.15)} 0%, ${alpha(color, 0.05)} 100%)`
-          : `linear-gradient(145deg, ${alpha(color, 0.08)} 0%, #fff 100%)`,
-        border: `1px solid ${alpha(color, 0.2)}`,
-        boxShadow: `0 4px 20px ${alpha(color, 0.12)}`,
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+          ? `linear-gradient(155deg, ${alpha(stat.color, 0.18)} 0%, ${alpha(stat.color, 0.04)} 55%, transparent 100%)`
+          : `linear-gradient(155deg, ${alpha(stat.color, 0.1)} 0%, #fff 60%)`,
+        boxShadow: `0 4px 18px ${alpha(stat.color, isDark ? 0.18 : 0.1)}`,
+        transition: 'all 0.25s ease',
+        '&::before': { content: '""', display: 'block', height: '3px', background: stat.gradient },
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: `0 8px 32px ${alpha(color, 0.25)}`,
-        },
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '3px',
-          background: gradient,
+          transform: 'translateY(-3px)',
+          boxShadow: `0 12px 28px ${alpha(stat.color, 0.32)}`,
         },
       }}
     >
-      <CardContent sx={{ p: 2.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-          <Box
-            sx={{
-              width: 44,
-              height: 44,
-              borderRadius: 2.5,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: gradient,
-              boxShadow: `0 4px 16px ${alpha(color, 0.4)}`,
-              '& svg': { fontSize: 24, color: '#fff' },
-            }}
-          >
-            {icon}
+      {/* Ícono fantasma de fondo — llena el espacio vacío a la derecha */}
+      <Box sx={{
+        position: 'absolute', right: -14, top: -14,
+        opacity: isDark ? 0.1 : 0.06,
+        transform: 'rotate(-8deg)',
+        pointerEvents: 'none',
+      }}>
+        {React.cloneElement(stat.icon as React.ReactElement, { sx: { color: stat.color, fontSize: 110 } })}
+      </Box>
+
+      <CardContent sx={{ p: 2.75, position: 'relative' }}>
+        <Typography
+          sx={{
+            fontSize: 10.5, fontWeight: 800, letterSpacing: '0.09em',
+            textTransform: 'uppercase', color: alpha(stat.color, 0.9),
+            mb: 1.25,
+          }}
+        >
+          {stat.label}
+        </Typography>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+          <Box sx={{
+            width: 46, height: 46, borderRadius: '13px', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: stat.gradient,
+            boxShadow: `0 4px 14px ${alpha(stat.color, 0.45)}`,
+          }}>
+            {React.cloneElement(stat.icon as React.ReactElement, { sx: { color: '#fff', fontSize: 24 } })}
           </Box>
           <Typography
-            variant="h4"
-            fontWeight={900}
-            sx={{
-              background: gradient,
+            variant="h2" fontWeight={900} sx={{
+              fontSize: { xs: '2.4rem', sm: '2.75rem' },
+              lineHeight: 1, letterSpacing: '-0.02em',
+              background: stat.gradient,
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              lineHeight: 1,
             }}
           >
-            {value}
+            {stat.value}
           </Typography>
         </Box>
-        <Typography variant="body2" fontWeight={700} color="text.secondary">
-          {label}
+
+        <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ fontSize: 13, lineHeight: 1.4 }}>
+          {stat.subtitle}
         </Typography>
       </CardContent>
     </Card>
@@ -137,7 +142,7 @@ const StatCard: React.FC<StatProps> = ({ label, value, color, gradient, icon, de
 };
 
 // ──────────────────────────────────────────────
-// FILA POR MATERIA
+// FILA POR MATERIA (sin cambios)
 // ──────────────────────────────────────────────
 
 const FilaMateria: React.FC<{ materia: ResumenPorMateria; index: number }> = ({ materia, index }) => {
@@ -263,10 +268,10 @@ const ResumenHijo: React.FC<Props> = ({ resumen, isLoading = false }) => {
   if (isLoading) {
     return (
       <Box>
-        <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid container spacing={1.5} sx={{ mb: 3 }}>
           {Array.from({ length: 5 }).map((_, i) => (
-            <Grid size={{xs:6, sm:4, md:2.4}}  key={i}>
-              <Skeleton variant="rounded" height={100} sx={{ borderRadius: 3 }} />
+            <Grid size={{ xs: 6, sm: 4, md: 2.4 }} key={i}>
+              <Skeleton variant="rounded" height={140} sx={{ borderRadius: 3 }} />
             </Grid>
           ))}
         </Grid>
@@ -299,6 +304,40 @@ const ResumenHijo: React.FC<Props> = ({ resumen, isLoading = false }) => {
   const color = getColorNivel(nivel, isDark);
   const gradient = getGradientNivel(nivel);
   const materiasEnRiesgo = resumen.por_materia.filter(m => m.en_riesgo);
+  const totalMaterias = resumen.por_materia.length;
+
+  const stats: StatCardData[] = [
+    {
+      label: 'Total clases', value: resumen.total_clases, color: '#3b82f6',
+      gradient: 'linear-gradient(135deg,#3b82f6,#60a5fa)',
+      subtitle: `Registradas en ${totalMaterias} materia${totalMaterias !== 1 ? 's' : ''} este período`,
+      icon: <ChecklistRtlRoundedIcon sx={{ color: '#fff', fontSize: 22 }} />,
+    },
+    {
+      label: 'Presentes', value: resumen.total_presentes, color: '#10b981',
+      gradient: 'linear-gradient(135deg,#10b981,#34d399)',
+      subtitle: `${resumen.total_presentes} de ${resumen.total_clases} clases con asistencia`,
+      icon: <CheckCircleRoundedIcon sx={{ color: '#fff', fontSize: 22 }} />,
+    },
+    {
+      label: 'Ausentes', value: resumen.total_ausentes, color: '#ef4444',
+      gradient: 'linear-gradient(135deg,#ef4444,#f87171)',
+      subtitle: resumen.total_ausentes > 0 ? `${resumen.total_ausentes} clase${resumen.total_ausentes > 1 ? 's' : ''} sin justificar` : 'Sin ausencias este período',
+      icon: <CancelRoundedIcon sx={{ color: '#fff', fontSize: 22 }} />,
+    },
+    {
+      label: 'Tardanzas', value: resumen.total_tardanzas, color: '#f59e0b',
+      gradient: 'linear-gradient(135deg,#f59e0b,#fbbf24)',
+      subtitle: resumen.total_tardanzas > 0 ? `${resumen.total_tardanzas} llegada${resumen.total_tardanzas > 1 ? 's' : ''} tarde registradas` : 'Sin tardanzas este período',
+      icon: <AccessTimeRoundedIcon sx={{ color: '#fff', fontSize: 22 }} />,
+    },
+    {
+      label: 'Justificados', value: resumen.total_justificados, color: '#8b5cf6',
+      gradient: 'linear-gradient(135deg,#8b5cf6,#a78bfa)',
+      subtitle: resumen.total_justificados > 0 ? `${resumen.total_justificados} ausencia${resumen.total_justificados > 1 ? 's' : ''} con justificativo` : 'Ninguna ausencia justificada',
+      icon: <VerifiedRoundedIcon sx={{ color: '#fff', fontSize: 22 }} />,
+    },
+  ];
 
   return (
     <Box>
@@ -326,57 +365,12 @@ const ResumenHijo: React.FC<Props> = ({ resumen, isLoading = false }) => {
       )}
 
       {/* Estadísticas globales */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{xs:6, sm:4, md:2.4}} >
-          <StatCard
-            label="Total clases"
-            value={resumen.total_clases}
-            color="#3b82f6"
-            gradient="linear-gradient(135deg, #3b82f6, #60a5fa)"
-            icon={<CheckCircleRoundedIcon />}
-            delay={0}
-          />
-        </Grid>
-        <Grid size={{xs:6, sm:4, md:2.4}} >
-          <StatCard
-            label="Presentes"
-            value={resumen.total_presentes}
-            color="#10b981"
-            gradient="linear-gradient(135deg, #10b981, #34d399)"
-            icon={<CheckCircleRoundedIcon />}
-            delay={0.07}
-          />
-        </Grid>
-        <Grid size={{xs:6, sm:4, md:2.4}} >
-          <StatCard
-            label="Ausentes"
-            value={resumen.total_ausentes}
-            color="#ef4444"
-            gradient="linear-gradient(135deg, #ef4444, #f87171)"
-            icon={<CancelRoundedIcon />}
-            delay={0.14}
-          />
-        </Grid>
-        <Grid size={{xs:6, sm:4, md:2.4}} >
-          <StatCard
-            label="Tardanzas"
-            value={resumen.total_tardanzas}
-            color="#f59e0b"
-            gradient="linear-gradient(135deg, #f59e0b, #fbbf24)"
-            icon={<AccessTimeRoundedIcon />}
-            delay={0.21}
-          />
-        </Grid>
-        <Grid size={{xs:6, sm:4, md:2.4}} >
-          <StatCard
-            label="Justificados"
-            value={resumen.total_justificados}
-            color="#8b5cf6"
-            gradient="linear-gradient(135deg, #8b5cf6, #a78bfa)"
-            icon={<VerifiedRoundedIcon />}
-            delay={0.28}
-          />
-        </Grid>
+      <Grid container spacing={1.5} sx={{ mb: 3 }}>
+        {stats.map((stat, i) => (
+          <Grid size={{ xs: 6, sm: 4, md: 2.4 }} key={stat.label}>
+            <StatCard stat={stat} index={i} />
+          </Grid>
+        ))}
       </Grid>
 
       {/* Porcentaje global destacado */}

@@ -16,6 +16,7 @@ import type {
   HijoPagoInfo,
   MensualidadHijo,
   ResumenMensualidades,
+  GrupoPago,
   QRGeneradoData,
   EstadoQRResponse,
   QRMultipleData,
@@ -98,6 +99,7 @@ export const useHijosConPagos = () => {
 // =============================================
 export const useMensualidadesHijo = (estudianteId: number | null) => {
   const [mensualidades, setMensualidades] = useState<MensualidadHijo[]>([]);
+  const [gruposPago, setGruposPago] = useState<GrupoPago[]>([]);
   const [resumen, setResumen] = useState<ResumenMensualidades>({
     total: 0, pagadas: 0, pendientes: 0, vencidas: 0, monto_pendiente: 0,
   });
@@ -110,11 +112,13 @@ export const useMensualidadesHijo = (estudianteId: number | null) => {
       const data = await getMensualidadesHijo(estudianteId);
       setMensualidades(data.mensualidades);
       setResumen(data.resumen);
+      setGruposPago(data.grupos_pago ?? []);
     } catch (error: any) {
       if (error.response?.status !== 404) {
         toast.error('Error al cargar las mensualidades');
       }
       setMensualidades([]);
+      setGruposPago([]);
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +130,7 @@ export const useMensualidadesHijo = (estudianteId: number | null) => {
   const pendientes = mensualidades.filter(m => m.estado === 'pendiente' || m.estado === 'vencido');
   const otras = mensualidades.filter(m => !['pagado', 'pendiente', 'vencido'].includes(m.estado));
 
-  return { mensualidades, resumen, pagadas, pendientes, otras, isLoading, refrescar: cargar };
+  return { mensualidades, gruposPago, resumen, pagadas, pendientes, otras, isLoading, refrescar: cargar };
 };
 
 // =============================================

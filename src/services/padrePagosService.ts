@@ -6,6 +6,7 @@ import type {
   HijoPagoInfo,
   MensualidadHijo,
   ResumenMensualidades,
+  GrupoPago,
   QRGeneradoData,
   EstadoQRResponse,
   QRMultipleData,
@@ -17,15 +18,15 @@ import type {
 // Generar QR para múltiples mensualidades
 export const generarQRMultiple = async (
   mensualidadIds: number[],
-  estudianteId:   number
+  estudianteId: number
 ): Promise<QRMultipleData> => {
   const res = await api.post('/padre-p/mensualidades/generar-qr-multiple', {
     mensualidad_ids: mensualidadIds,
-    estudiante_id:   estudianteId,
+    estudiante_id: estudianteId,
   });
   return res.data.data;
 };
- 
+
 // Verificar estado de un QR múltiple por alias
 export const getEstadoQRMultiple = async (
   alias: string
@@ -55,7 +56,8 @@ export const getMensualidadesHijo = async (
   estudianteId: number
 ): Promise<{
   mensualidades: MensualidadHijo[];
-  resumen:       ResumenMensualidades;
+  resumen: ResumenMensualidades;
+  grupos_pago: GrupoPago[];
 }> => {
   const res = await api.get(`/padre-p/hijos/${estudianteId}/mensualidades`);
   return res.data.data;

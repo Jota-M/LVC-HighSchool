@@ -50,6 +50,8 @@ import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
 import NotificationAddOutlinedIcon from '@mui/icons-material/NotificationAddOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 
+import CollectionsBookmarkOutlinedIcon from '@mui/icons-material/CollectionsBookmarkOutlined';
+
 import { useAuth } from '../../context/AuthContext';
 import { title } from 'process';
 
@@ -541,6 +543,12 @@ const sections = [
         to: '/dashboard/configuracion',
         icon: <SettingsOutlinedIcon />,
         permissions: ['configuracion.leer'],
+      },
+      {
+        title: 'Galería Institucional',
+        to: '/dashboard/galeria',
+        icon: <CollectionsBookmarkOutlinedIcon />,
+        roles: ['super_admin', 'secretaria'],
       },
       {
         title: 'Notificaciones Institucionales',

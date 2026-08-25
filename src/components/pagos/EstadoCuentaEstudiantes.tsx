@@ -28,6 +28,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  TablePagination,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -295,7 +296,15 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
       est.estudiante_codigo.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleExportar = async (formato: FormatoReporte) => {
+  // Reset page to first when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [estudiantesFiltrados]);
+
+  const [page, setPage] = useState(0);
+const rowsPerPage = 10;
+
+const handleExportar = async (formato: FormatoReporte) => {
     if (!periodoActivo) {
       enqueueSnackbar('No hay un período académico activo para generar el reporte', { variant: 'warning' });
       return;
@@ -653,7 +662,7 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {estudiantesFiltrados.map((estudiante) => (
+                {estudiantesFiltrados.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((estudiante) => (
                   <EstudianteRow
                     key={estudiante.estudiante_id}
                     estudiante={estudiante}
@@ -663,6 +672,14 @@ export const EstadoCuentaEstudiantes: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
+          <TablePagination
+            component="div"
+            count={estudiantesFiltrados.length}
+            page={page}
+            onPageChange={(event, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            rowsPerPageOptions={[rowsPerPage]}
+          />
 
           {estudiantesFiltrados.length === 0 && (
             <Box sx={{ textAlign: 'center', py: 4 }}>

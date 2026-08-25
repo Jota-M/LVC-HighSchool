@@ -1,54 +1,45 @@
 'use client';
 // components/padre/asistencia/SolicitarPermisoModal.tsx
+// Rediseño: mismo lenguaje visual que ProductoFormDialog — header con
+// watermark decorativo, eyebrow + ícono en recuadro, secciones con
+// SectionLabel (ícono + etiqueta + regla), inputs con fieldSx (radio,
+// foco con glow), footer fijo con Cancelar/Enviar. Se reemplaza el
+// Stepper por un formulario de una sola vista (como el de productos);
+// la validación ocurre al enviar.
 
 import React, { useState, useRef } from 'react';
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
   Box,
   Typography,
   TextField,
-  Select,
   MenuItem,
-  FormControl,
-  InputLabel,
   FormControlLabel,
   Switch,
   Button,
   Chip,
-  Alert,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
-  IconButton,
-  Divider,
+  Stack,
   useTheme,
   alpha,
   CircularProgress,
 } from '@mui/material';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import EventBusyRoundedIcon from '@mui/icons-material/EventBusyRounded';
+import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
+import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded';
+import AttachFileRoundedIcon from '@mui/icons-material/AttachFileRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import SendRoundedIcon from '@mui/icons-material/SendRounded';
+import InsertDriveFileRoundedIcon from '@mui/icons-material/InsertDriveFileRounded';
 import { keyframes } from '@mui/system';
-import CloseIcon from '@mui/icons-material/Close';
-import EventBusyIcon from '@mui/icons-material/EventBusy';
-import NoteAddIcon from '@mui/icons-material/NoteAdd';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
-import { HijoInfo, CrearPermisoHijoDTO,  } from '@/types/padreAsistenciaTypes';
+import { HijoInfo, CrearPermisoHijoDTO } from '@/types/padreAsistenciaTypes';
 import { MOTIVOS_PERMISO } from '@/types/asistenciaTypes';
 
 // ──────────────────────────────────────────────
 // ANIMACIONES
 // ──────────────────────────────────────────────
-
-const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-`;
 
 const popIn = keyframes`
   from { opacity: 0; transform: scale(0.85); }
@@ -78,6 +69,24 @@ interface FormState {
   asignacion_docente_id: string; // '' = día completo
 }
 
+// ── pequeño helper visual: eyebrow de sección (ícono + etiqueta + regla) ────
+const SectionLabel: React.FC<{ icon: React.ReactNode; children: React.ReactNode; brand: string; borderField: string }> = ({
+  icon, children, brand, borderField,
+}) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.25 }}>
+    <Box sx={{ display: 'flex', color: alpha(brand, 0.85), '& svg': { fontSize: 15 } }}>{icon}</Box>
+    <Typography
+      sx={{
+        fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.08em',
+        textTransform: 'uppercase', color: 'text.secondary', whiteSpace: 'nowrap',
+      }}
+    >
+      {children}
+    </Typography>
+    <Box sx={{ flex: 1, height: '1px', background: borderField }} />
+  </Box>
+);
+
 // ──────────────────────────────────────────────
 // COMPONENTE
 // ──────────────────────────────────────────────
@@ -94,95 +103,153 @@ const SolicitarPermisoModal: React.FC<Props> = ({
   const isDark = theme.palette.mode === 'dark';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── tokens (mismo criterio que ProductoFormDialog, en tono ámbar) ────────
+  const brand = isDark ? '#fbbf24' : '#f59e0b';
+  const brandSoft = isDark ? '#f59e0b' : '#b45309';
+  const brandDim = isDark ? 'rgba(251,191,36,0.12)' : 'rgba(245,158,11,0.10)';
+  const brandBorder = isDark ? 'rgba(251,191,36,0.25)' : 'rgba(245,158,11,0.25)';
+  const bgModal = isDark ? '#09101dff' : '#ffffff';
+  const bgField = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
+  const bgFieldAlt = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.015)';
+  const borderField = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)';
+  const R = '14px';
+
+  const fieldSx = {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: R,
+      background: bgField,
+      '& fieldset': { borderColor: borderField, borderRadius: R },
+      '&:hover fieldset': { borderColor: alpha(brand, 0.5) },
+      '&.Mui-focused fieldset': { borderColor: brand, borderWidth: '1.5px', borderRadius: R },
+      '&.Mui-focused': { boxShadow: `0 0 0 3px ${alpha(brand, 0.12)}`, borderRadius: R },
+      '&.Mui-disabled': { background: bgFieldAlt },
+    },
+    '& .MuiInputLabel-root': { color: 'text.secondary' },
+    '& .MuiInputLabel-root.Mui-focused': { color: brand },
+    '& .MuiSelect-select': { borderRadius: `${R} !important` },
+    '& .MuiOutlinedInput-notchedOutline': { borderRadius: `${R} !important` },
+  };
+
   const hoy = new Date().toISOString().slice(0, 10);
-  const [paso, setPaso] = useState(0);
   const [archivo, setArchivo] = useState<File | null>(null);
+  const [archivoPreview, setArchivoPreview] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const [exito, setExito] = useState(false);
 
   const [form, setForm] = useState<FormState>({
-    fecha_ausencia:        '',
-    motivo:                '',
-    descripcion:           '',
-    es_dia_completo:       true,
-    hora_inicio:           '',
-    hora_fin:              '',
+    fecha_ausencia: '',
+    motivo: '',
+    descripcion: '',
+    es_dia_completo: true,
+    hora_inicio: '',
+    hora_fin: '',
     asignacion_docente_id: '',
   });
 
   const [errores, setErrores] = useState<Partial<FormState>>({});
+  const [error, setError] = useState<string | null>(null);
 
   const handleChange = (key: keyof FormState, value: any) => {
     setForm(prev => ({ ...prev, [key]: value }));
     if (errores[key]) setErrores(prev => ({ ...prev, [key]: '' }));
   };
 
-  const validarPaso1 = (): boolean => {
+  const validar = (): boolean => {
     const e: Partial<FormState> = {};
     if (!form.fecha_ausencia) e.fecha_ausencia = 'Seleccioná la fecha de ausencia';
-    if (!form.motivo)         e.motivo         = 'Seleccioná el motivo';
+    if (!form.motivo) e.motivo = 'Seleccioná el motivo';
     if (!form.es_dia_completo) {
       if (!form.hora_inicio) e.hora_inicio = 'Indicá la hora de inicio';
-      if (!form.hora_fin)    e.hora_fin    = 'Indicá la hora de fin';
+      if (!form.hora_fin) e.hora_fin = 'Indicá la hora de fin';
     }
     setErrores(e);
-    return Object.keys(e).length === 0;
+    if (Object.keys(e).length > 0) {
+      setError('Completá los campos obligatorios para continuar');
+      return false;
+    }
+    setError(null);
+    return true;
   };
 
-  const handleSiguiente = () => {
-    if (paso === 0 && !validarPaso1()) return;
-    setPaso(p => p + 1);
+  const validarYSetearArchivo = (f: File | undefined) => {
+    if (!f) return;
+    const esValido = f.type.startsWith('image/') || f.type === 'application/pdf';
+    if (!esValido) {
+      setError('El archivo debe ser una imagen (JPG, PNG) o un PDF');
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      setError('El archivo no puede superar los 5 MB');
+      return;
+    }
+    setArchivo(f);
+    setArchivoPreview(f.type.startsWith('image/') ? URL.createObjectURL(f) : null);
+    setError(null);
   };
 
   const handleArchivoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) {
-      if (f.size > 5 * 1024 * 1024) {
-        alert('El archivo no puede superar los 5 MB');
-        return;
-      }
-      setArchivo(f);
-    }
+    validarYSetearArchivo(e.target.files?.[0]);
+  };
+
+  const handleDropArchivo = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragOver(false);
+    validarYSetearArchivo(e.dataTransfer.files?.[0]);
+  };
+
+  const quitarArchivo = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setArchivo(null);
+    setArchivoPreview(null);
+  };
+
+  const resetForm = () => {
+    setForm({
+      fecha_ausencia: '', motivo: '', descripcion: '',
+      es_dia_completo: true, hora_inicio: '', hora_fin: '',
+      asignacion_docente_id: '',
+    });
+    setArchivo(null);
+    setArchivoPreview(null);
+    setErrores({});
+    setError(null);
   };
 
   const handleSubmit = async () => {
-    if (!hijo) return;
+    if (!hijo || !validar()) return;
 
     const data: CrearPermisoHijoDTO = {
-      estudiante_id:         hijo.estudiante_id,
-      fecha_ausencia:        form.fecha_ausencia,
-      motivo:                form.motivo as any,
-      descripcion:           form.descripcion || undefined,
-      es_dia_completo:       form.es_dia_completo,
-      hora_inicio:           !form.es_dia_completo ? form.hora_inicio : undefined,
-      hora_fin:              !form.es_dia_completo ? form.hora_fin    : undefined,
+      estudiante_id: hijo.estudiante_id,
+      fecha_ausencia: form.fecha_ausencia,
+      motivo: form.motivo as any,
+      descripcion: form.descripcion || undefined,
+      es_dia_completo: form.es_dia_completo,
+      hora_inicio: !form.es_dia_completo ? form.hora_inicio : undefined,
+      hora_fin: !form.es_dia_completo ? form.hora_fin : undefined,
       asignacion_docente_id: form.asignacion_docente_id
         ? parseInt(form.asignacion_docente_id)
         : null,
     };
 
-    const ok = await onSubmit(data, archivo ?? undefined);
-    if (ok) {
-      setExito(true);
-      setTimeout(() => {
-        setExito(false);
-        setPaso(0);
-        setForm({
-          fecha_ausencia: '', motivo: '', descripcion: '',
-          es_dia_completo: true, hora_inicio: '', hora_fin: '',
-          asignacion_docente_id: '',
-        });
-        setArchivo(null);
-        onClose();
-      }, 2000);
+    try {
+      const ok = await onSubmit(data, archivo ?? undefined);
+      if (ok) {
+        setExito(true);
+        setTimeout(() => {
+          setExito(false);
+          resetForm();
+          onClose();
+        }, 2000);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al enviar la solicitud');
     }
   };
 
   const handleClose = () => {
     if (isSubmitting) return;
-    setPaso(0);
     setExito(false);
-    setErrores({});
-    setArchivo(null);
+    resetForm();
     onClose();
   };
 
@@ -196,96 +263,90 @@ const SolicitarPermisoModal: React.FC<Props> = ({
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 4,
-          background: isDark
-            ? 'linear-gradient(145deg, #1e1e2e, #1a1a2a)'
-            : '#fff',
-          boxShadow: isDark
-            ? '0 24px 80px rgba(0,0,0,0.6)'
-            : '0 24px 80px rgba(0,0,0,0.12)',
-          border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.05)}`,
+          borderRadius: '20px !important',
           overflow: 'hidden',
+          background: bgModal,
+          border: `1.5px solid ${brandBorder}`,
+          boxShadow: isDark
+            ? `0 0 0 1px rgba(251,191,36,0.06), 0 32px 64px rgba(0,0,0,0.8)`
+            : `0 32px 64px rgba(0,0,0,0.18)`,
         },
       }}
     >
-      {/* Header */}
-      <DialogTitle
+      {/* ── HEADER ── */}
+      <Box
         sx={{
-          p: 3,
-          pb: 2,
-          background: isDark
-            ? `linear-gradient(135deg, ${alpha('#f59e0b', 0.15)} 0%, ${alpha('#f59e0b', 0.05)} 100%)`
-            : `linear-gradient(135deg, ${alpha('#f59e0b', 0.08)} 0%, #fff 100%)`,
-          borderBottom: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06)}`,
+          px: 3, pt: 2.5, pb: 2, position: 'relative', overflow: 'hidden',
+          borderBottom: `1px solid ${borderField}`,
+          background: `linear-gradient(135deg, ${brandDim} 0%, transparent 65%)`,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box
+        {/* watermark decorativo sutil */}
+        <EventBusyRoundedIcon
+          sx={{
+            position: 'absolute', right: -14, top: -18, fontSize: 120,
+            color: brand, opacity: isDark ? 0.05 : 0.06, transform: 'rotate(-12deg)',
+            pointerEvents: 'none',
+          }}
+        />
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'relative' }}>
+          <Box>
+            <Typography
               sx={{
-                width: 44,
-                height: 44,
-                borderRadius: 2.5,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-                boxShadow: '0 4px 16px rgba(245, 158, 11, 0.4)',
+                fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em',
+                textTransform: 'uppercase', color: alpha(brand, 0.75), mb: 0.4,
               }}
             >
-              <EventBusyIcon sx={{ color: '#fff', fontSize: 24 }} />
-            </Box>
-            <Box>
-              <Typography variant="h6" fontWeight={900} sx={{ lineHeight: 1.2 }}>
+              {hijo ? `Para ${hijo.nombres} ${hijo.apellidos}` : 'Nueva solicitud'}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Box
+                sx={{
+                  width: 34, height: 34, borderRadius: '9px', flexShrink: 0,
+                  background: alpha(brand, 0.15),
+                  border: `1px solid ${alpha(brand, 0.3)}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <EventBusyRoundedIcon sx={{ color: brand, fontSize: 18 }} />
+              </Box>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', lineHeight: 1.1, color: 'text.primary' }}>
                 Solicitar permiso
               </Typography>
-              {hijo && (
-                <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                  Para {hijo.nombres} {hijo.apellidos}
-                </Typography>
-              )}
             </Box>
           </Box>
-          <IconButton
-            onClick={handleClose}
-            disabled={isSubmitting}
-            size="small"
-            sx={{
-              bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04),
-              borderRadius: 2,
-              '&:hover': { bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08) },
-            }}
-          >
-            <CloseIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-        </Box>
-      </DialogTitle>
 
-      <DialogContent sx={{ p: 3 }}>
-        {/* Estado de éxito */}
-        {exito ? (
           <Box
+            onClick={handleClose}
             sx={{
-              textAlign: 'center',
-              py: 5,
-              animation: `${popIn} 0.4s cubic-bezier(0.34,1.56,0.64,1)`,
+              width: 32, height: 32, borderRadius: '9px', cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,255,255,0.05)',
+              border: `1px solid ${borderField}`,
+              color: 'text.secondary',
+              opacity: isSubmitting ? 0.4 : 1,
+              transition: 'all 0.15s',
+              '&:hover': isSubmitting ? {} : { background: alpha(brand, 0.12), borderColor: alpha(brand, 0.4), color: brand },
             }}
           >
+            <CloseRoundedIcon sx={{ fontSize: 16 }} />
+          </Box>
+        </Box>
+      </Box>
+
+      {/* ── BODY ── */}
+      <DialogContent sx={{ px: 3, py: 2.75 }}>
+        {exito ? (
+          <Box sx={{ textAlign: 'center', py: 5, animation: `${popIn} 0.4s cubic-bezier(0.34,1.56,0.64,1)` }}>
             <Box
               sx={{
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                width: 80, height: 80, borderRadius: '50%', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', margin: '0 auto', mb: 3,
                 background: 'linear-gradient(135deg, #10b981, #34d399)',
                 boxShadow: '0 8px 32px rgba(16,185,129,0.4)',
-                margin: '0 auto',
-                mb: 3,
               }}
             >
-              <CheckCircleIcon sx={{ fontSize: 48, color: '#fff' }} />
+              <CheckCircleRoundedIcon sx={{ fontSize: 48, color: '#fff' }} />
             </Box>
             <Typography variant="h6" fontWeight={900} gutterBottom>
               ¡Solicitud enviada!
@@ -295,342 +356,329 @@ const SolicitarPermisoModal: React.FC<Props> = ({
             </Typography>
           </Box>
         ) : (
-          <Box sx={{ animation: `${fadeUp} 0.3s ease-out` }}>
-            {/* Pasos */}
-            <Stepper activeStep={paso} orientation="vertical" sx={{ '& .MuiStepLabel-label': { fontWeight: 700, fontSize: 13 } }}>
-              {/* ─── PASO 1: Datos del permiso ─── */}
-              <Step>
-                <StepLabel>Datos del permiso</StepLabel>
-                <StepContent>
-                  <Box sx={{ pt: 1.5, pb: 2 }}>
-                    {/* Fecha */}
+          <Stack spacing={2.5}>
+            {error && (
+              <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: alpha('#ef4444', 0.1), border: `1px solid ${alpha('#ef4444', 0.25)}`, color: '#ef4444', fontSize: 13, fontWeight: 600 }}>
+                {error}
+              </Box>
+            )}
+
+            {/* ── Sección: datos del permiso ── */}
+            <Box>
+              <SectionLabel icon={<CalendarMonthRoundedIcon />} brand={brand} borderField={borderField}>
+                Datos del permiso
+              </SectionLabel>
+
+              <Stack spacing={1.5} sx={{ mt: 1.25 }}>
+                <TextField
+                  label="Fecha de ausencia"
+                  type="date"
+                  size="small"
+                  fullWidth
+                  value={form.fecha_ausencia}
+                  onChange={e => handleChange('fecha_ausencia', e.target.value)}
+                  error={!!errores.fecha_ausencia}
+                  helperText={errores.fecha_ausencia}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: hoy }}
+                  sx={fieldSx}
+                />
+
+                {/* Motivo */}
+                <Box>
+                  <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Motivo de la ausencia
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {MOTIVOS_PERMISO.map(m => (
+                      <Chip
+                        key={m.value}
+                        label={`${m.icon} ${m.label}`}
+                        onClick={() => handleChange('motivo', m.value)}
+                        variant={form.motivo === m.value ? 'filled' : 'outlined'}
+                        size="small"
+                        sx={{
+                          height: 30, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                          borderRadius: '10px', transition: 'all 0.15s',
+                          ...(form.motivo === m.value
+                            ? {
+                              background: `linear-gradient(135deg, ${brand}, ${brandSoft})`,
+                              color: isDark ? '#000' : '#fff',
+                              border: 'none',
+                              boxShadow: `0 2px 8px ${alpha(brand, 0.4)}`,
+                            }
+                            : {
+                              bgcolor: bgFieldAlt,
+                              borderColor: borderField,
+                              '&:hover': { borderColor: alpha(brand, 0.5), bgcolor: alpha(brand, 0.06) },
+                            }),
+                        }}
+                      />
+                    ))}
+                  </Box>
+                  {errores.motivo && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.75, display: 'block' }}>
+                      {errores.motivo}
+                    </Typography>
+                  )}
+                </Box>
+
+                {/* ¿Día completo? */}
+                <Box
+                  sx={{
+                    p: 1.5, borderRadius: '12px', background: bgFieldAlt,
+                    border: `1px solid ${borderField}`,
+                  }}
+                >
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={form.es_dia_completo}
+                        onChange={e => handleChange('es_dia_completo', e.target.checked)}
+                        sx={{
+                          '& .MuiSwitch-switchBase.Mui-checked': { color: brand },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: brand },
+                        }}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body2" fontWeight={700}>Día completo</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {form.es_dia_completo
+                            ? 'Ausencia en todas las materias del día'
+                            : 'Solo en un horario específico'}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </Box>
+
+                {/* Horario parcial */}
+                {!form.es_dia_completo && (
+                  <Box sx={{ display: 'flex', gap: 1.5 }}>
                     <TextField
-                      label="Fecha de ausencia"
-                      type="date"
+                      label="Hora inicio"
+                      type="time"
                       size="small"
                       fullWidth
-                      value={form.fecha_ausencia}
-                      onChange={e => handleChange('fecha_ausencia', e.target.value)}
-                      error={!!errores.fecha_ausencia}
-                      helperText={errores.fecha_ausencia}
+                      value={form.hora_inicio}
+                      onChange={e => handleChange('hora_inicio', e.target.value)}
+                      error={!!errores.hora_inicio}
+                      helperText={errores.hora_inicio}
                       InputLabelProps={{ shrink: true }}
-                      inputProps={{ min: hoy }}
-                      sx={{ mb: 2, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      sx={fieldSx}
                     />
+                    <TextField
+                      label="Hora fin"
+                      type="time"
+                      size="small"
+                      fullWidth
+                      value={form.hora_fin}
+                      onChange={e => handleChange('hora_fin', e.target.value)}
+                      error={!!errores.hora_fin}
+                      helperText={errores.hora_fin}
+                      InputLabelProps={{ shrink: true }}
+                      sx={fieldSx}
+                    />
+                  </Box>
+                )}
 
-                    {/* Motivo */}
-                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                      Motivo de la ausencia
+                {/* Materia específica (opcional) */}
+                {materiasDisponibles.length > 0 && (
+                  <TextField
+                    select
+                    label="Materia afectada (opcional)"
+                    value={form.asignacion_docente_id}
+                    onChange={e => handleChange('asignacion_docente_id', e.target.value)}
+                    size="small"
+                    fullWidth
+                    sx={fieldSx}
+                  >
+                    <MenuItem value="">Todas las materias del día</MenuItem>
+                    {materiasDisponibles.map(m => (
+                      <MenuItem key={m.asignacion_id} value={m.asignacion_id.toString()}>
+                        {m.materia_nombre}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              </Stack>
+            </Box>
+
+            {/* ── Sección: descripción y adjunto ── */}
+            <Box>
+              <SectionLabel icon={<DescriptionRoundedIcon />} brand={brand} borderField={borderField}>
+                Descripción y documentación
+              </SectionLabel>
+
+              <Stack spacing={1.5} sx={{ mt: 1.25 }}>
+                {form.fecha_ausencia && motivoSeleccionado && (
+                  <Box
+                    sx={{
+                      p: 1.25, borderRadius: '12px', display: 'flex', alignItems: 'center', gap: 1,
+                      bgcolor: isDark ? alpha('#3b82f6', 0.1) : alpha('#3b82f6', 0.06),
+                      border: `1px solid ${alpha('#3b82f6', 0.2)}`,
+                      fontSize: 13, fontWeight: 600, color: 'text.secondary',
+                    }}
+                  >
+                    <Box sx={{ fontSize: 16 }}>{motivoSeleccionado.icon}</Box>
+                    <Typography variant="caption" fontWeight={600} color="text.secondary">
+                      {new Date(form.fecha_ausencia + 'T12:00:00').toLocaleDateString('es-BO', {
+                        weekday: 'long', day: 'numeric', month: 'long',
+                      })}
+                      {' · '}{motivoSeleccionado.label}
+                      {!form.es_dia_completo && form.hora_inicio && form.hora_fin && (
+                        <> · {form.hora_inicio} – {form.hora_fin}</>
+                      )}
                     </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                      {MOTIVOS_PERMISO.map(m => (
-                        <Chip
-                          key={m.value}
-                          label={`${m.icon} ${m.label}`}
-                          onClick={() => handleChange('motivo', m.value)}
-                          variant={form.motivo === m.value ? 'filled' : 'outlined'}
-                          size="small"
-                          sx={{
-                            height: 30,
-                            fontSize: 12,
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            borderRadius: 2,
-                            transition: 'all 0.2s ease',
-                            ...(form.motivo === m.value
-                              ? {
-                                  background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-                                  color: '#fff',
-                                  border: 'none',
-                                  boxShadow: '0 2px 8px rgba(245,158,11,0.4)',
-                                }
-                              : {
-                                  bgcolor: 'transparent',
-                                  borderColor: isDark ? alpha('#fff', 0.15) : alpha('#000', 0.12),
-                                  '&:hover': {
-                                    borderColor: '#f59e0b',
-                                    bgcolor: alpha('#f59e0b', 0.08),
-                                  },
-                                }),
-                          }}
-                        />
-                      ))}
-                    </Box>
-                    {errores.motivo && (
-                      <Typography variant="caption" color="error" sx={{ mb: 1, display: 'block' }}>
-                        {errores.motivo}
-                      </Typography>
-                    )}
+                  </Box>
+                )}
 
-                    {/* ¿Día completo? */}
-                    <Box
-                      sx={{
-                        p: 2,
-                        borderRadius: 2.5,
-                        bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
-                        border: `1px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)}`,
-                        mb: form.es_dia_completo ? 0 : 2,
-                      }}
-                    >
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={form.es_dia_completo}
-                            onChange={e => handleChange('es_dia_completo', e.target.checked)}
-                            sx={{
-                              '& .MuiSwitch-switchBase.Mui-checked': { color: '#f59e0b' },
-                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#f59e0b' },
-                            }}
-                          />
-                        }
-                        label={
-                          <Box>
-                            <Typography variant="body2" fontWeight={700}>
-                              Día completo
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {form.es_dia_completo
-                                ? 'Ausencia en todas las materias del día'
-                                : 'Solo en un horario específico'}
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                    </Box>
+                <TextField
+                  label="Descripción (opcional)"
+                  multiline
+                  rows={3}
+                  size="small"
+                  fullWidth
+                  value={form.descripcion}
+                  onChange={e => handleChange('descripcion', e.target.value)}
+                  placeholder="Agregá detalles adicionales sobre el motivo de la ausencia..."
+                  sx={fieldSx}
+                />
 
-                    {/* Horario parcial */}
-                    {!form.es_dia_completo && (
-                      <Box sx={{ display: 'flex', gap: 1.5 }}>
-                        <TextField
-                          label="Hora inicio"
-                          type="time"
-                          size="small"
-                          fullWidth
-                          value={form.hora_inicio}
-                          onChange={e => handleChange('hora_inicio', e.target.value)}
-                          error={!!errores.hora_inicio}
-                          helperText={errores.hora_inicio}
-                          InputLabelProps={{ shrink: true }}
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                        />
-                        <TextField
-                          label="Hora fin"
-                          type="time"
-                          size="small"
-                          fullWidth
-                          value={form.hora_fin}
-                          onChange={e => handleChange('hora_fin', e.target.value)}
-                          error={!!errores.hora_fin}
-                          helperText={errores.hora_fin}
-                          InputLabelProps={{ shrink: true }}
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                        />
+                {/* Adjunto — dropzone con previsualización, idéntico a productos */}
+                <Box>
+                  <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Documento de respaldo (opcional)
+                  </Typography>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    hidden
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={handleArchivoChange}
+                  />
+                  <Box
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={handleDropArchivo}
+                    sx={{
+                      borderRadius: '16px', cursor: 'pointer',
+                      py: archivo ? 2.5 : 4, px: 3,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      textAlign: 'center', gap: 0.5, position: 'relative',
+                      background: dragOver ? alpha(brand, 0.08) : bgFieldAlt,
+                      border: `1.5px dashed ${dragOver ? brand : archivo ? alpha('#10b981', 0.4) : borderField}`,
+                      transition: 'all 0.15s',
+                      '&:hover': { borderColor: alpha(brand, 0.5), background: alpha(brand, 0.04) },
+                    }}
+                  >
+                    {archivo && (
+                      <Box
+                        onClick={quitarArchivo}
+                        sx={{
+                          position: 'absolute', top: 10, right: 10,
+                          width: 26, height: 26, borderRadius: '8px', flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: 'text.secondary', background: bgField, border: `1px solid ${borderField}`,
+                          '&:hover': { background: alpha('#ef4444', 0.1), borderColor: alpha('#ef4444', 0.3), color: '#ef4444' },
+                        }}
+                      >
+                        <CloseRoundedIcon sx={{ fontSize: 13 }} />
                       </Box>
                     )}
 
-                    {/* Materia específica (opcional) */}
-                    {materiasDisponibles.length > 0 && (
-                      <FormControl size="small" fullWidth sx={{ mt: 2 }}>
-                        <InputLabel sx={{ fontWeight: 600, fontSize: 13 }}>
-                          Materia afectada (opcional)
-                        </InputLabel>
-                        <Select
-                          value={form.asignacion_docente_id}
-                          label="Materia afectada (opcional)"
-                          onChange={e => handleChange('asignacion_docente_id', e.target.value)}
-                          sx={{ borderRadius: 2, fontSize: 13 }}
-                        >
-                          <MenuItem value="">Todas las materias del día</MenuItem>
-                          {materiasDisponibles.map(m => (
-                            <MenuItem key={m.asignacion_id} value={m.asignacion_id.toString()}>
-                              {m.materia_nombre}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    )}
-                  </Box>
-
-                  <Button
-                    variant="contained"
-                    endIcon={<ArrowForwardIcon />}
-                    onClick={handleSiguiente}
-                    sx={{
-                      borderRadius: 2.5,
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-                      boxShadow: '0 4px 12px rgba(245,158,11,0.3)',
-                      '&:hover': { boxShadow: '0 6px 16px rgba(245,158,11,0.4)' },
-                    }}
-                  >
-                    Continuar
-                  </Button>
-                </StepContent>
-              </Step>
-
-              {/* ─── PASO 2: Descripción y adjunto ─── */}
-              <Step>
-                <StepLabel>Descripción y documentación</StepLabel>
-                <StepContent>
-                  <Box sx={{ pt: 1.5, pb: 2 }}>
-                    {/* Resumen del paso 1 */}
-                    {form.fecha_ausencia && motivoSeleccionado && (
-                      <Alert
-                        severity="info"
-                        icon={<Box sx={{ fontSize: 18 }}>{motivoSeleccionado.icon}</Box>}
+                    {archivoPreview ? (
+                      <Box
+                        component="img"
+                        src={archivoPreview}
+                        alt="Vista previa"
                         sx={{
-                          mb: 2,
-                          borderRadius: 2.5,
-                          fontSize: 13,
-                          fontWeight: 600,
-                          border: `1px solid ${alpha('#3b82f6', 0.2)}`,
-                          background: isDark ? alpha('#3b82f6', 0.1) : alpha('#3b82f6', 0.05),
-                          '& .MuiAlert-icon': { alignItems: 'center' },
+                          width: 84, height: 84, borderRadius: '12px', objectFit: 'cover', mb: 0.75,
+                          border: `1px solid ${borderField}`,
+                        }}
+                      />
+                    ) : archivo ? (
+                      <Box
+                        sx={{
+                          width: 60, height: 72, borderRadius: '10px', mb: 0.75,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: alpha('#10b981', 0.12), border: `1px solid ${alpha('#10b981', 0.3)}`,
                         }}
                       >
-                        {new Date(form.fecha_ausencia + 'T12:00:00').toLocaleDateString('es-BO', {
-                          weekday: 'long', day: 'numeric', month: 'long',
-                        })}
-                        {' · '}
-                        {motivoSeleccionado.label}
-                        {!form.es_dia_completo && form.hora_inicio && form.hora_fin && (
-                          <> · {form.hora_inicio} – {form.hora_fin}</>
-                        )}
-                      </Alert>
+                        <InsertDriveFileRoundedIcon sx={{ color: '#10b981', fontSize: 28 }} />
+                      </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          width: 52, height: 52, borderRadius: '50%', mb: 1,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: alpha(brand, 0.12), border: `1px solid ${alpha(brand, 0.3)}`,
+                        }}
+                      >
+                        <AttachFileRoundedIcon sx={{ color: brand, fontSize: 24 }} />
+                      </Box>
                     )}
 
-                    {/* Descripción */}
-                    <TextField
-                      label="Descripción (opcional)"
-                      multiline
-                      rows={3}
+                    <Typography variant="body2" fontWeight={800}>
+                      {archivo ? archivo.name : 'Arrastrá tu documento acá'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5 }}>
+                      {archivo ? `${(archivo.size / 1024).toFixed(0)} KB` : 'Admite PDF, JPG o PNG · máx. 5MB'}
+                    </Typography>
+
+                    <Button
+                      onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
                       size="small"
-                      fullWidth
-                      value={form.descripcion}
-                      onChange={e => handleChange('descripcion', e.target.value)}
-                      placeholder="Agregá detalles adicionales sobre el motivo de la ausencia..."
-                      sx={{
-                        mb: 2.5,
-                        '& .MuiOutlinedInput-root': { borderRadius: 2.5, fontSize: 13 },
-                      }}
-                    />
-
-                    {/* Adjunto */}
-                    <Box>
-                      <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                        Documento de respaldo (opcional · max. 5 MB)
-                      </Typography>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={handleArchivoChange}
-                        style={{ display: 'none' }}
-                      />
-                      {archivo ? (
-                        <Box
-                          sx={{
-                            p: 2,
-                            borderRadius: 2.5,
-                            border: `1px solid ${alpha('#10b981', 0.3)}`,
-                            bgcolor: isDark ? alpha('#10b981', 0.08) : alpha('#10b981', 0.05),
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                          }}
-                        >
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <AttachFileIcon sx={{ fontSize: 20, color: '#10b981' }} />
-                            <Box>
-                              <Typography variant="body2" fontWeight={700} sx={{ fontSize: 12 }}>
-                                {archivo.name}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {(archivo.size / 1024).toFixed(0)} KB
-                              </Typography>
-                            </Box>
-                          </Box>
-                          <IconButton
-                            size="small"
-                            onClick={() => setArchivo(null)}
-                            sx={{
-                              bgcolor: alpha('#ef4444', 0.1),
-                              color: '#ef4444',
-                              borderRadius: 1.5,
-                            }}
-                          >
-                            <CloseIcon sx={{ fontSize: 14 }} />
-                          </IconButton>
-                        </Box>
-                      ) : (
-                        <Button
-                          variant="outlined"
-                          startIcon={<AttachFileIcon />}
-                          onClick={() => fileInputRef.current?.click()}
-                          size="small"
-                          sx={{
-                            borderRadius: 2.5,
-                            textTransform: 'none',
-                            fontWeight: 700,
-                            fontSize: 12,
-                            borderColor: isDark ? alpha('#fff', 0.15) : alpha('#000', 0.15),
-                            color: 'text.secondary',
-                            '&:hover': {
-                              borderColor: '#f59e0b',
-                              bgcolor: alpha('#f59e0b', 0.05),
-                              color: '#f59e0b',
-                            },
-                          }}
-                        >
-                          Adjuntar certificado o documento
-                        </Button>
-                      )}
-                      <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, display: 'block' }}>
-                        Formatos aceptados: PDF, JPG, PNG
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<ArrowBackIcon />}
-                      onClick={() => setPaso(0)}
-                      disabled={isSubmitting}
-                      sx={{
-                        borderRadius: 2.5,
-                        textTransform: 'none',
-                        fontWeight: 700,
-                        borderColor: isDark ? alpha('#fff', 0.15) : alpha('#000', 0.15),
-                      }}
-                    >
-                      Volver
-                    </Button>
-                    <Button
                       variant="contained"
-                      onClick={handleSubmit}
-                      disabled={isSubmitting}
-                      startIcon={isSubmitting ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <NoteAddIcon />}
+                      disableElevation
                       sx={{
-                        borderRadius: 2.5,
-                        textTransform: 'none',
-                        fontWeight: 700,
-                        background: 'linear-gradient(135deg, #10b981, #34d399)',
-                        boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
-                        '&:hover': { boxShadow: '0 6px 16px rgba(16,185,129,0.4)' },
-                        '&.Mui-disabled': { opacity: 0.6 },
+                        borderRadius: '10px', px: 2.25, textTransform: 'none', fontWeight: 700,
+                        background: isDark ? 'rgba(255,255,255,0.10)' : '#111827',
+                        color: '#fff',
+                        '&:hover': { background: isDark ? 'rgba(255,255,255,0.16)' : '#000' },
                       }}
                     >
-                      {isSubmitting ? 'Enviando...' : 'Enviar solicitud'}
+                      {archivo ? 'Cambiar documento' : 'Elegir archivo'}
                     </Button>
                   </Box>
-                </StepContent>
-              </Step>
-            </Stepper>
-          </Box>
+                </Box>
+              </Stack>
+            </Box>
+          </Stack>
         )}
       </DialogContent>
+
+      {/* ── FOOTER ── */}
+      {!exito && (
+        <Box sx={{ px: 3, pb: 3, pt: 2, display: 'flex', alignItems: 'center', gap: 1, borderTop: `1px solid ${borderField}` }}>
+          <Box sx={{ flex: 1 }} />
+          <Button
+            onClick={handleClose}
+            disabled={isSubmitting}
+            sx={{ borderRadius: '10px', color: 'text.secondary', px: 2, textTransform: 'none', fontWeight: 600, '&:hover': { background: 'rgba(255,255,255,0.05)' } }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={isSubmitting}
+            startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : <SendRoundedIcon />}
+            sx={{
+              borderRadius: '10px', px: 3, fontWeight: 700, textTransform: 'none',
+              background: brand, color: isDark ? '#000' : '#fff',
+              boxShadow: `0 4px 16px ${alpha(brand, 0.4)}`,
+              '&:hover': { background: brandSoft, boxShadow: `0 6px 20px ${alpha(brand, 0.5)}` },
+              '&.Mui-disabled': { opacity: 0.5, background: brand, color: isDark ? '#000' : '#fff' },
+            }}
+          >
+            {isSubmitting ? 'Enviando...' : 'Enviar solicitud'}
+          </Button>
+        </Box>
+      )}
     </Dialog>
   );
 };

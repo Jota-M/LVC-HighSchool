@@ -404,12 +404,15 @@ class PagosService {
     fecha_inicio?: string;
     fecha_fin?: string;
     metodo_pago?: MetodoPago;
+    tipo_emision?: 'todos' | 'factura' | 'recibo';
+    grado_id?: number;
+    paralelo_id?: number;
   }): Promise<DescargaReportePagos> {
     return this.descargarReportePagos(
       '/api/reportes-pagos/exportar/facturas',
       filtros,
       'facturas',
-      `reporte-facturas-${filtros.periodo_academico_id}`
+      `reporte-facturacion-${filtros.periodo_academico_id}`
     );
   }
 

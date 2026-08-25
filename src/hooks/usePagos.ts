@@ -30,6 +30,7 @@ import type {
   AjusteCostoAplicarResponse,
   CursoReporteItem,
   FacturaReporteItem,
+  FacturasStats,
   FiltrosCursos,
   FiltrosFacturas,
   FormatoReporte,
@@ -57,7 +58,7 @@ interface UsePagosReturn {
   infoSistema: InfoSistema | null;
   cursosReport: CursoReporteItem[];
   facturasReport: FacturaReporteItem[];
-  facturasStats: { totalInvoiced: number; invoiceCount: number } | null;
+  facturasStats: FacturasStats | null;
 
   // Estados de carga
   loading: boolean;
@@ -106,6 +107,9 @@ interface UsePagosReturn {
     fecha_inicio?: string;
     fecha_fin?: string;
     metodo_pago?: MetodoPago;
+    tipo_emision?: 'todos' | 'factura' | 'recibo';
+    grado_id?: number;
+    paralelo_id?: number;
   }) => Promise<DescargaReportePagos>;
 
   // Acciones
@@ -147,7 +151,7 @@ export const usePagos = (options: UsePagosOptions = {}): UsePagosReturn => {
   const [infoSistema, setInfoSistema] = useState<InfoSistema | null>(null);
   const [cursosReport, setCursosReport] = useState<CursoReporteItem[]>([]);
   const [facturasReport, setFacturasReport] = useState<FacturaReporteItem[]>([]);
-  const [facturasStats, setFacturasStats] = useState<{ totalInvoiced: number; invoiceCount: number } | null>(null);
+  const [facturasStats, setFacturasStats] = useState<FacturasStats | null>(null);
 
   const [loadingCostos, setLoadingCostos] = useState(false);
   const [loadingMensualidades, setLoadingMens] = useState(false);
@@ -339,12 +343,15 @@ export const usePagos = (options: UsePagosOptions = {}): UsePagosReturn => {
     fecha_inicio?: string;
     fecha_fin?: string;
     metodo_pago?: MetodoPago;
+    tipo_emision?: 'todos' | 'factura' | 'recibo';
+    grado_id?: number;
+    paralelo_id?: number;
   }) => {
     try {
       setLoadingExportacionReportes(true); setError(null);
       return await pagosService.exportarFacturas(filtros);
     } catch (err) {
-      throw new Error(handleError(err, 'Error al descargar reporte de facturas'));
+      throw new Error(handleError(err, 'Error al descargar reporte de facturación'));
     } finally { setLoadingExportacionReportes(false); }
   }, []);
 

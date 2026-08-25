@@ -1,8 +1,8 @@
 // components/horario/HorarioReadonlyGrid.tsx
 'use client';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
-  Box, Typography, Tooltip, Chip, alpha, useTheme,
+  Box, Typography, Tooltip, Chip, alpha, useTheme, useMediaQuery,
   CircularProgress, Paper, ButtonBase, Dialog,
   DialogTitle, DialogContent, DialogActions, Button,
   IconButton, Divider,
@@ -53,13 +53,16 @@ export const HorarioReadonlyGrid: React.FC<Props> = ({
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const accentColor = isDark ? '#facc15' : '#0288d1';
   const [detalleCelda, setDetalleCelda] = useState<HorarioDetalle | null>(null);
 
-  const COL_WIDTH = compact ? 110 : 140;
-  const ROW_HEIGHT = compact ? 68 : 80;
-  const RECREO_HEIGHT = 34;
-  const HORA_COL = compact ? 72 : 86;
+  // Columnas fluidas: ocupan todo el ancho disponible, con un piso mínimo legible
+  const MIN_COL = compact ? 108 : 138;
+  const ROW_HEIGHT = compact ? 72 : 96;
+  const RECREO_HEIGHT = 38;
+  const HORA_COL = compact ? 72 : 92;
+  const GAP = 10;
 
   // Índice rápido celdas
   const celdaMap = useMemo(() => {
@@ -99,21 +102,41 @@ export const HorarioReadonlyGrid: React.FC<Props> = ({
         </Typography>
       )}
 
-      {/* Grid con scroll horizontal en mobile */}
-      <Box sx={{ overflowX: 'auto', pb: 1, mx: { xs: -1, sm: 0 } }}>
-        <Box sx={{ minWidth: HORA_COL + COL_WIDTH * diasActivos.length + 24, px: { xs: 1, sm: 0 } }}>
+      {isMobile ? (
+        <HorarioAgendaMobile
+          celdas={celdas}
+          bloques={bloques}
+          diasActivos={diasActivos}
+          celdaMap={celdaMap}
+          accentColor={accentColor}
+          isDark={isDark}
+          ocultarDocente={ocultarDocente}
+          onCeldaClick={setDetalleCelda}
+        />
+      ) : (
+        /* ── Grid de escritorio: columnas fluidas, ocupan todo el ancho ── */
+        <Box sx={{ overflowX: 'auto', pb: 1 }}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: `${HORA_COL}px repeat(${diasActivos.length}, minmax(${MIN_COL}px, 1fr))`,
+              gap: `${GAP}px`,
+              minWidth: HORA_COL + (MIN_COL + GAP) * diasActivos.length,
+              width: '100%',
+            }}
+          >
+            {/* Esquina vacía */}
+            <Box />
 
-          {/* ── Header de días ── */}
-          <Box sx={{ display: 'flex', mb: 1 }}>
-            <Box sx={{ width: HORA_COL, flexShrink: 0 }} />
+            {/* Header de días */}
             {diasActivos.map((dia) => {
               const tieneCeldas = celdas.some((c) => c.dia_semana === dia);
               return (
                 <Box
-                  key={dia}
+                  key={`h-${dia}`}
                   sx={{
-                    width: COL_WIDTH, flexShrink: 0, textAlign: 'center',
-                    px: 1, py: 1, borderRadius: 2, mx: 0.5,
+                    textAlign: 'center',
+                    px: 1, py: 1.2, borderRadius: 2,
                     background: tieneCeldas
                       ? isDark
                         ? 'linear-gradient(135deg,#facc1530,#f59e0b18)'
@@ -131,77 +154,74 @@ export const HorarioReadonlyGrid: React.FC<Props> = ({
                 </Box>
               );
             })}
-          </Box>
 
-          {/* ── Filas de bloques ── */}
-          {bloques.map((bloque) => {
-            const isRecreo = bloque.es_recreo;
-            const height = isRecreo ? RECREO_HEIGHT : ROW_HEIGHT;
+            {/* Filas de bloques */}
+            {bloques.map((bloque) => {
+              const isRecreo = bloque.es_recreo;
+              const height = isRecreo ? RECREO_HEIGHT : ROW_HEIGHT;
 
-            return (
-              <Box key={bloque.id} sx={{ display: 'flex', mb: 0.5, alignItems: 'stretch' }}>
-                {/* Columna hora */}
-                <Box
-                  sx={{
-                    width: HORA_COL, flexShrink: 0,
-                    display: 'flex', flexDirection: 'column',
-                    alignItems: 'flex-end', justifyContent: 'center',
-                    pr: 1.5, height,
-                  }}
-                >
-                  <Typography variant="caption" fontWeight={700} sx={{ fontSize: compact ? '0.62rem' : '0.7rem', color: 'text.primary', lineHeight: 1.3 }}>
-                    {bloque.hora_inicio.slice(0, 5)}
-                  </Typography>
-                  <Typography variant="caption" sx={{ fontSize: compact ? '0.58rem' : '0.65rem', color: 'text.secondary', lineHeight: 1.3 }}>
-                    {bloque.hora_fin.slice(0, 5)}
-                  </Typography>
-                  {!isRecreo && !compact && (
-                    <Typography variant="caption" sx={{ fontSize: '0.58rem', color: 'text.disabled', mt: 0.3 }}>
-                      {bloque.nombre}
-                    </Typography>
-                  )}
-                </Box>
-
-                {/* RECREO */}
-                {isRecreo ? (
+              return (
+                <React.Fragment key={bloque.id}>
+                  {/* Columna hora */}
                   <Box
                     sx={{
-                      flex: 1, height: RECREO_HEIGHT, mx: 0.5,
-                      borderRadius: 2,
-                      bgcolor: isDark ? '#ffffff07' : '#f3f4f6',
-                      border: `1px dashed ${isDark ? '#ffffff18' : '#d1d5db'}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+                      display: 'flex', flexDirection: 'column',
+                      alignItems: 'flex-end', justifyContent: 'center',
+                      pr: 1.5, height,
                     }}
                   >
-                    <RecresoIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
-                    <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: '0.65rem' }}>
-                      {bloque.nombre} · {bloque.hora_inicio.slice(0, 5)}–{bloque.hora_fin.slice(0, 5)}
+                    <Typography variant="caption" fontWeight={700} sx={{ fontSize: compact ? '0.62rem' : '0.7rem', color: 'text.primary', lineHeight: 1.3 }}>
+                      {bloque.hora_inicio.slice(0, 5)}
                     </Typography>
+                    <Typography variant="caption" sx={{ fontSize: compact ? '0.58rem' : '0.65rem', color: 'text.secondary', lineHeight: 1.3 }}>
+                      {bloque.hora_fin.slice(0, 5)}
+                    </Typography>
+                    {!isRecreo && !compact && (
+                      <Typography variant="caption" sx={{ fontSize: '0.58rem', color: 'text.disabled', mt: 0.3 }}>
+                        {bloque.nombre}
+                      </Typography>
+                    )}
                   </Box>
-                ) : (
-                  /* Celdas normales */
-                  diasActivos.map((dia) => {
-                    const celda = celdaMap[`${dia}-${bloque.id}`];
-                    return (
-                      <CeldaReadonly
-                        key={dia}
-                        celda={celda}
-                        height={height}
-                        width={COL_WIDTH}
-                        compact={compact}
-                        ocultarDocente={ocultarDocente}
-                        accentColor={accentColor}
-                        isDark={isDark}
-                        onClick={() => celda && setDetalleCelda(celda)}
-                      />
-                    );
-                  })
-                )}
-              </Box>
-            );
-          })}
+
+                  {isRecreo ? (
+                    <Box
+                      sx={{
+                        gridColumn: `span ${diasActivos.length}`,
+                        height: RECREO_HEIGHT,
+                        borderRadius: 2,
+                        bgcolor: isDark ? '#ffffff07' : '#f3f4f6',
+                        border: `1px dashed ${isDark ? '#ffffff18' : '#d1d5db'}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+                      }}
+                    >
+                      <RecresoIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+                      <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: '0.65rem' }}>
+                        {bloque.nombre} · {bloque.hora_inicio.slice(0, 5)}–{bloque.hora_fin.slice(0, 5)}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    diasActivos.map((dia) => {
+                      const celda = celdaMap[`${dia}-${bloque.id}`];
+                      return (
+                        <CeldaReadonly
+                          key={dia}
+                          celda={celda}
+                          height={height}
+                          compact={compact}
+                          ocultarDocente={ocultarDocente}
+                          accentColor={accentColor}
+                          isDark={isDark}
+                          onClick={() => celda && setDetalleCelda(celda)}
+                        />
+                      );
+                    })
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </Box>
         </Box>
-      </Box>
+      )}
 
       {/* ── Leyenda de materias ── */}
       {celdas.length > 0 && (
@@ -221,12 +241,11 @@ export const HorarioReadonlyGrid: React.FC<Props> = ({
 };
 
 // =============================================
-// Sub: celda readonly
+// Sub: celda readonly (escritorio — ancho fluido, 100% de su columna)
 // =============================================
 interface CeldaReadonlyProps {
   celda?: HorarioDetalle;
   height: number;
-  width: number;
   compact: boolean;
   ocultarDocente: boolean;
   accentColor: string;
@@ -235,13 +254,13 @@ interface CeldaReadonlyProps {
 }
 
 const CeldaReadonly: React.FC<CeldaReadonlyProps> = ({
-  celda, height, width, compact, ocultarDocente, accentColor, isDark, onClick,
+  celda, height, compact, ocultarDocente, accentColor, isDark, onClick,
 }) => {
   if (!celda) {
     return (
       <Box
         sx={{
-          width, height, mx: 0.5, borderRadius: 2, flexShrink: 0,
+          width: '100%', height, borderRadius: 2,
           border: `1.5px dashed ${isDark ? '#ffffff0f' : '#e5e7eb'}`,
           bgcolor: isDark ? '#ffffff04' : 'transparent',
         }}
@@ -252,65 +271,63 @@ const CeldaReadonly: React.FC<CeldaReadonlyProps> = ({
   const cellColor = celda.color || celda.materia_color || accentColor;
 
   return (
-    <Tooltip
-      title="Toca para ver detalles"
-      placement="top"
-      arrow
-      disableHoverListener={false}
-    >
+    <Tooltip title="Toca para ver detalles" placement="top" arrow>
       <ButtonBase
         onClick={onClick}
         sx={{
-          width, height, mx: 0.5, borderRadius: 2, flexShrink: 0,
-          background: `linear-gradient(145deg, ${cellColor}e0, ${cellColor}80)`,
-          border: `2px solid ${cellColor}bb`,
+          width: '100%', height, borderRadius: 2,
+          background: isDark
+            ? `linear-gradient(135deg, ${alpha(cellColor, 0.22)}, ${alpha(cellColor, 0.07)})`
+            : `linear-gradient(135deg, ${alpha(cellColor, 0.16)}, ${alpha(cellColor, 0.05)})`,
+          border: `1px solid ${alpha(cellColor, 0.55)}`,
+          borderLeft: `5px solid ${cellColor}`,
           display: 'flex', flexDirection: 'column',
           alignItems: 'flex-start', justifyContent: 'space-between',
-          p: compact ? 0.8 : 1,
+          p: compact ? 0.9 : 1.2,
           textAlign: 'left', overflow: 'hidden',
           transition: 'all 0.18s',
           cursor: 'pointer',
           '&:hover': {
-            transform: 'scale(1.02)',
-            boxShadow: `0 6px 20px ${cellColor}50`,
-            filter: 'brightness(1.08)',
+            transform: 'scale(1.015)',
+            borderColor: cellColor,
+            boxShadow: `0 6px 18px ${alpha(cellColor, 0.32)}`,
+            background: isDark
+              ? `linear-gradient(135deg, ${alpha(cellColor, 0.3)}, ${alpha(cellColor, 0.1)})`
+              : `linear-gradient(135deg, ${alpha(cellColor, 0.22)}, ${alpha(cellColor, 0.08)})`,
           },
           '&:active': { transform: 'scale(0.98)' },
         }}
       >
-        {/* Nombre materia */}
         <Typography
           variant="caption"
           fontWeight={800}
           sx={{
-            color: '#fff',
-            fontSize: compact ? '0.62rem' : '0.68rem',
-            lineHeight: 1.2,
+            color: cellColor,
+            fontSize: compact ? '0.66rem' : '0.75rem',
+            lineHeight: 1.25,
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
-            textShadow: '0 1px 3px #0006',
             width: '100%',
           }}
         >
           {celda.materia_nombre}
         </Typography>
 
-        {/* Info inferior */}
         <Box sx={{ width: '100%' }}>
           {!ocultarDocente && celda.docente_apellidos && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3, mb: 0.2 }}>
-              <PersonIcon sx={{ fontSize: compact ? 9 : 10, color: '#ffffffcc' }} />
-              <Typography variant="caption" sx={{ color: '#ffffffcc', fontSize: compact ? '0.56rem' : '0.6rem', lineHeight: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', maxWidth: '90%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mb: 0.2 }}>
+              <PersonIcon sx={{ fontSize: compact ? 10 : 12, color: 'text.secondary' }} />
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: compact ? '0.6rem' : '0.66rem', lineHeight: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', maxWidth: '90%' }}>
                 {celda.docente_apellidos}
               </Typography>
             </Box>
           )}
           {celda.aula && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-              <AulaIcon sx={{ fontSize: compact ? 9 : 10, color: '#ffffffaa' }} />
-              <Typography variant="caption" sx={{ color: '#ffffffaa', fontSize: compact ? '0.54rem' : '0.58rem', lineHeight: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+              <AulaIcon sx={{ fontSize: compact ? 10 : 12, color: 'text.disabled' }} />
+              <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: compact ? '0.58rem' : '0.64rem', lineHeight: 1 }}>
                 {celda.aula}
               </Typography>
             </Box>
@@ -322,14 +339,181 @@ const CeldaReadonly: React.FC<CeldaReadonlyProps> = ({
 };
 
 // =============================================
+// Sub: agenda mobile — selector de día + cards apiladas de ancho completo
+// =============================================
+interface HorarioAgendaMobileProps {
+  celdas: HorarioDetalle[];
+  bloques: BloqueReconstruido[];
+  diasActivos: number[];
+  celdaMap: Record<string, HorarioDetalle>;
+  accentColor: string;
+  isDark: boolean;
+  ocultarDocente: boolean;
+  onCeldaClick: (celda: HorarioDetalle) => void;
+}
+
+const HorarioAgendaMobile: React.FC<HorarioAgendaMobileProps> = ({
+  celdas, bloques, diasActivos, celdaMap, accentColor, isDark, ocultarDocente, onCeldaClick,
+}) => {
+  const primerDiaConClases = diasActivos.find((d) => celdas.some((c) => c.dia_semana === d)) ?? diasActivos[0];
+  const [diaSeleccionado, setDiaSeleccionado] = useState<number>(primerDiaConClases);
+
+  // Si cambia el modo L-V / L-S y el día ya no está activo, reubicar
+  useEffect(() => {
+    if (!diasActivos.includes(diaSeleccionado)) {
+      setDiaSeleccionado(diasActivos[0]);
+    }
+  }, [diasActivos, diaSeleccionado]);
+
+  return (
+    <Box>
+      {/* Selector de día */}
+      <Box
+        sx={{
+          display: 'flex', gap: 1, overflowX: 'auto', pb: 1, mb: 2,
+          '&::-webkit-scrollbar': { display: 'none' }, scrollbarWidth: 'none',
+        }}
+      >
+        {diasActivos.map((dia) => {
+          const activo = dia === diaSeleccionado;
+          const tieneCeldas = celdas.some((c) => c.dia_semana === dia);
+          return (
+            <ButtonBase
+              key={dia}
+              onClick={() => setDiaSeleccionado(dia)}
+              sx={{
+                px: 2, py: 1, borderRadius: 2.5, flexShrink: 0,
+                fontWeight: 700, fontSize: '0.78rem',
+                bgcolor: activo ? accentColor : (isDark ? '#ffffff08' : '#f3f4f6'),
+                color: activo ? (isDark ? '#000' : '#fff') : (tieneCeldas ? 'text.primary' : 'text.disabled'),
+                border: `1px solid ${activo ? accentColor : alpha(accentColor, 0.15)}`,
+                transition: 'all 0.15s',
+              }}
+            >
+              {DIAS_SEMANA[dia]}
+            </ButtonBase>
+          );
+        })}
+      </Box>
+
+      {/* Lista de bloques del día seleccionado */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {bloques.map((bloque) => {
+          if (bloque.es_recreo) {
+            return (
+              <Box
+                key={bloque.id}
+                sx={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+                  py: 1, borderRadius: 2,
+                  border: `1px dashed ${isDark ? '#ffffff18' : '#d1d5db'}`,
+                  bgcolor: isDark ? '#ffffff07' : '#f3f4f6',
+                }}
+              >
+                <RecresoIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+                <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: '0.68rem' }}>
+                  {bloque.nombre} · {bloque.hora_inicio.slice(0, 5)}–{bloque.hora_fin.slice(0, 5)}
+                </Typography>
+              </Box>
+            );
+          }
+
+          const celda = celdaMap[`${diaSeleccionado}-${bloque.id}`];
+
+          if (!celda) {
+            return (
+              <Box
+                key={bloque.id}
+                sx={{
+                  display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, borderRadius: 2,
+                  border: `1.5px dashed ${isDark ? '#ffffff0f' : '#e5e7eb'}`,
+                }}
+              >
+                <Box sx={{ width: 54, flexShrink: 0 }}>
+                  <Typography variant="caption" fontWeight={700} sx={{ fontSize: '0.68rem', display: 'block' }}>
+                    {bloque.hora_inicio.slice(0, 5)}
+                  </Typography>
+                  <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.6rem', display: 'block' }}>
+                    {bloque.hora_fin.slice(0, 5)}
+                  </Typography>
+                </Box>
+                <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
+                  Sin clase asignada
+                </Typography>
+              </Box>
+            );
+          }
+
+          const cellColor = celda.color || celda.materia_color || accentColor;
+
+          return (
+            <ButtonBase
+              key={bloque.id}
+              onClick={() => onCeldaClick(celda)}
+              sx={{
+                display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, borderRadius: 2,
+                width: '100%', textAlign: 'left',
+                background: isDark
+                  ? `linear-gradient(135deg, ${alpha(cellColor, 0.22)}, ${alpha(cellColor, 0.07)})`
+                  : `linear-gradient(135deg, ${alpha(cellColor, 0.16)}, ${alpha(cellColor, 0.05)})`,
+                border: `1px solid ${alpha(cellColor, 0.55)}`,
+                borderLeft: `5px solid ${cellColor}`,
+                transition: 'all 0.15s',
+                '&:active': { transform: 'scale(0.98)' },
+              }}
+            >
+              <Box sx={{ width: 54, flexShrink: 0 }}>
+                <Typography variant="caption" fontWeight={700} sx={{ fontSize: '0.72rem', display: 'block' }}>
+                  {bloque.hora_inicio.slice(0, 5)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.62rem', display: 'block' }}>
+                  {bloque.hora_fin.slice(0, 5)}
+                </Typography>
+              </Box>
+
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={800} sx={{ color: cellColor, lineHeight: 1.25 }}>
+                  {celda.materia_nombre}
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.2, mt: 0.4 }}>
+                  {!ocultarDocente && celda.docente_apellidos && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                      <PersonIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
+                        {celda.docente_apellidos}
+                      </Typography>
+                    </Box>
+                  )}
+                  {celda.aula && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                      <AulaIcon sx={{ fontSize: 13, color: 'text.disabled' }} />
+                      <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.68rem' }}>
+                        {celda.aula}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            </ButtonBase>
+          );
+        })}
+      </Box>
+    </Box>
+  );
+};
+
+// =============================================
 // Sub: leyenda de materias
 // =============================================
 interface LeyendaProps { celdas: HorarioDetalle[]; isDark: boolean; }
 
 const LeyendaMaterias: React.FC<LeyendaProps> = ({ celdas, isDark }) => {
+  // CORRECCIÓN: materia_color llega vacío ("") del backend — el color real
+  // que se pinta en cada celda sale de celda.color (hd.color). Usamos la
+  // misma resolución acá para que la leyenda coincida con la grilla.
   const materias = [
     ...new Map(
-      celdas.map((c) => [c.materia_id, { nombre: c.materia_nombre, color: c.materia_color }])
+      celdas.map((c) => [c.materia_id, { nombre: c.materia_nombre, color: c.color || c.materia_color }])
     ).values(),
   ];
 

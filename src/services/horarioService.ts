@@ -148,14 +148,11 @@ class HorarioService {
     return data.data.detalle;
   }
 
-  async horarioParalelo(
-    paraleloId: number,
-    periodoId: number,
-    estado = 'publicado'
-  ): Promise<HorarioDetalle[]> {
+  async horarioParalelo(paraleloId: number, periodoId: number, estado = 'publicado'): Promise<HorarioDetalle[]> {
     const { data } = await api.get(`/horarios/paralelo/${paraleloId}`, {
       params: { periodo_academico_id: periodoId, estado },
     });
+    console.log('🔍 detalle crudo:', data.data.detalle);
     return data.data.detalle;
   }
 }

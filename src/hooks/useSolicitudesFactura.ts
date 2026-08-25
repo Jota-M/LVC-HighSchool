@@ -5,6 +5,8 @@ import api from '@/lib/api';
 export interface SolicitudFactura {
     id: number;
     pago_mensualidad_id: number;
+    pago_mensualidad_ids?: number[];
+    transaccion_id?: string;
     estado: 'pendiente' | 'completada';
     factura_url?: string;
     fecha_solicitud: string;
@@ -12,6 +14,9 @@ export interface SolicitudFactura {
     mes_correspondiente: string;
     codigo_pago: string;
     monto_pagado: number;
+    monto_total?: number;
+    cantidad_cuotas?: number;
+    meses_cubiertos?: string[];
 }
 
 type SolicitudMap = Record<number, SolicitudFactura>;
@@ -33,7 +38,14 @@ export function useSolicitudesFactura() {
                 setSolicitudes(lista);
 
                 const map: SolicitudMap = {};
-                lista.forEach(s => { map[s.pago_mensualidad_id] = s; });
+                lista.forEach(s => {
+                    map[s.pago_mensualidad_id] = s;
+                    if (s.pago_mensualidad_ids && Array.isArray(s.pago_mensualidad_ids)) {
+                        s.pago_mensualidad_ids.forEach(pid => {
+                            map[pid] = s;
+                        });
+                    }
+                });
                 setSolicitudMap(map);
             }
         } catch (e: any) {

@@ -37,6 +37,8 @@ const slideIn = keyframes`
 interface SolicitudFactura {
     id: number;
     pago_mensualidad_id: number;
+    pago_mensualidad_ids?: number[];
+    transaccion_id?: string;
     estado: 'pendiente' | 'completada';
     factura_url?: string;
     fecha_solicitud: string;
@@ -51,6 +53,10 @@ interface SolicitudFactura {
     grado: string;
     paralelo: string;
     solicitado_por_username: string;
+    monto_total?: number;
+    cantidad_cuotas?: number;
+    meses_cubiertos?: string[];
+    codigos_pago?: string[];
 }
 
 // ─── Paleta coherente con el dashboard ───────────────────────────────────────
@@ -162,7 +168,9 @@ const ModalSubirFactura: React.FC<{
                                 Subir Factura
                             </Typography>
                             <Typography variant="caption" color="text.disabled">
-                                {solicitud.estudiante_nombres} {solicitud.estudiante_apellidos} · {solicitud.mes_correspondiente}
+                                {solicitud.estudiante_nombres} {solicitud.estudiante_apellidos} · {(solicitud.cantidad_cuotas || 1) > 1
+                                    ? `${solicitud.cantidad_cuotas} cuotas (${(solicitud.meses_cubiertos || []).join(', ')})`
+                                    : solicitud.mes_correspondiente}
                             </Typography>
                         </Box>
                     </Box>
@@ -182,9 +190,22 @@ const ModalSubirFactura: React.FC<{
                     display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1,
                 }}>
                     {[
-                        ['Código', solicitud.codigo_pago],
-                        ['Monto', `Bs ${parseFloat(String(solicitud.monto_pagado)).toFixed(2)}`],
-                        ['Mes', solicitud.mes_correspondiente],
+                        [
+                            (solicitud.cantidad_cuotas || 1) > 1 ? 'Referencia / Pago' : 'Código',
+                            solicitud.transaccion_id
+                                ? `${solicitud.transaccion_id.slice(0, 14)}...`
+                                : solicitud.codigo_pago
+                        ],
+                        [
+                            (solicitud.cantidad_cuotas || 1) > 1 ? 'Monto Total' : 'Monto',
+                            `Bs ${parseFloat(String(solicitud.monto_total || solicitud.monto_pagado)).toFixed(2)}`
+                        ],
+                        [
+                            (solicitud.cantidad_cuotas || 1) > 1 ? `Meses (${solicitud.cantidad_cuotas} cuotas)` : 'Mes',
+                            (solicitud.cantidad_cuotas || 1) > 1 && solicitud.meses_cubiertos?.length
+                                ? solicitud.meses_cubiertos.join(', ')
+                                : solicitud.mes_correspondiente
+                        ],
                         ['Grado', `${solicitud.grado} "${solicitud.paralelo}"`],
                     ].map(([label, val]) => (
                         <Box key={label}>
@@ -362,19 +383,42 @@ const FilaSolicitud: React.FC<{
 
             {/* Pago */}
             <TableCell sx={cellSx}>
-                <Typography variant="body2" fontWeight={700} sx={{ fontSize: 13 }}>
-                    {s.mes_correspondiente.charAt(0).toUpperCase() + s.mes_correspondiente.slice(1)}
-                </Typography>
-                <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10, fontFamily: 'monospace' }}>
-                    {s.codigo_pago}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                    <Typography variant="body2" fontWeight={700} sx={{ fontSize: 13 }}>
+                        {(s.cantidad_cuotas || 1) > 1 && s.meses_cubiertos?.length
+                            ? s.meses_cubiertos.map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')
+                            : s.mes_correspondiente.charAt(0).toUpperCase() + s.mes_correspondiente.slice(1)}
+                    </Typography>
+                    {(s.cantidad_cuotas || 1) > 1 && (
+                        <Chip
+                            label={`${s.cantidad_cuotas} cuotas`}
+                            size="small"
+                            sx={{
+                                height: 18,
+                                fontSize: 9,
+                                fontWeight: 800,
+                                bgcolor: isDark ? alpha(gold, 0.18) : alpha(gold, 0.12),
+                                color: isDark ? gold : '#0288d1',
+                                borderRadius: 1,
+                            }}
+                        />
+                    )}
+                </Box>
+                <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10, fontFamily: 'monospace', display: 'block' }}>
+                    {s.transaccion_id ? `${s.transaccion_id.slice(0, 15)}...` : s.codigo_pago}
                 </Typography>
             </TableCell>
 
             {/* Monto */}
             <TableCell sx={cellSx}>
                 <Typography variant="body2" fontWeight={900} sx={{ color: '#10b981', fontSize: 14 }}>
-                    Bs {parseFloat(String(s.monto_pagado)).toFixed(2)}
+                    Bs {parseFloat(String(s.monto_total || s.monto_pagado)).toFixed(2)}
                 </Typography>
+                {(s.cantidad_cuotas || 1) > 1 && (
+                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: 9, display: 'block', fontWeight: 600 }}>
+                        Total lote
+                    </Typography>
+                )}
             </TableCell>
 
             {/* Fecha solicitud */}

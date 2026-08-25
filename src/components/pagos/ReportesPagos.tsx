@@ -3,10 +3,8 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Grid,
   Card,
   CardContent,
-  Typography,
   useTheme,
   alpha,
   ToggleButtonGroup,
@@ -14,14 +12,14 @@ import {
 } from '@mui/material';
 import {
   Warning as WarningIcon,
-  TrendingUp as TrendingUpIcon,
+  ReceiptLong as ReceiptLongIcon,
   Receipt as ReceiptIcon,
 } from '@mui/icons-material';
 import { ReporteMorosos } from './ReporteMorosos';
-import { ReporteIngresos } from './ReporteIngresos';
+import { ReporteFacturacion } from './ReporteFacturacion';
 import { EstadoCuentaEstudiantes } from './EstadoCuentaEstudiantes';
 
-type TipoReporte = 'morosos' | 'ingresos' | 'estado_cuenta';
+type TipoReporte = 'morosos' | 'facturacion' | 'estado_cuenta';
 
 export const ReportesPagos: React.FC = () => {
   const theme = useTheme();
@@ -75,9 +73,9 @@ export const ReportesPagos: React.FC = () => {
               <WarningIcon sx={{ mr: 1 }} />
               Morosos
             </ToggleButton>
-            <ToggleButton value="ingresos">
-              <TrendingUpIcon sx={{ mr: 1 }} />
-              Ingresos
+            <ToggleButton value="facturacion">
+              <ReceiptLongIcon sx={{ mr: 1 }} />
+              Facturación vs. Recibos
             </ToggleButton>
           </ToggleButtonGroup>
         </CardContent>
@@ -86,7 +84,9 @@ export const ReportesPagos: React.FC = () => {
       {/* Contenido del Reporte */}
       {tipoReporte === 'estado_cuenta' && <EstadoCuentaEstudiantes />}
       {tipoReporte === 'morosos' && <ReporteMorosos />}
-      {tipoReporte === 'ingresos' && <ReporteIngresos />}
+      {tipoReporte === 'facturacion' && <ReporteFacturacion />}
     </Box>
   );
 };
+
+export default ReportesPagos;

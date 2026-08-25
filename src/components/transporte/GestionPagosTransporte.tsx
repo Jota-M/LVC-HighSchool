@@ -8,7 +8,7 @@ import {
   Typography,
   Button,
   TextField,
-  Grid,
+  Grid2,
   Table,
   TableBody,
   TableCell,

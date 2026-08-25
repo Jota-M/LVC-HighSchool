@@ -1,35 +1,29 @@
-// components/pagos/ModalGenerarRecibo.tsx - CON SOPORTE PAGO ANUAL
+// components/pagos/ModalGenerarRecibo.tsx - CON SOPORTE PAGO ANUAL (VERSIÓN RESTYLEADA)
 'use client';
 import React, { useState } from 'react';
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
   Box,
-  Grid,
   TextField,
   Button,
   Typography,
-  Alert,
   Switch,
-  FormControlLabel,
-  Divider,
-  IconButton,
   Stack,
-  Chip,
   useTheme,
   alpha,
   MenuItem,
+  CircularProgress,
 } from '@mui/material';
-import {
-  Close,
-  PictureAsPdf,
-  Visibility,
-  Download,
-  Person,
-  Badge,
-} from '@mui/icons-material';
+import PictureAsPdfRoundedIcon from '@mui/icons-material/PictureAsPdfRounded';
+import CloseIcon from '@mui/icons-material/CloseRounded';
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
+import BadgeRoundedIcon from '@mui/icons-material/BadgeRounded';
+import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
+import HandshakeRoundedIcon from '@mui/icons-material/HandshakeRounded';
+import StarsRoundedIcon from '@mui/icons-material/StarsRounded';
 import { useSnackbar } from 'notistack';
 import api from '@/lib/api';
 
@@ -66,6 +60,24 @@ const PERSONAS_QUE_RECIBEN = [
   { value: 'oswaldo', label: 'Oswaldo Esteban Bohorquez Velasco', ci: '5071886' },
 ];
 
+// ── pequeño helper visual: eyebrow de sección (ícono + etiqueta + regla) ─────
+const SectionLabel: React.FC<{ icon: React.ReactNode; children: React.ReactNode; brand: string; borderField: string }> = ({
+  icon, children, brand, borderField,
+}) => (
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.25 }}>
+    <Box sx={{ display: 'flex', color: alpha(brand, 0.85), '& svg': { fontSize: 15 } }}>{icon}</Box>
+    <Typography
+      sx={{
+        fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.08em',
+        textTransform: 'uppercase', color: 'text.secondary', whiteSpace: 'nowrap',
+      }}
+    >
+      {children}
+    </Typography>
+    <Box sx={{ flex: 1, height: '1px', background: borderField }} />
+  </Box>
+);
+
 export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
   open,
   onClose,
@@ -77,6 +89,16 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
   const { enqueueSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
 
+  // ── tokens (idénticos al resto de modales de pagos) ──────────────────────
+  const brand = isDark ? '#facc15' : '#0288d1';
+  const bgModal = isDark ? '#09101dff' : '#ffffff';
+  const bgField = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
+  const bgFieldAlt = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.015)';
+  const borderField = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)';
+  const green = '#10b981';
+  const red = '#ef4444';
+  const R = '14px';
+
   const [formData, setFormData] = useState<FormData>({
     nombre_entrega: '',
     ci_entrega: '',
@@ -84,16 +106,36 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
     preview: false,
   });
 
-  const totalMonto = pagos.reduce((sum, p) => 
+  const totalMonto = pagos.reduce((sum, p) =>
     sum + parseFloat(p.monto_pagado.toString() || '0'), 0
   );
-  
+
   const estudiante = pagos[0];
 
-  // 🔧 Detectar si es pago anual
-  const esPagoAnual = pagos.length === 1 && 
-                      (pagos[0].mes_correspondiente === 'Pago Anual Completo (10 meses)' || 
-                       pagos[0].numero_cuota === null);
+  const esPagoAnual = pagos.length === 1 &&
+    (pagos[0].mes_correspondiente === 'Pago Anual Completo (10 meses)' ||
+      pagos[0].numero_cuota === null);
+
+  // color de acento del modal: verde para anual, rojo (recibo/PDF) para el resto
+  const accent = esPagoAnual ? green : red;
+
+  const fieldSx = {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: R,
+      background: bgField,
+      '& fieldset': { borderColor: borderField, borderRadius: R },
+      '&:hover fieldset': { borderColor: alpha(brand, 0.5) },
+      '&.Mui-focused fieldset': { borderColor: brand, borderWidth: '1.5px', borderRadius: R },
+      '&.Mui-focused': { boxShadow: `0 0 0 3px ${alpha(brand, 0.12)}`, borderRadius: R },
+      '&.Mui-disabled': { background: bgFieldAlt },
+    },
+    '& .MuiInputLabel-root': { color: 'text.secondary' },
+    '& .MuiInputLabel-root.Mui-focused': { color: brand },
+    '& .MuiSelect-select': { borderRadius: `${R} !important` },
+    '& .MuiOutlinedInput-notchedOutline': { borderRadius: `${R} !important` },
+  };
+
+  const personaSeleccionada = PERSONAS_QUE_RECIBEN.find(p => p.value === formData.quien_recibe);
 
   const handleSubmit = async () => {
     if (!formData.nombre_entrega.trim()) {
@@ -112,9 +154,8 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
       let response;
 
       if (esPagoAnual) {
-        // 🆕 MODO DIRECTO: Para pago anual, enviar datos completos
         console.log('📄 Generando PDF de pago anual con datos directos');
-        
+
         response = await api.post(
           '/api/pago-mensualidad/pdf-directo',
           {
@@ -141,9 +182,8 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
           }
         );
       } else {
-        // MODO NORMAL: Para pagos regulares, buscar por IDs
         console.log('📄 Generando PDF de pagos regulares por IDs');
-        
+
         response = await api.post(
           '/api/pago-mensualidad/pdf-multiple',
           {
@@ -189,360 +229,315 @@ export const ModalGenerarRecibo: React.FC<ModalGenerarReciboProps> = ({
     }
   };
 
+  const handleClose = () => {
+    if (loading) return;
+    onClose();
+  };
+
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       maxWidth="sm"
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: '24px',
-          background: isDark ? alpha('#000', 0.95) : alpha('#fff', 0.98),
-          backdropFilter: 'blur(20px)',
+          borderRadius: '20px !important',
+          overflow: 'hidden',
+          background: bgModal,
+          border: `1.5px solid ${alpha(accent, 0.3)}`,
+          boxShadow: isDark
+            ? `0 0 0 1px ${alpha(accent, 0.08)}, 0 32px 64px rgba(0,0,0,0.8)`
+            : `0 32px 64px rgba(0,0,0,0.18)`,
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: '88vh',
         },
       }}
     >
-      <DialogTitle>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Box display="flex" alignItems="center" gap={2}>
-            <Box
+      {/* ── HEADER (fijo) ── */}
+      <Box
+        sx={{
+          px: 3, pt: 2.5, pb: 2, position: 'relative', overflow: 'hidden',
+          borderBottom: `1px solid ${borderField}`,
+          background: `linear-gradient(135deg, ${alpha(accent, 0.1)} 0%, transparent 65%)`,
+          flexShrink: 0,
+        }}
+      >
+        <PictureAsPdfRoundedIcon
+          sx={{
+            position: 'absolute', right: -14, top: -18, fontSize: 120,
+            color: accent, opacity: isDark ? 0.06 : 0.07, transform: 'rotate(-12deg)',
+            pointerEvents: 'none',
+          }}
+        />
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'relative' }}>
+          <Box>
+            <Typography
               sx={{
-                width: 48,
-                height: 48,
-                borderRadius: '12px',
-                background: esPagoAnual
-                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                  : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em',
+                textTransform: 'uppercase', color: alpha(accent, 0.85), mb: 0.4,
               }}
             >
-              <PictureAsPdf sx={{ color: '#fff', fontSize: 28 }} />
-            </Box>
-            <Box>
-              <Typography variant="h6" fontWeight={700}>
-                {esPagoAnual ? 'Recibo Pago Anual' : 'Generar Recibo de Pago'}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {estudiante?.nombres} {estudiante?.apellidos}
-              </Typography>
-            </Box>
-          </Box>
-          <IconButton onClick={onClose} size="small">
-            <Close />
-          </IconButton>
-        </Box>
-      </DialogTitle>
-
-      <DialogContent>
-        <Stack spacing={3} sx={{ mt: 2 }}>
-          {/* Información del pago */}
-          <Alert 
-            severity={esPagoAnual ? 'success' : 'info'}
-            sx={{ 
-              borderRadius: '12px',
-              bgcolor: alpha(esPagoAnual ? '#10b981' : '#3b82f6', 0.1),
-              border: `1px solid ${alpha(esPagoAnual ? '#10b981' : '#3b82f6', 0.3)}`,
-            }}
-          >
-            <Typography variant="body2" fontWeight={600} gutterBottom>
-              {esPagoAnual ? '🎉 Pago Anual Completo' : '📄 Resumen del Pago'}
+              {esPagoAnual ? 'Recibo · pago anual' : 'Generar recibo de pago'}
             </Typography>
-            <Box display="flex" justifyContent="space-between" mt={1}>
-              <Typography variant="caption" color="text.secondary">
-                {esPagoAnual ? 'Meses cubiertos:' : 'Mensualidades:'}
-              </Typography>
-              <Chip
-                label={esPagoAnual ? '10 meses (Feb - Nov)' : `${pagos.length} cuota(s)`}
-                size="small"
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Box
                 sx={{
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  bgcolor: alpha(esPagoAnual ? '#10b981' : '#3b82f6', 0.2),
+                  width: 34, height: 34, borderRadius: '9px', flexShrink: 0,
+                  background: alpha(accent, 0.15),
+                  border: `1px solid ${alpha(accent, 0.3)}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
-              />
-            </Box>
-            <Box display="flex" justifyContent="space-between" mt={0.5}>
-              <Typography variant="caption" color="text.secondary">
-                Monto Total:
-              </Typography>
-              <Typography variant="body2" fontWeight={700} color={esPagoAnual ? '#10b981' : '#3b82f6'}>
-                Bs. {totalMonto.toFixed(2)}
-              </Typography>
-            </Box>
-            {esPagoAnual && (
-              <Box display="flex" justifyContent="space-between" mt={0.5}>
-                <Typography variant="caption" color="text.secondary">
-                  Descuento aplicado:
+              >
+                <PictureAsPdfRoundedIcon sx={{ color: accent, fontSize: 18 }} />
+              </Box>
+              <Box>
+                <Typography sx={{ fontWeight: 800, fontSize: '1.35rem', lineHeight: 1.1, color: 'text.primary' }}>
+                  {esPagoAnual ? 'Recibo pago anual' : 'Generar recibo'}
                 </Typography>
-                <Typography variant="caption" fontWeight={700} color="#10b981">
-                  10% (1 mes gratis)
+                <Typography variant="caption" color="text.secondary">
+                  {estudiante?.nombres} {estudiante?.apellidos}
                 </Typography>
               </Box>
-            )}
-          </Alert>
-
-          <Divider>
-            <Chip 
-              label="Datos de quien entrega el dinero" 
-              size="small"
-              sx={{ borderRadius: '8px' }}
-            />
-          </Divider>
-
-          {/* Formulario para personalizar datos de QUIEN ENTREGA */}
-          <Box
-            sx={{
-              p: 2,
-              borderRadius: '16px',
-              border: '2px dashed',
-              borderColor: isDark ? alpha('#facc15', 0.3) : alpha('#0288d1', 0.3),
-              bgcolor: isDark ? alpha('#facc15', 0.05) : alpha('#0288d1', 0.05),
-            }}
-          >
-            <Typography 
-              variant="caption" 
-              color="text.secondary" 
-              gutterBottom 
-              display="block"
-              sx={{ mb: 2 }}
-            >
-              💰 Estos datos aparecerán en la sección "ENTREGUÉ CONFORME" del recibo
-            </Typography>
-
-            <Grid container spacing={2}>
-              <Grid size={{xs:12}}>
-                <TextField
-                  fullWidth
-                  label="Nombre y Apellido (quien entrega)"
-                  value={formData.nombre_entrega}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nombre_entrega: e.target.value })
-                  }
-                  InputProps={{
-                    startAdornment: (
-                      <Person sx={{ mr: 1, color: 'text.secondary' }} />
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '12px',
-                    },
-                  }}
-                  helperText="Nombre de la persona que entrega el dinero"
-                  required
-                />
-              </Grid>
-
-              <Grid size={{xs:12}}>
-                <TextField
-                  fullWidth
-                  label="Cédula de Identidad"
-                  value={formData.ci_entrega}
-                  onChange={(e) =>
-                    setFormData({ ...formData, ci_entrega: e.target.value })
-                  }
-                  InputProps={{
-                    startAdornment: (
-                      <Badge sx={{ mr: 1, color: 'text.secondary' }} />
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '12px',
-                    },
-                  }}
-                  helperText="C.I. de quien entrega el dinero"
-                  required
-                />
-              </Grid>
-            </Grid>
+            </Box>
           </Box>
 
-          <Divider>
-            <Chip 
-              label="¿Quién recibe el dinero?" 
-              size="small"
-              sx={{ borderRadius: '8px' }}
-            />
-          </Divider>
-
-          {/* Selector de quien RECIBE el dinero */}
           <Box
+            onClick={handleClose}
             sx={{
-              p: 2,
-              borderRadius: '16px',
-              border: '2px solid',
-              borderColor: isDark ? alpha('#10b981', 0.3) : alpha('#10b981', 0.3),
-              bgcolor: isDark ? alpha('#10b981', 0.05) : alpha('#10b981', 0.05),
+              width: 32, height: 32, borderRadius: '9px', cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,255,255,0.05)',
+              border: `1px solid ${borderField}`,
+              color: 'text.secondary',
+              opacity: loading ? 0.4 : 1,
+              transition: 'all 0.15s',
+              '&:hover': loading ? {} : { background: alpha(accent, 0.12), borderColor: alpha(accent, 0.4), color: accent },
             }}
           >
-            <Typography 
-              variant="caption" 
-              color="text.secondary" 
-              gutterBottom 
-              display="block"
-              sx={{ mb: 2 }}
-            >
-              📝 Estos datos aparecerán en la sección "RECIBÍ CONFORME" del recibo
-            </Typography>
-
-            <Grid container spacing={2}>
-              <Grid size={{xs:12}}>
-                <TextField
-                  fullWidth
-                  select
-                  label="Persona que recibe el dinero"
-                  value={formData.quien_recibe}
-                  onChange={(e) =>
-                    setFormData({ 
-                      ...formData, 
-                      quien_recibe: e.target.value as 'patricia' | 'oswaldo' 
-                    })
-                  }
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '12px',
-                    },
-                  }}
-                  helperText="Seleccione la persona autorizada que recibe el pago"
-                >
-                  {PERSONAS_QUE_RECIBEN.map((persona) => (
-                    <MenuItem key={persona.value} value={persona.value}>
-                      <Box>
-                        <Typography variant="body2" fontWeight={600}>
-                          {persona.label}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          C.I.: {persona.ci}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-
-              {/* Vista previa de quien recibe */}
-              <Grid size={{xs:12}}>
-                <Alert 
-                  severity="info" 
-                  sx={{ 
-                    borderRadius: '12px',
-                    bgcolor: alpha('#10b981', 0.1),
-                  }}
-                >
-                  <Typography variant="body2" fontWeight={600}>
-                    Recibirá el dinero:
-                  </Typography>
-                  <Typography variant="body2">
-                    {PERSONAS_QUE_RECIBEN.find(p => p.value === formData.quien_recibe)?.label}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    C.I.: {PERSONAS_QUE_RECIBEN.find(p => p.value === formData.quien_recibe)?.ci}
-                  </Typography>
-                </Alert>
-              </Grid>
-            </Grid>
+            <CloseIcon sx={{ fontSize: 16 }} />
           </Box>
+        </Box>
+      </Box>
 
-          {/* Opciones de generación */}
+      {/* ── BODY (único scroll) ── */}
+      <DialogContent
+        sx={{
+          px: 3, py: 2.75,
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          '&::-webkit-scrollbar': { width: '8px' },
+          '&::-webkit-scrollbar-track': { background: 'transparent' },
+          '&::-webkit-scrollbar-thumb': {
+            background: alpha(accent, 0.25),
+            borderRadius: '8px',
+            '&:hover': { background: alpha(accent, 0.4) },
+          },
+          scrollbarWidth: 'thin',
+          scrollbarColor: `${alpha(accent, 0.25)} transparent`,
+        }}
+      >
+        <Stack spacing={2.5}>
+          {/* ── Resumen del pago ── */}
           <Box>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={formData.preview}
-                  onChange={(e) =>
-                    setFormData({ ...formData, preview: e.target.checked })
-                  }
-                  color="primary"
-                />
-              }
-              label={
-                <Box>
-                  <Typography variant="body2" fontWeight={600}>
-                    Vista previa en navegador
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Abrir el PDF en una nueva pestaña en lugar de descargarlo
+            <SectionLabel icon={esPagoAnual ? <StarsRoundedIcon /> : <ReceiptLongRoundedIcon />} brand={accent} borderField={borderField}>
+              {esPagoAnual ? 'Pago anual completo' : 'Resumen del pago'}
+            </SectionLabel>
+
+            <Box
+              sx={{
+                mt: 1.25, p: 1.5, borderRadius: '12px',
+                background: alpha(accent, 0.06),
+                border: `1px solid ${alpha(accent, 0.2)}`,
+              }}
+            >
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Typography variant="caption" color="text.secondary">
+                  {esPagoAnual ? 'Meses cubiertos' : 'Mensualidades'}
+                </Typography>
+                <Box
+                  sx={{
+                    px: 1.1, py: 0.35, borderRadius: '8px', fontSize: '0.72rem', fontWeight: 700,
+                    background: alpha(accent, 0.15), border: `1px solid ${alpha(accent, 0.3)}`, color: accent,
+                  }}
+                >
+                  {esPagoAnual ? '10 meses (Feb - Nov)' : `${pagos.length} cuota(s)`}
+                </Box>
+              </Box>
+
+              <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
+                <Typography variant="caption" color="text.secondary">Monto total</Typography>
+                <Typography variant="body1" fontWeight={800} sx={{ color: accent }}>
+                  Bs {totalMonto.toFixed(2)}
+                </Typography>
+              </Box>
+
+              {esPagoAnual && (
+                <Box display="flex" justifyContent="space-between" alignItems="center" mt={0.75}>
+                  <Typography variant="caption" color="text.secondary">Descuento aplicado</Typography>
+                  <Typography variant="caption" fontWeight={700} sx={{ color: accent }}>
+                    10% (1 mes gratis)
                   </Typography>
                 </Box>
-              }
-            />
-          </Box>
+              )}
+            </Box>
 
-          {/* Lista de mensualidades */}
-          {pagos.length > 1 && !esPagoAnual && (
-            <Box>
-              <Typography variant="caption" color="text.secondary" gutterBottom>
-                Mensualidades incluidas en el recibo:
-              </Typography>
-              <Box mt={1} display="flex" flexWrap="wrap" gap={1}>
+            {/* Lista de mensualidades incluidas */}
+            {pagos.length > 1 && !esPagoAnual && (
+              <Box mt={1.25} display="flex" flexWrap="wrap" gap={0.75}>
                 {pagos.map((pago) => (
-                  <Chip
+                  <Box
                     key={pago.id}
-                    label={
-                      pago.mes_correspondiente
-                        ? `${pago.mes_correspondiente} (${pago.numero_cuota})`
-                        : `Pago ${pago.id}`
-                    }
-                    size="small"
                     sx={{
-                      borderRadius: '8px',
-                      fontWeight: 600,
+                      px: 1.1, py: 0.4, borderRadius: '8px', fontSize: '0.72rem', fontWeight: 700,
+                      color: 'text.secondary', background: bgFieldAlt, border: `1px solid ${borderField}`,
                     }}
-                  />
+                  >
+                    {pago.mes_correspondiente
+                      ? `${pago.mes_correspondiente} (${pago.numero_cuota})`
+                      : `Pago ${pago.id}`}
+                  </Box>
                 ))}
               </Box>
+            )}
+          </Box>
+
+          {/* ── Quien entrega el dinero ── */}
+          <Box>
+            <SectionLabel icon={<PersonRoundedIcon />} brand={brand} borderField={borderField}>
+              Quien entrega el dinero
+            </SectionLabel>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, mb: 1.25 }}>
+              Estos datos aparecen en la sección "Entregué conforme" del recibo.
+            </Typography>
+
+            <Stack spacing={1.5}>
+              <TextField
+                fullWidth
+                label="Nombre y apellido"
+                value={formData.nombre_entrega}
+                onChange={(e) => setFormData({ ...formData, nombre_entrega: e.target.value })}
+                InputProps={{ startAdornment: <PersonRoundedIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} /> }}
+                size="small"
+                required
+                sx={fieldSx}
+              />
+              <TextField
+                fullWidth
+                label="Cédula de identidad"
+                value={formData.ci_entrega}
+                onChange={(e) => setFormData({ ...formData, ci_entrega: e.target.value })}
+                InputProps={{ startAdornment: <BadgeRoundedIcon sx={{ mr: 1, fontSize: 18, color: 'text.secondary' }} /> }}
+                size="small"
+                required
+                sx={fieldSx}
+              />
+            </Stack>
+          </Box>
+
+          {/* ── Quien recibe el dinero ── */}
+          <Box>
+            <SectionLabel icon={<HandshakeRoundedIcon />} brand={green} borderField={borderField}>
+              Quien recibe el dinero
+            </SectionLabel>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, mb: 1.25 }}>
+              Estos datos aparecen en la sección "Recibí conforme" del recibo.
+            </Typography>
+
+            <Stack spacing={1.25}>
+              <TextField
+                fullWidth
+                select
+                label="Persona que recibe el dinero"
+                value={formData.quien_recibe}
+                onChange={(e) => setFormData({ ...formData, quien_recibe: e.target.value as 'patricia' | 'oswaldo' })}
+                size="small"
+                sx={fieldSx}
+              >
+                {PERSONAS_QUE_RECIBEN.map((persona) => (
+                  <MenuItem key={persona.value} value={persona.value}>
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>{persona.label}</Typography>
+                      <Typography variant="caption" color="text.secondary">C.I.: {persona.ci}</Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              <Box
+                sx={{
+                  p: 1.25, borderRadius: '12px',
+                  background: alpha(green, 0.06),
+                  border: `1px solid ${alpha(green, 0.2)}`,
+                  borderLeft: `3px solid ${green}`,
+                }}
+              >
+                <Typography variant="caption" fontWeight={700} sx={{ color: green, display: 'block' }}>
+                  Recibirá el dinero
+                </Typography>
+                <Typography variant="body2" fontWeight={700}>
+                  {personaSeleccionada?.label}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  C.I.: {personaSeleccionada?.ci}
+                </Typography>
+              </Box>
+            </Stack>
+          </Box>
+
+          {/* ── Opciones de generación ── */}
+          <Box
+            sx={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5,
+              p: 1.25, borderRadius: '12px', background: bgFieldAlt, border: `1px solid ${borderField}`,
+            }}
+          >
+            <Box>
+              <Typography variant="body2" fontWeight={600}>Vista previa en navegador</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Abrir el PDF en una pestaña nueva en vez de descargarlo
+              </Typography>
             </Box>
-          )}
+            <Switch
+              checked={formData.preview}
+              onChange={(e) => setFormData({ ...formData, preview: e.target.checked })}
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': { color: brand },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: brand },
+              }}
+            />
+          </Box>
         </Stack>
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, pt: 0 }}>
+      {/* ── FOOTER (fijo) ── */}
+      <Box sx={{ px: 3, pb: 3, pt: 2, display: 'flex', alignItems: 'center', gap: 1, borderTop: `1px solid ${borderField}`, flexShrink: 0 }}>
         <Button
-          onClick={onClose}
+          onClick={handleClose}
           disabled={loading}
-          sx={{ borderRadius: '12px', textTransform: 'none' }}
+          sx={{ borderRadius: '10px', color: 'text.secondary', px: 2, textTransform: 'none', fontWeight: 600, '&:hover': { background: 'rgba(255,255,255,0.05)' } }}
         >
           Cancelar
         </Button>
-
-        <Box flex={1} />
-
+        <Box sx={{ flex: 1 }} />
         <Button
           onClick={handleSubmit}
           variant="contained"
           disabled={loading}
-          startIcon={formData.preview ? <Visibility /> : <Download />}
+          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : formData.preview ? <VisibilityRoundedIcon /> : <DownloadRoundedIcon />}
           sx={{
-            borderRadius: '12px',
-            textTransform: 'none',
-            fontWeight: 600,
-            px: 3,
-            background: esPagoAnual
-              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-              : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-            color: '#fff',
-            '&:hover': {
-              background: esPagoAnual
-                ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
-                : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-            },
-            '&:disabled': {
-              background: alpha(esPagoAnual ? '#10b981' : '#ef4444', 0.5),
-              color: '#fff',
-            },
+            borderRadius: '10px', px: 3, fontWeight: 700, textTransform: 'none',
+            background: accent, color: '#fff',
+            boxShadow: `0 4px 16px ${alpha(accent, 0.4)}`,
+            '&:hover': { background: esPagoAnual ? '#059669' : '#dc2626', boxShadow: `0 6px 20px ${alpha(accent, 0.5)}` },
+            '&.Mui-disabled': { opacity: 0.5, background: accent, color: '#fff' },
           }}
         >
-          {loading
-            ? 'Generando...'
-            : formData.preview
-            ? 'Ver Recibo'
-            : 'Descargar Recibo'}
+          {loading ? 'Generando...' : formData.preview ? 'Ver recibo' : 'Descargar recibo'}
         </Button>
-      </DialogActions>
+      </Box>
     </Dialog>
   );
 };

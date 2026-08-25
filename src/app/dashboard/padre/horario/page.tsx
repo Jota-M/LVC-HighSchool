@@ -46,7 +46,7 @@ export default function PadreHorarioPage() {
   // ID del padre de familia autenticado
   // Ajusta según tu implementación de auth
   const { user } = useAuth();
-  
+
 
   const [periodoId, setPeriodoId] = useState<number | null>(null);
   const [hijoSeleccionado, setHijoSeleccionado] = useState<number>(0); // índice del tab
@@ -264,7 +264,7 @@ const HijoCard: React.FC<HijoCardProps> = ({ hijo, activo, accentColor, isDark, 
             {hijo.nombres.split(' ')[0]}
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', lineHeight: 1.2, display: 'block', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-            {hijo.apellido_paterno}
+            {hijo.apellidos}
           </Typography>
           {hijo.grado_nombre && (
             <Typography variant="caption" sx={{ fontSize: '0.6rem', color: accentColor, fontWeight: 600, lineHeight: 1 }}>
@@ -322,7 +322,8 @@ const HijoHorarioPanel: React.FC<HijoHorarioPanelProps> = ({
     .filter(([, h]) => h > 0)
     .sort(([, a], [, b]) => b - a);
 
-  const nombreCompleto = `${hijo.nombres} ${hijo.apellido_paterno}${hijo.apellido_materno ? ` ${hijo.apellido_materno}` : ''}`;
+  // CORRECCIÓN: el backend manda un solo campo `apellidos` (no apellido_paterno/materno)
+  const nombreCompleto = `${hijo.nombres} ${hijo.apellidos}`;
 
   if (!hijo.paralelo_id) {
     return (
@@ -399,7 +400,17 @@ const HijoHorarioPanel: React.FC<HijoHorarioPanelProps> = ({
         </Paper>
 
         {/* ── GRILLA ── */}
-        <Paper sx={{ borderRadius: 3, border: `1px solid ${alpha(accentColor, 0.15)}`, overflow: 'hidden', mb: 3 }}>
+        <Paper
+          sx={{
+            borderRadius: 3,
+            border: `1px solid ${alpha(accentColor, 0.15)}`,
+            overflow: 'hidden',
+            mb: 3,
+            background: isDark
+              ? `linear-gradient(135deg,${alpha('#facc15', 0.06)},transparent)`
+              : `linear-gradient(135deg,${alpha('#0288d1', 0.05)},transparent)`,
+          }}
+        >
           {/* Barra controles */}
           <Box
             sx={{
@@ -452,7 +463,7 @@ const HijoHorarioPanel: React.FC<HijoHorarioPanelProps> = ({
         {!isLoading && celdas.length > 0 && (
           <Grid container spacing={2}>
             {/* Resumen por día */}
-            <Grid size={{xs: 12, md: 7}}>
+            <Grid size={{ xs: 12, md: 7 }}>
               <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5, color: accentColor }}>
                 Clases por día
               </Typography>
@@ -506,7 +517,7 @@ const HijoHorarioPanel: React.FC<HijoHorarioPanelProps> = ({
             </Grid>
 
             {/* Panel de docentes */}
-            <Grid size={{xs: 12, md: 5}}>
+            <Grid size={{ xs: 12, md: 5 }}>
               <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5, color: accentColor }}>
                 Docentes de {hijo.nombres.split(' ')[0]}
               </Typography>
