@@ -227,7 +227,9 @@ const EstudianteCard: React.FC<{
                   size="small"
                   color={
                     estudiante.ultima_matricula.estado === 'activo' ? 'success' :
+                    estudiante.ultima_matricula.estado === 'inactivo' || estudiante.ultima_matricula.estado === 'retirado' ? 'error' :
                     estudiante.ultima_matricula.estado === 'graduado' ? 'info' :
+                    estudiante.ultima_matricula.estado === 'trasladado' || estudiante.ultima_matricula.estado === 'suspendido' ? 'warning' :
                     'default'
                   }
                   sx={{ mt: 0.5, fontSize: { xs: '0.65rem', md: '0.7rem' }, height: { xs: 18, md: 20 } }}
@@ -480,9 +482,23 @@ export const EstudiantesElegiblesTable: React.FC<Props> = ({
                   </TableCell>
                   <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
                     {estudiante.ultima_matricula ? (
-                      <Typography variant="caption">
-                        {estudiante.ultima_matricula.grado} - {estudiante.ultima_matricula.paralelo}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="caption">
+                          {estudiante.ultima_matricula.grado} - {estudiante.ultima_matricula.paralelo}
+                        </Typography>
+                        <Chip
+                          label={estudiante.ultima_matricula.estado}
+                          size="small"
+                          color={
+                            estudiante.ultima_matricula.estado === 'activo' ? 'success' :
+                            estudiante.ultima_matricula.estado === 'inactivo' || estudiante.ultima_matricula.estado === 'retirado' ? 'error' :
+                            estudiante.ultima_matricula.estado === 'graduado' ? 'info' :
+                            estudiante.ultima_matricula.estado === 'trasladado' || estudiante.ultima_matricula.estado === 'suspendido' ? 'warning' :
+                            'default'
+                          }
+                          sx={{ height: 20, fontSize: '0.7rem' }}
+                        />
+                      </Box>
                     ) : (
                       'Primera matrícula'
                     )}

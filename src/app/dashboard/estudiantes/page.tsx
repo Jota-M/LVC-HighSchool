@@ -1,4 +1,4 @@
-// pages/Estudiantes.tsx
+//src/app/dashboard/estudiantes/page.tsx
 'use client';
 import React, { useState } from 'react';
 import {

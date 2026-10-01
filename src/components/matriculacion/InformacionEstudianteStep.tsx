@@ -166,15 +166,63 @@ export const InformacionEstudianteStep: React.FC<InformacionEstudianteStepProps>
                 }}
               />
             )}
-            <Chip
-              label={estudiante.activo ? 'Activo' : 'Inactivo'}
-              size="small"
-              color={estudiante.activo ? 'success' : 'default'}
-              sx={{ fontWeight: 600 }}
-            />
+            {(() => {
+              const matriculas = (estudiante as any).matriculas;
+              const ultimaMatricula = Array.isArray(matriculas) && matriculas.length > 0
+                ? matriculas[matriculas.length - 1]
+                : (estudiante as any).ultima_matricula;
+              const estadoMatricula = (estudiante as any).matricula_estado || ultimaMatricula?.estado;
+
+              if (estadoMatricula) {
+                return (
+                  <Chip
+                    label={`Matrícula: ${estadoMatricula}`}
+                    size="small"
+                    color={
+                      estadoMatricula === 'activo' ? 'success' :
+                      estadoMatricula === 'inactivo' || estadoMatricula === 'retirado' ? 'error' :
+                      estadoMatricula === 'graduado' ? 'info' :
+                      'warning'
+                    }
+                    sx={{ fontWeight: 600, textTransform: 'capitalize' }}
+                  />
+                );
+              }
+
+              return (
+                <Chip
+                  label={estudiante.activo ? 'Estudiante Registrado' : 'Inactivo'}
+                  size="small"
+                  color={estudiante.activo ? 'default' : 'error'}
+                  sx={{ fontWeight: 600 }}
+                />
+              );
+            })()}
           </Box>
         </Box>
       </Box>
+
+      {(() => {
+        const matriculas = (estudiante as any).matriculas;
+        const ultimaMatricula = Array.isArray(matriculas) && matriculas.length > 0
+          ? matriculas[matriculas.length - 1]
+          : (estudiante as any).ultima_matricula;
+
+        if (!ultimaMatricula) return null;
+
+        const isActivo = ultimaMatricula.estado === 'activo';
+        const isInactivo = ultimaMatricula.estado === 'inactivo';
+
+        return (
+          <Alert
+            severity={isActivo ? 'success' : isInactivo ? 'warning' : 'info'}
+            sx={{ mb: 3, borderRadius: 2 }}
+          >
+            <strong>Última matrícula:</strong> {ultimaMatricula.grado} - Paralelo {ultimaMatricula.paralelo} ({ultimaMatricula.periodo}) — Estado:{' '}
+            <strong style={{ textTransform: 'capitalize' }}>{ultimaMatricula.estado}</strong>
+          </Alert>
+        );
+      })()}
 
       <Divider sx={{ my: 3 }} />
 

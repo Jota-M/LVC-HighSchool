@@ -1,5 +1,6 @@
 // hooks/useAsistencia.ts
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { solicitudPermisoService, asistenciaService, AsignacionDocente } from '@/services/asistenciaService';
 import {
@@ -27,61 +28,88 @@ import {
 // Llama a GET /api/asistencia/mis-asignaciones?fecha=X
 // El backend resuelve token → usuario_id → docente automáticamente.
 
-export const useMisAsignaciones = () => {
-  const [asignaciones, setAsignaciones]       = useState<AsignacionDocente[]>([]);
-  const [fecha, setFecha]                     = useState(new Date().toISOString().slice(0, 10));
-  const [isLoading, setIsLoading]             = useState(false);
-  const [sinAsignaciones, setSinAsignaciones] = useState(false);
- 
-  // ✅ FIX: ref para que refrescar() siempre lea la fecha más reciente
-  const fechaRef = useRef(fecha);
-  useEffect(() => { fechaRef.current = fecha; }, [fecha]);
- 
-  const cargar = useCallback(async (fechaTarget?: string) => {
-    const f = fechaTarget ?? fechaRef.current;   // ← usa ref, no closure
-    setIsLoading(true);
-    setSinAsignaciones(false);
-    try {
-      const res = await asistenciaService.getMisAsignaciones(f);
-      setAsignaciones(res.data.asignaciones);
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        setAsignaciones([]);
-        setSinAsignaciones(true);
-      } else {
+const getFechaLocalHoy = (): string => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export const useMisAsignaciones = (soloDelDiaInicial = false) => {
+  const queryClient = useQueryClient();
+  const [soloDelDia, setSoloDelDia] = useState(soloDelDiaInicial);
+  const [fecha, setFecha]           = useState(getFechaLocalHoy);
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['docente-mis-asignaciones', fecha, soloDelDia],
+    queryFn: async () => {
+      try {
+        const res = await asistenciaService.getMisAsignaciones(fecha, soloDelDia);
+        return {
+          asignaciones: (res.data?.asignaciones ?? []) as AsignacionDocente[],
+          totalConClaseHoy: Number(res.data?.total_con_clase_hoy ?? 0),
+          sinAsignaciones: false,
+        };
+      } catch (error: any) {
+        if (error.response?.status === 404) {
+          return {
+            asignaciones: [] as AsignacionDocente[],
+            totalConClaseHoy: 0,
+            sinAsignaciones: true,
+          };
+        }
         toast.error(error.response?.data?.message || 'Error al cargar tus materias');
-        setAsignaciones([]);
+        return {
+          asignaciones: [] as AsignacionDocente[],
+          totalConClaseHoy: 0,
+          sinAsignaciones: true,
+        };
       }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []); // ← sin dependencias; usa ref internamente
- 
-  useEffect(() => { cargar(); }, []);
- 
+    },
+    staleTime: 1000 * 60 * 3, // 3 min de caché fresca
+  });
+
+  const asignaciones = data?.asignaciones ?? [];
+  const totalConClaseHoy = data?.totalConClaseHoy ?? 0;
+  const sinAsignaciones = data?.sinAsignaciones ?? false;
+
   const cambiarFecha = useCallback((nuevaFecha: string) => {
     setFecha(nuevaFecha);
-    cargar(nuevaFecha);
-  }, [cargar]);
- 
-  const marcarCompleta = useCallback((asignacion_id: number) => {
-    setAsignaciones(prev =>
-      prev.map(a =>
-        a.asignacion_id === asignacion_id
-          ? { ...a, asistencia_completa: true, total_marcados: a.total_estudiantes, total_pendientes: 0 }
-          : a
-      )
-    );
   }, []);
- 
+
+  const toggleSoloDelDia = useCallback((nuevoSoloDelDia?: boolean) => {
+    setSoloDelDia(prev => (nuevoSoloDelDia !== undefined ? nuevoSoloDelDia : !prev));
+  }, []);
+
+  const marcarCompleta = useCallback((asignacion_id: number) => {
+    queryClient.setQueryData(
+      ['docente-mis-asignaciones', fecha, soloDelDia],
+      (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          asignaciones: old.asignaciones.map((a: AsignacionDocente) =>
+            a.asignacion_id === asignacion_id
+              ? { ...a, asistencia_completa: true, total_marcados: a.total_estudiantes, total_pendientes: 0 }
+              : a
+          ),
+        };
+      }
+    );
+  }, [queryClient, fecha, soloDelDia]);
+
   return {
     asignaciones,
+    totalConClaseHoy,
+    soloDelDia,
+    setSoloDelDia: toggleSoloDelDia,
     fecha,
     isLoading,
     sinAsignaciones,
     cambiarFecha,
     marcarCompleta,
-    refrescar: () => cargar(), // ← ahora siempre usa fechaRef.current
+    refrescar: () => refetch(),
   };
 };
 
@@ -195,9 +223,20 @@ export const useSolicitudDetalle = (id: number | null) => {
 // HOOK: LISTA DEL DÍA (pase de lista)
 // =============================================
 
+export interface HorarioClaseInfo {
+  tiene_clase_programada?: boolean;
+  dia_semana?: number;
+  dia_semana_nombre?: string;
+  dias_permitidos?: string[];
+  mensaje_horario?: string | null;
+  horarios_dia?: string | null;
+  aula_dia?: string | null;
+}
+
 export const useListaDia = () => {
   const [lista, setLista]               = useState<EstudianteDia[]>([]);
   const [estadisticas, setEstadisticas] = useState({ total: 0, ya_marcados: 0, pendientes: 0 });
+  const [horarioInfo, setHorarioInfo]   = useState<HorarioClaseInfo | null>(null);
   const [isLoading, setIsLoading]       = useState(false);
   const [isSaving, setIsSaving]         = useState(false);
   const [marcaciones, setMarcaciones]   = useState<Record<number, RegistroMasivoItem>>({});
@@ -211,6 +250,15 @@ export const useListaDia = () => {
         total:       res.data.total,
         ya_marcados: res.data.ya_marcados,
         pendientes:  res.data.pendientes,
+      });
+      setHorarioInfo({
+        tiene_clase_programada: res.data.tiene_clase_programada,
+        dia_semana: res.data.dia_semana,
+        dia_semana_nombre: res.data.dia_semana_nombre,
+        dias_permitidos: res.data.dias_permitidos,
+        mensaje_horario: res.data.mensaje_horario,
+        horarios_dia: res.data.horarios_dia,
+        aula_dia: res.data.aula_dia,
       });
 
       // Pre-poblar con los estados ya guardados
@@ -228,6 +276,7 @@ export const useListaDia = () => {
       setMarcaciones(preloaded);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Error al cargar lista del día');
+      setHorarioInfo(null);
     } finally {
       setIsLoading(false);
     }
@@ -258,6 +307,10 @@ export const useListaDia = () => {
     asignacion_docente_id: number,
     fecha: string
   ): Promise<boolean> => {
+    if (horarioInfo?.tiene_clase_programada === false) {
+      toast.error(horarioInfo.mensaje_horario || 'No se puede registrar asistencia en un día sin clase programada según el horario escolar.');
+      return false;
+    }
     const registros = Object.values(marcaciones);
     if (registros.length === 0) {
       toast.error('No hay registros para guardar');
@@ -282,6 +335,7 @@ export const useListaDia = () => {
   const limpiarLista = useCallback(() => {
     setLista([]);
     setMarcaciones({});
+    setHorarioInfo(null);
     setEstadisticas({ total: 0, ya_marcados: 0, pendientes: 0 });
   }, []);
 
@@ -292,6 +346,7 @@ export const useListaDia = () => {
   return {
     lista,
     estadisticas,
+    horarioInfo,
     marcaciones,
     isLoading,
     isSaving,

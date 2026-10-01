@@ -1,5 +1,6 @@
 'use client';
 // components/estudiante/asistencia/CalendarioAsistencia.tsx
+// Calendario de asistencia estudiantil con diseño unificado
 
 import React, { useState, useMemo } from 'react';
 import {
@@ -7,12 +8,12 @@ import {
   Chip, Paper, Tooltip, Fade, Skeleton,
 } from '@mui/material';
 import {
-  ChevronLeft as PrevIcon,
-  ChevronRight as NextIcon,
-  CheckCircle as PresenteIcon,
-  Cancel as AusenteIcon,
-  Warning as JustificadoIcon,
-  HelpOutline as TardanzaIcon,
+  ChevronLeftRounded as PrevIcon,
+  ChevronRightRounded as NextIcon,
+  CheckCircleRounded as PresenteIcon,
+  CancelRounded as AusenteIcon,
+  AssignmentTurnedInRounded as JustificadoIcon,
+  AccessTimeRounded as TardanzaIcon,
 } from '@mui/icons-material';
 import { SinDatos } from './SinDatos';
 
@@ -35,15 +36,15 @@ export const CalendarioAsistencia: React.FC<CalendarioAsistenciaProps> = ({
   const calendarioData = useMemo(() => {
     const year = mesActual.getFullYear();
     const month = mesActual.getMonth();
-    
+
     // Primer y último día del mes
     const primerDia = new Date(year, month, 1);
     const ultimoDia = new Date(year, month + 1, 0);
-    
+
     // Días a mostrar (incluyendo días del mes anterior y siguiente)
     const diasSemana = primerDia.getDay(); // 0 = domingo
     const totalDias = ultimoDia.getDate();
-    
+
     const dias: Array<{
       fecha: Date;
       esDelMes: boolean;
@@ -66,17 +67,17 @@ export const CalendarioAsistencia: React.FC<CalendarioAsistenciaProps> = ({
     for (let dia = 1; dia <= totalDias; dia++) {
       const fecha = new Date(year, month, dia);
       const fechaStr = fecha.toISOString().split('T')[0];
-      
-      const asistenciasDia = detalle.filter(d => 
+
+      const asistenciasDia = detalle.filter(d =>
         d.fecha?.split('T')[0] === fechaStr
       );
 
       let estado: 'presente' | 'ausente' | 'mixto' | 'sin-datos' = 'sin-datos';
-      
+
       if (asistenciasDia.length > 0) {
         const presentes = asistenciasDia.filter(a => a.estado === 'presente').length;
         const ausentes = asistenciasDia.filter(a => a.estado === 'ausente').length;
-        
+
         if (presentes === asistenciasDia.length) estado = 'presente';
         else if (ausentes === asistenciasDia.length) estado = 'ausente';
         else estado = 'mixto';
@@ -104,14 +105,17 @@ export const CalendarioAsistencia: React.FC<CalendarioAsistenciaProps> = ({
     return dias;
   }, [mesActual, detalle]);
 
-  const mesNombre = mesActual.toLocaleDateString('es-BO', { month: 'long', year: 'numeric' });
+  const mesNombre = mesActual.toLocaleDateString('es-BO', {
+    month: 'long',
+    year: 'numeric',
+  });
 
   const handleMesAnterior = () => {
-    setMesActual(new Date(mesActual.getFullYear(), mesActual.getMonth() - 1));
+    setMesActual(new Date(mesActual.getFullYear(), mesActual.getMonth() - 1, 1));
   };
 
   const handleMesSiguiente = () => {
-    setMesActual(new Date(mesActual.getFullYear(), mesActual.getMonth() + 1));
+    setMesActual(new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 1));
   };
 
   const handleHoy = () => {
@@ -120,99 +124,93 @@ export const CalendarioAsistencia: React.FC<CalendarioAsistenciaProps> = ({
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Skeleton variant="rounded" height={60} sx={{ borderRadius: '14px' }} />
-        <Skeleton variant="rounded" height={400} sx={{ borderRadius: '14px' }} />
+      <Box sx={{ p: 2 }}>
+        <Skeleton variant="rounded" height={420} sx={{ borderRadius: '18px' }} />
       </Box>
-    );
-  }
-
-  if (!detalle || !detalle.length) {
-    return (
-      <SinDatos
-        accent={accent}
-        isDark={isDark}
-        mensaje="No hay registros de asistencia para mostrar en el calendario."
-      />
     );
   }
 
   return (
     <Box>
-      {/* Header del calendario */}
+      {/* Barra de control de mes */}
       <Paper
         elevation={0}
         sx={{
-          bgcolor: isDark ? alpha('#fff', 0.03) : '#fff',
-          border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
-          borderRadius: '14px',
           p: 2,
-          mb: 2,
+          borderRadius: '16px',
+          bgcolor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+          border: `1.5px solid ${alpha(isDark ? '#fff' : '#000', 0.08)}`,
+          mb: 2.5,
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6" fontWeight={700} sx={{ textTransform: 'capitalize' }}>
+          <Typography variant="h6" fontWeight={800} sx={{ textTransform: 'capitalize', letterSpacing: -0.3 }}>
             {mesNombre}
           </Typography>
 
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Chip
               label="Hoy"
               onClick={handleHoy}
               size="small"
+              clickable
               sx={{
+                borderRadius: '8px',
                 bgcolor: alpha(accent, 0.15),
                 color: accent,
-                fontWeight: 600,
+                fontWeight: 800,
+                fontSize: '0.75rem',
+                border: `1px solid ${alpha(accent, 0.3)}`,
                 cursor: 'pointer',
                 '&:hover': { bgcolor: alpha(accent, 0.25) },
               }}
             />
 
-            <IconButton onClick={handleMesAnterior} size="small">
+            <IconButton onClick={handleMesAnterior} size="small" sx={{ borderRadius: '10px' }}>
               <PrevIcon />
             </IconButton>
 
-            <IconButton onClick={handleMesSiguiente} size="small">
+            <IconButton onClick={handleMesSiguiente} size="small" sx={{ borderRadius: '10px' }}>
               <NextIcon />
             </IconButton>
           </Box>
         </Box>
       </Paper>
 
-      {/* Leyenda */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-        <LeyendaItem color="#1D9E75" label="Todas presentes" isDark={isDark} />
-        <LeyendaItem color="#D85A30" label="Alguna ausencia" isDark={isDark} />
-        <LeyendaItem color="#BA7517" label="Mixto" isDark={isDark} />
-        <LeyendaItem color={isDark ? alpha('#fff', 0.1) : alpha('#000', 0.05)} label="Sin clases" isDark={isDark} />
+      {/* Leyenda de colores */}
+      <Box sx={{ display: 'flex', gap: 2.5, mb: 2, flexWrap: 'wrap', px: 0.5 }}>
+        <LeyendaItem color="#10b981" label="Todas presentes" isDark={isDark} />
+        <LeyendaItem color="#ef4444" label="Inasistencias" isDark={isDark} />
+        <LeyendaItem color="#f59e0b" label="Mixto o atrasos" isDark={isDark} />
+        <LeyendaItem color={isDark ? alpha('#fff', 0.2) : alpha('#000', 0.15)} label="Sin clases" isDark={isDark} />
       </Box>
 
       {/* Grid del calendario */}
       <Paper
         elevation={0}
         sx={{
-          bgcolor: isDark ? alpha('#fff', 0.03) : '#fff',
-          border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
-          borderRadius: '14px',
-          p: 2,
+          bgcolor: isDark ? 'rgba(255, 255, 255, 0.025)' : '#ffffff',
+          border: `1.5px solid ${alpha(isDark ? '#fff' : '#000', 0.08)}`,
+          borderRadius: '18px',
+          p: { xs: 1.5, sm: 2.5 },
           overflow: 'hidden',
         }}
       >
         {/* Días de la semana */}
-        <Box sx={{ 
-          display: 'grid', 
+        <Box sx={{
+          display: 'grid',
           gridTemplateColumns: 'repeat(7, 1fr)',
           gap: 1,
-          mb: 1,
+          mb: 1.5,
         }}>
           {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(dia => (
             <Typography
               key={dia}
               variant="caption"
-              fontWeight={600}
+              fontWeight={800}
               color="text.secondary"
               align="center"
+              sx={{ textTransform: 'uppercase', fontSize: '0.72rem' }}
             >
               {dia}
             </Typography>
@@ -220,8 +218,8 @@ export const CalendarioAsistencia: React.FC<CalendarioAsistenciaProps> = ({
         </Box>
 
         {/* Días del mes */}
-        <Box sx={{ 
-          display: 'grid', 
+        <Box sx={{
+          display: 'grid',
           gridTemplateColumns: 'repeat(7, 1fr)',
           gap: 1,
         }}>
@@ -252,30 +250,30 @@ const DiaCelda: React.FC<{
 }> = ({ dia, isDark, accent }) => {
   const esHoy = dia.fecha.toDateString() === new Date().toDateString();
 
-  const bgColor = 
-    dia.estado === 'presente' ? alpha('#1D9E75', isDark ? 0.15 : 0.1) :
-    dia.estado === 'ausente' ? alpha('#D85A30', isDark ? 0.15 : 0.1) :
-    dia.estado === 'mixto' ? alpha('#BA7517', isDark ? 0.15 : 0.1) :
+  const bgColor =
+    dia.estado === 'presente' ? alpha('#10b981', isDark ? 0.16 : 0.1) :
+    dia.estado === 'ausente' ? alpha('#ef4444', isDark ? 0.16 : 0.1) :
+    dia.estado === 'mixto' ? alpha('#f59e0b', isDark ? 0.16 : 0.1) :
     'transparent';
 
   const borderColor =
-    dia.estado === 'presente' ? alpha('#1D9E75', 0.3) :
-    dia.estado === 'ausente' ? alpha('#D85A30', 0.3) :
-    dia.estado === 'mixto' ? alpha('#BA7517', 0.3) :
-    isDark ? alpha('#fff', 0.05) : alpha('#000', 0.05);
+    dia.estado === 'presente' ? alpha('#10b981', 0.35) :
+    dia.estado === 'ausente' ? alpha('#ef4444', 0.35) :
+    dia.estado === 'mixto' ? alpha('#f59e0b', 0.35) :
+    isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06);
 
   const tooltipContent = dia.asistencias.length > 0 ? (
     <Box>
-      <Typography variant="caption" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>
+      <Typography variant="caption" fontWeight={800} sx={{ mb: 0.5, display: 'block' }}>
         {dia.fecha.toLocaleDateString('es-BO', { day: 'numeric', month: 'long' })}
       </Typography>
       {dia.asistencias.map((a, idx) => (
-        <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-          {a.estado === 'presente' && <PresenteIcon sx={{ fontSize: 12, color: '#1D9E75' }} />}
-          {a.estado === 'ausente' && <AusenteIcon sx={{ fontSize: 12, color: '#D85A30' }} />}
-          {a.estado === 'justificado' && <JustificadoIcon sx={{ fontSize: 12, color: '#BA7517' }} />}
-          {a.estado === 'tardanza' && <TardanzaIcon sx={{ fontSize: 12, color: '#7F77DD' }} />}
-          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+        <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mt: 0.4 }}>
+          {a.estado === 'presente' && <PresenteIcon sx={{ fontSize: 13, color: '#10b981' }} />}
+          {a.estado === 'ausente' && <AusenteIcon sx={{ fontSize: 13, color: '#ef4444' }} />}
+          {a.estado === 'justificado' && <JustificadoIcon sx={{ fontSize: 13, color: '#8b5cf6' }} />}
+          {a.estado === 'tardanza' && <TardanzaIcon sx={{ fontSize: 13, color: '#f59e0b' }} />}
+          <Typography variant="caption" sx={{ fontSize: '0.72rem' }}>
             {a.materia_nombre}
           </Typography>
         </Box>
@@ -292,48 +290,50 @@ const DiaCelda: React.FC<{
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: 2,
+          borderRadius: '11px',
           border: `1.5px solid ${esHoy ? accent : borderColor}`,
           bgcolor: bgColor,
-          opacity: dia.esDelMes ? 1 : 0.4,
+          opacity: dia.esDelMes ? 1 : 0.35,
           cursor: dia.asistencias.length > 0 ? 'pointer' : 'default',
-          transition: 'all 0.2s',
+          transition: 'all 0.2s ease',
           position: 'relative',
           '&:hover': dia.asistencias.length > 0 ? {
-            transform: 'scale(1.05)',
+            transform: 'scale(1.06)',
             zIndex: 10,
-            boxShadow: `0 4px 12px ${alpha(borderColor, 0.3)}`,
+            boxShadow: `0 4px 14px ${alpha(borderColor, 0.4)}`,
           } : {},
         }}
       >
         <Typography
           variant="body2"
-          fontWeight={esHoy ? 700 : dia.esDelMes ? 600 : 400}
+          fontWeight={esHoy ? 900 : dia.esDelMes ? 700 : 500}
           sx={{
             color: esHoy ? accent : dia.esDelMes ? 'text.primary' : 'text.disabled',
+            fontSize: '0.85rem',
           }}
         >
           {dia.fecha.getDate()}
         </Typography>
 
         {dia.asistencias.length > 0 && (
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 0.25, 
-            mt: 0.25,
+          <Box sx={{
+            display: 'flex',
+            gap: 0.3,
+            mt: 0.3,
             flexWrap: 'wrap',
             justifyContent: 'center',
           }}>
-            {dia.asistencias.slice(0, 3).map((_, idx) => (
+            {dia.asistencias.slice(0, 3).map((a, idx) => (
               <Box
                 key={idx}
                 sx={{
-                  width: 4,
-                  height: 4,
+                  width: 5,
+                  height: 5,
                   borderRadius: '50%',
-                  bgcolor: dia.estado === 'presente' ? '#1D9E75' :
-                           dia.estado === 'ausente' ? '#D85A30' :
-                           '#BA7517',
+                  bgcolor: a.estado === 'presente' ? '#10b981' :
+                           a.estado === 'ausente' ? '#ef4444' :
+                           a.estado === 'justificado' ? '#8b5cf6' :
+                           '#f59e0b',
                 }}
               />
             ))}
@@ -344,8 +344,8 @@ const DiaCelda: React.FC<{
           <Box
             sx={{
               position: 'absolute',
-              top: 2,
-              right: 2,
+              top: 3,
+              right: 3,
               width: 6,
               height: 6,
               borderRadius: '50%',
@@ -362,20 +362,21 @@ const DiaCelda: React.FC<{
 const LeyendaItem: React.FC<{ color: string; label: string; isDark: boolean }> = ({
   color,
   label,
-  isDark,
 }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
     <Box
       sx={{
-        width: 12,
-        height: 12,
-        borderRadius: 1,
+        width: 10,
+        height: 10,
+        borderRadius: '50%',
         bgcolor: color,
         border: `1px solid ${alpha(color, 0.5)}`,
       }}
     />
-    <Typography variant="caption" color="text.secondary">
+    <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ fontSize: '0.74rem' }}>
       {label}
     </Typography>
   </Box>
 );
+
+export default CalendarioAsistencia;

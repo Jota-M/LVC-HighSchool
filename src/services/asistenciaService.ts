@@ -54,6 +54,15 @@ export interface AsignacionDocente {
   justificados: number;
   faltas_parciales: number;
   asistencia_completa: boolean;
+  // Datos del horario escolar
+  tiene_clase_hoy?: boolean;
+  total_bloques_dia?: number;
+  horarios_dia?: string | null;
+  hora_inicio_dia?: string | null;
+  hora_fin_dia?: string | null;
+  aula_dia?: string | null;
+  dias_con_clase?: number[];
+  dias_texto?: string | null;
 }
 
 export interface MisAsignacionesResponse {
@@ -62,6 +71,7 @@ export interface MisAsignacionesResponse {
     fecha: string;
     docente_usuario_id: number;
     total_asignaciones: number;
+    total_con_clase_hoy?: number;
     asignaciones: AsignacionDocente[];
   };
 }
@@ -136,9 +146,12 @@ export const solicitudPermisoService = {
 
 export const asistenciaService = {
 
-  async getMisAsignaciones(fecha?: string): Promise<MisAsignacionesResponse> {
-    const params = fecha ? `?fecha=${fecha}` : '';
-    const response = await api.get(`/asistencia/mis-asignaciones${params}`);
+  async getMisAsignaciones(fecha?: string, solo_del_dia?: boolean): Promise<MisAsignacionesResponse> {
+    const params = new URLSearchParams();
+    if (fecha) params.append('fecha', fecha);
+    if (solo_del_dia !== undefined) params.append('solo_del_dia', String(solo_del_dia));
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await api.get(`/asistencia/mis-asignaciones${query}`);
     return response.data;
   },
 

@@ -8,7 +8,6 @@ export const DIAS_SEMANA: Record<number, string> = {
   3: 'Miércoles',
   4: 'Jueves',
   5: 'Viernes',
-  6: 'Sábado',
 };
 
 export const DIAS_SEMANA_CORTO: Record<number, string> = {
@@ -17,7 +16,6 @@ export const DIAS_SEMANA_CORTO: Record<number, string> = {
   3: 'Mié',
   4: 'Jue',
   5: 'Vie',
-  6: 'Sáb',
 };
 
 export const ESTADO_CONFIG: Record<HorarioEstado, { label: string; color: string; bg: string }> = {
@@ -128,6 +126,7 @@ export interface HorarioDetalle {
   aula: string | null;
   color: string | null;
   observaciones: string | null;
+  etiqueta_personalizada?: string | null;
   activo: boolean;
   // joins
   bloque_nombre: string;
@@ -141,6 +140,8 @@ export interface HorarioDetalle {
   docente_id: number | null;
   docente_nombres: string | null;
   docente_apellidos: string | null;
+  grado_nombre?: string | null;
+  paralelo_nombre?: string | null;
 }
 
 export interface HorarioDetalleCreate {
@@ -151,6 +152,7 @@ export interface HorarioDetalleCreate {
   aula?: string;
   color?: string;
   observaciones?: string;
+  etiqueta_personalizada?: string | null;
 }
 
 export interface HorarioDetalleUpdate {
@@ -159,6 +161,7 @@ export interface HorarioDetalleUpdate {
   aula?: string;
   color?: string;
   observaciones?: string;
+  etiqueta_personalizada?: string | null;
 }
 
 // =============================================

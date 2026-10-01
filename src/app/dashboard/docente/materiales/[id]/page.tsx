@@ -4,35 +4,32 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, Chip, Skeleton, Fade, alpha, useTheme,
-  IconButton,
 } from '@mui/material';
-import {
-  ArrowBack as ArrowBackIcon,
-  AutoStories as AutoStoriesIcon,
-  MenuBook as MenuBookIcon,
-} from '@mui/icons-material';
+import { keyframes } from '@mui/system';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import AutoStoriesRoundedIcon from '@mui/icons-material/AutoStoriesRounded';
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
+import FolderSharedRoundedIcon from '@mui/icons-material/FolderSharedRounded';
 import { useParams, useRouter } from 'next/navigation';
 import { asistenciaService, AsignacionDocente } from '@/services/asistenciaService';
 import { toast } from 'react-hot-toast';
-import { MaterialesDocente } from '../../../../../components/materiales/MaterialesDocente';
+import { MaterialesDocente } from '@/components/materiales/MaterialesDocente';
 import TabRecursosIA from '@/components/prediccion/TabRecursosIA';
-import CursoDocente from '@/components/docente/materiales/CursoDocente';
 
+type VistaTab = 'materiales' | 'recursosIA';
 
-type VistaTab = 'materiales' | 'recursosIA' | 'curso';
+const bounceIcon = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+`;
 
-const TABS: { key: VistaTab; label: string; icon: React.ReactNode }[] = [
-  { key: 'materiales', label: 'Materiales', icon: <AutoStoriesIcon sx={{ fontSize: 15 }} /> },
-  { key: 'recursosIA', label: 'Recursos IA', icon: <AutoAwesomeRoundedIcon sx={{ fontSize: 15 }} /> },
-  { key: 'curso', label: 'Curso', icon: <MenuBookIcon sx={{ fontSize: 15 }} /> },
-];
-
-export default function MateriaDetallePage() {
+export default function MateriaMaterialesPage() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const accent = isDark ? '#facc15' : '#0288d1';
-  const accentDark = isDark ? '#f59e0b' : '#01579b';
+  const gold = isDark ? '#facc15' : '#0288d1';
+  const goldEnd = isDark ? '#f59e0b' : '#01579b';
+  const gradBg = `linear-gradient(135deg, ${gold}, ${goldEnd})`;
+
   const router = useRouter();
   const params = useParams();
   const asignacionId = Number(params?.id);
@@ -49,7 +46,10 @@ export default function MateriaDetallePage() {
         const found = res.data.asignaciones.find(
           (a: AsignacionDocente) => a.asignacion_id === asignacionId
         );
-        if (!found) { router.replace('/dashboard/docente/materiales'); return; }
+        if (!found) {
+          router.replace('/dashboard/docente/materiales');
+          return;
+        }
         setAsignacion(found);
       } catch {
         toast.error('Error al cargar la materia');
@@ -59,14 +59,14 @@ export default function MateriaDetallePage() {
       }
     };
     if (asignacionId) cargar();
-  }, [asignacionId]);
+  }, [asignacionId, router]);
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-        <Skeleton variant="rounded" height={32} width={200} sx={{ borderRadius: '8px' }} />
-        <Skeleton variant="rounded" height={60} sx={{ borderRadius: '12px' }} />
-        <Skeleton variant="rounded" height={48} width={300} sx={{ borderRadius: '10px' }} />
+      <Box sx={{ minHeight: '100vh', py: 2.5, px: { xs: 1.5, sm: 2.5, md: 3 }, width: '100%' }}>
+        <Skeleton variant="rounded" height={28} width={180} sx={{ borderRadius: '8px', mb: 2 }} />
+        <Skeleton variant="rounded" height={80} sx={{ borderRadius: '18px', mb: 3 }} />
+        <Skeleton variant="rounded" height={450} sx={{ borderRadius: '18px' }} />
       </Box>
     );
   }
@@ -74,90 +74,174 @@ export default function MateriaDetallePage() {
   if (!asignacion) return null;
 
   return (
-    <Box sx={{ minHeight: '100vh' }}>
-
-      {/* ── Volver ── */}
-      <Fade in timeout={300}>
-        <Box sx={{ mb: 4 }}>
+    <Box sx={{ minHeight: '100vh', py: 2.5, px: { xs: 1.5, sm: 2.5, md: 3 }, width: '100%' }}>
+      {/* ══ HEADER IDÉNTICO AL MÓDULO DE TEMARIO, TAREAS Y CALIFICACIONES (ANCHO COMPLETO) ══ */}
+      <Fade in timeout={350}>
+        <Box sx={{ mb: 3.5 }}>
+          {/* Volver */}
           <Box
             onClick={() => router.push('/dashboard/docente/materiales')}
             sx={{
-              display: 'inline-flex', alignItems: 'center', gap: 0.6, mb: 3,
-              cursor: 'pointer', color: 'text.secondary', fontSize: 13, fontWeight: 600,
-              transition: 'color 0.15s', '&:hover': { color: accent },
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.6,
+              mb: 1.5,
+              cursor: 'pointer',
+              color: 'text.secondary',
+              fontSize: 13,
+              fontWeight: 600,
+              '&:hover': { color: gold },
+              transition: 'color 0.15s ease',
             }}
           >
-            <ArrowBackIcon sx={{ fontSize: 16 }} />
-            Mis materias
+            <ArrowBackRoundedIcon sx={{ fontSize: 16 }} />
+            Volver a mis materias
           </Box>
 
-          {/* ── Info de la materia ── */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="h5" sx={{
-                fontWeight: 700, letterSpacing: '-0.02em',
-                background: `linear-gradient(135deg, ${accent}, ${accentDark})`,
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              }} noWrap>
-                {asignacion.materia_nombre}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5, flexWrap: 'wrap' }}>
-                <Chip
-                  label={`${asignacion.grado_nombre} "${asignacion.paralelo_nombre}"`}
-                  size="small"
+          {/* Título + Chips */}
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 2,
+            mb: 2.5,
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75 }}>
+              <Box sx={{
+                width: 52,
+                height: 52,
+                borderRadius: '16px',
+                bgcolor: alpha(gold, 0.12),
+                border: `1.5px solid ${alpha(gold, 0.28)}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: `0 4px 16px ${alpha(gold, 0.15)}`,
+              }}>
+                <FolderSharedRoundedIcon
                   sx={{
-                    height: 20, fontSize: '0.68rem', fontWeight: 700, borderRadius: '5px',
-                    background: `linear-gradient(135deg, ${accent}, ${accentDark})`,
-                    color: isDark ? '#000' : '#fff',
+                    color: gold,
+                    fontSize: 30,
+                    animation: `${bounceIcon} 1.6s ease-in-out infinite`,
                   }}
                 />
-                {asignacion.turno_nombre && (
-                  <Typography variant="caption" color="text.disabled" fontWeight={600}>
-                    · {asignacion.turno_nombre}
-                  </Typography>
-                )}
+              </Box>
+
+              <Box>
+                <Typography sx={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: gold,
+                  mb: 0.3,
+                }}>
+                  Biblioteca de Estudio · Recursos y Materiales
+                </Typography>
+                <Typography
+                  variant="h1"
+                  sx={{
+                    fontSize: { xs: '1.4rem', sm: '1.85rem', md: '2.2rem' },
+                    fontWeight: 800,
+                    background: gradBg,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {asignacion.materia_nombre}
+                </Typography>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.6, flexWrap: 'wrap' }}>
+                  <Chip
+                    label={`${asignacion.grado_nombre} "${asignacion.paralelo_nombre}"`}
+                    size="small"
+                    sx={{
+                      background: gradBg,
+                      color: isDark ? '#000' : '#fff',
+                      fontWeight: 700,
+                      fontSize: 11,
+                      height: 22,
+                    }}
+                  />
+                  {asignacion.turno_nombre && (
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      · Turno {asignacion.turno_nombre}
+                    </Typography>
+                  )}
+                  {asignacion.nivel_nombre && (
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      · {asignacion.nivel_nombre}
+                    </Typography>
+                  )}
+                  {asignacion.total_estudiantes !== undefined && (
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      · {asignacion.total_estudiantes} estudiantes
+                    </Typography>
+                  )}
+                </Box>
               </Box>
             </Box>
-          </Box>
 
-          {/* ── Tabs ── */}
-          <Box sx={{
-            display: 'inline-flex', gap: 0.5, p: 0.5,
-            bgcolor: isDark ? alpha('#fff', 0.04) : alpha('#000', 0.03),
-            borderRadius: '10px',
-          }}>
-            {TABS.map(tab => (
-              <Box
-                key={tab.key}
-                onClick={() => setVistaActiva(tab.key)}
-                sx={{
-                  display: 'flex', alignItems: 'center', gap: 0.75,
-                  px: 2, py: 0.75, borderRadius: '7px', cursor: 'pointer',
-                  fontSize: '0.8rem', fontWeight: 600, transition: 'all 0.15s ease',
-                  color: vistaActiva === tab.key ? (isDark ? '#000' : '#fff') : 'text.secondary',
-                  bgcolor: vistaActiva === tab.key ? accent : 'transparent',
-                  boxShadow: vistaActiva === tab.key ? `0 2px 8px ${alpha(accent, 0.25)}` : 'none',
-                  '&:hover': vistaActiva !== tab.key
-                    ? { bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04) }
-                    : {},
-                }}
-              >
-                {tab.icon}
-                {tab.label}
-              </Box>
-            ))}
+            {/* Selector de pestañas moderno (Segmented Control) */}
+            <Box sx={{
+              display: 'inline-flex',
+              gap: 0.6,
+              p: 0.6,
+              bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.03),
+              borderRadius: '14px',
+              border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
+              boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.02)',
+            }}>
+              {[
+                { key: 'materiales' as VistaTab, label: 'Materiales didácticos', icon: <AutoStoriesRoundedIcon sx={{ fontSize: 17 }} /> },
+                { key: 'recursosIA' as VistaTab, label: 'Recursos asistidos por IA', icon: <AutoAwesomeRoundedIcon sx={{ fontSize: 17 }} /> },
+              ].map(tab => {
+                const isActive = vistaActiva === tab.key;
+                return (
+                  <Box
+                    key={tab.key}
+                    onClick={() => setVistaActiva(tab.key)}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.8,
+                      px: { xs: 1.5, sm: 2.2 },
+                      py: 0.8,
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      transition: 'all 0.18s ease',
+                      color: isActive ? (isDark ? '#000' : '#fff') : 'text.secondary',
+                      background: isActive ? gradBg : 'transparent',
+                      boxShadow: isActive ? `0 4px 12px ${alpha(gold, 0.3)}` : 'none',
+                      '&:hover': !isActive ? {
+                        bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04),
+                        color: 'text.primary',
+                      } : {},
+                    }}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </Box>
+                );
+              })}
+            </Box>
           </Box>
         </Box>
       </Fade>
 
-      {/* ── Contenido ── */}
+      {/* ── CUERPO PRINCIPAL ── */}
       <Fade in timeout={300} key={vistaActiva}>
         <Box>
           {vistaActiva === 'materiales' && (
             <MaterialesDocente
               asignacion={asignacion}
-              accent={accent}
-              accentDark={accentDark}
+              accent={gold}
+              accentDark={goldEnd}
               isDark={isDark}
             />
           )}
@@ -166,15 +250,7 @@ export default function MateriaDetallePage() {
               asignacionId={asignacion.asignacion_id}
               periodoId={asignacion.periodo_evaluacion_id}
               paraleloId={asignacion.paralelo_id}
-              accent={accent}
-              isDark={isDark}
-            />
-          )}
-          {vistaActiva === 'curso' && (
-            <CursoDocente
-              asignacion={asignacion}
-              accent={accent}
-              accentDark={accentDark}
+              accent={gold}
               isDark={isDark}
             />
           )}

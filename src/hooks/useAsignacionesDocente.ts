@@ -19,17 +19,20 @@ interface PaginacionState {
   totalPages: number;
 }
 
-export const useAsignacionesDocente = (filtrosIniciales: AsignacionesFiltros = {}) => {
+export const useAsignacionesDocente = (
+  filtrosIniciales: AsignacionesFiltros = {},
+  options: { enabled?: boolean } = { enabled: true }
+) => {
   const [asignaciones, setAsignaciones] = useState<AsignacionDocente[]>([]);
   const [paginacion, setPaginacion] = useState<PaginacionState>({
     total: 0,
     page: 1,
-    limit: 20,
+    limit: filtrosIniciales.limit || 12,
     totalPages: 0,
   });
   const [filters, setFilters] = useState<AsignacionesFiltros>({
     page: 1,
-    limit: 20,
+    limit: 12,
     ...filtrosIniciales,
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -41,6 +44,7 @@ export const useAsignacionesDocente = (filtrosIniciales: AsignacionesFiltros = {
   // LISTAR ASIGNACIONES
   // =============================================
   const cargarAsignaciones = useCallback(async () => {
+    if (options.enabled === false) return;
     setIsLoading(true);
     try {
       const response = await asignacionDocenteService.listar(filters);
@@ -54,7 +58,7 @@ export const useAsignacionesDocente = (filtrosIniciales: AsignacionesFiltros = {
     } finally {
       setIsLoading(false);
     }
-  }, [filters]);
+  }, [filters, options.enabled]);
 
   // Cargar asignaciones cuando cambien los filtros
   useEffect(() => {
@@ -78,7 +82,6 @@ export const useAsignacionesDocente = (filtrosIniciales: AsignacionesFiltros = {
     setIsCreating(true);
     try {
       await asignacionDocenteService.crear(data);
-      toast.success('Asignación creada exitosamente');
       
       // Recargar lista
       await cargarAsignaciones();
@@ -117,12 +120,6 @@ export const useAsignacionesDocente = (filtrosIniciales: AsignacionesFiltros = {
       
       const { exitosas, fallidas, omitidas } = response.data;
       
-      toast.success(
-        `${exitosas.length} asignaciones creadas. ` +
-        (fallidas.length > 0 ? `${fallidas.length} fallidas. ` : '') +
-        (omitidas.length > 0 ? `${omitidas.length} omitidas.` : '')
-      );
-      
       // Recargar lista
       await cargarAsignaciones();
       
@@ -149,11 +146,7 @@ export const useAsignacionesDocente = (filtrosIniciales: AsignacionesFiltros = {
   const copiarDePeriodo = useCallback(async (data: CopiarPeriodoDTO): Promise<boolean> => {
     setIsCreating(true);
     try {
-      const response = await asignacionDocenteService.copiarDePeriodo(data);
-      
-      toast.success(
-        `${response.data.asignaciones.length} asignaciones copiadas exitosamente`
-      );
+      await asignacionDocenteService.copiarDePeriodo(data);
       
       // Recargar lista
       await cargarAsignaciones();
@@ -177,7 +170,6 @@ export const useAsignacionesDocente = (filtrosIniciales: AsignacionesFiltros = {
     setIsUpdating(true);
     try {
       await asignacionDocenteService.actualizar(id, data);
-      toast.success('Asignación actualizada exitosamente');
       
       // Recargar lista
       await cargarAsignaciones();
@@ -201,7 +193,6 @@ export const useAsignacionesDocente = (filtrosIniciales: AsignacionesFiltros = {
     setIsUpdating(true);
     try {
       await asignacionDocenteService.cambiarDocente(id, data);
-      toast.success('Docente cambiado exitosamente');
       
       // Recargar lista
       await cargarAsignaciones();
@@ -222,7 +213,6 @@ export const useAsignacionesDocente = (filtrosIniciales: AsignacionesFiltros = {
     setIsDeleting(true);
     try {
       await asignacionDocenteService.eliminar(id);
-      toast.success('Asignación eliminada exitosamente');
       
       // Recargar lista
       await cargarAsignaciones();

@@ -5,13 +5,29 @@
 // ============================================
 
 export type TipoEvaluacion =
+  // Saber
   | 'examen'
-  | 'practica'
-  | 'tarea'
-  | 'proyecto'
-  | 'participacion'
   | 'exposicion'
-  | 'trabajo_grupal';
+  | 'cuestionario'
+  | 'tarea'
+  | 'ficha_trabajo'
+  | 'investigacion'
+  | 'evaluacion_oral'
+  // Hacer
+  | 'trabajo_practico'
+  | 'manualidad'
+  | 'experimento'
+  | 'actividad_practica'
+  | 'ejercicio_practico'
+  | 'trabajo_grupal'
+  | 'proyecto'
+  | 'demostracion'
+  | 'produccion_creativa'
+  // General / compatibilidad
+  | 'practica'
+  | 'participacion'
+  | 'general'
+  | 'ser';
 
 export type EstadoCalificacionPeriodo = 'activa' | 'cerrada' | 'anulada';
 
@@ -27,7 +43,7 @@ export interface DimensionEvaluacion {
   nombre: string;
   codigo: CodigoDimension;
   descripcion?: string;
-  porcentaje_ponderacion: number; // SER=10, SAB=40, HAC=45, AUTO=5
+  porcentaje_ponderacion: number | string; // SER=10, SAB=45, HAC=40, AUTO=5 (dinámico)
   color: string;
   orden: number;
   activo: boolean;
@@ -47,8 +63,8 @@ export interface PeriodoEvaluacion {
   fecha_fin: string;
   activo: boolean;
   observaciones?: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
   periodo_academico_nombre?: string;
   periodo_academico_codigo?: string;
 }
@@ -68,6 +84,7 @@ export interface MateriaDocenteNotas {
   grado_materia_id: number;    // ← expuesto desde el backend para calcular notas
   grado_nombre: string;
   nivel_nombre: string;
+  modalidad_evaluacion?: 'dimensional' | 'cualitativa';
   paralelo_id: number;
   paralelo_nombre: string;
   turno_nombre: string;
@@ -85,6 +102,7 @@ export interface MateriaDocenteNotas {
   evaluaciones_hacer: number;
   evaluaciones_auto: number;
   calificaciones_registradas: number;
+  total_calificaciones?: number;
   estudiantes_con_nota_final: number;
   aprobados: number;
   reprobados: number;
@@ -172,6 +190,13 @@ export interface Evaluacion {
   pdf_url?: string | null;     // ← nuevo
   pdf_public_id?: string | null;
   pdf_nombre?: string | null;  // ← nuevo
+  modalidad?: 'presencial' | 'virtual';
+  duracion_minutos?: number | null;
+  fecha_hora_inicio?: string | null;
+  fecha_hora_fin?: string | null;
+  intentos_permitidos?: number | null;
+  orden_aleatorio?: boolean | null;
+  permite_entrega_archivo?: boolean | null;
   activo: boolean;
   created_at: string;
   updated_at: string;
@@ -182,6 +207,8 @@ export interface Evaluacion {
   periodo_nombre?: string;
   materia_nombre?: string;
   materia_codigo?: string;
+  grado_nombre?: string;
+  paralelo_nombre?: string;
   porcentaje_ponderacion?: number;
 }
 
@@ -197,11 +224,17 @@ export interface CalificacionEstudiante {
   estudiante_apellidos: string;
   estudiante_foto?: string | null;
   id?: number;
+  calificacion_id?: number | null;
   evaluacion_id?: number;
   puntaje_obtenido?: number | null;
   esta_ausente?: boolean;
   observacion?: string;
   fecha_registro?: string;
+  entrega_id?: number | null;
+  entrega_archivo_url?: string | null;
+  entrega_archivo_nombre?: string | null;
+  entrega_fecha?: string | null;
+  entrega_comentario?: string | null;
 }
 
 export interface CalificacionPorPeriodo {
@@ -291,7 +324,15 @@ export interface CrearEvaluacionDTO {
   puntaje_maximo?: number;
   peso_en_dimension?: number;
   visible_para_padres?: boolean;
-  tema_id?: number; 
+  tema_id?: number;
+  modalidad?: 'presencial' | 'virtual';
+  duracion_minutos?: number;
+  fecha_hora_inicio?: string;
+  fecha_hora_fin?: string;
+  intentos_permitidos?: number;
+  orden_aleatorio?: boolean;
+  permite_entrega_archivo?: boolean;
+  preguntas?: any[];
 }
 
 export interface ActualizarEvaluacionDTO {
@@ -305,7 +346,15 @@ export interface ActualizarEvaluacionDTO {
   peso_en_dimension?: number;
   visible_para_padres?: boolean;
   activo?: boolean;
-  tema_id?: number | null; 
+  tema_id?: number | null;
+  modalidad?: 'presencial' | 'virtual';
+  duracion_minutos?: number;
+  fecha_hora_inicio?: string;
+  fecha_hora_fin?: string;
+  intentos_permitidos?: number;
+  orden_aleatorio?: boolean;
+  permite_entrega_archivo?: boolean;
+  preguntas?: any[];
 }
 
 export interface PublicarEvaluacionDTO {
@@ -318,6 +367,11 @@ export interface RegistroCalificacionItem {
   puntaje_obtenido: number;
   esta_ausente?: boolean;
   observacion?: string;
+  sin_calificar?: boolean;
+  entrega_archivo_url?: string | null;
+  entrega_archivo_nombre?: string | null;
+  entrega_fecha?: string | null;
+  entrega_comentario?: string | null;
 }
 
 export interface RegistrarNotasMasivoDTO {
@@ -342,13 +396,15 @@ export interface EvaluacionFiltros {
 // CONSTANTES PARA UI — 4 DIMENSIONES
 // ============================================
 
-export const DIMENSIONES_CONFIG: Record<CodigoDimension, {
+export interface DimensionConfigItem {
   label: string;
   color: string;
   bgColor: string;
   porcentaje: number;
   descripcion: string;
-}> = {
+}
+
+export const DIMENSIONES_CONFIG: Record<CodigoDimension, DimensionConfigItem> = {
   SER: {
     label: 'Ser',
     color: '#10b981',
@@ -360,14 +416,14 @@ export const DIMENSIONES_CONFIG: Record<CodigoDimension, {
     label: 'Saber',
     color: '#3b82f6',
     bgColor: '#dbeafe',
-    porcentaje: 40,
+    porcentaje: 45,
     descripcion: 'Conocimientos y teoría',
   },
   HAC: {
     label: 'Hacer',
     color: '#f59e0b',
     bgColor: '#fef3c7',
-    porcentaje: 45,
+    porcentaje: 40,
     descripcion: 'Prácticas y habilidades',
   },
   AUT: {
@@ -379,16 +435,32 @@ export const DIMENSIONES_CONFIG: Record<CodigoDimension, {
   },
 };
 
-export const DIMENSIONES_ORDEN: CodigoDimension[] = ['SER', 'SAB', 'HAC', 'AUT'];
+export const DIMENSIONES_ORDEN: CodigoDimension[] = ['SAB', 'HAC', 'SER', 'AUT'];
 
 export const TIPOS_EVALUACION: { value: TipoEvaluacion; label: string; icon: string }[] = [
-  { value: 'examen',         label: 'Examen',          icon: '📝' },
-  { value: 'practica',       label: 'Práctica',        icon: '🔬' },
-  { value: 'tarea',          label: 'Tarea',           icon: '📚' },
-  { value: 'proyecto',       label: 'Proyecto',        icon: '🎯' },
-  { value: 'participacion',  label: 'Participación',   icon: '🙋' },
-  { value: 'exposicion',     label: 'Exposición',      icon: '🎤' },
-  { value: 'trabajo_grupal', label: 'Trabajo Grupal',  icon: '👥' },
+  // Saber
+  { value: 'examen',              label: 'Examen',              icon: '📝' },
+  { value: 'exposicion',          label: 'Exposición',          icon: '🗣️' },
+  { value: 'cuestionario',        label: 'Cuestionario',        icon: '❓' },
+  { value: 'tarea',               label: 'Tarea',               icon: '✏️' },
+  { value: 'ficha_trabajo',       label: 'Ficha de trabajo',    icon: '📋' },
+  { value: 'investigacion',       label: 'Investigación',       icon: '🔎' },
+  { value: 'evaluacion_oral',     label: 'Evaluación oral',     icon: '🗣️' },
+  // Hacer
+  { value: 'trabajo_practico',    label: 'Trabajo práctico',    icon: '🛠️' },
+  { value: 'manualidad',          label: 'Manualidad',          icon: '✂️' },
+  { value: 'experimento',         label: 'Experimento',         icon: '🧪' },
+  { value: 'actividad_practica',  label: 'Actividad práctica',  icon: '🧩' },
+  { value: 'ejercicio_practico',  label: 'Ejercicio práctico',  icon: '📐' },
+  { value: 'trabajo_grupal',      label: 'Trabajo grupal',      icon: '👥' },
+  { value: 'proyecto',            label: 'Proyecto',            icon: '🏗️' },
+  { value: 'demostracion',        label: 'Demostración',        icon: '🎭' },
+  { value: 'produccion_creativa', label: 'Producción creativa', icon: '🖍️' },
+  // General y compatibilidad
+  { value: 'general',             label: 'General',             icon: '⭐' },
+  { value: 'participacion',       label: 'Participación',       icon: '🙋' },
+  { value: 'practica',            label: 'Práctica',            icon: '🔬' },
+  { value: 'ser',                 label: 'Actitudinal',         icon: '⭐' },
 ];
 
 export const COLORES_MATERIA = [
@@ -397,9 +469,9 @@ export const COLORES_MATERIA = [
 ];
 // Tipos permitidos por dimensión
 export const TIPOS_POR_DIMENSION: Record<CodigoDimension, TipoEvaluacion[]> = {
-  SER:  ['participacion', 'trabajo_grupal'],
-  SAB:  ['examen', 'practica', 'tarea', 'proyecto', 'exposicion'],
-  HAC:  ['proyecto', 'practica', 'exposicion', 'trabajo_grupal'],
+  SER:  [], // No requiere selector; se asigna tipo general por defecto
+  SAB:  ['examen', 'exposicion', 'cuestionario', 'tarea', 'ficha_trabajo', 'investigacion', 'evaluacion_oral'],
+  HAC:  ['trabajo_practico', 'manualidad', 'experimento', 'actividad_practica', 'ejercicio_practico', 'trabajo_grupal', 'proyecto', 'demostracion', 'produccion_creativa'],
   AUT:  [], // no usa tipos
 };
 
@@ -424,3 +496,26 @@ export const generarNombreDefault = (dim: CodigoDimension): string => {
     default:     return '';
   }
 };
+
+// ============================================
+// ENTREGAS DE ESTUDIANTES (VISTA DOCENTE)
+// ============================================
+export interface EstudianteEntregaItem {
+  matricula_id: number;
+  estudiante_id?: number;
+  nombres?: string;
+  apellidos?: string;
+  codigo_estudiante?: string;
+  foto_perfil_url?: string;
+  archivo_url?: string | null;
+  archivo_nombre?: string | null;
+  archivo_tamano?: number | null;
+  archivos?: Array<{ url: string; nombre?: string; tamano?: number; tipo?: string }>;
+  comentario_estudiante?: string | null;
+  fecha_entrega?: string | null;
+  calificado?: boolean;
+  puntaje_obtenido?: number | null;
+  esta_ausente?: boolean;
+  observacion_docente?: string | null;
+  [key: string]: any;
+}

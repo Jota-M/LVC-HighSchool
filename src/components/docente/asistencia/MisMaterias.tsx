@@ -1,23 +1,47 @@
 'use client';
 // components/docente/asistencia/MisMaterias.tsx
+// Rediseñado con estilo unificado Temario / Calificaciones
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  Box, Typography, Chip, Grid, Skeleton,
-  useTheme, alpha, Stack,
+  Box,
+  Typography,
+  Chip,
+  Skeleton,
+  useTheme,
+  alpha,
+  Card,
+  CardContent,
+  Avatar,
+  Badge,
+  Button,
+  TextField,
+  InputAdornment,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  ToggleButtonGroup,
+  ToggleButton,
+  Tooltip,
+  Fade,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
-import GroupsIcon from '@mui/icons-material/Groups';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import SchoolIcon from '@mui/icons-material/School';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import {
+  MenuBook as MenuBookIcon,
+  Psychology as PsychologyIcon,
+  Person as PersonIcon,
+  AccessTime as AccessTimeIcon,
+  School as SchoolIcon,
+  ChevronRight as ChevronRightIcon,
+  Search as SearchIcon,
+  ViewModule as ViewModuleIcon,
+  TableRows as TableRowsIcon,
+  CheckCircleRounded as CheckCircleRoundedIcon,
+  TouchAppRounded as TouchAppRoundedIcon,
+} from '@mui/icons-material';
 
-// ── tipos ─────────────────────────────────────────────────────────────────────
-
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 export interface MateriaDocente {
   asignacion_id: number;
   materia_nombre: string;
@@ -41,318 +65,595 @@ interface Props {
   fecha: string;
 }
 
-// ── animaciones ───────────────────────────────────────────────────────────────
-
-const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+// ─── Animaciones ──────────────────────────────────────────────────────────────
+const bounce = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
 `;
 
-// ── paleta (misma que antes) ──────────────────────────────────────────────────
-
-const COLORES_PREMIUM = {
-  light: [
-    { primary: '#3b82f6', secondary: '#60a5fa' },
-    { primary: '#8b5cf6', secondary: '#a78bfa' },
-    { primary: '#ec4899', secondary: '#f472b6' },
-    { primary: '#10b981', secondary: '#34d399' },
-    { primary: '#f59e0b', secondary: '#fbbf24' },
-    { primary: '#06b6d4', secondary: '#22d3ee' },
-    { primary: '#ef4444', secondary: '#f87171' },
-    { primary: '#6366f1', secondary: '#818cf8' },
-  ],
-  dark: [
-    { primary: '#60a5fa', secondary: '#93c5fd' },
-    { primary: '#a78bfa', secondary: '#c4b5fd' },
-    { primary: '#f472b6', secondary: '#f9a8d4' },
-    { primary: '#34d399', secondary: '#6ee7b7' },
-    { primary: '#fbbf24', secondary: '#fcd34d' },
-    { primary: '#22d3ee', secondary: '#67e8f9' },
-    { primary: '#f87171', secondary: '#fca5a5' },
-    { primary: '#818cf8', secondary: '#a5b4fc' },
-  ],
-};
-
-const getColorScheme = (index: number, isDark: boolean) => {
-  const palette = isDark ? COLORES_PREMIUM.dark : COLORES_PREMIUM.light;
-  return palette[index % palette.length];
-};
-
-// iniciales de la materia (hasta 2 chars)
-const getIniciales = (nombre: string) =>
-  nombre
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(w => w[0].toUpperCase())
-    .join('');
-
-// ── skeleton ──────────────────────────────────────────────────────────────────
-
-const MateriaCardSkeleton = () => (
-  <Box sx={{ borderRadius: '16px', overflow: 'hidden' }}>
-    <Skeleton variant="rounded" height={180} sx={{ borderRadius: '16px' }} />
-  </Box>
-);
-
-// ── card individual ───────────────────────────────────────────────────────────
-
-const MateriaCardPremium: React.FC<{
+// ─── Card Individual (Temario / Calificaciones style) ─────────────────────────
+interface MateriaCardProps {
   materia: MateriaDocente;
-  index: number;
   isSelected: boolean;
-  onClick: () => void;
-}> = ({ materia, index, isSelected, onClick }) => {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const cs = getColorScheme(index, isDark);
-  const iniciales = getIniciales(materia.materia_nombre);
+  accentColor: string;
+  gradBg: string;
+  isDark: boolean;
+  onSelect: () => void;
+}
 
-  const borderColor = isDark ? alpha('#fff', 0.07) : alpha('#000', 0.07);
-  const bgCard = isDark ? alpha('#fff', 0.02) : '#fff';
-  const bgStat = isDark ? alpha('#fff', 0.04) : alpha('#f8f9fa', 0.9);
-
+const MateriaCard: React.FC<MateriaCardProps> = ({
+  materia,
+  isSelected,
+  accentColor,
+  gradBg,
+  isDark,
+  onSelect,
+}) => {
   return (
-    <Box
-      onClick={onClick}
-      sx={{
-        borderRadius: '16px',
-        border: isSelected
-          ? `2px solid ${cs.primary}`
-          : `1.5px solid ${borderColor}`,
-        bgcolor: bgCard,
-        cursor: 'pointer',
-        overflow: 'hidden',
-        boxShadow: isSelected
-          ? `0 4px 20px ${alpha(cs.primary, 0.22)}`
-          : isDark ? 'none' : '0 1px 8px rgba(0,0,0,0.05)',
-        transition: 'transform 0.18s, box-shadow 0.18s, border-color 0.18s',
-        animation: `${fadeUp} 0.35s ease-out ${index * 0.07}s both`,
-        '&:hover': {
-          transform: 'translateY(-3px)',
-          borderColor: alpha(cs.primary, 0.55),
-          boxShadow: isDark
-            ? `0 4px 20px ${alpha(cs.primary, 0.15)}`
-            : `0 6px 24px ${alpha(cs.primary, 0.18)}`,
-        },
-        // borde superior de color
-        '&::before': {
-          content: '""',
-          display: 'block',
-          height: '3px',
-          background: `linear-gradient(90deg, ${cs.primary}, ${cs.secondary})`,
-          borderRadius: '16px 16px 0 0',
-          marginTop: '-1.5px',
-        },
-      }}
-    >
-      {/* ── cabecera: avatar + nombre + chevron ── */}
-      <Box sx={{ px: 2.5, pt: 2, pb: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        {/* Avatar cuadrado con iniciales */}
-        <Box sx={{
-          width: 46, height: 46, borderRadius: '12px', flexShrink: 0,
-          background: `linear-gradient(135deg, ${cs.primary}, ${cs.secondary})`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: `0 4px 12px ${alpha(cs.primary, 0.35)}`,
-        }}>
-          <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.9rem', letterSpacing: 0.5 }}>
-            {iniciales}
-          </Typography>
+    <Fade in timeout={300}>
+      <Card
+        sx={{
+          height: '100%',
+          borderRadius: '18px',
+          border: isSelected
+            ? `2px solid ${accentColor}`
+            : `1px solid ${alpha(isDark ? '#fff' : '#000', 0.08)}`,
+          bgcolor: isSelected
+            ? isDark
+              ? alpha(accentColor, 0.06)
+              : alpha(accentColor, 0.04)
+            : isDark
+            ? alpha('#fff', 0.02)
+            : '#fff',
+          boxShadow: isSelected
+            ? `0 8px 24px ${alpha(accentColor, 0.28)}`
+            : isDark
+            ? 'none'
+            : '0 2px 8px rgba(0,0,0,0.04)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          cursor: 'pointer',
+          position: 'relative',
+          overflow: 'visible',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          '&:hover': {
+            transform: 'translateY(-6px)',
+            boxShadow: `0 10px 22px ${alpha(accentColor, 0.2)}`,
+            borderColor: accentColor,
+            '& .btn-gestionar': {
+              backgroundColor: alpha(accentColor, 0.15),
+              borderColor: accentColor,
+              transform: 'translateX(2px)',
+            },
+          },
+        }}
+        onClick={onSelect}
+      >
+        {/* Badge de Paralelo arriba a la izquierda */}
+        <Chip
+          label={`Paralelo "${materia.paralelo_nombre}"`}
+          size="small"
+          sx={{
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            zIndex: 1,
+            fontWeight: 700,
+            fontSize: '0.68rem',
+            height: 22,
+            backgroundColor: isDark ? 'rgba(250, 204, 21, 0.15)' : 'rgba(2, 136, 209, 0.12)',
+            color: accentColor,
+            border: `1px solid ${alpha(accentColor, 0.25)}`,
+          }}
+        />
+
+        {/* Chip de Selección arriba a la derecha */}
+        <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 1 }}>
+          {isSelected ? (
+            <Chip
+              icon={<CheckCircleRoundedIcon sx={{ fontSize: '13px !important', color: `${accentColor} !important` }} />}
+              label="Activa"
+              size="small"
+              sx={{
+                fontWeight: 700,
+                fontSize: '0.65rem',
+                height: 22,
+                backgroundColor: isDark ? alpha(accentColor, 0.2) : alpha(accentColor, 0.12),
+                color: accentColor,
+                border: `1px solid ${accentColor}`,
+              }}
+            />
+          ) : (
+            <Chip
+              label={materia.turno_nombre || 'Regular'}
+              size="small"
+              sx={{
+                fontWeight: 600,
+                fontSize: '0.65rem',
+                height: 22,
+                backgroundColor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
+                color: 'text.secondary',
+              }}
+            />
+          )}
         </Box>
 
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography
-            variant="body1"
-            fontWeight={800}
-            sx={{
-              lineHeight: 1.2,
-              color: isSelected ? cs.primary : 'text.primary',
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}
-          >
+        <CardContent sx={{ p: 2.2, pt: 4.5, textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {/* Avatar mediano centrado */}
+          <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'center' }}>
+            <Avatar
+              sx={{
+                width: 72,
+                height: 72,
+                margin: '0 auto',
+                bgcolor: accentColor,
+                color: isDark ? '#000' : '#fff',
+                border: `3px solid ${alpha(accentColor, 0.2)}`,
+                boxShadow: isSelected
+                  ? `0 6px 16px ${alpha(accentColor, 0.4)}`
+                  : `0 6px 14px ${alpha(accentColor, 0.2)}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              <PsychologyIcon sx={{ fontSize: 36, color: '#fff' }} />
+            </Avatar>
+          </Box>
+
+          {/* Nombre de la Materia */}
+          <Typography variant="subtitle1" fontWeight={800} gutterBottom sx={{ fontSize: '1.02rem', lineHeight: 1.25, mb: 0.3 }}>
             {materia.materia_nombre}
           </Typography>
-          <Typography variant="caption" color="text.secondary" fontWeight={500}>
-            {materia.grado_nombre} "{materia.paralelo_nombre}" · {materia.turno_nombre}
+          <Typography variant="caption" color="text.secondary" gutterBottom fontWeight={600} sx={{ fontSize: '0.78rem' }}>
+            {materia.grado_nombre}
           </Typography>
-        </Box>
 
-        <ChevronRightIcon sx={{ fontSize: 18, color: alpha(cs.primary, 0.6), flexShrink: 0 }} />
-      </Box>
-
-      {/* ── stats en cajitas ── */}
-      <Box sx={{ px: 2.5, pb: 1.5, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
-        <Box sx={{ bgcolor: bgStat, borderRadius: '10px', p: 1.2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.3 }}>
-            <GroupsIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
-              Estudiantes
-            </Typography>
+          {/* Chip de Código */}
+          <Box sx={{ my: 0.8 }}>
+            <Chip
+              label={materia.materia_codigo ? `Código: ${materia.materia_codigo}` : 'Asignatura'}
+              size="small"
+              sx={{
+                fontFamily: 'monospace',
+                fontWeight: 700,
+                fontSize: '0.68rem',
+                height: 22,
+                backgroundColor: isDark ? alpha(accentColor, 0.1) : alpha(accentColor, 0.08),
+                color: accentColor,
+              }}
+            />
           </Box>
-          <Typography variant="body2" fontWeight={800}>{materia.total_estudiantes}</Typography>
-        </Box>
 
-        <Box sx={{ bgcolor: bgStat, borderRadius: '10px', p: 1.2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.3 }}>
-            <AccessTimeIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
-              Código
-            </Typography>
+          {/* Botón de acción */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', my: 1 }}>
+            <Button
+              className="btn-gestionar"
+              size="small"
+              variant={isSelected ? 'contained' : 'outlined'}
+              endIcon={<ChevronRightIcon sx={{ fontSize: 16 }} />}
+              sx={{
+                borderRadius: '10px',
+                textTransform: 'none',
+                fontWeight: 700,
+                fontSize: '0.74rem',
+                px: 1.8,
+                py: 0.4,
+                borderColor: alpha(accentColor, 0.35),
+                color: isSelected ? (isDark ? '#000' : '#fff') : accentColor,
+                bgcolor: isSelected ? accentColor : 'transparent',
+                '&:hover': {
+                  bgcolor: isSelected ? accentColor : alpha(accentColor, 0.1),
+                },
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {isSelected ? 'Materia Seleccionada' : 'Ver Estudiantes'}
+            </Button>
           </Box>
-          <Typography variant="body2" fontWeight={800}>{materia.materia_codigo}</Typography>
-        </Box>
-      </Box>
 
-      {/* ── footer: estado ── */}
-      <Box sx={{
-        px: 2.5, py: 1.25,
-        borderTop: `1px solid ${isDark ? alpha('#fff', 0.05) : alpha('#000', 0.05)}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.68rem' }}>
-          {materia.hora_ultimo_registro ? `⏱ ${materia.hora_ultimo_registro}` : materia.turno_hora_inicio
-            ? `${materia.turno_hora_inicio} – ${materia.turno_hora_fin}`
-            : ''}
-        </Typography>
+          {/* Footer stats */}
+          <Box
+            sx={{
+              mt: 'auto',
+              pt: 1.5,
+              borderTop: `1px solid ${alpha(isDark ? '#fff' : '#000', 0.08)}`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 0.8,
+              textAlign: 'left',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+              <PersonIcon sx={{ fontSize: 15, color: 'text.secondary' }} />
+              <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ fontSize: '0.72rem' }}>
+                Estudiantes:
+              </Typography>
+              <Typography variant="caption" fontWeight={700} sx={{ ml: 'auto', fontSize: '0.74rem' }}>
+                {materia.total_estudiantes ?? 0}
+              </Typography>
+            </Box>
 
-        {materia.lista_pasada_hoy ? (
-          <Chip
-            icon={<CheckCircleIcon sx={{ fontSize: '12px !important', color: '#10b981 !important' }} />}
-            label="Lista pasada"
-            size="small"
-            sx={{
-              height: 22, fontSize: '0.62rem', fontWeight: 700,
-              bgcolor: alpha('#10b981', 0.1), color: '#10b981',
-              border: `1px solid ${alpha('#10b981', 0.25)}`,
-            }}
-          />
-        ) : (
-          <Chip
-            icon={<RadioButtonUncheckedIcon sx={{ fontSize: '12px !important', color: '#f59e0b !important' }} />}
-            label="Pendiente"
-            size="small"
-            sx={{
-              height: 22, fontSize: '0.62rem', fontWeight: 700,
-              bgcolor: alpha('#f59e0b', 0.1), color: '#f59e0b',
-              border: `1px solid ${alpha('#f59e0b', 0.25)}`,
-            }}
-          />
-        )}
-      </Box>
-    </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+              <AccessTimeIcon sx={{ fontSize: 15, color: 'text.secondary' }} />
+              <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ fontSize: '0.72rem' }}>
+                Turno:
+              </Typography>
+              <Typography variant="caption" fontWeight={700} sx={{ ml: 'auto', fontSize: '0.74rem' }}>
+                {materia.turno_nombre || 'Regular'}
+              </Typography>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+    </Fade>
   );
 };
 
-// ── componente principal (header sin cambios) ─────────────────────────────────
+// ─── Fila Individual (Vista Lista/Tabla) ──────────────────────────────────────
+interface MateriaRowProps {
+  materia: MateriaDocente;
+  isSelected: boolean;
+  accentColor: string;
+  gradBg: string;
+  isDark: boolean;
+  onSelect: () => void;
+}
 
+const MateriaRow: React.FC<MateriaRowProps> = ({
+  materia,
+  isSelected,
+  accentColor,
+  gradBg,
+  isDark,
+  onSelect,
+}) => {
+  return (
+    <Fade in timeout={250}>
+      <Card
+        onClick={onSelect}
+        sx={{
+          borderRadius: '14px',
+          border: isSelected
+            ? `2px solid ${accentColor}`
+            : `1px solid ${alpha(isDark ? '#fff' : '#000', 0.08)}`,
+          bgcolor: isSelected
+            ? isDark
+              ? alpha(accentColor, 0.06)
+              : alpha(accentColor, 0.04)
+            : isDark
+            ? alpha('#fff', 0.02)
+            : '#fff',
+          p: 1.6,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          cursor: 'pointer',
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            transform: 'translateX(4px)',
+            borderColor: accentColor,
+            boxShadow: `0 4px 16px ${alpha(accentColor, 0.12)}`,
+          },
+        }}
+      >
+        <Avatar
+          sx={{
+            width: 44,
+            height: 44,
+            bgcolor: accentColor,
+            color: '#fff',
+            boxShadow: `0 3px 8px ${alpha(accentColor, 0.3)}`,
+            flexShrink: 0,
+          }}
+        >
+          <PsychologyIcon sx={{ fontSize: 24 }} />
+        </Avatar>
+
+        <Box sx={{ minWidth: 160, flex: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="subtitle2" fontWeight={800} noWrap>
+              {materia.materia_nombre}
+            </Typography>
+            <Chip
+              label={`Par. ${materia.paralelo_nombre}`}
+              size="small"
+              sx={{
+                fontWeight: 700,
+                fontSize: '0.62rem',
+                height: 19,
+                bgcolor: alpha(accentColor, 0.1),
+                color: accentColor,
+              }}
+            />
+          </Box>
+          <Typography variant="caption" color="text.secondary" fontWeight={500}>
+            {materia.grado_nombre} · {materia.turno_nombre}
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: { xs: 'none', sm: 'block' }, minWidth: 100, textAlign: 'center' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem', display: 'block' }}>
+            Estudiantes
+          </Typography>
+          <Typography variant="body2" fontWeight={800}>
+            {materia.total_estudiantes ?? 0}
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto', flexShrink: 0 }}>
+          {isSelected ? (
+            <Chip
+              icon={<CheckCircleRoundedIcon sx={{ fontSize: '13px !important', color: `${accentColor} !important` }} />}
+              label="Seleccionada"
+              size="small"
+              sx={{
+                fontWeight: 700,
+                fontSize: '0.65rem',
+                height: 22,
+                bgcolor: alpha(accentColor, 0.15),
+                color: accentColor,
+              }}
+            />
+          ) : (
+            <Button
+              size="small"
+              variant="outlined"
+              endIcon={<ChevronRightIcon sx={{ fontSize: 14 }} />}
+              sx={{
+                borderRadius: '8px',
+                textTransform: 'none',
+                fontWeight: 700,
+                fontSize: '0.72rem',
+                py: 0.3,
+                px: 1.4,
+                borderColor: alpha(accentColor, 0.3),
+                color: accentColor,
+              }}
+            >
+              Seleccionar
+            </Button>
+          )}
+        </Box>
+      </Card>
+    </Fade>
+  );
+};
+
+// ─── Componente Principal MisMaterias ─────────────────────────────────────────
 const MisMaterias: React.FC<Props> = ({
-  materias, isLoading = false, seleccionada, onSeleccionar, fecha,
+  materias,
+  isLoading = false,
+  seleccionada,
+  onSeleccionar,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
-  const brand = isDark ? '#facc15' : '#0288d1';
-  const brandEnd = isDark ? '#f59e0b' : '#01579b';
-  const gradBg = `linear-gradient(135deg, ${brand} 0%, ${brandEnd} 100%)`;
+  const accentColor = isDark ? '#facc15' : '#0288d1';
+  const accentColorEnd = isDark ? '#f59e0b' : '#01579b';
+  const gradBg = `linear-gradient(135deg, ${accentColor} 0%, ${accentColorEnd} 100%)`;
 
-  const pendientes = materias.filter(m => !m.lista_pasada_hoy).length;
-  const completadas = materias.filter(m => m.lista_pasada_hoy).length;
+  // Estados locales de filtrado y visualización
+  const [searchTerm, setSearchTerm] = useState('');
+  const [gradoFilter, setGradoFilter] = useState('');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+
+  // Grados disponibles
+  const gradosDisponibles = useMemo(() => {
+    const setG = new Set<string>();
+    materias.forEach((m) => {
+      if (m.grado_nombre) setG.add(m.grado_nombre);
+    });
+    return Array.from(setG).sort();
+  }, [materias]);
+
+  // Materias filtradas
+  const materiasFiltradas = useMemo(() => {
+    return materias.filter((m) => {
+      const matchGrado = !gradoFilter || m.grado_nombre === gradoFilter;
+      const matchSearch =
+        !searchTerm ||
+        m.materia_nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.grado_nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.paralelo_nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.materia_codigo?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchGrado && matchSearch;
+    });
+  }, [materias, gradoFilter, searchTerm]);
 
   return (
     <Box>
-      {/* Header */}
-      <Box sx={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        mb: 3, p: 3, borderRadius: '16px',
-        bgcolor: isDark ? alpha('#fff', 0.02) : '#fff',
-        border: `1.5px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.07)}`,
-        boxShadow: isDark ? 'none' : '0 1px 8px rgba(0,0,0,0.05)',
-      }}>
-        <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.4 }}>
-            <Typography variant="h6" fontWeight={800} sx={{
-              background: gradBg,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
-              Mis Materias
-            </Typography>
-            {!isLoading && materias.length > 0 && (
-              <Chip label={materias.length} size="small" sx={{
-                bgcolor: alpha(brand, 0.12), color: brand,
-                fontWeight: 800, fontSize: 12, height: 22,
-                '& .MuiChip-label': { px: 1 },
-              }} />
-            )}
-          </Box>
-          <Typography variant="body2" color="text.secondary" fontWeight={500}>
-            Seleccioná una materia para gestionar la asistencia
-          </Typography>
-        </Box>
+      {/* ══ BARRA DE FILTROS & VISTA ══ */}
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 2,
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          p: 2,
+          mb: 3,
+          borderRadius: '16px',
+          bgcolor: isDark ? alpha('#fff', 0.02) : '#fff',
+          border: `1px solid ${alpha(isDark ? '#fff' : '#000', 0.08)}`,
+        }}
+      >
+        {/* BUSCADOR */}
+        <TextField
+          placeholder="Buscar por materia, grado o paralelo..."
+          size="small"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{
+            flex: { xs: '1 1 100%', sm: '1 1 280px' },
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '12px',
+              bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+            },
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+              </InputAdornment>
+            ),
+          }}
+        />
 
-        {!isLoading && materias.length > 0 && (
-          <Box sx={{ display: 'flex', gap: 1.5 }}>
-            <Box sx={{
-              px: 2, py: 1, borderRadius: '10px',
-              bgcolor: alpha('#10b981', 0.08),
-              border: `1px solid ${alpha('#10b981', 0.2)}`,
-              display: 'flex', alignItems: 'center', gap: 1,
-            }}>
-              <CheckCircleIcon sx={{ fontSize: 16, color: '#10b981' }} />
-              <Typography variant="body2" fontWeight={700} color="#10b981">{completadas}</Typography>
-            </Box>
-            <Box sx={{
-              px: 2, py: 1, borderRadius: '10px',
-              bgcolor: alpha('#f59e0b', 0.08),
-              border: `1px solid ${alpha('#f59e0b', 0.2)}`,
-              display: 'flex', alignItems: 'center', gap: 1,
-            }}>
-              <TrendingUpIcon sx={{ fontSize: 16, color: '#f59e0b' }} />
-              <Typography variant="body2" fontWeight={700} color="#f59e0b">{pendientes}</Typography>
-            </Box>
-          </Box>
-        )}
+        {/* FILTRO POR GRADO */}
+        <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 } }}>
+          <InputLabel>Filtrar por Grado</InputLabel>
+          <Select
+            value={gradoFilter}
+            label="Filtrar por Grado"
+            onChange={(e) => setGradoFilter(e.target.value)}
+            sx={{ borderRadius: '12px' }}
+          >
+            <MenuItem value="">Todos los grados</MenuItem>
+            {gradosDisponibles.map((g) => (
+              <MenuItem key={g} value={g}>
+                {g}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* TOGGLE VISTA: CARDS O TABLA */}
+        <ToggleButtonGroup
+          value={viewMode}
+          exclusive
+          onChange={(_, val) => {
+            if (val) setViewMode(val);
+          }}
+          size="small"
+          sx={{
+            borderRadius: '12px',
+            bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+            '& .MuiToggleButton-root': {
+              borderRadius: '10px !important',
+              border: 'none',
+              px: 1.5,
+              py: 0.8,
+              '&.Mui-selected': {
+                background: gradBg,
+                color: isDark ? '#000' : '#fff',
+              },
+            },
+          }}
+        >
+          <ToggleButton value="cards" aria-label="vista de tarjetas">
+            <Tooltip title="Vista de tarjetas">
+              <ViewModuleIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="table" aria-label="vista de lista">
+            <Tooltip title="Vista de lista">
+              <TableRowsIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+        </ToggleButtonGroup>
       </Box>
 
-      {/* Grid */}
-      <Grid container spacing={2}>
-        {isLoading
-          ? Array.from({ length: 4 }).map((_, i) => (
-            <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={i}>
-              <MateriaCardSkeleton />
-            </Grid>
-          ))
-          : materias.length === 0
-            ? (
-              <Grid size={{ xs: 12 }}>
-                <Box sx={{
-                  textAlign: 'center', py: 8, borderRadius: '16px',
-                  border: `2px dashed ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.1)}`,
-                }}>
-                  <MenuBookIcon sx={{ fontSize: 56, color: 'text.disabled', mb: 2, opacity: 0.5 }} />
-                  <Typography variant="h6" color="text.secondary" fontWeight={700} sx={{ mb: 0.5 }}>
-                    Sin materias asignadas
-                  </Typography>
-                  <Typography variant="body2" color="text.disabled">
-                    No tenés materias asignadas para este período académico
-                  </Typography>
-                </Box>
-              </Grid>
-            )
-            : materias.map((m, i) => (
-              <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={m.asignacion_id}>
-                <MateriaCardPremium
-                  materia={m}
-                  index={i}
-                  isSelected={seleccionada === m.asignacion_id}
-                  onClick={() => onSeleccionar(m.asignacion_id)}
-                />
-              </Grid>
-            ))
-        }
-      </Grid>
+      {/* ══ LOADING ══ */}
+      {isLoading && (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(auto-fill, minmax(260px, 1fr))',
+              md: 'repeat(auto-fill, minmax(270px, 1fr))',
+              lg: 'repeat(auto-fill, minmax(280px, 1fr))',
+              xl: 'repeat(4, 1fr)',
+            },
+            gap: 2.5,
+          }}
+        >
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={260} sx={{ borderRadius: '18px' }} />
+          ))}
+        </Box>
+      )}
+
+      {/* ══ SIN MATERIAS ══ */}
+      {!isLoading && materias.length === 0 && (
+        <Box
+          sx={{
+            textAlign: 'center',
+            py: 8,
+            borderRadius: '16px',
+            border: `2px dashed ${alpha(accentColor, 0.2)}`,
+          }}
+        >
+          <MenuBookIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1, opacity: 0.6 }} />
+          <Typography variant="h6" color="text.secondary" fontWeight={700}>
+            Sin materias asignadas
+          </Typography>
+          <Typography variant="body2" color="text.disabled">
+            No tenés materias asignadas para este período académico
+          </Typography>
+        </Box>
+      )}
+
+      {/* ══ SIN RESULTADOS POR FILTRO ══ */}
+      {!isLoading && materias.length > 0 && materiasFiltradas.length === 0 && (
+        <Box sx={{ textAlign: 'center', py: 6 }}>
+          <Typography variant="body1" fontWeight={700} color="text.secondary">
+            No se encontraron materias con ese filtro.
+          </Typography>
+        </Box>
+      )}
+
+      {/* ══ VISTA DE TARJETAS (minmax(260px, 1fr)) ══ */}
+      {!isLoading && materiasFiltradas.length > 0 && viewMode === 'cards' && (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(auto-fill, minmax(260px, 1fr))',
+              md: 'repeat(auto-fill, minmax(270px, 1fr))',
+              lg: 'repeat(auto-fill, minmax(280px, 1fr))',
+              xl: 'repeat(4, 1fr)',
+            },
+            gap: 2.5,
+          }}
+        >
+          {materiasFiltradas.map((m) => (
+            <MateriaCard
+              key={m.asignacion_id}
+              materia={m}
+              isSelected={seleccionada === m.asignacion_id}
+              accentColor={accentColor}
+              gradBg={gradBg}
+              isDark={isDark}
+              onSelect={() => onSeleccionar(m.asignacion_id)}
+            />
+          ))}
+        </Box>
+      )}
+
+      {/* ══ VISTA DE LISTA / TABLA ══ */}
+      {!isLoading && materiasFiltradas.length > 0 && viewMode === 'table' && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {materiasFiltradas.map((m) => (
+            <MateriaRow
+              key={m.asignacion_id}
+              materia={m}
+              isSelected={seleccionada === m.asignacion_id}
+              accentColor={accentColor}
+              gradBg={gradBg}
+              isDark={isDark}
+              onSelect={() => onSeleccionar(m.asignacion_id)}
+            />
+          ))}
+        </Box>
+      )}
     </Box>
   );
 };
 
-export default MisMaterias;
+export default MisMaterias;

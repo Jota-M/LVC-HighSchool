@@ -45,6 +45,7 @@ import {
   TIPOS_CONTRATO,
   NIVELES_FORMACION,
 } from '@/types/docenteTypes';
+import PostgradosField from '@/components/docentes/PostgradosField';
 
 export const EditarDocente: React.FC = () => {
   const theme = useTheme();
@@ -429,9 +430,16 @@ export const EditarDocente: React.FC = () => {
                     <TextField fullWidth label="Título Profesional" value={formData.titulo_profesional || ''}
                       onChange={(e) => handleInputChange('titulo_profesional', e.target.value)} sx={fieldSx} />
                   </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField fullWidth label="Título de Postgrado" value={formData.titulo_postgrado || ''}
-                      onChange={(e) => handleInputChange('titulo_postgrado', e.target.value)} sx={fieldSx} />
+                  <Grid size={{ xs: 12 }}>
+                    <PostgradosField
+                      value={formData.titulo_postgrado}
+                      onChange={(val) => handleInputChange('titulo_postgrado', val)}
+                      onNivelAutoUpdate={(sugerido) => {
+                        if (!formData.nivel_formacion || formData.nivel_formacion === 'licenciatura') {
+                          handleInputChange('nivel_formacion', sugerido);
+                        }
+                      }}
+                    />
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <TextField fullWidth select label="Nivel de Formación"

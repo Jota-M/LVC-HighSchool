@@ -1026,28 +1026,28 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
-  Box, Container, Typography, Chip, Tabs, Tab, Snackbar, Alert,
+  Box, Container, Typography, Chip, Tabs, Tab,
   Fade, LinearProgress, CircularProgress, Collapse, useTheme, alpha,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
+import WorkspacePremiumRoundedIcon from '@mui/icons-material/WorkspacePremiumRounded';
 
 import { useParams, useRouter } from 'next/navigation';
 import {
   useMisMateriasNotas,
   useEvaluaciones,
   useResumenDimensiones,
+  useDimensiones,
 } from '@/hooks/useNotas';
 import {
   MateriaDocenteNotas,
   Evaluacion,
   DIMENSIONES_CONFIG,
-  DIMENSIONES_ORDEN,
   CodigoDimension,
   CalificacionEstudiante,
   RegistroCalificacionItem,
@@ -1055,8 +1055,10 @@ import {
 import { calificacionesService, notasCalculoService } from '@/services/notasService';
 import { ResumenDimensiones } from '@/components/docente/notas/IngresarNotas';
 import { GradeGrid } from '@/components/docente/notas/GradeGrid';
+import { NotasFinalesGrid } from '@/components/docente/notas/NotasFinalesGrid';
 import { EvaluacionConProgreso } from '@/components/docente/notas/GradeGridTypes';
 import { toast } from 'react-hot-toast';
+import { PanelEvaluacionInicial } from '@/components/docente/inicial/PanelEvaluacionInicial';
 
 // ── Animaciones ────────────────────────────────────────────────────────────────
 const floatIcon = keyframes`
@@ -1090,7 +1092,6 @@ async function enriquecerConProgreso(
   });
 }
 
-// ── Tipo de mapa de notas para la grilla ──────────────────────────────────────
 // clave: `${evaluacion_id}_${matricula_id}`
 type NotasGrid = Record<string, RegistroCalificacionItem & { evaluacion_id: number }>;
 
@@ -1115,9 +1116,17 @@ export default function CalificacionesDetailPage() {
     m => m.asignacion_id === asignacionId && m.periodo_evaluacion_id === periodoId
   );
 
+  // Nivel Inicial: evaluación cualitativa (listas de cotejo)
+  const esInicial = !!seleccionada && (
+    seleccionada.modalidad_evaluacion === 'cualitativa' ||
+    !!seleccionada.nivel_nombre?.toLowerCase().includes('inicial')
+  );
+
   // ── Tab de dimensión ────────────────────────────────────────────────────────
+  const { dimensionesConfig, dimensionesOrden } = useDimensiones();
   const [dimTab, setDimTab] = useState(0);
-  const dimensionActiva: CodigoDimension = DIMENSIONES_ORDEN[dimTab];
+  const esTabFinales = dimTab === dimensionesOrden.length;
+  const dimensionActiva: CodigoDimension = !esTabFinales ? (dimensionesOrden[dimTab] || 'SER') : 'SER';
 
   // ── Evaluaciones ────────────────────────────────────────────────────────────
   const {
@@ -1126,6 +1135,25 @@ export default function CalificacionesDetailPage() {
     asignacion_docente_id: asignacionId,
     periodo_evaluacion_id: periodoId,
   });
+
+  // ── Lista de estudiantes (compartida para toda la dimensión) ───────────────
+  const [lista, setLista] = useState<CalificacionEstudiante[]>([]);
+  const [loadingLista, setLoadingLista] = useState(false);
+  const listaLoadedFor = useRef<number | null>(null);
+
+  const cargarLista = useCallback(async (primeraEvId: number) => {
+    if (listaLoadedFor.current === primeraEvId) return;
+    listaLoadedFor.current = primeraEvId;
+    setLoadingLista(true);
+    try {
+      const res = await calificacionesService.listarPorEvaluacion(primeraEvId);
+      setLista(res.data.calificaciones);
+    } catch {
+      setLista([]);
+    } finally {
+      setLoadingLista(false);
+    }
+  }, []);
 
   // ── Evaluaciones con progreso (agrupadas por dimensión) ────────────────────
   const [evConProgreso, setEvConProgreso] = useState<Record<string, EvaluacionConProgreso[]>>({});
@@ -1148,40 +1176,23 @@ export default function CalificacionesDetailPage() {
         grouped[cod].push(ev);
       });
       setEvConProgreso(grouped);
+      if (evList.length > 0 && (!listaLoadedFor.current || lista.length === 0)) {
+        await cargarLista(evList[0].id);
+      }
     } finally {
       setLoadingProgreso(false);
       progresoRunning.current = false;
     }
-  }, [seleccionada?.total_estudiantes]);
+  }, [seleccionada?.total_estudiantes, cargarLista, lista.length]);
 
+  // Inicial no usa evaluaciones numéricas: se evitan los requests a listarPorEvaluacion
   useEffect(() => {
+    if (esInicial) return;
     cargarProgreso(evaluaciones);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [evaluaciones]);
-
-  // ── Lista de estudiantes (compartida para toda la dimensión) ───────────────
-  // Se carga una sola vez al cambiar de dimensión o cuando evaluaciones estén listas
-  const [lista, setLista] = useState<CalificacionEstudiante[]>([]);
-  const [loadingLista, setLoadingLista] = useState(false);
-  const listaLoadedFor = useRef<number | null>(null); // id de la 1ra evaluación cargada
-
-  const cargarLista = useCallback(async (primeraEvId: number) => {
-    if (listaLoadedFor.current === primeraEvId) return;
-    listaLoadedFor.current = primeraEvId;
-    setLoadingLista(true);
-    try {
-      const res = await calificacionesService.listarPorEvaluacion(primeraEvId);
-      // Tomamos la lista de estudiantes de esta respuesta (es igual para todas)
-      setLista(res.data.calificaciones);
-    } catch {
-      setLista([]);
-    } finally {
-      setLoadingLista(false);
-    }
-  }, []);
+  }, [evaluaciones, esInicial]);
 
   // ── Mapa de notas para la grilla ───────────────────────────────────────────
-  // Se carga al cambiar de dimensión, prepobleando con las notas existentes
   const [notasGrid, setNotasGrid] = useState<NotasGrid>({});
   const [loadingNotasGrid, setLoadingNotasGrid] = useState(false);
 
@@ -1197,28 +1208,33 @@ export default function CalificacionesDetailPage() {
         if (r.status !== 'fulfilled') return;
         const ev = evs[i];
         r.value.data.calificaciones.forEach((c: CalificacionEstudiante) => {
+          const key = `${ev.id}_${c.matricula_id}`;
+          const base = {
+            evaluacion_id: ev.id,
+            matricula_id: c.matricula_id,
+            observacion: c.observacion,
+            entrega_id: c.entrega_id,
+            entrega_archivo_url: c.entrega_archivo_url,
+            entrega_archivo_nombre: c.entrega_archivo_nombre,
+            entrega_fecha: c.entrega_fecha,
+            entrega_comentario: c.entrega_comentario,
+          };
           if (c.puntaje_obtenido !== null && c.puntaje_obtenido !== undefined) {
-            const key = `${ev.id}_${c.matricula_id}`;
             nuevo[key] = {
-              evaluacion_id: ev.id,
-              matricula_id: c.matricula_id,
+              ...base,
               puntaje_obtenido: c.puntaje_obtenido,
               esta_ausente: c.esta_ausente ?? false,
-              observacion: c.observacion,
+              sin_calificar: false,
             };
           } else if (c.esta_ausente) {
-            const key = `${ev.id}_${c.matricula_id}`;
-            nuevo[key] = {
-              evaluacion_id: ev.id,
-              matricula_id: c.matricula_id,
-              puntaje_obtenido: 0,
-              esta_ausente: true,
-            };
+            nuevo[key] = { ...base, puntaje_obtenido: 0, esta_ausente: true, sin_calificar: false };
+          } else if (c.entrega_archivo_url) {
+            // Entregó pero aún no tiene calificación registrada
+            nuevo[key] = { ...base, puntaje_obtenido: 0, esta_ausente: false, sin_calificar: true };
           }
         });
       });
       setNotasGrid(nuevo);
-      // También cargamos lista de estudiantes con la primera evaluación
       if (evs.length > 0) await cargarLista(evs[0].id);
     } finally {
       setLoadingNotasGrid(false);
@@ -1228,13 +1244,14 @@ export default function CalificacionesDetailPage() {
   // Recargar cuando cambia la dimensión activa y ya tenemos evaluaciones con progreso
   const prevDimRef = useRef<string | null>(null);
   useEffect(() => {
+    if (esInicial) return;
     const evsDim = evConProgreso[dimensionActiva] ?? [];
     if (evsDim.length > 0 && prevDimRef.current !== dimensionActiva) {
       prevDimRef.current = dimensionActiva;
       listaLoadedFor.current = null;
       cargarNotasGrid(evsDim);
     }
-  }, [evConProgreso, dimensionActiva, cargarNotasGrid]);
+  }, [evConProgreso, dimensionActiva, cargarNotasGrid, esInicial]);
 
   // ── Callbacks de edición ───────────────────────────────────────────────────
   const handleSetNota = useCallback((
@@ -1249,6 +1266,7 @@ export default function CalificacionesDetailPage() {
         ...(prev[key] ?? { evaluacion_id, matricula_id, puntaje_obtenido: 0 }),
         evaluacion_id,
         ...datos,
+        sin_calificar: false,
       } as NotasGrid[string],
     }));
   }, []);
@@ -1267,6 +1285,7 @@ export default function CalificacionesDetailPage() {
         matricula_id,
         puntaje_obtenido: ausente ? 0 : (prev[key]?.puntaje_obtenido ?? 0),
         esta_ausente: ausente,
+        sin_calificar: false,
       } as NotasGrid[string],
     }));
   }, []);
@@ -1281,11 +1300,11 @@ export default function CalificacionesDetailPage() {
 
     setIsSaving(true);
     try {
-      // Agrupar notas por evaluación
       const porEv: Record<number, RegistroCalificacionItem[]> = {};
       Object.values(notasGrid).forEach(n => {
         if (!porEv[n.evaluacion_id]) porEv[n.evaluacion_id] = [];
         const valido = n.esta_ausente === true || (
+          !n.sin_calificar &&
           typeof n.puntaje_obtenido === 'number' &&
           !isNaN(n.puntaje_obtenido) && n.puntaje_obtenido >= 0
         );
@@ -1299,21 +1318,16 @@ export default function CalificacionesDetailPage() {
         }
       });
 
-      // Guardar evaluación por evaluación
       let totalGuardadas = 0;
       await Promise.allSettled(
         evsDim.map(async ev => {
           const registros = porEv[ev.id];
           if (!registros || registros.length === 0) return;
-          await calificacionesService.registrarMasivo({
-            evaluacion_id: ev.id,
-            registros,
-          });
+          await calificacionesService.registrarMasivo({ evaluacion_id: ev.id, registros });
           totalGuardadas += registros.length;
         })
       );
 
-      // Recalcular notas finales para todos los estudiantes
       const matriculaIds = [...new Set(Object.values(notasGrid).map(n => n.matricula_id))];
       await Promise.allSettled(
         matriculaIds.map(mid =>
@@ -1323,10 +1337,8 @@ export default function CalificacionesDetailPage() {
 
       toast.success(`✅ ${totalGuardadas} notas guardadas`);
 
-      // Recargar progreso
       await cargarProgreso(evaluaciones);
       await cargarNotasGrid(evsDim);
-
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Error al guardar notas');
     } finally {
@@ -1339,10 +1351,8 @@ export default function CalificacionesDetailPage() {
     notas: notasDimension, isLoading: loadingResumen,
   } = useResumenDimensiones();
 
-  // ── Panel de resumen (collapsible) ─────────────────────────────────────────
   const [resumenOpen, setResumenOpen] = useState(false);
 
-  // ── Cambio de tab ──────────────────────────────────────────────────────────
   const handleDimTabChange = (_: React.SyntheticEvent, v: number) => {
     setDimTab(v);
     prevDimRef.current = null;
@@ -1365,52 +1375,87 @@ export default function CalificacionesDetailPage() {
     );
   }
 
+  // ── HEADER COMPARTIDO (todos los niveles) ──────────────────────────────────
+  const tituloHeader = seleccionada.materia_nombre;
+  const chipHeader = esInicial
+    ? `${seleccionada.grado_nombre} "${seleccionada.paralelo_nombre}" · Inicial`
+    : (seleccionada.trimestre_nombre ?? 'Sin trimestre');
+
+  const headerNode = (
+    <Fade in timeout={400}>
+      <Box sx={{ mb: 3 }}>
+        <Box
+          onClick={() => router.push('/dashboard/docente/calificaciones')}
+          sx={{
+            display: 'inline-flex', alignItems: 'center', gap: 0.5, mb: 2,
+            cursor: 'pointer', color: 'text.secondary', fontSize: 13, fontWeight: 600,
+            '&:hover': { color: gold }, transition: 'color 0.15s',
+          }}
+        >
+          <ArrowBackRoundedIcon sx={{ fontSize: 16 }} />
+          Volver a mis materias
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <EditNoteRoundedIcon sx={{
+            color: gold, fontSize: 34,
+            animation: `${floatIcon} 2s ease-in-out infinite`,
+          }} />
+          <Box>
+            <Typography variant="h1" sx={{
+              fontSize: { xs: '1.4rem', sm: '1.8rem', md: '2.2rem' },
+              fontWeight: 800, background: gradBg,
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', lineHeight: 1.2,
+            }}>
+              {tituloHeader}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.4, flexWrap: 'wrap' }}>
+              <Chip label={chipHeader} size="small"
+                sx={{ background: gradBg, color: isDark ? '#000' : '#fff', fontWeight: 700, fontSize: 11 }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                {esInicial
+                  ? `${seleccionada.turno_nombre} · ${seleccionada.trimestre_nombre ?? 'Trimestre actual'} · ${seleccionada.total_estudiantes} párvulos`
+                  : `${seleccionada.grado_nombre} "${seleccionada.paralelo_nombre}" · ${seleccionada.turno_nombre} · ${seleccionada.total_estudiantes} estudiantes`}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      </Box>
+    </Fade>
+  );
+
+  // ── BRANCH: Nivel Inicial (Evaluación Cualitativa / Listas de Cotejo) ──────
+  if (esInicial) {
+    return (
+      <Box sx={{ minHeight: '100vh', py: 4 }}>
+        <Container maxWidth="xl">
+          {headerNode}
+          <Box sx={{ animation: `${fadeUp} 0.28s ease-out` }}>
+            <PanelEvaluacionInicial
+              paraleloId={seleccionada.paralelo_id}
+              periodoId={periodoId}
+              gradoId={seleccionada.grado_id}
+              paraleloNombre={seleccionada.paralelo_nombre}
+              gradoNombre={seleccionada.grado_nombre}
+              turnoNombre={seleccionada.turno_nombre}
+              periodoNombre={seleccionada.trimestre_nombre ?? 'Trimestre Actual'}
+              materia={seleccionada}
+              asignacionId={asignacionId}
+            />
+          </Box>
+        </Container>
+      </Box>
+    );
+  }
+
   const evDimActiva = evConProgreso[dimensionActiva] ?? [];
-  const cfg = DIMENSIONES_CONFIG[dimensionActiva];
+  const cfg = dimensionesConfig[dimensionActiva] || DIMENSIONES_CONFIG[dimensionActiva];
 
   return (
     <Box sx={{ minHeight: '100vh', py: 4 }}>
       <Container maxWidth="xl">
 
         {/* ══ HEADER ══ */}
-        <Fade in timeout={400}>
-          <Box sx={{ mb: 3 }}>
-            <Box
-              onClick={() => router.push('/dashboard/docente/calificaciones')}
-              sx={{
-                display: 'inline-flex', alignItems: 'center', gap: 0.5, mb: 2,
-                cursor: 'pointer', color: 'text.secondary', fontSize: 13, fontWeight: 600,
-                '&:hover': { color: gold }, transition: 'color 0.15s',
-              }}
-            >
-              <ArrowBackRoundedIcon sx={{ fontSize: 16 }} />
-              Volver a mis materias
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <EditNoteRoundedIcon sx={{
-                color: gold, fontSize: 34,
-                animation: `${floatIcon} 2s ease-in-out infinite`,
-              }} />
-              <Box>
-                <Typography variant="h1" sx={{
-                  fontSize: { xs: '1.4rem', sm: '1.8rem', md: '2.2rem' },
-                  fontWeight: 800, background: gradBg,
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', lineHeight: 1.2,
-                }}>
-                  {seleccionada.materia_nombre}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.4, flexWrap: 'wrap' }}>
-                  <Chip label={seleccionada.trimestre_nombre ?? 'Sin trimestre'} size="small"
-                    sx={{ background: gradBg, color: isDark ? '#000' : '#fff', fontWeight: 700, fontSize: 11 }} />
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                    {seleccionada.grado_nombre} "{seleccionada.paralelo_nombre}" · {seleccionada.turno_nombre}
-                    · {seleccionada.total_estudiantes} estudiantes
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        </Fade>
+        {headerNode}
 
         {/* ══ TABS DE DIMENSIÓN ══ */}
         <Fade in timeout={450}>
@@ -1431,12 +1476,8 @@ export default function CalificacionesDetailPage() {
                 allowScrollButtonsMobile
                 sx={{
                   minHeight: { xs: 36, md: 48 },
-                  '& .MuiTabs-scroller': {
-                    borderRadius: '10px',
-                  },
-                  '& .MuiTabs-flexContainer': {
-                    flexWrap: 'nowrap',
-                  },
+                  '& .MuiTabs-scroller': { borderRadius: '10px' },
+                  '& .MuiTabs-flexContainer': { flexWrap: 'nowrap' },
                   '& .MuiTabs-scrollButtons': {
                     color: isDark ? '#000' : '#fff',
                     width: { xs: 28, md: 40 },
@@ -1448,27 +1489,22 @@ export default function CalificacionesDetailPage() {
                     textTransform: 'none',
                     fontWeight: 600,
                     minWidth: 'max-content',
-                    maxWidth: 'none',
-                    flexShrink: 0,
                     minHeight: { xs: 36, md: 48 },
-                    fontSize: { xs: '0.7rem', md: '0.95rem' },
-                    px: { xs: 1.2, md: 3 },
-                    color: isDark ? '#000' : '#fff',
+                    fontSize: { xs: '0.75rem', md: '0.95rem' },
+                    color: isDark ? alpha('#000', 0.7) : alpha('#fff', 0.8),
                     whiteSpace: 'nowrap',
                     '&:hover': { color: isDark ? '#000' : '#fff' },
                   },
-                  '& .Mui-selected': {
-                    color: `${isDark ? '#000' : '#fff'} !important`,
-                  },
+                  '& .Mui-selected': { color: `${isDark ? '#000' : '#fff'} !important` },
                   '& .MuiTabs-indicator': {
                     backgroundColor: isDark ? '#000' : '#fff',
-                    height: { xs: 2, md: 3 },
+                    height: 3,
                     borderRadius: '3px 3px 0 0',
                   },
                 }}
               >
-                {DIMENSIONES_ORDEN.map(k => {
-                  const c = DIMENSIONES_CONFIG[k];
+                {dimensionesOrden.map(k => {
+                  const c = dimensionesConfig[k] || DIMENSIONES_CONFIG[k];
                   const evs = evConProgreso[k] ?? [];
                   const count = evs.length;
                   const todas = count > 0 && evs.every(e => e.total_alumnos > 0 && e.con_nota >= e.total_alumnos);
@@ -1481,12 +1517,14 @@ export default function CalificacionesDetailPage() {
                           bgcolor: isDark ? alpha('#000', 0.25) : alpha('#fff', 0.25),
                           color: isDark ? '#000' : '#fff',
                           borderRadius: '8px', px: 0.8, py: 0.2, lineHeight: 1.4,
-                        }}>{c.porcentaje}%</Box>
+                        }}>
+                          {c.porcentaje}%
+                        </Box>
                         {count > 0 && (
                           <Box sx={{
                             fontSize: { xs: 8, md: 9 }, fontWeight: 800,
-                            bgcolor: todas ? alpha('#16a34a', 0.4) : isDark ? alpha('#000', 0.35) : alpha('#fff', 0.35),
-                            color: todas ? '#fff' : isDark ? '#000' : '#fff',
+                            bgcolor: todas ? alpha('#16a34a', 0.3) : isDark ? alpha('#000', 0.35) : alpha('#fff', 0.35),
+                            color: todas ? (isDark ? '#4ade80' : '#16a34a') : (isDark ? '#000' : '#fff'),
                             borderRadius: '6px', px: 0.7, py: 0.1, lineHeight: 1.4,
                             minWidth: 16, textAlign: 'center',
                             display: 'flex', alignItems: 'center', gap: 0.3,
@@ -1499,74 +1537,108 @@ export default function CalificacionesDetailPage() {
                     } />
                   );
                 })}
+
+                {/* ── TAB: NOTAS FINALES (CONSOLIDADO) ── */}
+                <Tab
+                  key="FINAL"
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.6, md: 1 }, whiteSpace: 'nowrap' }}>
+                      <WorkspacePremiumRoundedIcon sx={{ fontSize: { xs: 15, md: 18 } }} />
+                      <span>Notas Finales</span>
+                      <Box sx={{
+                        fontSize: { xs: 9, md: 10 }, fontWeight: 700,
+                        bgcolor: isDark ? alpha('#000', 0.25) : alpha('#fff', 0.25),
+                        color: isDark ? '#000' : '#fff',
+                        borderRadius: '8px', px: 0.8, py: 0.2, lineHeight: 1.4,
+                      }}>
+                        100%
+                      </Box>
+                    </Box>
+                  }
+                />
               </Tabs>
             </Box>
           </Box>
         </Fade>
 
         {/* ══ CONTENIDO ══ */}
-        <Fade in timeout={500} key={dimensionActiva}>
+        <Fade in timeout={500} key={esTabFinales ? 'tab-notas-finales' : dimensionActiva}>
           <Box sx={{ animation: `${fadeUp} 0.28s ease-out` }}>
 
-            {/* Sub-encabezado dimensión */}
-            <Box sx={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              mb: 2, px: 0.5,
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
-                <Box sx={{
-                  width: 10, height: 10, borderRadius: '50%', bgcolor: cfg.color,
-                  boxShadow: `0 0 8px ${alpha(cfg.color, 0.6)}`,
-                }} />
-                <Typography variant="body1" fontWeight={800} sx={{ color: cfg.color }}>
-                  {cfg.label}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
-                  {cfg.descripcion} · {cfg.porcentaje}% de la nota final
-                </Typography>
-              </Box>
-              <Box
-                onClick={() => refrescarEvaluaciones()}
-                sx={{
-                  fontSize: 12, fontWeight: 600, color: 'text.disabled', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 0.4,
-                  '&:hover': { color: cfg.color }, transition: 'color 0.15s',
-                }}
-              >
-                ↺ Refrescar
-              </Box>
-            </Box>
-
-            {/* Loading evaluaciones/progreso */}
-            {(loadingEv || loadingProgreso) ? (
-              <Box sx={{ py: 6, textAlign: 'center' }}>
-                <CircularProgress size={28} sx={{ color: cfg.color }} />
-                <Typography variant="caption" color="text.secondary"
-                  sx={{ display: 'block', mt: 1.5 }}>Cargando evaluaciones...</Typography>
-              </Box>
-            ) : (
-              /* ══ GRILLA ══ */
-              <GradeGrid
-                dimensionCodigo={dimensionActiva}
+            {esTabFinales ? (
+              <NotasFinalesGrid
+                seleccionada={seleccionada}
+                evaluaciones={evaluaciones}
                 lista={lista}
-                evaluaciones={evDimActiva}
-                notas={notasGrid}
-                isLoadingLista={loadingLista || loadingNotasGrid}
-                isSaving={isSaving}
-                onSetNota={handleSetNota}
-                onMarcarAusente={handleMarcarAusente}
-                onGuardar={handleGuardar}
+                isLoadingLista={loadingLista}
+                periodoId={periodoId}
+                onRefrescarNotas={async () => {
+                  await refrescarEvaluaciones();
+                }}
               />
+            ) : (
+              <>
+                {/* Sub-encabezado dimensión */}
+                <Box sx={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  mb: 2, px: 0.5,
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                    <Box sx={{
+                      width: 10, height: 10, borderRadius: '50%', bgcolor: cfg.color,
+                      boxShadow: `0 0 8px ${alpha(cfg.color, 0.6)}`,
+                    }} />
+                    <Typography variant="body1" fontWeight={800} sx={{ color: cfg.color }}>
+                      {cfg.label}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+                      {cfg.descripcion} · {cfg.porcentaje}% de la nota final
+                    </Typography>
+                  </Box>
+                  <Box
+                    onClick={() => refrescarEvaluaciones()}
+                    sx={{
+                      fontSize: 12, fontWeight: 600, color: 'text.disabled', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 0.4,
+                      '&:hover': { color: cfg.color }, transition: 'color 0.15s',
+                    }}
+                  >
+                    ↺ Refrescar
+                  </Box>
+                </Box>
+
+                {(loadingEv || loadingProgreso) ? (
+                  <Box sx={{ py: 6, textAlign: 'center' }}>
+                    <CircularProgress size={28} sx={{ color: cfg.color }} />
+                    <Typography variant="caption" color="text.secondary"
+                      sx={{ display: 'block', mt: 1.5 }}>Cargando evaluaciones...</Typography>
+                  </Box>
+                ) : (
+                  <GradeGrid
+                    dimensionCodigo={dimensionActiva}
+                    lista={lista}
+                    evaluaciones={evDimActiva}
+                    notas={notasGrid}
+                    isLoadingLista={loadingLista || loadingNotasGrid}
+                    isSaving={isSaving}
+                    onSetNota={handleSetNota}
+                    onMarcarAusente={handleMarcarAusente}
+                    onGuardar={handleGuardar}
+                  />
+                )}
+              </>
             )}
 
-            {/* ── Resumen collapsible ── */}
-            {(notasDimension.length > 0 || loadingResumen) && (
+            {/* ── Resumen collapsible (solo en tabs de dimensiones) ── */}
+            {!esTabFinales && (notasDimension.length > 0 || loadingResumen) && (
               <Box sx={{
                 mt: 4, borderRadius: '16px',
-                border: `1.5px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.07)}`,
+                border: `1.5px solid ${alpha(gold, 0.2)}`,
                 overflow: 'hidden',
-                bgcolor: isDark ? alpha('#fff', 0.02) : '#fff',
-                boxShadow: isDark ? 'none' : '0 2px 16px rgba(0,0,0,0.06)',
+                background: isDark
+                  ? `linear-gradient(135deg, ${alpha('#facc15', 0.05)} 0%, rgba(17, 24, 39, 0.96) 100%)`
+                  : `linear-gradient(135deg, ${alpha('#0288d1', 0.04)} 0%, #ffffff 100%)`,
+                boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 2px 16px rgba(0,0,0,0.06)',
               }}>
                 <Box
                   onClick={() => setResumenOpen(o => !o)}

@@ -4,6 +4,7 @@ import {
   Dialog, DialogContent, Button, Box, Typography, Grid,
   FormControl, Select, MenuItem, TextField,
   CircularProgress, Alert, Chip, Tooltip,
+  FormGroup, FormControlLabel, Checkbox,
   alpha, useTheme,
 } from '@mui/material';
 import {
@@ -16,9 +17,10 @@ import {
   Palette as ColorIcon,
   Edit as EditIcon,
   Visibility as ViewIcon,
+  CalendarMonth as CalendarIcon,
 } from '@mui/icons-material';
 import { useGradoMaterias, useAsignaciones, useHorarioCeldas, useAsignacionTitular } from '@/hooks/useHorario';
-import { COLORES_MATERIA, DIAS_SEMANA, HorarioDetalle } from '@/types/horariotypes';
+import { COLORES_MATERIA, DIAS_SEMANA, HorarioDetalle, BloqueHorario } from '@/types/horariotypes';
 
 interface CeldaTarget {
   dia_semana: number;
@@ -37,6 +39,8 @@ interface Props {
   gradoId: number;
   paraleloId: number;
   periodoId: number;
+  bloques?: BloqueHorario[];
+  diasActivos?: number[];
   readonly?: boolean;
 }
 
@@ -46,6 +50,7 @@ interface FormData {
   aula: string;
   color: string;
   observaciones: string;
+  etiqueta_personalizada: string;
 }
 
 const EMPTY_FORM: FormData = {
@@ -54,22 +59,26 @@ const EMPTY_FORM: FormData = {
   aula: '',
   color: '',
   observaciones: '',
+  etiqueta_personalizada: '',
 };
 
 export const CeldaModal: React.FC<Props> = ({
-  open, onClose, target, horarioId, gradoId, paraleloId, periodoId, readonly = false,
+  open, onClose, target, horarioId, gradoId, paraleloId, periodoId,
+  diasActivos = [1, 2, 3, 4, 5],
+  readonly = false,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [diasSeleccionados, setDiasSeleccionados] = useState<number[]>([]);
 
   const { gradoMaterias, isLoading: loadingMaterias } = useGradoMaterias(gradoId);
   const { asignaciones, isLoading: loadingAsig } = useAsignaciones(
     paraleloId, periodoId,
     form.grado_materia_id ? Number(form.grado_materia_id) : null
   );
-  const { agregar, actualizar, eliminar, isAgregando, isActualizando, isEliminando, isBusy } =
+  const { agregar, actualizar, eliminar, agregarBatch, isEliminando, isBusy } =
     useHorarioCeldas(horarioId);
   const { asignacionTitular } = useAsignacionTitular(
     form.grado_materia_id ? Number(form.grado_materia_id) : null,
@@ -90,9 +99,7 @@ export const CeldaModal: React.FC<Props> = ({
   const materiaSeleccionada = Array.isArray(gradoMaterias)
     ? gradoMaterias.find((gm) => gm.id === Number(form.grado_materia_id))
     : null;
-  const colorPreview = form.color || materiaSeleccionada?.materia_color || brand;
 
-  // header toma el color de la materia si hay una seleccionada, sino brand
   const headerAccent = isEditing && form.color
     ? form.color
     : materiaSeleccionada?.materia_color || brand;
@@ -111,14 +118,19 @@ export const CeldaModal: React.FC<Props> = ({
     '& .MuiOutlinedInput-notchedOutline': { borderRadius: `${R} !important` },
   };
 
-  // ── lógica ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (asignacionTitular && !form.asignacion_docente_id) {
       setForm(p => ({ ...p, asignacion_docente_id: asignacionTitular.id }));
     }
   }, [asignacionTitular]);
+
   useEffect(() => {
-    if (!open) { setForm(EMPTY_FORM); setConfirmDelete(false); return; }
+    if (!open) {
+      setForm(EMPTY_FORM);
+      setConfirmDelete(false);
+      setDiasSeleccionados([]);
+      return;
+    }
     if (target?.existing) {
       const e = target.existing;
       setForm({
@@ -127,9 +139,12 @@ export const CeldaModal: React.FC<Props> = ({
         aula: e.aula ?? '',
         color: e.color ?? '',
         observaciones: e.observaciones ?? '',
+        etiqueta_personalizada: e.etiqueta_personalizada ?? '',
       });
-    } else {
+      setDiasSeleccionados([e.dia_semana]);
+    } else if (target) {
       setForm(EMPTY_FORM);
+      setDiasSeleccionados([target.dia_semana]);
     }
   }, [open, target]);
 
@@ -137,19 +152,43 @@ export const CeldaModal: React.FC<Props> = ({
     setForm(p => ({ ...p, grado_materia_id: val, asignacion_docente_id: '' }));
   };
 
+  const handleToggleDia = (dia: number) => {
+    setDiasSeleccionados(prev =>
+      prev.includes(dia)
+        ? prev.length > 1 ? prev.filter(d => d !== dia) : prev // no dejar vacío
+        : [...prev, dia]
+    );
+  };
+
   const handleSubmit = async () => {
     if (!form.grado_materia_id || !target) return;
-    const payload = {
+    const payloadBase = {
       grado_materia_id: Number(form.grado_materia_id),
       asignacion_docente_id: form.asignacion_docente_id ? Number(form.asignacion_docente_id) : null,
       aula: form.aula || undefined,
       color: form.color || undefined,
       observaciones: form.observaciones || undefined,
+      etiqueta_personalizada: form.etiqueta_personalizada ? form.etiqueta_personalizada.trim() : null,
     };
+
     if (isEditing && target.existing) {
-      await actualizar({ detId: target.existing.id, payload });
+      await actualizar({ detId: target.existing.id, payload: payloadBase });
     } else {
-      await agregar({ ...payload, dia_semana: target.dia_semana, bloque_horario_id: target.bloque_horario_id });
+      if (diasSeleccionados.length > 1) {
+        // Creación masiva multi-día
+        const celdas = diasSeleccionados.map(dia => ({
+          ...payloadBase,
+          dia_semana: dia,
+          bloque_horario_id: target.bloque_horario_id,
+        }));
+        await agregarBatch({ celdas, sobrescribir: true });
+      } else {
+        await agregar({
+          ...payloadBase,
+          dia_semana: target.dia_semana,
+          bloque_horario_id: target.bloque_horario_id,
+        });
+      }
     }
     onClose();
   };
@@ -256,7 +295,7 @@ export const CeldaModal: React.FC<Props> = ({
                             flexShrink: 0,
                           }}
                         />
-                        <Typography variant="body2">
+                        <Typography variant="body2" fontWeight={600}>
                           {materia.materia_nombre}
                         </Typography>
                       </Box>
@@ -332,6 +371,114 @@ export const CeldaModal: React.FC<Props> = ({
                   No hay docentes asignados a esta materia en este paralelo
                 </Typography>
               )}
+            </Grid>
+
+            {/* Asignación rápida multi-día (Solo cuando se crea nueva celda) */}
+            {!isEditing && !readonly && (
+              <Grid size={{ xs: 12 }}>
+                <Box sx={{ p: 2, borderRadius: R, border: `1px solid ${borderField}`, background: bgField }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <CalendarIcon sx={{ fontSize: 16, color: brand }} />
+                    <Typography variant="caption" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Aplicar en este bloque a los días:
+                    </Typography>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 0.8, flexWrap: 'wrap' }}>
+                    {diasActivos.map(dia => {
+                      const isChecked = diasSeleccionados.includes(dia);
+                      return (
+                        <Chip
+                          key={dia}
+                          label={DIAS_SEMANA[dia]}
+                          size="small"
+                          clickable
+                          onClick={() => handleToggleDia(dia)}
+                          color={isChecked ? 'primary' : 'default'}
+                          variant={isChecked ? 'filled' : 'outlined'}
+                          sx={{
+                            fontWeight: 700,
+                            borderRadius: '8px',
+                            bgcolor: isChecked ? brand : 'transparent',
+                            color: isChecked ? (isDark ? '#000' : '#fff') : 'text.secondary',
+                            borderColor: isChecked ? brand : borderField,
+                          }}
+                        />
+                      );
+                    })}
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.8, fontSize: '0.7rem' }}>
+                    💡 Puedes seleccionar varios días (ej. Lun, Mié, Vie) para asignar esta clase a todos ellos a la vez.
+                  </Typography>
+                </Box>
+              </Grid>
+            )}
+
+            {/* Etiqueta / Nombre a mostrar en el Horario (Alias) */}
+            <Grid size={{ xs: 12 }}>
+              <Box sx={{ p: 2, borderRadius: R, border: `1px solid ${borderField}`, background: bgField }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    🏷️ Nombre a mostrar en la grilla (Alias)
+                  </Typography>
+                  {form.etiqueta_personalizada && (
+                    <Chip
+                      label="Etiqueta activa"
+                      size="small"
+                      sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, bgcolor: alpha(brand, 0.15), color: brand }}
+                    />
+                  )}
+                </Box>
+
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="Por defecto: nombre de la materia (Ej: CLASES)"
+                  value={form.etiqueta_personalizada}
+                  onChange={e => setForm(p => ({ ...p, etiqueta_personalizada: e.target.value }))}
+                  disabled={readonly}
+                  sx={fieldSx}
+                />
+
+                {/* Botones de sugerencia rápida */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1.2, flexWrap: 'wrap' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.72rem' }}>
+                    Sugerencias:
+                  </Typography>
+                  {[
+                    { label: 'CLASES', color: '#0284c7' },
+                    { label: 'REFORZAMIENTO', color: '#7c3aed' },
+                    { label: 'TUTORÍA', color: '#059669' },
+                    { label: 'EVALUACIÓN', color: '#dc2626' },
+                  ].map(sug => (
+                    <Chip
+                      key={sug.label}
+                      label={sug.label}
+                      size="small"
+                      onClick={() => !readonly && setForm(p => ({ ...p, etiqueta_personalizada: sug.label }))}
+                      variant={form.etiqueta_personalizada === sug.label ? 'filled' : 'outlined'}
+                      sx={{
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        cursor: readonly ? 'default' : 'pointer',
+                        borderColor: alpha(sug.color, 0.4),
+                        color: form.etiqueta_personalizada === sug.label ? '#fff' : sug.color,
+                        bgcolor: form.etiqueta_personalizada === sug.label ? sug.color : 'transparent',
+                        '&:hover': { bgcolor: alpha(sug.color, 0.15) }
+                      }}
+                    />
+                  ))}
+                  {form.etiqueta_personalizada && !readonly && (
+                    <Button
+                      size="small"
+                      onClick={() => setForm(p => ({ ...p, etiqueta_personalizada: '' }))}
+                      sx={{ fontSize: '0.68rem', p: 0.2, minWidth: 'auto', textTransform: 'none', color: 'text.secondary' }}
+                    >
+                      Limpiar
+                    </Button>
+                  )}
+                </Box>
+              </Box>
             </Grid>
 
             {/* Separador opcionales */}
@@ -457,7 +604,13 @@ export const CeldaModal: React.FC<Props> = ({
               '&:hover': { background: isDark ? '#eab308' : '#01579b', boxShadow: `0 6px 20px ${alpha(brand, 0.5)}` },
               '&.Mui-disabled': { opacity: 0.3, background: brand, color: isDark ? '#000' : '#fff' },
             }}>
-            {isBusy ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Asignar'}
+            {isBusy
+              ? 'Guardando...'
+              : isEditing
+                ? 'Guardar cambios'
+                : diasSeleccionados.length > 1
+                  ? `Asignar a ${diasSeleccionados.length} días`
+                  : 'Asignar'}
           </Button>
         </Box>
       )}

@@ -34,7 +34,9 @@ import { useGestionAcademica } from '@/hooks/useRegistroCompleto';
 import { EstudiantesElegiblesTable } from '@/components/matriculacion/EstudiantesElegiblesTable';
 import { MatriculasTable } from '@/components/matriculacion/MatriculasTable';
 import { EstadisticasMatricula } from '@/components/matriculacion/EstadisticasMatricula';
+import { ReservasCupoTable } from '@/components/matriculacion/ReservasCupoTable';
 import { useEstudiantesElegibles, useMatriculasPorPeriodo, useEstadisticasMatricula } from '@/hooks/useMatriculacion';
+import { EventAvailable as EventAvailableIcon } from '@mui/icons-material';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -314,6 +316,12 @@ export const Matriculacion: React.FC = () => {
                       iconPosition="start"
                       label="Estadísticas"
                     />
+
+                    <Tab
+                      icon={<EventAvailableIcon sx={{ fontSize: { xs: 16, md: 24 } }} />}
+                      iconPosition="start"
+                      label="Reservas 2027"
+                    />
                   </Tabs>
                 </Box>
 
@@ -417,6 +425,14 @@ export const Matriculacion: React.FC = () => {
                     estadisticas={estadisticas}
                     isLoading={isLoadingEstadisticas}
                   />
+                </Box>
+              </Fade>
+            </TabPanel>
+
+            <TabPanel value={activeTab} index={3}>
+              <Fade in timeout={700}>
+                <Box>
+                  <ReservasCupoTable />
                 </Box>
               </Fade>
             </TabPanel>

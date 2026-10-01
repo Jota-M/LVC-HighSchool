@@ -163,6 +163,18 @@ export const EstadisticasMatricula: React.FC<Props> = ({ estadisticas, isLoading
           />
         </Grid>
 
+        {Number(estadisticas?.resumen?.inactivas) > 0 && (
+          <Grid size={{xs:12, sm:6, md:4}}>
+            <StatCard
+              title="Matrículas Inactivas"
+              value={estadisticas?.resumen?.inactivas || 0}
+              icon={<InactiveIcon sx={{ fontSize: 32 }} />}
+              color="#e53935"
+              isLoading={isLoading}
+            />
+          </Grid>
+        )}
+
         <Grid size={{xs:12, sm:6, md:4}}>
           <StatCard
             title="Estudiantes Becados"

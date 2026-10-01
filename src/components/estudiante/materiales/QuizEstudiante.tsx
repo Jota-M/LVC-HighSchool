@@ -16,8 +16,10 @@ import {
     EmojiEvents as TrophyIcon,
     Refresh as RefreshIcon,
     LightbulbOutlined as TipIcon,
+    Lock as LockIcon,
+    Event as EventIcon,
 } from '@mui/icons-material';
-import { useResolverQuiz } from '@/hooks/useMaterial';
+import { useResolverQuiz, useConfigQuizTema } from '@/hooks/useMaterial';
 import { usePerfilEstudiante } from '@/hooks/useEstudiante';
 import type { QuizPregunta, RespuestaQuizDTO } from '@/types/materialTypes';
 
@@ -33,6 +35,7 @@ export const QuizEstudiante: React.FC<QuizEstudianteProps> = ({
 }) => {
     const { perfil } = usePerfilEstudiante();
     const matricula_id = perfil?.matricula_id ?? null;
+    const paralelo_id = perfil?.paralelo_id ?? null;
 
     const {
         preguntas, isLoading, enviando,
@@ -40,11 +43,29 @@ export const QuizEstudiante: React.FC<QuizEstudianteProps> = ({
         responder, reiniciar,
     } = useResolverQuiz(tema_id, matricula_id);
 
+    const { config } = useConfigQuizTema(tema_id, paralelo_id);
+
     const [expandido, setExpandido] = useState(false);
     const [respuestas, setRespuestas] = useState<Record<number, number>>({});
 
     const tieneQuiz = preguntas.length > 0;
     const todoRespondido = preguntas.length > 0 && preguntas.every(p => respuestas[p.id] !== undefined);
+
+    const limiteIntentos = config?.limite_intentos !== undefined && config?.limite_intentos !== null ? config.limite_intentos : 1;
+    const intentosAgotados = Boolean(
+        limiteIntentos && limiteIntentos > 0 && ultimoIntento
+    );
+    const estaBloqueado = Boolean(config && !config.puede_responder);
+
+    // Si ya completó sus intentos y no hay un resultado en memoria fresca, usar el del último intento
+    const resultadoAMostrar = resultado || (intentosAgotados && ultimoIntento ? {
+        resultados: ultimoIntento.respuestas,
+        correctas: ultimoIntento.correctas,
+        total: ultimoIntento.total_preguntas,
+        puntaje: Number(ultimoIntento.puntaje),
+    } : null);
+
+    const puedeReintentar = !intentosAgotados && !estaBloqueado && (!limiteIntentos || limiteIntentos > 1);
 
     const handleResponder = async () => {
         const payload: RespuestaQuizDTO[] = Object.entries(respuestas).map(([quiz_id, respuesta_dada]) => ({
@@ -91,19 +112,32 @@ export const QuizEstudiante: React.FC<QuizEstudianteProps> = ({
                         <QuizIcon sx={{ fontSize: 17 }} />
                     </Box>
                     <Box>
-                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 700 }}>
-                            Quiz de repaso
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography sx={{ fontSize: '0.85rem', fontWeight: 700 }}>
+                                Quiz de repaso
+                            </Typography>
+                            {config && !config.activo && (
+                                <Chip
+                                    icon={<LockIcon sx={{ fontSize: '11px !important' }} />}
+                                    label="Cerrado"
+                                    size="small"
+                                    sx={{
+                                        height: 18, fontSize: '0.62rem', fontWeight: 700, borderRadius: '5px',
+                                        bgcolor: alpha('#dc2626', 0.1), color: '#dc2626',
+                                    }}
+                                />
+                            )}
+                        </Box>
                         <Typography sx={{ fontSize: '0.7rem', color: 'text.disabled' }}>
                             {isLoading
                                 ? 'Cargando…'
                                 : !tieneQuiz
                                     ? 'El docente aún no ha generado un quiz para este tema'
-                                    : resultado
-                                        ? `Resultado: ${resultado.correctas}/${resultado.total} correctas`
+                                    : resultadoAMostrar
+                                        ? `Resultado: ${resultadoAMostrar.correctas}/${resultadoAMostrar.total} correctas · ${resultadoAMostrar.puntaje}%`
                                         : ultimoIntento
                                             ? `Último intento: ${ultimoIntento.puntaje}% · ${ultimoIntento.correctas}/${ultimoIntento.total_preguntas}`
-                                            : `${preguntas.length} pregunta${preguntas.length !== 1 ? 's' : ''}`}
+                                            : `${preguntas.length} pregunta${preguntas.length !== 1 ? 's' : ''}${limiteIntentos ? ` · ${limiteIntentos} intento permitido` : ''}`}
                         </Typography>
                     </Box>
                 </Box>
@@ -155,16 +189,34 @@ export const QuizEstudiante: React.FC<QuizEstudianteProps> = ({
                                 <Skeleton key={i} variant="rounded" height={80} sx={{ borderRadius: '10px' }} />
                             ))}
                         </Box>
-                    ) : resultado ? (
+                    ) : resultadoAMostrar ? (
                         /* ── Vista de resultados ── */
                         <ResultadoView
-                            resultado={resultado}
+                            resultado={resultadoAMostrar}
                             preguntas={preguntas}
                             accent={accent}
                             accentDark={accentDark}
                             isDark={isDark}
+                            puedeReintentar={puedeReintentar}
+                            motivoBloqueo={estaBloqueado ? (config?.motivo_bloqueo || 'El quiz se encuentra cerrado') : intentosAgotados ? `Has completado el límite permitido (${limiteIntentos} intento).` : null}
                             onReiniciar={handleReiniciar}
                         />
+                    ) : estaBloqueado ? (
+                        /* ── Quiz no disponible para responder ── */
+                        <Box sx={{
+                            p: 3, borderRadius: '12px', textAlign: 'center', my: 1,
+                            bgcolor: isDark ? alpha('#dc2626', 0.05) : alpha('#dc2626', 0.03),
+                            border: `1px solid ${alpha('#dc2626', 0.2)}`,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1
+                        }}>
+                            <LockIcon sx={{ fontSize: 32, color: '#dc2626' }} />
+                            <Typography sx={{ fontWeight: 700, fontSize: '0.88rem', color: '#dc2626' }}>
+                                Quiz no disponible
+                            </Typography>
+                            <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', maxWidth: 440 }}>
+                                {config?.motivo_bloqueo || 'El docente ha cerrado las respuestas para este quiz.'}
+                            </Typography>
+                        </Box>
                     ) : (
                         /* ── Vista de preguntas ── */
                         <Box>
@@ -220,16 +272,14 @@ export const QuizEstudiante: React.FC<QuizEstudianteProps> = ({
                                             startIcon={enviando ? <CircularProgress size={14} color="inherit" /> : <QuizIcon sx={{ fontSize: 16 }} />}
                                             sx={{
                                                 borderRadius: '10px', textTransform: 'none',
-                                                fontWeight: 700, fontSize: '0.85rem',
-                                                px: 3, py: 1,
-                                                background: todoRespondido
-                                                    ? 'linear-gradient(135deg, #a855f7, #7c3aed)'
-                                                    : undefined,
-                                                color: '#fff', boxShadow: 'none',
-                                                '&:disabled': { opacity: 0.5 },
+                                                fontWeight: 700, fontSize: '0.82rem', px: 3, py: 1,
+                                                background: `linear-gradient(135deg, ${accent}, ${accentDark})`,
+                                                color: isDark ? '#000' : '#fff',
+                                                boxShadow: `0 4px 14px ${alpha(accent, 0.35)}`,
+                                                '&:disabled': { opacity: 0.5, color: 'text.disabled' },
                                             }}
                                         >
-                                            {enviando ? 'Enviando…' : 'Enviar respuestas'}
+                                            {enviando ? 'Calificando…' : 'Enviar respuestas'}
                                         </Button>
                                     </span>
                                 </Tooltip>
@@ -349,8 +399,10 @@ const ResultadoView: React.FC<{
     accent: string;
     accentDark: string;
     isDark: boolean;
+    puedeReintentar?: boolean;
+    motivoBloqueo?: string | null;
     onReiniciar: () => void;
-}> = ({ resultado, preguntas, accent, isDark, onReiniciar }) => {
+}> = ({ resultado, preguntas, accent, isDark, puedeReintentar = true, motivoBloqueo, onReiniciar }) => {
     const [detalleExpandido, setDetalleExpandido] = useState(false);
 
     const puntajeColor = resultado.puntaje >= 70 ? '#16a34a'
@@ -399,7 +451,7 @@ const ResultadoView: React.FC<{
             </Box>
 
             {/* Botones */}
-            <Box sx={{ display: 'flex', gap: 1, mb: 2.5, justifyContent: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 1, mb: 2.5, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
                 <Button
                     variant="outlined" size="small"
                     onClick={() => setDetalleExpandido(p => !p)}
@@ -412,18 +464,31 @@ const ResultadoView: React.FC<{
                 >
                     {detalleExpandido ? 'Ocultar respuestas' : 'Ver respuestas'}
                 </Button>
-                <Button
-                    variant="outlined" size="small"
-                    onClick={onReiniciar}
-                    startIcon={<RefreshIcon sx={{ fontSize: 15 }} />}
-                    sx={{
-                        borderRadius: '9px', textTransform: 'none', fontWeight: 600, fontSize: '0.78rem',
-                        borderColor: alpha(accent, 0.4), color: accent,
-                        '&:hover': { bgcolor: alpha(accent, 0.06), borderColor: accent },
-                    }}
-                >
-                    Reintentar
-                </Button>
+                {puedeReintentar ? (
+                    <Button
+                        variant="outlined" size="small"
+                        onClick={onReiniciar}
+                        startIcon={<RefreshIcon sx={{ fontSize: 15 }} />}
+                        sx={{
+                            borderRadius: '9px', textTransform: 'none', fontWeight: 600, fontSize: '0.78rem',
+                            borderColor: alpha(accent, 0.4), color: accent,
+                            '&:hover': { bgcolor: alpha(accent, 0.06), borderColor: accent },
+                        }}
+                    >
+                        Reintentar
+                    </Button>
+                ) : motivoBloqueo ? (
+                    <Chip
+                        icon={<LockIcon sx={{ fontSize: '13px !important' }} />}
+                        label={motivoBloqueo}
+                        size="small"
+                        sx={{
+                            height: 26, fontSize: '0.72rem', fontWeight: 600, borderRadius: '8px',
+                            bgcolor: isDark ? alpha('#fff', 0.04) : alpha('#000', 0.04),
+                            color: 'text.secondary',
+                        }}
+                    />
+                ) : null}
             </Box>
 
             {/* Detalle de respuestas */}

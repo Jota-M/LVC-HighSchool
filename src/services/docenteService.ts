@@ -59,6 +59,7 @@ export const docentesService = {
     if (filters.activo !== undefined) params.append('activo', filters.activo.toString());
     if (filters.tipo_contrato) params.append('tipo_contrato', filters.tipo_contrato);
     if (filters.especialidad) params.append('especialidad', filters.especialidad);
+    if (filters.simple !== undefined) params.append('simple', filters.simple.toString());
 
     const response = await api.get(`/docente?${params}`);
     return response.data;

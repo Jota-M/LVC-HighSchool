@@ -15,12 +15,14 @@ import ExpandLessIcon      from '@mui/icons-material/ExpandLess';
 import TrendingUpIcon      from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon    from '@mui/icons-material/TrendingDown';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import AttachFileRoundedIcon from '@mui/icons-material/AttachFileRounded';
 
 import {
   CalificacionEstudiante, Evaluacion, RegistroCalificacionItem,
   NotaDimension, DIMENSIONES_CONFIG, DIMENSIONES_ORDEN, CodigoDimension,
   TIPOS_EVALUACION,
 } from '@/types/notasTypes';
+import { useDimensiones } from '@/hooks/useNotas';
 
 // ─── Animaciones ──────────────────────────────────────────────────────────────
 const shimmerBar = keyframes`
@@ -47,9 +49,29 @@ const usePalette = () => {
 };
 
 const TIPOS_MAP: Record<string, string> = {
-  examen: '📝 Examen', practica: '🔬 Práctica', tarea: '📚 Tarea',
-  proyecto: '🎯 Proyecto', participacion: '🙋 Participación',
-  exposicion: '🎤 Exposición', trabajo_grupal: '👥 Trabajo Grupal',
+  // Saber
+  examen:              '📝 Examen',
+  exposicion:          '🗣️ Exposición',
+  cuestionario:        '❓ Cuestionario',
+  tarea:               '✏️ Tarea',
+  ficha_trabajo:       '📋 Ficha de trabajo',
+  investigacion:       '🔎 Investigación',
+  evaluacion_oral:     '🗣️ Evaluación oral',
+  // Hacer
+  trabajo_practico:    '🛠️ Trabajo práctico',
+  manualidad:          '✂️ Manualidad',
+  experimento:         '🧪 Experimento',
+  actividad_practica:  '🧩 Actividad práctica',
+  ejercicio_practico:  '📐 Ejercicio práctico',
+  trabajo_grupal:      '👥 Trabajo grupal',
+  proyecto:            '🏗️ Proyecto',
+  demostracion:        '🎭 Demostración',
+  produccion_creativa: '🖍️ Producción creativa',
+  // General y compatibilidad
+  practica:            '🔬 Práctica',
+  participacion:       '🙋 Participación',
+  general:             '⭐ General',
+  ser:                 '⭐ Actitudinal',
 };
 
 // ─── Fila de estudiante ───────────────────────────────────────────────────────
@@ -122,9 +144,38 @@ const FilaNota: React.FC<{
             sx={{ color: ausente ? '#dc2626' : nota ? colorNota : 'text.primary', fontSize: 13 }}>
             {estudiante.estudiante_apellidos}, {estudiante.estudiante_nombres}
           </Typography>
-          <Typography variant="caption" color="text.disabled" noWrap sx={{ fontSize: 10 }}>
-            {estudiante.estudiante_codigo}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" color="text.disabled" noWrap sx={{ fontSize: 10 }}>
+              {estudiante.estudiante_codigo}
+            </Typography>
+            {estudiante.entrega_archivo_url && (
+              <Tooltip title={`Entrega digital: ${estudiante.entrega_archivo_nombre || 'Archivo'}. Clic para abrir`}>
+                <Box
+                  component="a"
+                  href={estudiante.entrega_archivo_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.3,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: '#2563eb',
+                    textDecoration: 'none',
+                    bgcolor: alpha('#2563eb', 0.1),
+                    px: 0.6,
+                    py: 0.1,
+                    borderRadius: '4px',
+                    '&:hover': { bgcolor: alpha('#2563eb', 0.2) },
+                  }}
+                >
+                  <AttachFileRoundedIcon sx={{ fontSize: 11 }} />
+                  Ver trabajo
+                </Box>
+              </Tooltip>
+            )}
+          </Box>
         </Box>
 
         {/* Controles */}
@@ -428,6 +479,7 @@ export const ResumenDimensiones: React.FC<ResumenDimensionesProps> = ({
   notas, isLoading = false, notaFinal, notaMinima = 51,
 }) => {
   const { isDark, gold, gradBg } = usePalette();
+  const { dimensionesConfig, dimensionesOrden } = useDimensiones();
 
   if (isLoading) return (
     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.5 }}>
@@ -460,9 +512,9 @@ export const ResumenDimensiones: React.FC<ResumenDimensionesProps> = ({
     <Box>
       {/* Cards de las 4 dimensiones */}
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5, mb: notaFinal != null ? 1.5 : 0 }}>
-        {DIMENSIONES_ORDEN.map((codigo, i) => {
+        {dimensionesOrden.map((codigo, i) => {
           const nd  = notas.find(n => n.dimension_codigo === codigo);
-          const cfg = DIMENSIONES_CONFIG[codigo];
+          const cfg = dimensionesConfig[codigo] || DIMENSIONES_CONFIG[codigo];
           const nota = nd?.nota_promedio != null ? parseFloat(String(nd.nota_promedio)) : null;
           const aprobadoDim = nota !== null ? nota >= notaMinima : null;
 

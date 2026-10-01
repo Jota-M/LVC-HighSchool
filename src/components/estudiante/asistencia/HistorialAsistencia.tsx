@@ -1,21 +1,22 @@
 'use client';
 // components/estudiante/asistencia/HistorialAsistencia.tsx
+// Historial cronológico de asistencias con diseño institucional unificado
 
 import React, { useMemo, useState } from 'react';
 import {
-  Box, Typography, alpha, useTheme, Skeleton,
+  Box, Typography, alpha, Skeleton,
   Chip, Collapse, IconButton, Divider, Paper,
   TextField, InputAdornment, Tooltip,
 } from '@mui/material';
 import {
-  CheckCircle as OkIcon,
-  Cancel as CancelIcon,
-  ExpandMore as ExpandIcon,
-  AssignmentLate as PermisoIcon,
-  HelpOutline as TardiIcon,
-  Search as SearchIcon,
-  FilterList as FilterIcon,
-  CalendarMonth as CalendarIcon,
+  CheckCircleRounded as OkIcon,
+  CancelRounded as CancelIcon,
+  ExpandMoreRounded as ExpandIcon,
+  AssignmentTurnedInRounded as PermisoIcon,
+  AccessTimeRounded as TardiIcon,
+  SearchRounded as SearchIcon,
+  ClearRounded as ClearIcon,
+  CalendarMonthRounded as CalendarIcon,
 } from '@mui/icons-material';
 import { SinDatos } from './SinDatos';
 
@@ -40,9 +41,12 @@ export const HistorialAsistencia: React.FC<HistorialAsistenciaProps> = ({
   const detalleFiltrado = useMemo(() => {
     let resultado = detalle;
 
-    if (busqueda) {
+    if (busqueda.trim()) {
+      const q = busqueda.toLowerCase();
       resultado = resultado.filter(d =>
-        d.materia_nombre?.toLowerCase().includes(busqueda.toLowerCase())
+        d.materia_nombre?.toLowerCase().includes(q) ||
+        d.docente_nombres?.toLowerCase().includes(q) ||
+        d.docente_apellidos?.toLowerCase().includes(q)
       );
     }
 
@@ -79,7 +83,7 @@ export const HistorialAsistencia: React.FC<HistorialAsistenciaProps> = ({
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         {[1, 2, 3, 4, 5].map(i => (
-          <Skeleton key={i} variant="rounded" height={72} sx={{ borderRadius: '12px' }} />
+          <Skeleton key={i} variant="rounded" height={72} sx={{ borderRadius: '14px' }} />
         ))}
       </Box>
     );
@@ -97,106 +101,158 @@ export const HistorialAsistencia: React.FC<HistorialAsistenciaProps> = ({
 
   return (
     <Box>
-      {/* Barra de búsqueda y filtros */}
+      {/* ── Barra de Búsqueda y Filtros de Estado ── */}
       <Paper
         elevation={0}
         sx={{
-          bgcolor: isDark ? alpha('#fff', 0.03) : '#fff',
-          border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
-          borderRadius: '14px',
-          p: 2,
-          mb: 2,
+          p: { xs: 1.8, sm: 2.2 },
+          mb: 2.5,
+          borderRadius: '18px',
+          border: `1.5px solid ${alpha(isDark ? '#fff' : '#000', 0.08)}`,
+          bgcolor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
         }}
       >
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Buscador */}
+          {/* Buscador de materia o docente */}
           <TextField
             size="small"
-            placeholder="Buscar materia..."
+            placeholder="Buscar por materia o docente..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
+                  <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
                 </InputAdornment>
               ),
+              endAdornment: busqueda ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setBusqueda('')}>
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
             }}
             sx={{
               flex: 1,
-              minWidth: 200,
+              minWidth: { xs: '100%', sm: 240 },
               '& .MuiOutlinedInput-root': {
-                bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+                borderRadius: '12px',
+                bgcolor: isDark ? alpha('#000', 0.2) : '#fff',
+                '& fieldset': {
+                  borderColor: alpha(isDark ? '#fff' : '#000', 0.12),
+                },
+                '&:hover fieldset': {
+                  borderColor: accent,
+                },
               },
             }}
           />
 
-          {/* Filtros de estado */}
+          {/* Chips de filtro por estado */}
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Chip
-              label={`Todas (${stats.total})`}
+              label={`Todos (${stats.total})`}
               onClick={() => setFiltroEstado(null)}
               size="small"
+              clickable
               sx={{
-                bgcolor: !filtroEstado ? alpha(accent, 0.15) : 'transparent',
-                color: !filtroEstado ? accent : 'text.secondary',
-                fontWeight: !filtroEstado ? 600 : 400,
-                '&:hover': { bgcolor: alpha(accent, 0.1) },
+                height: 32,
+                borderRadius: '10px',
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                bgcolor: !filtroEstado ? accent : (isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04)),
+                color: !filtroEstado ? (isDark ? '#000' : '#fff') : 'text.secondary',
+                border: `1.5px solid ${!filtroEstado ? accent : alpha(isDark ? '#fff' : '#000', 0.08)}`,
+                boxShadow: !filtroEstado ? `0 2px 8px ${alpha(accent, 0.3)}` : 'none',
               }}
             />
 
             <Chip
-              icon={<OkIcon sx={{ fontSize: 14 }} />}
+              icon={<OkIcon sx={{ fontSize: '15px !important' }} />}
               label={`Presentes (${stats.presentes})`}
-              onClick={() => setFiltroEstado('presente')}
+              onClick={() => setFiltroEstado(filtroEstado === 'presente' ? null : 'presente')}
               size="small"
+              clickable
               sx={{
-                bgcolor: filtroEstado === 'presente' ? alpha('#1D9E75', 0.15) : 'transparent',
-                color: filtroEstado === 'presente' ? '#1D9E75' : 'text.secondary',
-                fontWeight: filtroEstado === 'presente' ? 600 : 400,
-                '&:hover': { bgcolor: alpha('#1D9E75', 0.1) },
+                height: 32,
+                borderRadius: '10px',
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                bgcolor: filtroEstado === 'presente' ? '#10b981' : (isDark ? alpha('#10b981', 0.12) : alpha('#10b981', 0.08)),
+                color: filtroEstado === 'presente' ? '#fff' : (isDark ? '#34d399' : '#059669'),
+                border: `1.5px solid ${alpha('#10b981', filtroEstado === 'presente' ? 1 : 0.25)}`,
+                '& .MuiChip-icon': {
+                  color: filtroEstado === 'presente' ? '#fff' : (isDark ? '#34d399' : '#059669'),
+                },
               }}
             />
 
             <Chip
-              icon={<CancelIcon sx={{ fontSize: 14 }} />}
+              icon={<CancelIcon sx={{ fontSize: '15px !important' }} />}
               label={`Ausentes (${stats.ausentes})`}
-              onClick={() => setFiltroEstado('ausente')}
+              onClick={() => setFiltroEstado(filtroEstado === 'ausente' ? null : 'ausente')}
               size="small"
+              clickable
               sx={{
-                bgcolor: filtroEstado === 'ausente' ? alpha('#D85A30', 0.15) : 'transparent',
-                color: filtroEstado === 'ausente' ? '#D85A30' : 'text.secondary',
-                fontWeight: filtroEstado === 'ausente' ? 600 : 400,
-                '&:hover': { bgcolor: alpha('#D85A30', 0.1) },
+                height: 32,
+                borderRadius: '10px',
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                bgcolor: filtroEstado === 'ausente' ? '#ef4444' : (isDark ? alpha('#ef4444', 0.12) : alpha('#ef4444', 0.08)),
+                color: filtroEstado === 'ausente' ? '#fff' : (isDark ? '#f87171' : '#dc2626'),
+                border: `1.5px solid ${alpha('#ef4444', filtroEstado === 'ausente' ? 1 : 0.25)}`,
+                '& .MuiChip-icon': {
+                  color: filtroEstado === 'ausente' ? '#fff' : (isDark ? '#f87171' : '#dc2626'),
+                },
               }}
             />
 
-            {stats.justificados > 0 && (
+            {stats.tardanzas > 0 && (
               <Chip
-                icon={<PermisoIcon sx={{ fontSize: 14 }} />}
-                label={`Justificados (${stats.justificados})`}
-                onClick={() => setFiltroEstado('justificado')}
+                icon={<TardiIcon sx={{ fontSize: '15px !important' }} />}
+                label={`Tardanzas (${stats.tardanzas})`}
+                onClick={() => setFiltroEstado(filtroEstado === 'tardanza' ? null : 'tardanza')}
                 size="small"
+                clickable
                 sx={{
-                  bgcolor: filtroEstado === 'justificado' ? alpha('#BA7517', 0.15) : 'transparent',
-                  color: filtroEstado === 'justificado' ? '#BA7517' : 'text.secondary',
-                  fontWeight: filtroEstado === 'justificado' ? 600 : 400,
-                  '&:hover': { bgcolor: alpha('#BA7517', 0.1) },
+                  height: 32,
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  bgcolor: filtroEstado === 'tardanza' ? '#f59e0b' : (isDark ? alpha('#f59e0b', 0.12) : alpha('#f59e0b', 0.08)),
+                  color: filtroEstado === 'tardanza' ? (isDark ? '#000' : '#fff') : (isDark ? '#fbbf24' : '#d97706'),
+                  border: `1.5px solid ${alpha('#f59e0b', filtroEstado === 'tardanza' ? 1 : 0.25)}`,
+                  '& .MuiChip-icon': {
+                    color: filtroEstado === 'tardanza' ? (isDark ? '#000' : '#fff') : (isDark ? '#fbbf24' : '#d97706'),
+                  },
                 }}
               />
             )}
 
-            {stats.tardanzas > 0 && (
+            {stats.justificados > 0 && (
               <Chip
-                icon={<TardiIcon sx={{ fontSize: 14 }} />}
-                label={`Tardanzas (${stats.tardanzas})`}
-                onClick={() => setFiltroEstado('tardanza')}
+                icon={<PermisoIcon sx={{ fontSize: '15px !important' }} />}
+                label={`Justificados (${stats.justificados})`}
+                onClick={() => setFiltroEstado(filtroEstado === 'justificado' ? null : 'justificado')}
                 size="small"
+                clickable
                 sx={{
-                  bgcolor: filtroEstado === 'tardanza' ? alpha('#7F77DD', 0.15) : 'transparent',
-                  color: filtroEstado === 'tardanza' ? '#7F77DD' : 'text.secondary',
-                  fontWeight: filtroEstado === 'tardanza' ? 600 : 400,
-                  '&:hover': { bgcolor: alpha('#7F77DD', 0.1) },
+                  height: 32,
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  bgcolor: filtroEstado === 'justificado' ? '#8b5cf6' : (isDark ? alpha('#8b5cf6', 0.12) : alpha('#8b5cf6', 0.08)),
+                  color: filtroEstado === 'justificado' ? '#fff' : (isDark ? '#c084fc' : '#7c3aed'),
+                  border: `1.5px solid ${alpha('#8b5cf6', filtroEstado === 'justificado' ? 1 : 0.25)}`,
+                  '& .MuiChip-icon': {
+                    color: filtroEstado === 'justificado' ? '#fff' : (isDark ? '#c084fc' : '#7c3aed'),
+                  },
                 }}
               />
             )}
@@ -204,96 +260,91 @@ export const HistorialAsistencia: React.FC<HistorialAsistenciaProps> = ({
         </Box>
       </Paper>
 
-      {/* Lista de registros */}
+      {/* ── Lista de Registros Agrupados por Fecha ── */}
       {porFecha.length === 0 ? (
         <SinDatos
           accent={accent}
           isDark={isDark}
-          mensaje="No se encontraron registros con los filtros aplicados."
+          mensaje="No se encontraron registros con los criterios de búsqueda actuales."
         />
       ) : (
-        <Paper
-          elevation={0}
-          sx={{
-            bgcolor: isDark ? alpha('#fff', 0.03) : '#fff',
-            border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
-            borderRadius: '14px',
-            overflow: 'hidden',
-          }}
-        >
-          {porFecha.map(([fecha, registros], idx) => {
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {porFecha.map(([fecha, registros]) => {
             const isOpen = expanded === fecha;
             const presentes = registros.filter(r => r.estado === 'presente').length;
             const total = registros.length;
             const allOk = presentes === total;
-            const promedio = (presentes / total) * 100;
 
             return (
-              <React.Fragment key={fecha}>
-                {idx > 0 && <Divider sx={{ opacity: 0.5 }} />}
-
+              <Paper
+                key={fecha}
+                elevation={0}
+                sx={{
+                  bgcolor: isDark ? alpha('#fff', 0.025) : '#ffffff',
+                  border: `1.5px solid ${alpha(allOk ? '#10b981' : presentes === 0 ? '#ef4444' : '#f59e0b', isDark ? 0.25 : 0.18)}`,
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    boxShadow: `0 4px 16px ${alpha(allOk ? '#10b981' : '#f59e0b', 0.12)}`,
+                  },
+                }}
+              >
                 {/* Cabecera de fecha */}
                 <Box
                   onClick={() => setExpanded(isOpen ? null : fecha)}
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 1.5,
-                    px: 2.5,
-                    py: 2,
+                    gap: 1.8,
+                    px: { xs: 2, sm: 2.5 },
+                    py: 1.8,
                     cursor: 'pointer',
                     transition: 'background 0.2s',
                     '&:hover': {
-                      bgcolor: isDark ? alpha('#fff', 0.04) : alpha('#000', 0.03),
+                      bgcolor: isDark ? alpha('#fff', 0.04) : alpha('#000', 0.02),
                     },
                   }}
                 >
-                  {/* Icono de calendario */}
+                  {/* Icono de calendario con color condicional */}
                   <Box
                     sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 2,
-                      bgcolor: alpha(
-                        allOk ? '#1D9E75' : presentes === 0 ? '#D85A30' : '#BA7517',
-                        isDark ? 0.15 : 0.1
-                      ),
+                      width: 42,
+                      height: 42,
+                      borderRadius: '12px',
+                      bgcolor: alpha(allOk ? '#10b981' : presentes === 0 ? '#ef4444' : '#f59e0b', 0.16),
+                      color: allOk ? '#10b981' : presentes === 0 ? '#ef4444' : '#f59e0b',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
                     }}
                   >
-                    <CalendarIcon
-                      sx={{
-                        fontSize: 20,
-                        color: allOk ? '#1D9E75' : presentes === 0 ? '#D85A30' : '#BA7517',
-                      }}
-                    />
+                    <CalendarIcon sx={{ fontSize: 22 }} />
                   </Box>
 
-                  {/* Información de fecha */}
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" fontWeight={700}>
+                  {/* Información de la fecha */}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="subtitle2" fontWeight={800} sx={{ textTransform: 'capitalize', fontSize: '0.95rem' }}>
                       {formatearFecha(fecha)}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {total} {total === 1 ? 'clase' : 'clases'} registradas
+                    <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                      {total} {total === 1 ? 'materia programada' : 'materias programadas'}
                     </Typography>
                   </Box>
 
-                  {/* Badge de estado */}
+                  {/* Badge resumen de la fecha */}
                   <Chip
-                    label={`${presentes}/${total}`}
+                    label={`${presentes} de ${total} asistidas`}
                     size="small"
                     sx={{
-                      bgcolor: alpha(
-                        allOk ? '#1D9E75' : presentes === 0 ? '#D85A30' : '#BA7517',
-                        isDark ? 0.2 : 0.15
-                      ),
-                      color: allOk ? '#1D9E75' : presentes === 0 ? '#D85A30' : '#BA7517',
-                      fontWeight: 700,
-                      minWidth: 60,
+                      bgcolor: alpha(allOk ? '#10b981' : presentes === 0 ? '#ef4444' : '#f59e0b', 0.15),
+                      color: allOk ? (isDark ? '#34d399' : '#059669') : presentes === 0 ? (isDark ? '#f87171' : '#dc2626') : (isDark ? '#fbbf24' : '#d97706'),
+                      fontWeight: 800,
+                      borderRadius: '8px',
+                      height: 28,
+                      fontSize: '0.74rem',
+                      border: `1px solid ${alpha(allOk ? '#10b981' : presentes === 0 ? '#ef4444' : '#f59e0b', 0.3)}`,
                     }}
                   />
 
@@ -301,20 +352,22 @@ export const HistorialAsistencia: React.FC<HistorialAsistenciaProps> = ({
                     size="small"
                     sx={{
                       transform: isOpen ? 'rotate(180deg)' : 'none',
-                      transition: 'transform 0.3s',
+                      transition: 'transform 0.25s ease',
+                      p: 0.6,
                     }}
                   >
-                    <ExpandIcon fontSize="small" />
+                    <ExpandIcon sx={{ fontSize: 20 }} />
                   </IconButton>
                 </Box>
 
-                {/* Detalle de materias */}
+                {/* Desglose de materias */}
                 <Collapse in={isOpen} unmountOnExit>
                   <Box
                     sx={{
-                      bgcolor: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02),
-                      px: 2.5,
-                      py: 1.5,
+                      borderTop: `1px solid ${alpha(isDark ? '#fff' : '#000', 0.06)}`,
+                      bgcolor: isDark ? alpha('#000', 0.2) : alpha('#000', 0.015),
+                      px: { xs: 2, sm: 2.5 },
+                      py: 1,
                     }}
                   >
                     {registros.map((r, ridx) => (
@@ -322,18 +375,18 @@ export const HistorialAsistencia: React.FC<HistorialAsistenciaProps> = ({
                     ))}
                   </Box>
                 </Collapse>
-              </React.Fragment>
+              </Paper>
             );
           })}
-        </Paper>
+        </Box>
       )}
     </Box>
   );
 };
 
-// ── Fila de registro individual mejorada ──────────────────────
+// ── Fila de registro individual modernizada ──────────────────
 const RegistroRow: React.FC<{ registro: any; isDark: boolean }> = ({ registro, isDark }) => {
-  const { chip, bg } = getChipEstado(registro.estado, isDark);
+  const chip = getChipEstado(registro.estado, isDark);
 
   return (
     <Box
@@ -341,16 +394,16 @@ const RegistroRow: React.FC<{ registro: any; isDark: boolean }> = ({ registro, i
         display: 'flex',
         alignItems: 'center',
         gap: 1.5,
-        py: 1.5,
+        py: 1.4,
         px: 1,
-        borderRadius: 2,
-        transition: 'background 0.15s',
+        borderRadius: '10px',
+        transition: 'background 0.15s ease',
         '&:hover': {
           bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
         },
       }}
     >
-      {/* Dot de color de materia */}
+      {/* Indicador de color de materia */}
       <Box
         sx={{
           width: 10,
@@ -362,15 +415,16 @@ const RegistroRow: React.FC<{ registro: any; isDark: boolean }> = ({ registro, i
         }}
       />
 
-      {/* Nombre de materia */}
+      {/* Información de materia */}
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="body2" fontWeight={600} noWrap>
+        <Typography variant="body2" fontWeight={700} noWrap sx={{ fontSize: '0.86rem' }}>
           {registro.materia_nombre}
         </Typography>
 
         {registro.hora_marcacion && (
-          <Typography variant="caption" color="text.secondary">
-            ⏰ {registro.hora_marcacion.slice(0, 5)}
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <TardiIcon sx={{ fontSize: 13 }} />
+            Marcado: {registro.hora_marcacion.slice(0, 5)}
           </Typography>
         )}
       </Box>
@@ -381,26 +435,30 @@ const RegistroRow: React.FC<{ registro: any; isDark: boolean }> = ({ registro, i
         label={chip.label}
         size="small"
         sx={{
-          bgcolor: bg,
+          bgcolor: chip.bg,
           color: chip.color,
-          fontWeight: 600,
-          fontSize: '0.75rem',
-          height: 26,
-          '& .MuiChip-icon': { color: chip.color, fontSize: 14 },
+          fontWeight: 800,
+          fontSize: '0.74rem',
+          height: 28,
+          borderRadius: '8px',
+          border: `1px solid ${alpha(chip.color, 0.3)}`,
+          '& .MuiChip-icon': { color: chip.color, fontSize: 15 },
         }}
       />
 
-      {/* Info adicional */}
+      {/* Permiso o justificación si existe */}
       {registro.permiso_codigo && (
         <Tooltip title={registro.permiso_motivo || 'Permiso justificado'} arrow>
           <Chip
             label={`Permiso #${registro.permiso_codigo}`}
             size="small"
             sx={{
-              bgcolor: alpha('#BA7517', isDark ? 0.15 : 0.1),
-              color: '#BA7517',
+              bgcolor: alpha('#8b5cf6', isDark ? 0.18 : 0.1),
+              color: isDark ? '#c084fc' : '#7c3aed',
               fontSize: '0.7rem',
-              height: 22,
+              fontWeight: 700,
+              height: 24,
+              borderRadius: '6px',
             }}
           />
         </Tooltip>
@@ -414,28 +472,38 @@ function getChipEstado(estado: string, isDark: boolean) {
   switch (estado) {
     case 'presente':
       return {
-        chip: { label: 'Presente', color: '#085041', icon: <OkIcon /> },
-        bg: isDark ? alpha('#1D9E75', 0.2) : '#E1F5EE',
+        label: 'Presente',
+        color: isDark ? '#34d399' : '#059669',
+        bg: isDark ? alpha('#10b981', 0.18) : alpha('#10b981', 0.1),
+        icon: <OkIcon />,
       };
     case 'ausente':
       return {
-        chip: { label: 'Ausente', color: '#791F1F', icon: <CancelIcon /> },
-        bg: isDark ? alpha('#D85A30', 0.2) : '#FCEBEB',
+        label: 'Ausente',
+        color: isDark ? '#f87171' : '#dc2626',
+        bg: isDark ? alpha('#ef4444', 0.18) : alpha('#ef4444', 0.1),
+        icon: <CancelIcon />,
       };
     case 'justificado':
       return {
-        chip: { label: 'Justificado', color: '#633806', icon: <PermisoIcon /> },
-        bg: isDark ? alpha('#BA7517', 0.2) : '#FAEEDA',
+        label: 'Justificado',
+        color: isDark ? '#c084fc' : '#7c3aed',
+        bg: isDark ? alpha('#8b5cf6', 0.18) : alpha('#8b5cf6', 0.1),
+        icon: <PermisoIcon />,
       };
     case 'tardanza':
       return {
-        chip: { label: 'Tardanza', color: '#26215C', icon: <TardiIcon /> },
-        bg: isDark ? alpha('#7F77DD', 0.2) : '#EEEDFE',
+        label: 'Tardanza',
+        color: isDark ? '#fbbf24' : '#d97706',
+        bg: isDark ? alpha('#f59e0b', 0.18) : alpha('#f59e0b', 0.1),
+        icon: <TardiIcon />,
       };
     default:
       return {
-        chip: { label: estado, color: 'text.secondary', icon: <TardiIcon /> },
-        bg: 'transparent',
+        label: estado,
+        color: 'text.secondary',
+        bg: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.05),
+        icon: <TardiIcon />,
       };
   }
 }
@@ -453,3 +521,5 @@ function formatearFecha(fechaStr: string): string {
     return fechaStr;
   }
 }
+
+export default HistorialAsistencia;

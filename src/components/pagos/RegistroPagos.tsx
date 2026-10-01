@@ -579,7 +579,7 @@ export const RegistroPagos: React.FC = () => {
     const isVencida = mensualidad.estado === 'vencido';
     const montoFinal = parseFloat(mensualidad.monto_final.toString());
     const saldoPendiente = parseFloat((mensualidad.saldo_pendiente ?? mensualidad.monto_final).toString());
-    const color = MESES_COLORES[index % MESES_COLORES.length];
+    const color = MESES_COLORES[((mensualidad.numero_cuota || (index + 1)) - 1) % MESES_COLORES.length];
 
     return (
       <Grid size={{xs: 12, sm: 6, md: 4, lg: 3}} key={mensualidad.id}>

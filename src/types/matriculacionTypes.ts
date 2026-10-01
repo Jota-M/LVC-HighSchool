@@ -229,6 +229,7 @@ export interface RetiroMatricula {
 // ============================================================
 export type EstadoMatricula =
   | 'activo'
+  | 'inactivo'
   | 'retirado'
   | 'trasladado'
   | 'anulado'
@@ -237,6 +238,7 @@ export type EstadoMatricula =
 
 export const ESTADOS_MATRICULA: Record<EstadoMatricula, { label: string; color: string }> = {
   activo:     { label: 'Activo',     color: 'success' },
+  inactivo:   { label: 'Inactivo',   color: 'error' },
   retirado:   { label: 'Retirado',   color: 'error' },
   trasladado: { label: 'Trasladado', color: 'warning' },
   anulado:    { label: 'Anulado',    color: 'default' },
@@ -251,6 +253,7 @@ export interface EstadisticasMatricula {
   resumen: {
     total_matriculas: number;
     activas: number;
+    inactivas?: number;
     retirados: number;
     becados: number;
     repitentes: number;
@@ -260,6 +263,7 @@ export interface EstadisticasMatricula {
     grado: string;
     total: number;
     activos: number;
+    inactivos?: number;
     retirados: number;
   }>;
   por_paralelo: Array<{

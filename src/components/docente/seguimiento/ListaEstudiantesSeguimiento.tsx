@@ -14,6 +14,7 @@ import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { keyframes } from '@mui/system';
 
 import { ResumenEstudianteAsignacion } from '@/types/seguimientoPedagogicoTypes';
+import { formatDateDayMonth } from '@/utils/dateUtils';
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(10px); }
@@ -186,7 +187,7 @@ const EstudianteCard: React.FC<EstudianteCardProps> = ({
       }}>
         <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.68rem' }}>
           {est.ultima_obs_fecha
-            ? `Última: ${new Date(est.ultima_obs_fecha + 'T12:00:00').toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })}`
+            ? `Última: ${formatDateDayMonth(est.ultima_obs_fecha)}`
             : 'Sin observaciones'}
         </Typography>
 

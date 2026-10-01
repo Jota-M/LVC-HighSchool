@@ -11,7 +11,7 @@
  *   - MLStatusBadge con más detalle (version + features)
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Box, Container, Typography, Chip, Tooltip,
   LinearProgress, Fade, Alert, useTheme, alpha,
@@ -19,21 +19,22 @@ import {
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 
-import PsychologyRoundedIcon   from '@mui/icons-material/PsychologyRounded';
-import ChevronRightIcon        from '@mui/icons-material/ChevronRight';
-import GroupsRoundedIcon       from '@mui/icons-material/GroupsRounded';
-import WifiOffRoundedIcon      from '@mui/icons-material/WifiOffRounded';
-import SchoolRoundedIcon       from '@mui/icons-material/SchoolRounded';
-import AccessTimeRoundedIcon   from '@mui/icons-material/AccessTimeRounded';
-import AutoAwesomeRoundedIcon  from '@mui/icons-material/AutoAwesomeRounded';
+import PsychologyRoundedIcon from '@mui/icons-material/PsychologyRounded';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
+import WifiOffRoundedIcon from '@mui/icons-material/WifiOffRounded';
+import SchoolRoundedIcon from '@mui/icons-material/SchoolRounded';
+import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
+import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
 import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 
-import { useRouter }          from 'next/navigation';
-import { useAuth }            from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { useMisAsignaciones } from '@/hooks/useAsistencia';
-import { useMLHealth }        from '@/hooks/usePrediccion';
-import { AsignacionDocente }  from '@/services/asistenciaService';
+import { useMLHealth } from '@/hooks/usePrediccion';
+import { AsignacionDocente } from '@/services/asistenciaService';
+import { sortCursos } from '@/utils/cursoUtils';
 
 // ── Animaciones ───────────────────────────────────────────────
 const fadeUp = keyframes`
@@ -113,25 +114,25 @@ const MLStatusBadge: React.FC<{ isDark: boolean; accent: string }> = ({ isDark, 
 // ── Card de materia ───────────────────────────────────────────
 const MateriaCard: React.FC<{
   asignacion: AsignacionDocente;
-  accent:     string;
-  accentEnd:  string;
-  isDark:     boolean;
-  index:      number;
-  onClick:    () => void;
+  accent: string;
+  accentEnd: string;
+  isDark: boolean;
+  index: number;
+  onClick: () => void;
 }> = ({ asignacion, accent, accentEnd, isDark, index, onClick }) => {
 
   // Calcular progreso del período si hay fechas disponibles
   // (asumimos que asignacion puede traer semana_actual / total_semanas)
-  const semanaActual  = (asignacion as any).semana_actual  ?? null;
-  const totalSemanas  = (asignacion as any).total_semanas  ?? null;
-  const pctPeriodo    = semanaActual && totalSemanas
+  const semanaActual = (asignacion as any).semana_actual ?? null;
+  const totalSemanas = (asignacion as any).total_semanas ?? null;
+  const pctPeriodo = semanaActual && totalSemanas
     ? Math.round((semanaActual / totalSemanas) * 100)
     : null;
-  const periodoLabel  = (asignacion as any).periodo_nombre ?? asignacion.periodo_nombre ?? null;
+  const periodoLabel = (asignacion as any).periodo_nombre ?? asignacion.periodo_nombre ?? null;
 
-  const totalEst      = Number(asignacion.total_estudiantes) || 0;
-  const ausentes      = Number(asignacion.ausentes) || 0;
-  const presentes     = Number(asignacion.presentes) || 0;
+  const totalEst = Number(asignacion.total_estudiantes) || 0;
+  const ausentes = Number(asignacion.ausentes) || 0;
+  const presentes = Number(asignacion.presentes) || 0;
 
   // Iniciales de materia
   const initials = asignacion.materia_nombre
@@ -157,9 +158,9 @@ const MateriaCard: React.FC<{
         boxShadow: isDark ? 'none' : '0 2px 16px rgba(0,0,0,0.06)',
         animation: `${fadeUp} 0.45s ease-out ${index * 0.08}s both`,
         '&:hover': {
-          transform:    'translateY(-5px) scale(1.01)',
-          borderColor:  alpha(accent, 0.45),
-          boxShadow:    isDark
+          transform: 'translateY(-5px) scale(1.01)',
+          borderColor: alpha(accent, 0.45),
+          boxShadow: isDark
             ? `0 12px 40px ${alpha(accent, 0.18)}`
             : `0 12px 40px ${alpha(accent, 0.2)}`,
         },
@@ -311,16 +312,17 @@ const MateriaCard: React.FC<{
 
 // ── Página ────────────────────────────────────────────────────
 export default function PrediccionIndexPage() {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const router = useRouter();
   const { user } = useAuth();
 
-  const accent    = isDark ? '#facc15' : '#0284c7';
+  const accent = isDark ? '#facc15' : '#0284c7';
   const accentEnd = isDark ? '#f59e0b' : '#0369a1';
-  const gradBg    = `linear-gradient(135deg, ${accent} 0%, ${accentEnd} 100%)`;
+  const gradBg = `linear-gradient(135deg, ${accent} 0%, ${accentEnd} 100%)`;
 
   const { asignaciones, isLoading, sinAsignaciones } = useMisAsignaciones();
+  const asignacionesOrdenadas = useMemo(() => sortCursos(asignaciones), [asignaciones]);
 
   const handleIr = (asignacion: AsignacionDocente) => {
     router.push(
@@ -357,9 +359,9 @@ export default function PrediccionIndexPage() {
                 </Box>
                 <Box>
                   <Typography variant="h4" fontWeight={900} sx={{
-                    background:           gradBg,
+                    background: gradBg,
                     WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor:  'transparent',
+                    WebkitTextFillColor: 'transparent',
                     lineHeight: 1.2,
                     letterSpacing: -0.5,
                   }}>
@@ -378,7 +380,7 @@ export default function PrediccionIndexPage() {
               p: 2,
               borderRadius: '16px',
               bgcolor: isDark ? alpha(accent, 0.07) : alpha(accent, 0.05),
-              border:  `1px solid ${alpha(accent, 0.18)}`,
+              border: `1px solid ${alpha(accent, 0.18)}`,
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
               gap: 1.5,
@@ -439,11 +441,11 @@ export default function PrediccionIndexPage() {
               {asignaciones.length} materia{asignaciones.length !== 1 ? 's' : ''} asignada{asignaciones.length !== 1 ? 's' : ''}
             </Typography>
             <Box sx={{
-              display:             'grid',
+              display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-              gap:                 2.5,
+              gap: 2.5,
             }}>
-              {asignaciones.map((asig, i) => (
+              {asignacionesOrdenadas.map((asig, i) => (
                 <MateriaCard
                   key={asig.asignacion_id}
                   asignacion={asig}

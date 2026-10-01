@@ -1,66 +1,88 @@
 'use client';
 // app/dashboard/estudiante/home/page.tsx
+// Página principal del portal estudiantil con estética institucional unificada
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   Box, Container, Typography, Fade, Chip, Avatar,
   useTheme, alpha, IconButton, Tooltip, Skeleton,
-  Paper, LinearProgress, Grid, Divider,
+  Paper, LinearProgress, Grid, Button, Stack,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 import { useRouter } from 'next/navigation';
 
 // Icons
-import MenuBookIcon        from '@mui/icons-material/MenuBook';
-import SchoolIcon          from '@mui/icons-material/School';
-import AssignmentIcon      from '@mui/icons-material/Assignment';
-import CalendarMonthIcon   from '@mui/icons-material/CalendarMonth';
-import EventAvailableIcon  from '@mui/icons-material/EventAvailable';
-import RefreshIcon         from '@mui/icons-material/Refresh';
-import ArrowForwardIcon    from '@mui/icons-material/ArrowForward';
-import CheckCircleIcon     from '@mui/icons-material/CheckCircle';
-import WarningRoundedIcon  from '@mui/icons-material/WarningRounded';
-import TrendingUpIcon      from '@mui/icons-material/TrendingUp';
-import TrendingDownIcon    from '@mui/icons-material/TrendingDown';
-import AccessTimeIcon      from '@mui/icons-material/AccessTime';
-import ErrorOutlineIcon    from '@mui/icons-material/ErrorOutline';
-import AutoStoriesIcon     from '@mui/icons-material/AutoStories';
-import WbSunnyIcon         from '@mui/icons-material/WbSunny';
-import NightsStayIcon      from '@mui/icons-material/NightsStay';
-import BoltIcon            from '@mui/icons-material/Bolt';
+import SchoolIcon from '@mui/icons-material/School';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import AutoStoriesIcon from '@mui/icons-material/AutoStories';
+import WbSunnyIcon from '@mui/icons-material/WbSunny';
+import NightsStayIcon from '@mui/icons-material/NightsStay';
+import BoltIcon from '@mui/icons-material/Bolt';
+import VerifiedIcon from '@mui/icons-material/Verified';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import ComputerRoundedIcon from '@mui/icons-material/ComputerRounded';
+import QuizRoundedIcon from '@mui/icons-material/QuizRounded';
+import WorkspacePremiumRoundedIcon from '@mui/icons-material/WorkspacePremiumRounded';
+import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
 
 // Hooks
-import { useAuth }                               from '@/context/AuthContext';
-import { usePerfilEstudiante, usePeriodosEstudiante, useMisMaterias, useBoletinEstudiante, useTareasEstudiante, useAsistenciaEstudiante, useHorarioEstudiante } from '@/hooks/useEstudiante';
+import { useAuth } from '@/context/AuthContext';
+import {
+  usePerfilEstudiante,
+  usePeriodosEstudiante,
+  useMisMaterias,
+  useBoletinEstudiante,
+  useTareasEstudiante,
+  useAsistenciaEstudiante,
+  useHorarioEstudiante,
+} from '@/hooks/useEstudiante';
 
 // ─────────────────────────────────────────────────────────────
-// KEYFRAMES
+// ANIMACIONES Y KEYFRAMES
 // ─────────────────────────────────────────────────────────────
+
+const bounce = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+`;
 
 const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(22px); }
+  from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 `;
-const fadeLeft = keyframes`
-  from { opacity: 0; transform: translateX(-16px); }
-  to   { opacity: 1; transform: translateX(0); }
+
+const pulse = keyframes`
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.9); }
 `;
-const fadeRight = keyframes`
-  from { opacity: 0; transform: translateX(16px); }
-  to   { opacity: 1; transform: translateX(0); }
-`;
-const scanline = keyframes`
-  0%   { transform: translateY(-100%); }
-  100% { transform: translateY(400%); }
-`;
-const pulseGlow = keyframes`
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); }
-  50%       { box-shadow: 0 0 0 10px rgba(99,102,241,0); }
-`;
+
 const ticker = keyframes`
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 `;
+
+// ─────────────────────────────────────────────────────────────
+// PALETA DINÁMICA DUAL (IDÉNTICA A TAREAS Y EXÁMENES)
+// ─────────────────────────────────────────────────────────────
+
+const usePalette = () => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const accentColor = isDark ? '#facc15' : '#0288d1';
+  const accentColorEnd = isDark ? '#f59e0b' : '#01579b';
+  const gradBg = `linear-gradient(135deg, ${accentColor} 0%, ${accentColorEnd} 100%)`;
+  const textOnAccent = isDark ? '#000000' : '#ffffff';
+  return { theme, isDark, accentColor, accentColorEnd, gradBg, textOnAccent };
+};
 
 // ─────────────────────────────────────────────────────────────
 // HELPERS
@@ -73,295 +95,572 @@ const saludoData = (): { texto: string; emoji: string; Icon: React.ElementType }
   return { texto: 'Buenas noches', emoji: '🌙', Icon: NightsStayIcon };
 };
 
-const round1 = (n?: number | null) =>
-  n != null ? Math.round(n * 10) / 10 : null;
-
 // ─────────────────────────────────────────────────────────────
-// STAT GRANDE — número editorial
+// SELECTOR DE TRIMESTRE (ESTILO INSTITUCIONAL DE TAREAS)
 // ─────────────────────────────────────────────────────────────
 
-interface BigStatProps {
-  value:    string | number;
-  label:    string;
-  sub?:     string;
-  color:    string;
-  delay?:   number;
-  trend?:   'up' | 'down' | 'neutral';
-  loading?: boolean;
+interface SelectorTrimestreProps {
+  periodos: { id: number; nombre: string; fecha_inicio?: string; fecha_fin?: string }[];
+  periodoActivo: number | null;
+  onChange: (id: number) => void;
+  isLoading: boolean;
+  accentColor: string;
+  isDark: boolean;
 }
 
-const BigStat: React.FC<BigStatProps> = ({ value, label, sub, color, delay = 0, trend, loading }) => (
-  <Box sx={{ animation: `${fadeUp} 0.5s ease-out ${delay}ms both` }}>
-    {loading ? (
-      <>
-        <Skeleton variant="text" width={80} height={64} />
-        <Skeleton variant="text" width={100} height={18} />
-      </>
-    ) : (
-      <>
-        <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.75, lineHeight: 1 }}>
-          <Typography
-            sx={{
-              fontSize: { xs: '2.4rem', sm: '3rem' },
-              fontWeight: 900,
-              lineHeight: 1,
-              letterSpacing: '-0.04em',
-              color,
-            }}
-          >
-            {value}
-          </Typography>
-          {trend === 'up'   && <TrendingUpIcon   sx={{ fontSize: 22, color: '#10b981', mb: 0.5 }} />}
-          {trend === 'down' && <TrendingDownIcon  sx={{ fontSize: 22, color: '#ef4444', mb: 0.5 }} />}
-        </Box>
-        <Typography variant="body2" fontWeight={700} color="text.secondary" sx={{ fontSize: '0.75rem', mt: 0.25 }}>
-          {label}
-        </Typography>
-        {sub && (
-          <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem' }}>
-            {sub}
-          </Typography>
-        )}
-      </>
-    )}
-  </Box>
-);
-
-// ─────────────────────────────────────────────────────────────
-// MÓDULO NAVEGABLE — estilo editorial, sin cards genéricas
-// ─────────────────────────────────────────────────────────────
-
-interface ModuleRowProps {
-  title:      string;
-  desc:       string;
-  icon:       React.ElementType;
-  accentColor:string;
-  href:       string;
-  delay?:     number;
-  tag?:       string;
-  tagColor?:  'warn' | 'err' | 'ok' | 'info';
-  barValue?:  number; // 0-100 para barra de progreso
-  barLabel?:  string;
-  items?:     { label: string; value: string | number; color?: string }[];
-  loading?:   boolean;
-}
-
-const tagStyles = (t: 'warn' | 'err' | 'ok' | 'info', isDark: boolean) => ({
-  warn: { bg: isDark ? alpha('#f59e0b', 0.18) : alpha('#f59e0b', 0.1),  fg: isDark ? '#fbbf24' : '#d97706', border: alpha('#f59e0b', 0.3) },
-  err:  { bg: isDark ? alpha('#ef4444', 0.18) : alpha('#ef4444', 0.1),  fg: isDark ? '#f87171' : '#dc2626', border: alpha('#ef4444', 0.3) },
-  ok:   { bg: isDark ? alpha('#10b981', 0.18) : alpha('#10b981', 0.1),  fg: isDark ? '#34d399' : '#059669', border: alpha('#10b981', 0.3) },
-  info: { bg: isDark ? alpha('#6366f1', 0.18) : alpha('#6366f1', 0.08), fg: isDark ? '#818cf8' : '#4f46e5', border: alpha('#6366f1', 0.25) },
-}[t]);
-
-const ModuleRow: React.FC<ModuleRowProps> = ({
-  title, desc, icon: Icon, accentColor, href,
-  delay = 0, tag, tagColor = 'info',
-  barValue, barLabel, items = [], loading,
+const SelectorTrimestre: React.FC<SelectorTrimestreProps> = ({
+  periodos,
+  periodoActivo,
+  onChange,
+  isLoading,
+  accentColor,
+  isDark,
 }) => {
-  const theme  = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const router = useRouter();
-  const ts     = tagColor ? tagStyles(tagColor, isDark) : null;
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', gap: 1 }}>
+        {[1, 2, 3].map(i => (
+          <Skeleton key={i} variant="rounded" width={130} height={36} sx={{ borderRadius: '12px' }} />
+        ))}
+      </Box>
+    );
+  }
+
+  const hoy = new Date().toISOString().slice(0, 10);
 
   return (
-    <Box
-      onClick={() => router.push(href)}
-      sx={{
-        display: 'flex', alignItems: 'stretch', gap: 0,
-        borderRadius: '16px', overflow: 'hidden',
-        cursor: 'pointer',
-        border: `1px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)}`,
-        background: isDark
-          ? 'linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))'
-          : '#fff',
-        animation: `${fadeUp} 0.45s ease-out ${delay}ms both`,
-        transition: 'all 0.2s ease',
-        '&:hover': {
-          transform: 'translateY(-3px)',
-          borderColor: alpha(accentColor, 0.4),
-          boxShadow: `0 8px 32px ${alpha(accentColor, isDark ? 0.2 : 0.12)}`,
-          '& .mod-arrow': { opacity: 1, transform: 'translateX(4px)' },
-          '& .mod-accent-bar': { opacity: 1 },
-        },
-      }}
-    >
-      {/* Barra lateral de acento */}
-      <Box
-        className="mod-accent-bar"
-        sx={{
-          width: 4, flexShrink: 0,
-          background: `linear-gradient(180deg, ${accentColor}, ${alpha(accentColor, 0.3)})`,
-          opacity: 0.5,
-          transition: 'opacity 0.2s ease',
-        }}
-      />
+    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+      {periodos.map(p => {
+        const isSelected = p.id === periodoActivo;
+        const esVigente = Boolean(p.fecha_inicio && p.fecha_fin && p.fecha_inicio <= hoy && p.fecha_fin >= hoy);
 
-      {/* Cuerpo */}
-      <Box sx={{ flex: 1, p: { xs: 2, sm: 2.5 }, minWidth: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 1.5 }}>
-          {/* Ícono + título */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
-            <Box sx={{
-              width: 38, height: 38, borderRadius: '11px', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: `linear-gradient(135deg, ${accentColor}, ${alpha(accentColor, 0.6)})`,
-              boxShadow: `0 4px 12px ${alpha(accentColor, 0.35)}`,
-            }}>
-              <Icon sx={{ fontSize: 20, color: '#fff' }} />
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="subtitle2" fontWeight={800} sx={{ letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                {title}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
-                {desc}
-              </Typography>
-            </Box>
-          </Box>
-
-          {/* Tag + flecha */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
-            {tag && ts && (
-              <Chip
-                size="small"
-                label={tag}
-                sx={{
-                  height: 20, fontSize: '0.65rem', fontWeight: 800,
-                  bgcolor: ts.bg, color: ts.fg,
-                  border: `1px solid ${ts.border}`,
-                  borderRadius: '6px',
-                }}
-              />
-            )}
-            <ArrowForwardIcon
-              className="mod-arrow"
-              sx={{
-                fontSize: 15, color: accentColor, opacity: 0,
-                transition: 'all 0.2s ease',
-              }}
-            />
-          </Box>
-        </Box>
-
-        {/* Loading state */}
-        {loading ? (
-          <Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>
-            {[1, 2, 3].map(i => <Skeleton key={i} variant="text" width={60} height={32} />)}
-          </Box>
-        ) : (
-          <>
-            {/* Items numéricos inline */}
-            {items.length > 0 && (
-              <Box sx={{ display: 'flex', gap: 2.5, mb: barValue != null ? 1.25 : 0, flexWrap: 'wrap' }}>
-                {items.map((it, i) => (
-                  <Box key={i}>
-                    <Typography
-                      sx={{
-                        fontSize: '1.35rem', fontWeight: 900, lineHeight: 1,
-                        letterSpacing: '-0.03em',
-                        color: it.color ?? accentColor,
-                      }}
-                    >
-                      {it.value}
-                    </Typography>
-                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.62rem', fontWeight: 600 }}>
-                      {it.label}
-                    </Typography>
+        return (
+          <Chip
+            key={p.id}
+            clickable
+            onClick={() => onChange(p.id)}
+            icon={esVigente ? <VerifiedIcon sx={{ fontSize: '15px !important' }} /> : undefined}
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                <span>{p.nombre}</span>
+                {esVigente && (
+                  <Box
+                    component="span"
+                    sx={{
+                      fontSize: '0.62rem',
+                      fontWeight: 800,
+                      px: 0.7,
+                      py: 0.1,
+                      borderRadius: '6px',
+                      bgcolor: isSelected ? (isDark ? '#000' : '#fff') : accentColor,
+                      color: isSelected ? accentColor : (isDark ? '#000' : '#fff'),
+                    }}
+                  >
+                    ACTIVO
                   </Box>
-                ))}
+                )}
               </Box>
-            )}
-
-            {/* Barra de progreso */}
-            {barValue != null && (
-              <Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.4 }}>
-                  <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: '0.62rem' }}>
-                    {barLabel ?? 'Progreso'}
-                  </Typography>
-                  <Typography variant="caption" fontWeight={900} sx={{ color: accentColor, fontSize: '0.68rem' }}>
-                    {barValue}%
-                  </Typography>
-                </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={Math.min(barValue, 100)}
-                  sx={{
-                    height: 5, borderRadius: 3,
-                    bgcolor: isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06),
-                    '& .MuiLinearProgress-bar': {
-                      borderRadius: 3,
-                      background: `linear-gradient(90deg, ${accentColor}, ${alpha(accentColor, 0.6)})`,
-                    },
-                  }}
-                />
-              </Box>
-            )}
-          </>
-        )}
-      </Box>
+            }
+            sx={{
+              height: 38,
+              px: 1.2,
+              borderRadius: '12px',
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              transition: 'all 0.25s ease',
+              cursor: 'pointer',
+              backgroundColor: isSelected
+                ? accentColor
+                : (isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'),
+              color: isSelected ? (isDark ? '#000' : '#fff') : 'text.primary',
+              border: `1.5px solid ${isSelected ? accentColor : alpha(isDark ? '#fff' : '#000', 0.08)}`,
+              boxShadow: isSelected ? `0 4px 14px ${alpha(accentColor, 0.3)}` : 'none',
+              '& .MuiChip-icon': {
+                color: isSelected ? (isDark ? '#000' : '#fff') : accentColor,
+              },
+              '&:hover': {
+                backgroundColor: isSelected ? accentColor : alpha(accentColor, 0.12),
+                borderColor: accentColor,
+                transform: 'translateY(-1px)',
+              },
+            }}
+          />
+        );
+      })}
     </Box>
   );
 };
 
 // ─────────────────────────────────────────────────────────────
-// TICKER DE TAREAS PRÓXIMAS
+// KPI CARD MODERNO (IDÉNTICO A TAREAS Y EVALUACIONES)
 // ─────────────────────────────────────────────────────────────
 
-const TareasTicker: React.FC<{
-  tareas: { evaluacion_nombre: string; materia_nombre: string; dias_restantes: number | null | undefined }[];
-  isDark: boolean;
-}> = ({ tareas, isDark }) => {
-  if (tareas.length === 0) return null;
-  const items = [...tareas, ...tareas]; // duplicar para loop continuo
+interface KpiCardProps {
+  label: string;
+  value: string | number;
+  sublabel?: string;
+  color: string;
+  icon: React.ElementType;
+  delay?: number;
+  trend?: 'up' | 'down' | 'neutral';
+  loading?: boolean;
+  onClick?: () => void;
+}
+
+const KpiCard: React.FC<KpiCardProps> = ({
+  label,
+  value,
+  sublabel,
+  color,
+  icon: Icon,
+  delay = 0,
+  trend,
+  loading,
+  onClick,
+}) => {
+  const { isDark } = usePalette();
 
   return (
-    <Box sx={{
-      overflow: 'hidden', borderRadius: '10px',
-      bgcolor: isDark ? alpha('#f59e0b', 0.08) : alpha('#f59e0b', 0.06),
-      border: `1px solid ${alpha('#f59e0b', 0.2)}`,
-      display: 'flex', alignItems: 'center', gap: 0,
-      height: 36,
-    }}>
-      {/* Label fijo */}
-      <Box sx={{
-        px: 1.5, py: 0, height: '100%',
-        display: 'flex', alignItems: 'center', gap: 0.75,
-        bgcolor: isDark ? alpha('#f59e0b', 0.2) : alpha('#f59e0b', 0.15),
-        borderRight: `1px solid ${alpha('#f59e0b', 0.25)}`,
-        flexShrink: 0,
-      }}>
-        <BoltIcon sx={{ fontSize: 14, color: '#f59e0b' }} />
-        <Typography variant="caption" fontWeight={800} sx={{ color: '#f59e0b', fontSize: '0.68rem', whiteSpace: 'nowrap' }}>
-          Próximas
+    <Paper
+      onClick={onClick}
+      elevation={0}
+      sx={{
+        p: { xs: 1.8, sm: 2.2 },
+        borderRadius: '16px',
+        border: `2px solid ${alpha(color, isDark ? 0.28 : 0.2)}`,
+        background: isDark
+          ? `linear-gradient(135deg, ${alpha(color, 0.1)} 0%, rgba(15, 23, 42, 0.75) 100%)`
+          : `linear-gradient(135deg, ${alpha(color, 0.08)} 0%, #ffffff 100%)`,
+        boxShadow: isDark
+          ? `0 6px 20px rgba(0,0,0,0.35)`
+          : `0 3px 12px ${alpha(color, 0.08)}`,
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        animation: `${fadeUp} 0.4s ease-out ${delay}ms both`,
+        position: 'relative',
+        overflow: 'hidden',
+        '&:hover': onClick ? {
+          transform: 'translateY(-3px)',
+          borderColor: color,
+          boxShadow: `0 8px 24px ${alpha(color, 0.3)}`,
+        } : {},
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+        <Box
+          sx={{
+            width: 40,
+            height: 40,
+            borderRadius: '11px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: alpha(color, 0.16),
+            color: color,
+          }}
+        >
+          <Icon sx={{ fontSize: 22 }} />
+        </Box>
+
+        {trend && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            {trend === 'up' && <TrendingUpIcon sx={{ fontSize: 20, color: '#10b981' }} />}
+            {trend === 'down' && <TrendingDownIcon sx={{ fontSize: 20, color: '#ef4444' }} />}
+          </Box>
+        )}
+      </Box>
+
+      {loading ? (
+        <>
+          <Skeleton variant="text" width={60} height={42} />
+          <Skeleton variant="text" width={100} height={18} />
+        </>
+      ) : (
+        <>
+          <Typography
+            sx={{
+              fontSize: { xs: '1.8rem', sm: '2.2rem' },
+              fontWeight: 900,
+              lineHeight: 1.1,
+              letterSpacing: '-0.03em',
+              color: color,
+              mb: 0.4,
+            }}
+          >
+            {value}
+          </Typography>
+
+          <Typography
+            variant="caption"
+            sx={{
+              fontWeight: 800,
+              fontSize: '0.75rem',
+              letterSpacing: 0.4,
+              textTransform: 'uppercase',
+              color: 'text.secondary',
+              display: 'block',
+            }}
+          >
+            {label}
+          </Typography>
+
+          {sublabel && (
+            <Typography
+              variant="caption"
+              sx={{
+                fontSize: '0.68rem',
+                color: 'text.disabled',
+                fontWeight: 600,
+                mt: 0.3,
+                display: 'block',
+              }}
+            >
+              {sublabel}
+            </Typography>
+          )}
+        </>
+      )}
+    </Paper>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// TARJETA DE MÓDULO (ESTILO INSTITUCIONAL CON GLASSMORPHISM)
+// ─────────────────────────────────────────────────────────────
+
+interface ModuloCardProps {
+  title: string;
+  subtitle: string;
+  badge?: string;
+  badgeColor?: string;
+  icon: React.ElementType;
+  accentColor: string;
+  href: string;
+  delay?: number;
+  stats?: { label: string; value: string | number; color?: string }[];
+  progressBar?: { value: number; label?: string };
+  actionLabel?: string;
+  loading?: boolean;
+}
+
+const ModuloCard: React.FC<ModuloCardProps> = ({
+  title,
+  subtitle,
+  badge,
+  badgeColor,
+  icon: Icon,
+  accentColor,
+  href,
+  delay = 0,
+  stats = [],
+  progressBar,
+  actionLabel = 'Ingresar al módulo',
+  loading,
+}) => {
+  const router = useRouter();
+  const { isDark } = usePalette();
+
+  return (
+    <Paper
+      elevation={0}
+      onClick={() => router.push(href)}
+      sx={{
+        p: { xs: 2.2, sm: 2.8 },
+        borderRadius: '20px',
+        border: `1.5px solid ${alpha(accentColor, isDark ? 0.22 : 0.16)}`,
+        background: isDark
+          ? `linear-gradient(135deg, ${alpha(accentColor, 0.08)} 0%, rgba(15, 23, 42, 0.8) 100%)`
+          : `linear-gradient(135deg, ${alpha(accentColor, 0.05)} 0%, #ffffff 100%)`,
+        boxShadow: isDark
+          ? '0 8px 28px rgba(0,0,0,0.3)'
+          : `0 4px 16px ${alpha(accentColor, 0.08)}`,
+        cursor: 'pointer',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        animation: `${fadeUp} 0.45s ease-out ${delay}ms both`,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        height: '100%',
+        position: 'relative',
+        overflow: 'hidden',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          borderColor: accentColor,
+          boxShadow: `0 12px 32px ${alpha(accentColor, isDark ? 0.25 : 0.18)}`,
+          '& .btn-arrow': {
+            transform: 'translateX(4px)',
+            color: accentColor,
+          },
+        },
+      }}
+    >
+      {/* ── Barra decorativa superior ── */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 3.5,
+          background: `linear-gradient(90deg, ${accentColor}, ${alpha(accentColor, 0.2)})`,
+        }}
+      />
+
+      <Box>
+        {/* ── Encabezado de la tarjeta ── */}
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1.5, mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 46,
+                height: 46,
+                borderRadius: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: alpha(accentColor, 0.15),
+                color: accentColor,
+                flexShrink: 0,
+              }}
+            >
+              <Icon sx={{ fontSize: 24 }} />
+            </Box>
+            <Box>
+              <Typography
+                variant="h6"
+                fontWeight={800}
+                sx={{ fontSize: { xs: '1.05rem', sm: '1.15rem' }, lineHeight: 1.25, letterSpacing: -0.3 }}
+              >
+                {title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', mt: 0.2, fontWeight: 500 }}>
+                {subtitle}
+              </Typography>
+            </Box>
+          </Box>
+
+          {badge && (
+            <Chip
+              size="small"
+              label={badge}
+              sx={{
+                height: 24,
+                fontSize: '0.7rem',
+                fontWeight: 800,
+                borderRadius: '8px',
+                bgcolor: alpha(badgeColor || accentColor, 0.15),
+                color: badgeColor || accentColor,
+                border: `1px solid ${alpha(badgeColor || accentColor, 0.35)}`,
+              }}
+            />
+          )}
+        </Box>
+
+        {/* ── Métricas internas ── */}
+        {loading ? (
+          <Box sx={{ display: 'flex', gap: 2, my: 1.5 }}>
+            {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" width={70} height={36} />)}
+          </Box>
+        ) : stats.length > 0 ? (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${stats.length}, 1fr)`,
+              gap: 1.2,
+              p: 1.5,
+              borderRadius: '14px',
+              bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+              border: `1px solid ${alpha(isDark ? '#fff' : '#000', 0.05)}`,
+              mb: progressBar ? 1.8 : 1,
+            }}
+          >
+            {stats.map((s, idx) => (
+              <Box key={idx} sx={{ textAlign: 'center' }}>
+                <Typography
+                  sx={{
+                    fontSize: '1.25rem',
+                    fontWeight: 900,
+                    lineHeight: 1.1,
+                    color: s.color || accentColor,
+                  }}
+                >
+                  {s.value}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', mt: 0.2, display: 'block' }}
+                >
+                  {s.label}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        ) : null}
+
+        {/* ── Barra de Progreso Opcional ── */}
+        {progressBar && (
+          <Box sx={{ mb: 1.5 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+              <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ fontSize: '0.72rem' }}>
+                {progressBar.label || 'Progreso de avance'}
+              </Typography>
+              <Typography variant="caption" fontWeight={900} sx={{ color: accentColor, fontSize: '0.75rem' }}>
+                {progressBar.value}%
+              </Typography>
+            </Box>
+            <LinearProgress
+              variant="determinate"
+              value={Math.min(Math.max(progressBar.value, 0), 100)}
+              sx={{
+                height: 7,
+                borderRadius: 4,
+                bgcolor: alpha(accentColor, 0.12),
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 4,
+                  background: `linear-gradient(90deg, ${accentColor}, ${alpha(accentColor, 0.6)})`,
+                },
+              }}
+            />
+          </Box>
+        )}
+      </Box>
+
+      {/* ── Pie con botón de acceso ── */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          pt: 1.8,
+          mt: 'auto',
+          borderTop: `1px solid ${alpha(isDark ? '#fff' : '#000', 0.06)}`,
+        }}
+      >
+        <Typography
+          variant="body2"
+          fontWeight={700}
+          sx={{
+            fontSize: '0.82rem',
+            color: accentColor,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.8,
+          }}
+        >
+          {actionLabel}
+        </Typography>
+
+        <IconButton
+          size="small"
+          className="btn-arrow"
+          sx={{
+            bgcolor: alpha(accentColor, 0.1),
+            color: accentColor,
+            transition: 'all 0.25s ease',
+            p: 0.8,
+            borderRadius: '10px',
+          }}
+        >
+          <ArrowForwardIcon sx={{ fontSize: 16 }} />
+        </IconButton>
+      </Box>
+    </Paper>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// TICKER DINÁMICO DE EVALUACIONES PRÓXIMAS
+// ─────────────────────────────────────────────────────────────
+
+interface TickerItem {
+  evaluacion_id: number;
+  evaluacion_nombre: string;
+  materia_nombre: string;
+  dias_restantes: number | null | undefined;
+}
+
+const TickerProximas: React.FC<{
+  tareas: TickerItem[];
+  isDark: boolean;
+  onItemClick: (id: number) => void;
+}> = ({ tareas, isDark, onItemClick }) => {
+  if (tareas.length === 0) return null;
+  const items = [...tareas, ...tareas]; // duplicar para flujo infinito
+
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        overflow: 'hidden',
+        borderRadius: '14px',
+        border: `1.5px solid ${alpha('#f59e0b', 0.3)}`,
+        background: isDark ? alpha('#f59e0b', 0.08) : alpha('#f59e0b', 0.05),
+        display: 'flex',
+        alignItems: 'center',
+        height: 40,
+      }}
+    >
+      <Box
+        sx={{
+          px: 1.8,
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.8,
+          bgcolor: isDark ? alpha('#f59e0b', 0.22) : alpha('#f59e0b', 0.15),
+          borderRight: `1px solid ${alpha('#f59e0b', 0.3)}`,
+          flexShrink: 0,
+        }}
+      >
+        <BoltIcon sx={{ fontSize: 16, color: '#f59e0b' }} />
+        <Typography variant="caption" fontWeight={800} sx={{ color: '#f59e0b', fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
+          Por Vencer
         </Typography>
       </Box>
 
-      {/* Ticker */}
       <Box sx={{ overflow: 'hidden', flex: 1 }}>
-        <Box sx={{
-          display: 'flex', alignItems: 'center', gap: 3,
-          animation: `${ticker} ${tareas.length * 5}s linear infinite`,
-          width: 'max-content', px: 2,
-        }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 3.5,
+            animation: `${ticker} ${Math.max(tareas.length * 6, 15)}s linear infinite`,
+            width: 'max-content',
+            px: 2,
+            cursor: 'pointer',
+          }}
+        >
           {items.map((t, i) => (
-            <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
-              <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: '#f59e0b', flexShrink: 0 }} />
-              <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.7rem', whiteSpace: 'nowrap', color: 'text.primary' }}>
+            <Box
+              key={i}
+              onClick={() => onItemClick(t.evaluacion_id)}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                flexShrink: 0,
+                '&:hover': { textDecoration: 'underline' },
+              }}
+            >
+              <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#f59e0b', flexShrink: 0 }} />
+              <Typography variant="caption" fontWeight={700} sx={{ fontSize: '0.75rem', color: 'text.primary' }}>
                 {t.evaluacion_nombre}
               </Typography>
-              <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>
-                · {t.materia_nombre}
+              <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+                ({t.materia_nombre})
               </Typography>
               {t.dias_restantes != null && (
                 <Chip
                   size="small"
-                  label={t.dias_restantes === 0 ? 'hoy' : `${t.dias_restantes}d`}
+                  label={t.dias_restantes === 0 ? '¡Vence hoy!' : t.dias_restantes === 1 ? 'Mañana' : `${t.dias_restantes} días`}
                   sx={{
-                    height: 16, fontSize: '0.6rem', fontWeight: 800,
-                    bgcolor: t.dias_restantes <= 1 ? alpha('#ef4444', 0.15) : alpha('#f59e0b', 0.15),
+                    height: 18,
+                    fontSize: '0.62rem',
+                    fontWeight: 800,
+                    bgcolor: t.dias_restantes <= 1 ? alpha('#ef4444', 0.18) : alpha('#f59e0b', 0.18),
                     color: t.dias_restantes <= 1 ? '#ef4444' : '#f59e0b',
-                    borderRadius: '5px',
+                    borderRadius: '6px',
                   }}
                 />
               )}
@@ -369,144 +668,204 @@ const TareasTicker: React.FC<{
           ))}
         </Box>
       </Box>
-    </Box>
+    </Paper>
   );
 };
 
 // ─────────────────────────────────────────────────────────────
-// HERO DEL ESTUDIANTE — asimétrico, editorial
+// HERO PRINCIPAL DEL ESTUDIANTE (CON IDENTIDAD DE TAREAS/EXÁMENES)
 // ─────────────────────────────────────────────────────────────
 
-const HeroEstudiante: React.FC<{
-  perfil:    any;
-  isDark:    boolean;
+interface HeroProps {
+  perfil: any;
+  accentColor: string;
+  gradBg: string;
+  isDark: boolean;
   onRefresh: () => void;
-  loading:   boolean;
-}> = ({ perfil, isDark, onRefresh, loading }) => {
-  const { texto, emoji } = saludoData();
+  loading: boolean;
+  alertas: { tipo: 'err' | 'warn'; mensaje: string }[];
+}
 
-  const nivelColor = perfil?.porcentaje_beca > 0 ? '#8b5cf6' : '#6366f1';
+const HeroEstudiante: React.FC<HeroProps> = ({
+  perfil,
+  accentColor,
+  gradBg,
+  isDark,
+  onRefresh,
+  loading,
+  alertas,
+}) => {
+  const { texto, emoji } = saludoData();
+  const iniciales = perfil?.nombres?.charAt(0) ?? '?';
 
   return (
-    <Box sx={{
-      position: 'relative', overflow: 'hidden',
-      borderRadius: '24px',
-      background: isDark
-        ? 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)'
-        : 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)',
-      p: { xs: 2.5, sm: 3.5 },
-      mb: 3,
-      animation: `${fadeUp} 0.5s ease-out both`,
-    }}>
-      {/* Decoración geométrica de fondo */}
-      <Box sx={{
-        position: 'absolute', top: -60, right: -60,
-        width: 280, height: 280, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)',
-        pointerEvents: 'none',
-      }} />
-      <Box sx={{
-        position: 'absolute', bottom: -40, left: '30%',
-        width: 160, height: 160, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%)',
-        pointerEvents: 'none',
-      }} />
-      {/* Líneas de cuadrícula sutiles */}
-      <Box sx={{
-        position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.04,
-        backgroundImage: 'linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)',
-        backgroundSize: '32px 32px',
-      }} />
-      {/* Línea de scan animada */}
-      <Box sx={{
-        position: 'absolute', left: 0, right: 0, height: '2px',
-        background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.6), transparent)',
-        animation: `${scanline} 4s ease-in-out infinite`,
-        pointerEvents: 'none',
-      }} />
+    <Paper
+      elevation={0}
+      sx={{
+        mb: 3,
+        p: { xs: 2.2, sm: 3 },
+        borderRadius: '22px',
+        border: `1.5px solid ${alpha(accentColor, isDark ? 0.28 : 0.2)}`,
+        background: isDark
+          ? `linear-gradient(135deg, ${alpha(accentColor, 0.12)} 0%, rgba(15, 23, 42, 0.85) 100%)`
+          : `linear-gradient(135deg, ${alpha(accentColor, 0.07)} 0%, #ffffff 100%)`,
+        boxShadow: isDark
+          ? `0 10px 30px rgba(0,0,0,0.4)`
+          : `0 6px 20px ${alpha(accentColor, 0.08)}`,
+        animation: `${fadeUp} 0.45s ease-out both`,
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', md: 'center' },
+          gap: 2.5,
+        }}
+      >
+        {/* IZQUIERDA: AVATAR Y DATOS DEL ESTUDIANTE */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.2, minWidth: 0 }}>
+          {loading ? (
+            <Skeleton variant="circular" width={64} height={64} sx={{ flexShrink: 0 }} />
+          ) : (
+            <Avatar
+              src={perfil?.foto_url ?? undefined}
+              sx={{
+                width: { xs: 58, sm: 68 },
+                height: { xs: 58, sm: 68 },
+                fontWeight: 900,
+                fontSize: { xs: '1.4rem', sm: '1.7rem' },
+                bgcolor: alpha(accentColor, 0.2),
+                color: accentColor,
+                border: `2.5px solid ${accentColor}`,
+                boxShadow: `0 4px 16px ${alpha(accentColor, 0.3)}`,
+                flexShrink: 0,
+              }}
+            >
+              {iniciales}
+            </Avatar>
+          )}
 
-      <Box sx={{
-        position: 'relative', zIndex: 1,
-        display: 'flex', alignItems: 'flex-start',
-        justifyContent: 'space-between', flexWrap: 'wrap', gap: 2,
-      }}>
-        {/* Lado izquierdo */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
-          {/* Avatar con glow */}
-          <Box sx={{
-            position: 'relative', flexShrink: 0,
-            animation: `${pulseGlow} 3s ease-in-out infinite`,
-          }}>
-            {loading ? (
-              <Skeleton variant="circular" width={72} height={72} sx={{ bgcolor: alpha('#fff', 0.1) }} />
-            ) : (
-              <Avatar
-                src={perfil?.foto_url ?? undefined}
+          <Box sx={{ minWidth: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.3 }}>
+              <SchoolIcon
                 sx={{
-                  width: 72, height: 72,
-                  fontWeight: 900, fontSize: '1.5rem',
-                  background: 'linear-gradient(135deg, #6366f1, #10b981)',
-                  border: '3px solid rgba(255,255,255,0.15)',
-                  boxShadow: '0 0 0 4px rgba(99,102,241,0.3)',
+                  color: accentColor,
+                  fontSize: 22,
+                  animation: `${bounce} 2s infinite ease-in-out`,
+                }}
+              />
+              <Typography
+                variant="caption"
+                fontWeight={800}
+                sx={{
+                  color: 'text.secondary',
+                  letterSpacing: 0.5,
+                  textTransform: 'uppercase',
+                  fontSize: '0.72rem',
                 }}
               >
-                {perfil?.nombres?.charAt(0) ?? '?'}
-              </Avatar>
-            )}
-            {/* Punto verde "online" */}
-            <Box sx={{
-              position: 'absolute', bottom: 4, right: 4,
-              width: 14, height: 14, borderRadius: '50%',
-              bgcolor: '#10b981', border: '2px solid #1e1b4b',
-            }} />
-          </Box>
+                {emoji} {texto}
+              </Typography>
+            </Box>
 
-          {/* Nombre y datos */}
-          <Box>
-            <Typography variant="caption" sx={{
-              color: alpha('#fff', 0.5), fontWeight: 700,
-              fontSize: '0.68rem', letterSpacing: '0.1em', textTransform: 'uppercase',
-              display: 'block', mb: 0.25,
-            }}>
-              {emoji} {texto}
-            </Typography>
             {loading ? (
               <>
-                <Skeleton variant="text" width={200} height={38} sx={{ bgcolor: alpha('#fff', 0.1) }} />
-                <Skeleton variant="text" width={150} height={20} sx={{ bgcolor: alpha('#fff', 0.08), mt: 0.5 }} />
+                <Skeleton variant="text" width={220} height={36} />
+                <Skeleton variant="text" width={180} height={22} />
               </>
             ) : (
               <>
-                <Typography sx={{
-                  fontSize: { xs: '1.4rem', sm: '1.75rem' },
-                  fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.1,
-                  color: '#fff',
-                }}>
-                  {perfil?.nombres?.split(' ')[0] ?? 'Estudiante'}
-                  {' '}
-                  <Box component="span" sx={{ color: '#818cf8' }}>
-                    {perfil?.apellidos?.split(' ')[0] ?? ''}
-                  </Box>
+                <Typography
+                  variant="h1"
+                  sx={{
+                    fontSize: { xs: '1.5rem', sm: '1.9rem', md: '2.2rem' },
+                    fontWeight: 900,
+                    letterSpacing: -0.6,
+                    lineHeight: 1.15,
+                    background: gradBg,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  {perfil?.nombres ?? 'Estudiante'} {perfil?.apellidos ?? ''}
                 </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1 }}>
-                  {[
-                    perfil?.grado_nombre && `${perfil.grado_nombre} "${perfil.paralelo_nombre}"`,
-                    perfil?.nivel_academico,
-                    perfil?.turno,
-                  ].filter(Boolean).map((label, i) => (
-                    <Chip key={i} label={label} size="small" sx={{
-                      height: 22, fontSize: '0.65rem', fontWeight: 700,
-                      bgcolor: alpha('#fff', 0.1), color: alpha('#fff', 0.85),
-                      border: `1px solid ${alpha('#fff', 0.15)}`,
-                      borderRadius: '6px',
-                    }} />
-                  ))}
+
+                {/* Chips de Curso, Paralelo, Turno, etc. */}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8, mt: 1 }}>
+                  {perfil?.grado_nombre && (
+                    <Chip
+                      size="small"
+                      label={`${perfil.grado_nombre} "${perfil.paralelo_nombre || 'A'}"`}
+                      sx={{
+                        height: 24,
+                        fontWeight: 800,
+                        fontSize: '0.72rem',
+                        bgcolor: alpha(accentColor, 0.16),
+                        color: accentColor,
+                        border: `1px solid ${alpha(accentColor, 0.3)}`,
+                        borderRadius: '8px',
+                      }}
+                    />
+                  )}
+
+                  {perfil?.nivel_academico && (
+                    <Chip
+                      size="small"
+                      label={perfil.nivel_academico}
+                      sx={{
+                        height: 24,
+                        fontWeight: 700,
+                        fontSize: '0.72rem',
+                        bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05),
+                        borderRadius: '8px',
+                      }}
+                    />
+                  )}
+
+                  {perfil?.turno && (
+                    <Chip
+                      size="small"
+                      label={`Turno ${perfil.turno}`}
+                      sx={{
+                        height: 24,
+                        fontWeight: 700,
+                        fontSize: '0.72rem',
+                        bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05),
+                        borderRadius: '8px',
+                      }}
+                    />
+                  )}
+
                   {perfil?.es_becado && (
-                    <Chip label="Becado" size="small" sx={{
-                      height: 22, fontSize: '0.65rem', fontWeight: 800,
-                      bgcolor: alpha('#8b5cf6', 0.3), color: '#c4b5fd',
-                      border: `1px solid ${alpha('#8b5cf6', 0.4)}`, borderRadius: '6px',
-                    }} />
+                    <Chip
+                      size="small"
+                      icon={<WorkspacePremiumRoundedIcon sx={{ fontSize: '14px !important' }} />}
+                      label="Becado"
+                      sx={{
+                        height: 24,
+                        fontWeight: 800,
+                        fontSize: '0.72rem',
+                        bgcolor: alpha('#8b5cf6', 0.18),
+                        color: '#a78bfa',
+                        border: `1px solid ${alpha('#8b5cf6', 0.35)}`,
+                        borderRadius: '8px',
+                        '& .MuiChip-icon': { color: '#a78bfa' },
+                      }}
+                    />
+                  )}
+
+                  {perfil?.codigo_estudiante && (
+                    <Chip
+                      size="small"
+                      label={`ID ${perfil.codigo_estudiante}`}
+                      sx={{
+                        height: 24,
+                        fontSize: '0.7rem',
+                        borderRadius: '8px',
+                      }}
+                    />
                   )}
                 </Box>
               </>
@@ -514,63 +873,54 @@ const HeroEstudiante: React.FC<{
           </Box>
         </Box>
 
-        {/* Lado derecho: período + refresh */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-          <Tooltip title="Actualizar datos">
+        {/* DERECHA: ALERTAS ACTIVAS Y BOTÓN DE REFRESH */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', alignSelf: { xs: 'stretch', md: 'center' }, justifyContent: { xs: 'space-between', md: 'flex-end' } }}>
+          {alertas.length > 0 && (
+            <Stack direction="row" spacing={1}>
+              {alertas.map((a, idx) => (
+                <Chip
+                  key={idx}
+                  icon={a.tipo === 'err' ? <WarningAmberIcon sx={{ fontSize: '15px !important' }} /> : <AccessTimeIcon sx={{ fontSize: '15px !important' }} />}
+                  label={a.mensaje}
+                  size="small"
+                  sx={{
+                    height: 32,
+                    fontWeight: 800,
+                    fontSize: 12,
+                    bgcolor: a.tipo === 'err' ? (isDark ? alpha('#ef4444', 0.18) : alpha('#ef4444', 0.1)) : (isDark ? alpha('#f59e0b', 0.18) : alpha('#f59e0b', 0.1)),
+                    color: a.tipo === 'err' ? (isDark ? '#f87171' : '#dc2626') : (isDark ? '#fbbf24' : '#d97706'),
+                    border: `1.5px solid ${alpha(a.tipo === 'err' ? '#ef4444' : '#f59e0b', 0.35)}`,
+                    borderRadius: '10px',
+                    '& .MuiChip-icon': { color: a.tipo === 'err' ? (isDark ? '#f87171' : '#dc2626') : (isDark ? '#fbbf24' : '#d97706') },
+                  }}
+                />
+              ))}
+            </Stack>
+          )}
+
+          <Tooltip title="Actualizar datos académicos">
             <IconButton
               onClick={onRefresh}
-              size="small"
+              disabled={loading}
               sx={{
-                bgcolor: alpha('#fff', 0.08),
-                border: `1px solid ${alpha('#fff', 0.12)}`,
-                borderRadius: '10px',
-                color: alpha('#fff', 0.7),
+                borderRadius: '14px',
+                border: `1.5px solid ${alpha(accentColor, 0.3)}`,
+                bgcolor: isDark ? alpha(accentColor, 0.1) : alpha(accentColor, 0.06),
+                color: accentColor,
+                p: 1.2,
                 transition: 'all 0.3s ease',
-                '&:hover': { bgcolor: alpha('#6366f1', 0.3), transform: 'rotate(180deg)', color: '#fff' },
+                '&:hover': {
+                  bgcolor: alpha(accentColor, 0.2),
+                  transform: 'rotate(180deg)',
+                },
               }}
             >
-              <RefreshIcon sx={{ fontSize: 17 }} />
+              <RefreshIcon sx={{ fontSize: 20 }} />
             </IconButton>
           </Tooltip>
-          {!loading && perfil?.periodo_academico && (
-            <Box sx={{ textAlign: 'right' }}>
-              <Typography variant="caption" sx={{ color: alpha('#fff', 0.4), fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Período activo
-              </Typography>
-              <Typography variant="body2" fontWeight={800} sx={{ color: '#a5b4fc', fontSize: '0.78rem' }}>
-                {perfil.periodo_academico}
-              </Typography>
-            </Box>
-          )}
         </Box>
       </Box>
-
-      {/* Código de estudiante al pie */}
-      {!loading && perfil?.codigo_estudiante && (
-        <Box sx={{
-          position: 'relative', zIndex: 1,
-          mt: 2.5, pt: 2,
-          borderTop: `1px solid ${alpha('#fff', 0.08)}`,
-          display: 'flex', alignItems: 'center', gap: 1,
-        }}>
-          <Typography sx={{
-            fontFamily: 'monospace', fontSize: '0.7rem',
-            color: alpha('#fff', 0.35), letterSpacing: '0.12em',
-          }}>
-            ID #{perfil.codigo_estudiante}
-          </Typography>
-          <Box sx={{ flex: 1, height: 1, bgcolor: alpha('#fff', 0.06) }} />
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            {[...Array(3)].map((_, i) => (
-              <Box key={i} sx={{
-                width: 6, height: 6, borderRadius: '50%',
-                bgcolor: i === 0 ? '#10b981' : alpha('#fff', 0.2),
-              }} />
-            ))}
-          </Box>
-        </Box>
-      )}
-    </Box>
+    </Paper>
   );
 };
 
@@ -579,382 +929,514 @@ const HeroEstudiante: React.FC<{
 // ─────────────────────────────────────────────────────────────
 
 export default function EstudianteHomePage() {
-  const theme  = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const router = useRouter();
+  const { isDark, accentColor, gradBg } = usePalette();
 
-  // ── Datos ──
+  // ── Hooks de datos ──
   const { perfil, isLoading: loadingPerfil } = usePerfilEstudiante();
-  const { periodoActivo, isLoading: loadingPeriodos } = usePeriodosEstudiante();
-  const { materias, isLoading: loadingMaterias, refrescar: refrescarMaterias } = useMisMaterias(periodoActivo ?? undefined);
-  const { boletin, aprobadas, reprobadas, promedio, isLoading: loadingBoletin } = useBoletinEstudiante(periodoActivo);
-  const { resumen: resumenTareas, proximasAvencer, isLoading: loadingTareas } = useTareasEstudiante({ periodo_evaluacion_id: periodoActivo ?? undefined });
-  const { reporte: reporteAsistencia, isLoading: loadingAsistencia } = useAsistenciaEstudiante();
-  const { horario, isLoading: loadingHorario } = useHorarioEstudiante();
+  const {
+    periodos,
+    periodoActivo,
+    setPeriodoActivo,
+    isLoading: loadingPeriodos,
+  } = usePeriodosEstudiante();
 
-  const handleRefresh = () => { refrescarMaterias(); };
+  const {
+    materias,
+    isLoading: loadingMaterias,
+    refrescar: refrescarMaterias,
+  } = useMisMaterias(periodoActivo ?? undefined);
 
-  // ── Estadísticas derivadas ──
+  const {
+    boletin,
+    aprobadas,
+    reprobadas,
+    promedio,
+    isLoading: loadingBoletin,
+    refrescar: refrescarBoletin,
+  } = useBoletinEstudiante(periodoActivo);
 
-  // Asistencia global (promedio de materias)
+  const {
+    resumen: resumenTareas,
+    proximasAvencer,
+    isLoading: loadingTareas,
+    refrescar: refrescarTareas,
+  } = useTareasEstudiante({ periodo_evaluacion_id: periodoActivo ?? undefined });
+
+  const {
+    reporte: reporteAsistencia,
+    isLoading: loadingAsistencia,
+    refrescar: refrescarAsistencia,
+  } = useAsistenciaEstudiante();
+
+  const {
+    horario,
+    isLoading: loadingHorario,
+    refrescar: refrescarHorario,
+  } = useHorarioEstudiante();
+
+  // Función global para actualizar toda la información
+  const handleRefreshAll = useCallback(() => {
+    refrescarMaterias();
+    refrescarBoletin();
+    refrescarTareas();
+    refrescarAsistencia();
+    refrescarHorario();
+  }, [refrescarMaterias, refrescarBoletin, refrescarTareas, refrescarAsistencia, refrescarHorario]);
+
+  // ── Estadísticas y estados calculados ──
+
+  // Asistencia global acumulada
   const asistenciaGlobal = useMemo(() => {
     if (!reporteAsistencia.length) return null;
     const sum = reporteAsistencia.reduce((a, r) => a + (r.porcentaje_asistencia ?? 0), 0);
     return Math.round(sum / reporteAsistencia.length);
   }, [reporteAsistencia]);
 
-  // Materias en riesgo de asistencia
-  const materiasRiesgo = useMemo(
+  // Materias con asistencia comprometida (< 75%)
+  const materiasRiesgoAsistencia = useMemo(
     () => reporteAsistencia.filter(r => r.porcentaje_asistencia < 75).length,
     [reporteAsistencia]
   );
 
-  // Progreso promedio del temario
+  // Progreso promedio de los temarios de las materias
   const progresoTemario = useMemo(() => {
     if (!materias.length) return 0;
     const sum = materias.reduce((a, m) => a + (m.progreso_promedio ?? 0), 0);
     return Math.round(sum / materias.length);
   }, [materias]);
 
-  // Clase en curso ahora
+  // Total de materiales académicos disponibles
+  const totalMateriales = useMemo(() => {
+    return materias.reduce((acc, m) => acc + (m.total_materiales || 0), 0);
+  }, [materias]);
+
+  // Identificar si el estudiante tiene una clase presencial/virtual en curso en este momento
   const claseAhora = useMemo(() => {
     if (!horario) return null;
-    const hoy = new Date().getDay(); // 0=Dom
-    if (hoy === 0) return null;
+    const hoy = new Date().getDay(); // 0=Dom, 1=Lun ... 6=Sab
+    if (hoy === 0 || hoy === 6) return null;
     const diaData = horario.grilla.find(d => d.dia_numero === hoy);
     if (!diaData) return null;
     const ahora = new Date().getHours() * 60 + new Date().getMinutes();
     return diaData.bloques.find(b => {
       if (b.es_recreo || !b.materia_nombre) return false;
       const [hh, mm] = (b.hora_inicio ?? '0:0').split(':').map(Number);
-      const [eh, em] = (b.hora_fin   ?? '0:0').split(':').map(Number);
+      const [eh, em] = (b.hora_fin ?? '0:0').split(':').map(Number);
       return (hh * 60 + mm) <= ahora && ahora < (eh * 60 + em);
     }) ?? null;
   }, [horario]);
 
-  // Alertas
-  const alertas: string[] = [];
-  if ((resumenTareas?.atrasados ?? 0) > 0) alertas.push(`${resumenTareas!.atrasados} tarea${resumenTareas!.atrasados > 1 ? 's' : ''} atrasada${resumenTareas!.atrasados > 1 ? 's' : ''}`);
-  if (materiasRiesgo > 0) alertas.push(`${materiasRiesgo} materia${materiasRiesgo > 1 ? 's' : ''} con asistencia baja`);
-  if (reprobadas > 0) alertas.push(`${reprobadas} materia${reprobadas > 1 ? 's' : ''} reprobada${reprobadas > 1 ? 's' : ''}`);
+  // Resumen de alertas para el Header
+  const alertasHeader = useMemo(() => {
+    const list: { tipo: 'err' | 'warn'; mensaje: string }[] = [];
+    if ((resumenTareas?.atrasados ?? 0) > 0) {
+      list.push({
+        tipo: 'err',
+        mensaje: `${resumenTareas.atrasados} atrasada${resumenTareas.atrasados > 1 ? 's' : ''}`,
+      });
+    }
+    if (proximasAvencer && proximasAvencer.length > 0) {
+      list.push({
+        tipo: 'warn',
+        mensaje: `${proximasAvencer.length} por vencer`,
+      });
+    }
+    return list;
+  }, [resumenTareas, proximasAvencer]);
 
   return (
-    <Box sx={{
-      minHeight: '100vh',
-      background: isDark
-        ? 'radial-gradient(ellipse at 10% 0%, rgba(99,102,241,0.08) 0%, transparent 50%)'
-        : 'radial-gradient(ellipse at 10% 0%, rgba(99,102,241,0.04) 0%, transparent 50%)',
-    }}>
-      <Container maxWidth="xl" disableGutters sx={{ px: { xs: 2, sm: 3 } }}>
+    <Box sx={{ minHeight: '100vh', py: { xs: 2.5, sm: 4 } }}>
+      <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 3 } }}>
 
-        {/* ══ HERO ══ */}
-        <Box sx={{ pt: 3 }}>
-          <HeroEstudiante
-            perfil={perfil}
-            isDark={isDark}
-            onRefresh={handleRefresh}
-            loading={loadingPerfil}
-          />
-        </Box>
+        {/* ══ 1. HERO INSTITUCIONAL ══ */}
+        <HeroEstudiante
+          perfil={perfil}
+          accentColor={accentColor}
+          gradBg={gradBg}
+          isDark={isDark}
+          onRefresh={handleRefreshAll}
+          loading={loadingPerfil}
+          alertas={alertasHeader}
+        />
 
-        {/* ══ CLASE EN CURSO ══ */}
+        {/* ══ 2. SELECTOR DE TRIMESTRE (PANEL ESTILO TAREAS) ══ */}
+        {periodos.length > 0 && (
+          <Fade in timeout={350}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 2,
+                p: 1.6,
+                mb: 3,
+                borderRadius: '18px',
+                bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.015)',
+                border: `1.5px solid ${alpha(isDark ? '#fff' : '#000', 0.07)}`,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CalendarMonthIcon sx={{ fontSize: 22, color: accentColor }} />
+                <Typography variant="subtitle2" fontWeight={800} color="text.secondary">
+                  Trimestre de evaluación:
+                </Typography>
+              </Box>
+
+              <SelectorTrimestre
+                periodos={periodos}
+                periodoActivo={periodoActivo}
+                onChange={setPeriodoActivo}
+                isLoading={loadingPeriodos}
+                accentColor={accentColor}
+                isDark={isDark}
+              />
+            </Box>
+          </Fade>
+        )}
+
+        {/* ══ 3. CLASE EN CURSO AHORA (SI APLICA) ══ */}
         {claseAhora && (
           <Fade in timeout={400}>
-            <Box sx={{
-              mb: 3, p: 2, borderRadius: '14px',
-              display: 'flex', alignItems: 'center', gap: 2,
-              background: isDark
-                ? `linear-gradient(135deg, ${alpha('#10b981', 0.18)}, ${alpha('#10b981', 0.06)})`
-                : `linear-gradient(135deg, ${alpha('#10b981', 0.1)}, ${alpha('#10b981', 0.03)})`,
-              border: `1px solid ${alpha('#10b981', 0.3)}`,
-              animation: `${fadeLeft} 0.4s ease-out 200ms both`,
-            }}>
-              <Box sx={{
-                width: 10, height: 10, borderRadius: '50%', bgcolor: '#10b981', flexShrink: 0,
-                boxShadow: `0 0 0 4px ${alpha('#10b981', 0.25)}`,
-              }} />
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="caption" fontWeight={800} sx={{ color: '#10b981', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  Ahora en clase
-                </Typography>
-                <Typography variant="body2" fontWeight={800} noWrap>
-                  {claseAhora.materia_nombre}
-                  {claseAhora.aula && (
-                    <Box component="span" sx={{ color: 'text.secondary', fontWeight: 600, ml: 1, fontSize: '0.8rem' }}>
-                      · Aula {claseAhora.aula}
-                    </Box>
-                  )}
-                </Typography>
+            <Paper
+              elevation={0}
+              onClick={() => router.push('/dashboard/estudiante/horario')}
+              sx={{
+                mb: 3,
+                p: 2,
+                borderRadius: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: 'pointer',
+                gap: 2,
+                border: `1.5px solid ${alpha('#10b981', 0.35)}`,
+                background: isDark
+                  ? `linear-gradient(135deg, ${alpha('#10b981', 0.15)} 0%, rgba(15, 23, 42, 0.7) 100%)`
+                  : `linear-gradient(135deg, ${alpha('#10b981', 0.1)} 0%, #ffffff 100%)`,
+                transition: 'all 0.25s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 6px 20px ${alpha('#10b981', 0.25)}`,
+                },
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    bgcolor: '#10b981',
+                    boxShadow: '0 0 10px #10b981',
+                    animation: `${pulse} 1.5s ease-in-out infinite`,
+                    flexShrink: 0,
+                  }}
+                />
+                <Box>
+                  <Typography
+                    variant="caption"
+                    fontWeight={900}
+                    sx={{
+                      color: '#10b981',
+                      fontSize: '0.68rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.8,
+                      display: 'block',
+                    }}
+                  >
+                    Clase en curso ahora
+                  </Typography>
+                  <Typography variant="body1" fontWeight={800}>
+                    {claseAhora.etiqueta_personalizada || claseAhora.materia_nombre}
+                    {claseAhora.aula && (
+                      <Box component="span" sx={{ color: 'text.secondary', fontWeight: 600, ml: 1, fontSize: '0.85rem' }}>
+                        · Aula {claseAhora.aula}
+                      </Box>
+                    )}
+                  </Typography>
+                </Box>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                <AccessTimeIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
-                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ fontSize: '0.68rem' }}>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AccessTimeIcon sx={{ fontSize: 16, color: '#10b981' }} />
+                <Typography variant="body2" fontWeight={700} sx={{ color: '#10b981', fontSize: '0.82rem' }}>
                   {claseAhora.hora_inicio?.slice(0, 5)} – {claseAhora.hora_fin?.slice(0, 5)}
                 </Typography>
+                <ArrowForwardIcon sx={{ fontSize: 16, color: '#10b981', ml: 0.5 }} />
               </Box>
-            </Box>
+            </Paper>
           </Fade>
         )}
 
-        {/* ══ TICKER DE PRÓXIMAS TAREAS ══ */}
+        {/* ══ 4. TICKER DE PRÓXIMAS ACTIVIDADES Y EXÁMENES ══ */}
         {proximasAvencer.length > 0 && !loadingTareas && (
-          <Box sx={{ mb: 3, animation: `${fadeUp} 0.4s ease-out 150ms both` }}>
-            <TareasTicker
+          <Box sx={{ mb: 3 }}>
+            <TickerProximas
               tareas={proximasAvencer.map(t => ({
+                evaluacion_id: t.evaluacion_id,
                 evaluacion_nombre: t.evaluacion_nombre,
-                materia_nombre:    t.materia_nombre,
-                dias_restantes:    t.dias_restantes,
+                materia_nombre: t.materia_nombre,
+                dias_restantes: t.dias_restantes,
               }))}
               isDark={isDark}
+              onItemClick={(id) => router.push(`/dashboard/estudiante/tareas/${id}`)}
             />
           </Box>
         )}
 
-        {/* ══ ALERTAS ══ */}
-        {alertas.length > 0 && (
-          <Fade in timeout={400}>
-            <Box sx={{
-              mb: 3, p: 1.75, borderRadius: '12px',
-              display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.25,
-              bgcolor: isDark ? alpha('#ef4444', 0.1) : alpha('#ef4444', 0.05),
-              border: `1px solid ${alpha('#ef4444', 0.2)}`,
-              animation: `${fadeUp} 0.4s ease-out 100ms both`,
-            }}>
-              <ErrorOutlineIcon sx={{ fontSize: 17, color: '#ef4444', flexShrink: 0 }} />
-              <Typography variant="caption" fontWeight={800} sx={{ color: isDark ? '#f87171' : '#dc2626', fontSize: '0.72rem' }}>
-                Requiere atención:
-              </Typography>
-              {alertas.map((a, i) => (
-                <Chip key={i} size="small" label={a} sx={{
-                  height: 22, fontWeight: 700, fontSize: '0.65rem', borderRadius: '7px',
-                  bgcolor: isDark ? alpha('#ef4444', 0.18) : alpha('#ef4444', 0.1),
-                  color: isDark ? '#f87171' : '#dc2626',
-                  border: `1px solid ${alpha('#ef4444', 0.25)}`,
-                }} />
-              ))}
-            </Box>
-          </Fade>
-        )}
-
-        {/* ══ STATS RÁPIDAS — fila editorial ══ */}
-        <Box sx={{
-          mb: 3, p: { xs: 2, sm: 2.5 }, borderRadius: '18px',
-          border: `1px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.06)}`,
-          background: isDark
-            ? 'linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))'
-            : '#fff',
-          animation: `${fadeUp} 0.45s ease-out 50ms both`,
-        }}>
-          <Typography variant="caption" fontWeight={800} color="text.disabled" sx={{
-            fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.1em',
-            display: 'block', mb: 2,
-          }}>
-            Resumen del período
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 2.5, sm: 4 } }}>
-            <BigStat
-              value={promedio ?? '—'}
-              label="Promedio general"
-              sub="sobre 100 pts"
-              color={
-                promedio == null ? (isDark ? '#6b7280' : '#9ca3af')
-                : promedio >= 70 ? '#10b981'
-                : promedio >= 51 ? '#f59e0b'
-                : '#ef4444'
-              }
+        {/* ══ 5. KPIS ACADÉMICOS (ESTILO TAREAS Y EVALUACIONES) ══ */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          {/* Promedio General */}
+          <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+            <KpiCard
+              label="Promedio General"
+              value={promedio != null ? promedio : '—'}
+              sublabel={promedio >= 70 ? 'Rendimiento sobresaliente' : promedio >= 51 ? 'Aprobado regular' : 'Requiere refuerzo'}
+              color={promedio == null ? (isDark ? '#9ca3af' : '#6b7280') : promedio >= 70 ? '#10b981' : promedio >= 51 ? '#f59e0b' : '#ef4444'}
+              icon={SchoolIcon}
               trend={promedio != null ? (promedio >= 70 ? 'up' : 'down') : undefined}
+              loading={loadingBoletin}
+              onClick={() => router.push('/dashboard/estudiante/notas')}
               delay={0}
-              loading={loadingBoletin}
             />
-            <Box sx={{ width: 1, bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.07), display: { xs: 'none', sm: 'block' } }} />
-            <BigStat
-              value={aprobadas}
-              label="Materias aprobadas"
-              color="#10b981"
-              trend={aprobadas > 0 ? 'up' : 'neutral'}
-              delay={60}
-              loading={loadingBoletin}
-            />
-            <BigStat
-              value={asistenciaGlobal != null ? `${asistenciaGlobal}%` : '—'}
-              label="Asistencia global"
-              color={
-                asistenciaGlobal == null ? (isDark ? '#6b7280' : '#9ca3af')
-                : asistenciaGlobal >= 85 ? '#10b981'
-                : asistenciaGlobal >= 70 ? '#f59e0b'
-                : '#ef4444'
-              }
-              trend={asistenciaGlobal != null ? (asistenciaGlobal >= 80 ? 'up' : 'down') : undefined}
-              delay={120}
-              loading={loadingAsistencia}
-            />
-            <BigStat
-              value={resumenTareas?.entregados ?? '—'}
-              label="Tareas entregadas"
-              sub={resumenTareas ? `de ${resumenTareas.total} totales` : undefined}
-              color="#6366f1"
-              delay={180}
-              loading={loadingTareas}
-            />
-            <BigStat
-              value={progresoTemario ? `${progresoTemario}%` : '—'}
-              label="Progreso temario"
+          </Grid>
+
+          {/* Tareas & Evaluaciones */}
+          <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+            <KpiCard
+              label="Tareas Pendientes"
+              value={resumenTareas?.pendientes ?? '0'}
+              sublabel={`${resumenTareas?.entregados ?? 0} entregadas de ${resumenTareas?.total ?? 0}`}
               color="#f59e0b"
-              delay={240}
-              loading={loadingMaterias}
+              icon={AssignmentIcon}
+              loading={loadingTareas}
+              onClick={() => router.push('/dashboard/estudiante/tareas')}
+              delay={60}
             />
-          </Box>
-        </Box>
-
-        {/* ══ GRID DE MÓDULOS ══ */}
-        <Grid container spacing={2} sx={{ pb: 6 }}>
-
-          {/* Columna izquierda — 2 módulos apilados */}
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-
-              {/* CALIFICACIONES */}
-              <ModuleRow
-                title="Calificaciones"
-                desc="Boletín, notas y dimensiones"
-                icon={SchoolIcon}
-                accentColor="#10b981"
-                href="/dashboard/estudiante/calificaciones"
-                delay={0}
-                tag={
-                  reprobadas > 0
-                    ? `${reprobadas} reprobada${reprobadas > 1 ? 's' : ''}`
-                    : promedio != null
-                      ? `Prom. ${promedio}`
-                      : undefined
-                }
-                tagColor={reprobadas > 0 ? 'err' : 'ok'}
-                items={[
-                  { label: 'Promedio',   value: promedio ?? '—',    color: '#10b981' },
-                  { label: 'Aprobadas',  value: aprobadas,           color: '#10b981' },
-                  { label: 'Reprobadas', value: reprobadas,          color: reprobadas > 0 ? '#ef4444' : undefined },
-                  { label: 'Sin nota',   value: boletin.filter(b => b.nota_final == null).length },
-                ]}
-                loading={loadingBoletin}
-              />
-
-              {/* ASISTENCIA */}
-              <ModuleRow
-                title="Asistencia"
-                desc="Presencias, tardanzas y historial"
-                icon={EventAvailableIcon}
-                accentColor="#3b82f6"
-                href="/dashboard/estudiante/asistencia"
-                delay={80}
-                tag={
-                  materiasRiesgo > 0
-                    ? `${materiasRiesgo} en riesgo`
-                    : asistenciaGlobal != null && asistenciaGlobal >= 85
-                      ? 'Excelente'
-                      : undefined
-                }
-                tagColor={materiasRiesgo > 0 ? 'warn' : 'ok'}
-                barValue={asistenciaGlobal ?? undefined}
-                barLabel="Asistencia promedio"
-                items={[
-                  { label: 'Presente',    value: reporteAsistencia.reduce((a, r) => a + r.presentes, 0),  color: '#10b981' },
-                  { label: 'Ausente',     value: reporteAsistencia.reduce((a, r) => a + r.ausentes, 0),   color: '#ef4444' },
-                  { label: 'Tardanzas',   value: reporteAsistencia.reduce((a, r) => a + r.tardanzas, 0),  color: '#f59e0b' },
-                ]}
-                loading={loadingAsistencia}
-              />
-
-            </Box>
           </Grid>
 
-          {/* Columna derecha — 3 módulos */}
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-
-              {/* TAREAS */}
-              <ModuleRow
-                title="Tareas y Evaluaciones"
-                desc="Entregas pendientes y resultados"
-                icon={AssignmentIcon}
-                accentColor="#f59e0b"
-                href="/dashboard/estudiante/tareas"
-                delay={160}
-                tag={
-                  (resumenTareas?.atrasados ?? 0) > 0
-                    ? `${resumenTareas!.atrasados} atrasada${resumenTareas!.atrasados > 1 ? 's' : ''}`
-                    : (resumenTareas?.pendientes ?? 0) > 0
-                      ? `${resumenTareas!.pendientes} pendiente${resumenTareas!.pendientes > 1 ? 's' : ''}`
-                      : undefined
-                }
-                tagColor={(resumenTareas?.atrasados ?? 0) > 0 ? 'err' : 'warn'}
-                barValue={
-                  resumenTareas?.total
-                    ? Math.round((resumenTareas.entregados / resumenTareas.total) * 100)
-                    : undefined
-                }
-                barLabel="Progreso de entregas"
-                items={[
-                  { label: 'Total',      value: resumenTareas?.total      ?? '—' },
-                  { label: 'Entregadas', value: resumenTareas?.entregados ?? '—', color: '#10b981' },
-                  { label: 'Pendientes', value: resumenTareas?.pendientes ?? '—', color: '#f59e0b' },
-                  { label: 'Atrasadas',  value: resumenTareas?.atrasados  ?? '—', color: (resumenTareas?.atrasados ?? 0) > 0 ? '#ef4444' : undefined },
-                ]}
-                loading={loadingTareas}
-              />
-
-              {/* MATERIAS */}
-              <ModuleRow
-                title="Mis Materias"
-                desc="Temario, materiales y docentes"
-                icon={AutoStoriesIcon}
-                accentColor="#8b5cf6"
-                href="/dashboard/estudiante/materias"
-                delay={240}
-                tag={materias.length > 0 ? `${materias.length} materias` : undefined}
-                tagColor="info"
-                barValue={progresoTemario || undefined}
-                barLabel="Progreso del temario"
-                items={[
-                  { label: 'Materias',     value: materias.length },
-                  { label: 'Con nota',     value: materias.filter(m => m.nota_final != null).length, color: '#8b5cf6' },
-                  { label: 'Materiales',   value: materias.reduce((a, m) => a + m.total_materiales, 0), color: '#6366f1' },
-                ]}
-                loading={loadingMaterias}
-              />
-
-              {/* HORARIO */}
-              <ModuleRow
-                title="Mi Horario"
-                desc="Clases, bloques y docentes"
-                icon={CalendarMonthIcon}
-                accentColor="#06b6d4"
-                href="/dashboard/estudiante/horario"
-                delay={320}
-                tag={
-                  claseAhora
-                    ? 'En clase ahora'
-                    : horario
-                      ? `${horario.total_celdas} clases/sem`
-                      : undefined
-                }
-                tagColor={claseAhora ? 'ok' : 'info'}
-                items={
-                  horario
-                    ? [
-                        { label: 'Clases/sem',  value: horario.total_celdas },
-                        { label: 'Días',        value: horario.grilla.length },
-                        ...(claseAhora
-                          ? [{ label: 'Ahora', value: claseAhora.materia_nombre?.split(' ')[0] ?? '—', color: '#10b981' }]
-                          : []),
-                      ]
-                    : []
-                }
-                loading={loadingHorario}
-              />
-
-            </Box>
+          {/* Asistencia Global */}
+          <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+            <KpiCard
+              label="Asistencia Global"
+              value={asistenciaGlobal != null ? `${asistenciaGlobal}%` : '—'}
+              sublabel={asistenciaGlobal != null && asistenciaGlobal >= 85 ? 'Asistencia regular y óptima' : materiasRiesgoAsistencia > 0 ? `${materiasRiesgoAsistencia} materias con faltas` : 'Registro actualizado'}
+              color={asistenciaGlobal == null ? '#3b82f6' : asistenciaGlobal >= 85 ? '#10b981' : asistenciaGlobal >= 75 ? '#3b82f6' : '#ef4444'}
+              icon={EventAvailableIcon}
+              loading={loadingAsistencia}
+              onClick={() => router.push('/dashboard/estudiante/asistencia')}
+              delay={120}
+            />
           </Grid>
 
+          {/* Progreso del Temario / Materias */}
+          <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+            <KpiCard
+              label="Avance del Temario"
+              value={`${progresoTemario}%`}
+              sublabel={`${materias.length} materias activas`}
+              color="#8b5cf6"
+              icon={AutoStoriesIcon}
+              loading={loadingMaterias}
+              onClick={() => router.push('/dashboard/estudiante/materias')}
+              delay={180}
+            />
+          </Grid>
         </Grid>
+
+        {/* ══ 6. GRID DE MÓDULOS PRINCIPALES (TARJETAS GLASSMORPHISM) ══ */}
+        <Typography
+          variant="h6"
+          fontWeight={800}
+          sx={{
+            fontSize: '1.15rem',
+            letterSpacing: -0.3,
+            mb: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+          }}
+        >
+          <Box
+            component="span"
+            sx={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              bgcolor: accentColor,
+            }}
+          />
+          Módulos y Actividades Académicas
+        </Typography>
+
+        <Grid container spacing={2.5} sx={{ pb: 4 }}>
+          {/* MÓDULO: TAREAS Y ACTIVIDADES */}
+          <Grid size={{ xs: 12, md: 6, lg: 4 }}>
+            <ModuloCard
+              title="Tareas y Actividades"
+              subtitle="Entregas de trabajos prácticos y tareas"
+              badge={
+                (resumenTareas?.atrasados ?? 0) > 0
+                  ? `${resumenTareas.atrasados} atrasadas`
+                  : (resumenTareas?.pendientes ?? 0) > 0
+                    ? `${resumenTareas.pendientes} pendientes`
+                    : 'Al día'
+              }
+              badgeColor={(resumenTareas?.atrasados ?? 0) > 0 ? '#ef4444' : (resumenTareas?.pendientes ?? 0) > 0 ? '#f59e0b' : '#10b981'}
+              icon={AssignmentIcon}
+              accentColor="#f59e0b"
+              href="/dashboard/estudiante/tareas"
+              delay={0}
+              loading={loadingTareas}
+              stats={[
+                { label: 'Total', value: resumenTareas?.total ?? 0 },
+                { label: 'Pendientes', value: resumenTareas?.pendientes ?? 0, color: '#f59e0b' },
+                { label: 'Entregadas', value: resumenTareas?.entregados ?? 0, color: '#10b981' },
+              ]}
+              progressBar={
+                resumenTareas?.total
+                  ? {
+                    value: Math.round((resumenTareas.entregados / resumenTareas.total) * 100),
+                    label: 'Tasa de entregas completadas',
+                  }
+                  : undefined
+              }
+              actionLabel="Ver mis tareas asignadas"
+            />
+          </Grid>
+
+          {/* MÓDULO: EXÁMENES VIRTUALES Y QUIZZES */}
+          <Grid size={{ xs: 12, md: 6, lg: 4 }}>
+            <ModuloCard
+              title="Exámenes y Quizzes"
+              subtitle="Evaluaciones en línea y pruebas virtuales"
+              badge="En línea"
+              badgeColor="#ec4899"
+              icon={ComputerRoundedIcon}
+              accentColor="#ec4899"
+              href="/dashboard/estudiante/tareas"
+              delay={60}
+              loading={loadingTareas}
+              stats={[
+                { label: 'Modalidad', value: 'Virtual', color: '#ec4899' },
+                { label: 'Corrección', value: 'Gemini IA', color: '#8b5cf6' },
+                { label: 'Alertas', value: proximasAvencer.length, color: '#ec4899' },
+              ]}
+              progressBar={{
+                value: 100,
+                label: 'Plataforma de evaluación lista',
+              }}
+              actionLabel="Ir a exámenes y evaluaciones"
+            />
+          </Grid>
+
+          {/* MÓDULO: BOLETÍN Y NOTAS */}
+          <Grid size={{ xs: 12, md: 6, lg: 4 }}>
+            <ModuloCard
+              title="Calificaciones y Boletín"
+              subtitle="Dimensiones Ser, Saber, Hacer, Decidir"
+              badge={reprobadas > 0 ? `${reprobadas} en riesgo` : promedio != null ? `Promedio ${promedio}` : undefined}
+              badgeColor={reprobadas > 0 ? '#ef4444' : '#10b981'}
+              icon={SchoolIcon}
+              accentColor="#10b981"
+              href="/dashboard/estudiante/notas"
+              delay={120}
+              loading={loadingBoletin}
+              stats={[
+                { label: 'Promedio', value: promedio ?? '—', color: '#10b981' },
+                { label: 'Aprobadas', value: aprobadas, color: '#10b981' },
+                { label: 'Reprobadas', value: reprobadas, color: reprobadas > 0 ? '#ef4444' : '#6b7280' },
+              ]}
+              progressBar={
+                materias.length > 0
+                  ? {
+                    value: Math.round((aprobadas / materias.length) * 100),
+                    label: 'Porcentaje de aprobación',
+                  }
+                  : undefined
+              }
+              actionLabel="Consultar libreta de notas"
+            />
+          </Grid>
+
+          {/* MÓDULO: MIS MATERIAS Y MATERIALES */}
+          <Grid size={{ xs: 12, md: 6, lg: 4 }}>
+            <ModuloCard
+              title="Mis Materias y Temario"
+              subtitle="Recursos de estudio, bibliografía y unidades"
+              badge={`${materias.length} asignaturas`}
+              badgeColor="#8b5cf6"
+              icon={AutoStoriesIcon}
+              accentColor="#8b5cf6"
+              href="/dashboard/estudiante/materias"
+              delay={180}
+              loading={loadingMaterias}
+              stats={[
+                { label: 'Materias', value: materias.length },
+                { label: 'Materiales', value: totalMateriales, color: '#8b5cf6' },
+                { label: 'Avance', value: `${progresoTemario}%`, color: '#10b981' },
+              ]}
+              progressBar={{
+                value: progresoTemario,
+                label: 'Avance global de los temas',
+              }}
+              actionLabel="Explorar materias y temas"
+            />
+          </Grid>
+
+          {/* MÓDULO: ASISTENCIA */}
+          <Grid size={{ xs: 12, md: 6, lg: 4 }}>
+            <ModuloCard
+              title="Registro de Asistencia"
+              subtitle="Puntualidad, atrasos y justificaciones"
+              badge={asistenciaGlobal != null && asistenciaGlobal >= 85 ? 'Óptima' : materiasRiesgoAsistencia > 0 ? `${materiasRiesgoAsistencia} bajas` : undefined}
+              badgeColor={asistenciaGlobal != null && asistenciaGlobal >= 85 ? '#10b981' : '#ef4444'}
+              icon={EventAvailableIcon}
+              accentColor="#3b82f6"
+              href="/dashboard/estudiante/asistencia"
+              delay={240}
+              loading={loadingAsistencia}
+              stats={[
+                { label: 'Presente', value: reporteAsistencia.reduce((a, r) => a + r.presentes, 0), color: '#10b981' },
+                { label: 'Faltas', value: reporteAsistencia.reduce((a, r) => a + r.ausentes, 0), color: '#ef4444' },
+                { label: 'Tardanzas', value: reporteAsistencia.reduce((a, r) => a + r.tardanzas, 0), color: '#f59e0b' },
+              ]}
+              progressBar={
+                asistenciaGlobal != null
+                  ? {
+                    value: asistenciaGlobal,
+                    label: 'Porcentaje global de asistencia',
+                  }
+                  : undefined
+              }
+              actionLabel="Revisar detalle de asistencias"
+            />
+          </Grid>
+
+          {/* MÓDULO: HORARIO ESCOLAR */}
+          <Grid size={{ xs: 12, md: 6, lg: 4 }}>
+            <ModuloCard
+              title="Mi Horario Escolar"
+              subtitle="Distribución semanal de períodos de clase"
+              badge={claseAhora ? 'En clase ahora' : horario ? `${horario.total_celdas} clases/sem` : undefined}
+              badgeColor={claseAhora ? '#10b981' : accentColor}
+              icon={CalendarMonthIcon}
+              accentColor={accentColor}
+              href="/dashboard/estudiante/horario"
+              delay={300}
+              loading={loadingHorario}
+              stats={[
+                { label: 'Días', value: horario?.grilla.length ?? 5 },
+                { label: 'Clases/Sem', value: horario?.total_celdas ?? 0, color: accentColor },
+                { label: 'Estado', value: claseAhora ? 'En curso' : 'Libre', color: claseAhora ? '#10b981' : '#6b7280' },
+              ]}
+              actionLabel="Ver grilla horaria semanal"
+            />
+          </Grid>
+        </Grid>
+
       </Container>
     </Box>
   );

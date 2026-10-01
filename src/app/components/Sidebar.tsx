@@ -51,6 +51,7 @@ import NotificationAddOutlinedIcon from '@mui/icons-material/NotificationAddOutl
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 
 import CollectionsBookmarkOutlinedIcon from '@mui/icons-material/CollectionsBookmarkOutlined';
+import BookmarkAddedOutlinedIcon from '@mui/icons-material/BookmarkAddedOutlined';
 
 import { useAuth } from '../../context/AuthContext';
 import { title } from 'process';
@@ -123,6 +124,8 @@ interface SectionProps {
 const TopProgressBar = ({ isLoading }: { isLoading: boolean }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const accent = isDark ? '#f2b93d' : '#0288d1';
+  const accentDeep = isDark ? '#b8860b' : '#01579b';
 
   if (!isLoading) return null;
 
@@ -135,14 +138,14 @@ const TopProgressBar = ({ isLoading }: { isLoading: boolean }) => {
         right: 0,
         zIndex: 9999,
         height: 3,
-        backgroundColor: isDark ? alpha('#0288d1', 0.1) : alpha('#0288d1', 0.05),
+        backgroundColor: alpha(accent, isDark ? 0.12 : 0.05),
         overflow: 'hidden',
       }}
     >
       <Box
         sx={{
           height: '100%',
-          background: 'linear-gradient(90deg, #0288d1, #01579b, #0288d1)',
+          background: `linear-gradient(90deg, ${accent}, ${accentDeep}, ${accent})`,
           backgroundSize: '200% 100%',
           animation: `${shimmer} 1.5s linear infinite, ${progressAnimation} 2s ease-in-out`,
         }}
@@ -177,53 +180,46 @@ const MenuItem = ({
     onNavigate();
   };
 
+  // Color de acento: celeste en claro, dorado en oscuro
+  const accent = isDark ? '#f2b93d' : '#0288d1';
+
   const content = (
     <Link href={to} style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}>
       <ListItemButton
         onClick={handleClick}
         sx={{
-          minHeight: 48,
-          px: 2.5,
-          mb: 0.5,
-          borderRadius: 2,
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          minHeight: 44,
+          px: 2,
+          mb: 0.25,
+          borderRadius: 2.5,
+          transition: 'background-color 0.15s ease, color 0.15s ease',
           position: 'relative',
-          overflow: 'hidden',
           backgroundColor: isActive
             ? isDark
-              ? alpha('#0288d1', 0.15)
-              : alpha('#0288d1', 0.1)
+              ? alpha(accent, 0.16)
+              : alpha(accent, 0.1)
             : 'transparent',
           '&:hover': {
-            backgroundColor: isDark ? alpha('#0288d1', 0.12) : alpha('#0288d1', 0.08),
-            transform: 'translateX(4px)',
-            '& .MuiListItemIcon-root': {
-              transform: 'scale(1.1) rotate(5deg)',
-            },
+            backgroundColor: isActive
+              ? isDark
+                ? alpha(accent, 0.2)
+                : alpha(accent, 0.13)
+              : isDark
+                ? alpha('#ffffff', 0.04)
+                : alpha('#000000', 0.03),
           },
-          '&::before': isActive
-            ? {
-              content: '""',
-              position: 'absolute',
-              left: 0,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: 4,
-              height: '70%',
-              borderRadius: '0 4px 4px 0',
-              background: 'linear-gradient(180deg, #0288d1, #01579b)',
-              animation: `${pulse} 2s ease-in-out infinite`,
-            }
-            : {},
         }}
       >
         <ListItemIcon
           sx={{
             minWidth: 0,
-            mr: isCollapsed ? 'auto' : 2,
+            mr: isCollapsed ? 'auto' : 1.75,
             justifyContent: 'center',
-            color: isActive ? '#0288d1' : isDark ? '#b0bec5' : '#607d8b',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            color: isActive
+              ? accent
+              : isDark ? '#8a94a3' : '#6b7280',
+            '& svg': { fontSize: 20 },
+            transition: 'color 0.15s ease',
           }}
         >
           {icon}
@@ -234,9 +230,12 @@ const MenuItem = ({
             <ListItemText
               primary={title}
               primaryTypographyProps={{
-                fontSize: '0.9rem',
-                fontWeight: isActive ? 700 : 500,
-                color: isActive ? '#0288d1' : 'inherit',
+                fontSize: '0.875rem',
+                fontWeight: isActive ? 600 : 500,
+                color: isActive
+                  ? isDark ? '#ffffff' : '#1a1a1a'
+                  : isDark ? '#a7b0bd' : '#4b5563',
+                letterSpacing: '0.01em',
               }}
             />
             {badge && badge > 0 && (
@@ -244,13 +243,12 @@ const MenuItem = ({
                 label={badge}
                 size="small"
                 sx={{
-                  height: 20,
-                  minWidth: 20,
-                  fontSize: '0.7rem',
+                  height: 18,
+                  minWidth: 18,
+                  fontSize: '0.65rem',
                   fontWeight: 700,
-                  backgroundColor: '#f44336',
-                  color: '#fff',
-                  animation: `${pulse} 2s ease-in-out infinite`,
+                  backgroundColor: accent,
+                  color: isDark ? '#1a1a1a' : '#ffffff',
                 }}
               />
             )}
@@ -300,18 +298,20 @@ const MenuSection = ({
   if (filteredItems.length === 0) return null;
 
   return (
-    <Box sx={{ mb: 2 }}>
+    <Box sx={{ mb: 2.5 }}>
       {!isCollapsed && (
         <ListItemButton
           onClick={() => setOpen(!open)}
+          disableRipple
           sx={{
             px: 2,
-            py: 0.5,
+            py: 0.25,
             borderRadius: 2,
-            mb: 0.5,
-            transition: 'all 0.2s ease',
+            mb: 0.75,
+            minHeight: 'auto',
+            transition: 'none',
             '&:hover': {
-              backgroundColor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.03),
+              backgroundColor: 'transparent',
             },
           }}
         >
@@ -319,18 +319,19 @@ const MenuSection = ({
             variant="caption"
             sx={{
               textTransform: 'uppercase',
-              fontWeight: 700,
-              letterSpacing: 1,
-              color: isDark ? '#78909c' : '#90a4ae',
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              fontSize: '0.7rem',
+              color: isDark ? '#6b7684' : '#9aa3af',
               flex: 1,
             }}
           >
             {label}
           </Typography>
           {open ? (
-            <ExpandLessIcon sx={{ fontSize: 18, color: isDark ? '#78909c' : '#90a4ae' }} />
+            <ExpandLessIcon sx={{ fontSize: 16, color: isDark ? '#6b7684' : '#9aa3af' }} />
           ) : (
-            <ExpandMoreIcon sx={{ fontSize: 18, color: isDark ? '#78909c' : '#90a4ae' }} />
+            <ExpandMoreIcon sx={{ fontSize: 16, color: isDark ? '#6b7684' : '#9aa3af' }} />
           )}
         </ListItemButton>
       )}
@@ -338,12 +339,7 @@ const MenuSection = ({
       <Collapse in={open || isCollapsed} timeout="auto" unmountOnExit>
         <List component="div" disablePadding>
           {filteredItems.map((item, index) => (
-            <Box
-              key={item.title}
-              sx={{
-                animation: `${fadeIn} 0.3s ease-out ${index * 0.05}s both`,
-              }}
-            >
+            <Box key={item.title}>
               <MenuItem
                 title={item.title}
                 to={item.to}
@@ -358,16 +354,6 @@ const MenuSection = ({
           ))}
         </List>
       </Collapse>
-
-      {!isCollapsed && (
-        <Divider
-          sx={{
-            mt: 1.5,
-            mb: 0.5,
-            borderColor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08),
-          }}
-        />
-      )}
     </Box>
   );
 };
@@ -420,12 +406,12 @@ const sections = [
         icon: <AppRegistrationIcon />,
         roles: ['super_admin', 'secretaria'],
       },
-      // {
-      //   title: 'Cursos Vacacionales',
-      //   to: '/dashboard/CursosVacacionales',
-      //   icon: <ContactsOutlinedIcon />,
-      //   roles: ['super_admin'],
-      // }
+      {
+        title: 'Reserva de Cupos',
+        to: '/dashboard/reserva-cupos',
+        icon: <BookmarkAddedOutlinedIcon />,
+        roles: ['super_admin', 'secretaria'],
+      },
     ],
   },
   {
@@ -500,15 +486,14 @@ const sections = [
         title: 'Mensualidades',
         to: '/dashboard/pagos',
         icon: <CalculateIcon />,
-
         roles: ['super_admin', 'secretaria']
       },
-      // {
-      //   title: 'Transporte',
-      //   to: '/dashboard/transporte',
-      //   icon: <LocalShippingOutlinedIcon />,
-      //   roles: ['super_admin'],
-      // },
+      {
+        title: 'Migración Mensualidades',
+        to: '/dashboard/migracion-mensualidades',
+        icon: <HistoryEduIcon />,
+        roles: ['super_admin', 'secretaria']
+      },
       {
         title: 'Asignaciones',
         to: '/dashboard/plan-estudio',
@@ -519,6 +504,12 @@ const sections = [
         title: 'Horarios',
         to: '/dashboard/admin/horario',
         icon: <CalendarTodayOutlinedIcon />,
+        roles: ['super_admin', 'secretaria'],
+      },
+      {
+        title: 'Notas y Calificaciones',
+        to: '/dashboard/admin/notas',
+        icon: <GradeOutlinedIcon />,
         roles: ['super_admin', 'secretaria'],
       },
     ],
@@ -646,6 +637,12 @@ const sections = [
         roles: ['docente'],
       },
       {
+        title: 'Mis Estudiantes',
+        to: '/dashboard/docente/estudiantes',
+        icon: <PeopleOutlinedIcon />,
+        roles: ['docente'],
+      },
+      {
         title: 'Temario',
         to: '/dashboard/docente/temario',
         icon: <MenuBookIcon />,
@@ -673,12 +670,6 @@ const sections = [
         title: 'Materiales',
         to: '/dashboard/docente/materiales',
         icon: <MenuBookIcon />,
-        roles: ['docente'],
-      },
-      {
-        title: 'Modelo Predictivo',
-        to: '/dashboard/docente/prediccion',
-        icon: <CalculateIcon />,
         roles: ['docente'],
       },
       {
@@ -711,7 +702,7 @@ const sections = [
         roles: ['estudiante'],
       },
       {
-        title: 'Actividades Pedagogicas',
+        title: 'Actividades y Exámenes',
         to: '/dashboard/estudiante/tareas',
         icon: <AssessmentOutlinedIcon />,
         roles: ['estudiante'],
@@ -731,7 +722,7 @@ const sections = [
       {
         title: 'Materiales',
         to: '/dashboard/estudiante/materiales',
-        icon: <MenuBookIcon />,
+        icon: <CollectionsBookmarkOutlinedIcon />,
         roles: ['estudiante'],
       },
       {
@@ -791,13 +782,14 @@ const SidebarContent = ({
           justifyContent: 'space-between',
           borderBottom: `1px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.07)}`,
           position: 'relative',
-          // El ::before del header — funciona bien en ambos modos, no cambia
           '&::before': {
             content: '""',
             position: 'absolute',
             top: 0, left: 0, right: 0,
             height: '2px',
-            background: 'linear-gradient(90deg, #0288d1 0%, #26c6da 60%, transparent 100%)',
+            background: isDark
+              ? 'linear-gradient(90deg, #f2b93d 0%, #ffe082 60%, transparent 100%)'
+              : 'linear-gradient(90deg, #0288d1 0%, #26c6da 60%, transparent 100%)',
           },
         }}
       >
@@ -830,13 +822,12 @@ const SidebarContent = ({
 
             {/* Textos */}
             <Box>
-
               <Typography
                 sx={{
                   fontFamily: '"Rajdhani", sans-serif',
                   fontSize: '13px',
                   fontWeight: 700,
-                  color: isDark ? '#ffffff' : '#263238',  // ← antes era '#ffffff' fijo
+                  color: isDark ? '#ffffff' : '#263238',
                   lineHeight: 1.2,
                   letterSpacing: '0.05em',
                   textTransform: 'uppercase',
@@ -851,7 +842,7 @@ const SidebarContent = ({
                   fontFamily: '"Rajdhani", sans-serif',
                   fontSize: '13px',
                   fontWeight: 700,
-                  color: '#0288d1',  // ← este se queda igual, funciona en ambos modos
+                  color: isDark ? '#f2b93d' : '#0288d1',
                   lineHeight: 1.2,
                   letterSpacing: '0.05em',
                   textTransform: 'uppercase',
@@ -861,16 +852,14 @@ const SidebarContent = ({
                 Particular
               </Typography>
 
-
               <Box sx={{ height: '1px', width: '14px', background: '#f9a825', opacity: isDark ? 0.6 : 0.9 }} />
-
 
               <Typography
                 sx={{
                   fontFamily: '"Rajdhani", sans-serif',
                   fontSize: '9px',
                   fontWeight: 500,
-                  color: isDark ? 'rgba(255,215,0,0.7)' : 'rgba(180,130,0,0.85)',  // ← dorado más oscuro en light
+                  color: isDark ? 'rgba(255,215,0,0.7)' : 'rgba(180,130,0,0.85)',
                   letterSpacing: '0.16em',
                   textTransform: 'uppercase',
                   whiteSpace: 'nowrap',
@@ -880,7 +869,6 @@ const SidebarContent = ({
               </Typography>
 
               <Box sx={{ height: '1px', width: '14px', background: '#f9a825', opacity: isDark ? 0.6 : 0.9 }} />
-
             </Box>
           </Box>
         )}
@@ -899,98 +887,19 @@ const SidebarContent = ({
               transition: 'all 0.3s ease',
               '&:hover': {
                 transform: 'rotate(180deg)',
-                backgroundColor: isDark ? alpha('#0288d1', 0.15) : alpha('#0288d1', 0.1),
+                backgroundColor: isDark ? alpha('#f2b93d', 0.15) : alpha('#0288d1', 0.1),
               },
             }}
           >
             {isMobile
-              ? <CloseIcon sx={{ color: '#0288d1' }} />
-              : <MenuOutlinedIcon sx={{ color: '#0288d1' }} />
+              ? <CloseIcon sx={{ color: isDark ? '#f2b93d' : '#0288d1' }} />
+              : <MenuOutlinedIcon sx={{ color: isDark ? '#f2b93d' : '#0288d1' }} />
             }
           </IconButton>
         </Tooltip>
 
 
       </Box>
-
-      {/* PERFIL DE USUARIO */}
-      {/* {!isCollapsed && (
-        <Box
-          sx={{
-            p: 2.5,
-            borderBottom: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              p: 1.5,
-              borderRadius: 2,
-              transition: 'all 0.3s ease',
-              cursor: 'pointer',
-              '&:hover': {
-                backgroundColor: isDark
-                  ? alpha('#0288d1', 0.08)
-                  : alpha('#0288d1', 0.05),
-                transform: 'translateY(-2px)',
-                boxShadow: isDark
-                  ? '0 4px 12px rgba(2,136,209,0.15)'
-                  : '0 4px 12px rgba(2,136,209,0.1)',
-              },
-            }}
-          >
-            <Avatar
-              src="/perfil.jpg"
-              sx={{
-                width: 48,
-                height: 48,
-                border: '2px solid #0288d1',
-                boxShadow: '0 2px 8px rgba(2,136,209,0.2)',
-              }}
-            />
-            <Box flex={1} sx={{ minWidth: 0 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 700,
-                  color: isDark ? '#fff' : '#263238',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {user?.username}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: isDark ? '#78909c' : '#90a4ae',
-                  display: 'block',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {rolePrincipal}
-              </Typography>
-            </Box>
-            <Box
-              sx={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                backgroundColor: user?.activo ? '#4caf50' : '#f44336',
-                boxShadow: `0 0 0 2px ${
-                  user?.activo ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)'
-                }`,
-                animation: user?.activo ? `${pulse} 2s ease-in-out infinite` : 'none',
-              }}
-            />
-          </Box>
-        </Box>
-      )} */}
 
       {isCollapsed && (
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
@@ -1021,25 +930,23 @@ const SidebarContent = ({
           overflowY: 'auto',
           overflowX: 'hidden',
           px: 1.5,
-          py: 2,
+          pt: 2.5,
+          pb: 2,
           '&::-webkit-scrollbar': {
-            width: 6,
+            width: 4,
           },
           '&::-webkit-scrollbar-track': {
             backgroundColor: 'transparent',
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: isDark ? alpha('#fff', 0.1) : alpha('#000', 0.1),
+            backgroundColor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08),
             borderRadius: 3,
-            '&:hover': {
-              backgroundColor: isDark ? alpha('#fff', 0.15) : alpha('#000', 0.15),
-            },
           },
         }}
       >
-        {sections.map((section) => (
+        {sections.map((section, idx) => (
           <MenuSection
-            key={section.label}
+            key={`${section.label}-${idx}`}
             label={section.label}
             items={section.items}
             currentPath={pathname || '/dashboard'}
@@ -1061,7 +968,7 @@ const SidebarContent = ({
         <Box
           sx={{
             p: 2,
-            borderTop: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
+            borderTop: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06)}`,
           }}
         >
           <Typography
@@ -1135,10 +1042,6 @@ const ModernSidebar = () => {
       return () => window.removeEventListener('load', handleComplete);
     }
   }, []);
-  //   console.log('🎨 SIDEBAR - userRoles:', userRoles);
-  // console.log('🎨 SIDEBAR - userPermissions:', userPermissions);
-  // console.log('🎨 SIDEBAR - loadin g:', loading);
-  // console.log('🎨 SIDEBAR - user:', user);
 
   if (loading) {
     return (
@@ -1181,33 +1084,31 @@ const ModernSidebar = () => {
         <Box
           sx={{
             position: 'fixed',
-            top: -10, // Debajo del topbar
-            left: -10, // alineado al borde izquierdo
+            top: -10,
+            left: -10,
             zIndex: 1100,
-            p: 1,    // padding del contenedor
+            p: 1,
           }}
         >
           <IconButton
             onClick={() => setMobileOpen(true)}
             sx={{
-              width: 57,         // tamaño cuadrado
-              height: 57,        // tamaño cuadrado
+              width: 57,
+              height: 57,
               border: `1px solid ${isDark ? alpha('#fff', 0.12) : alpha('#000', 0.12)}`,
               boxShadow: isDark
                 ? '0 2px 8px rgba(0,0,0,0.3)'
                 : '0 2px 8px rgba(0,0,0,0.08)',
               '&:hover': {
                 backgroundColor: isDark ? '#212d3d' : '#f5f5f5',
-                transform: 'scale(1.05)',
               },
-              transition: 'all 0.3s ease',
-              borderRadius: 2,   // bordes ligeramente redondeados
+              borderRadius: 2,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <MenuOutlinedIcon sx={{ color: '#0288d1', fontSize: 24 }} />
+            <MenuOutlinedIcon sx={{ color: isDark ? '#f2b93d' : '#0288d1', fontSize: 24 }} />
           </IconButton>
         </Box>
       )}
@@ -1223,19 +1124,8 @@ const ModernSidebar = () => {
             '& .MuiDrawer-paper': {
               width: 280,
               background: isDark ? "#020518" : "ffffff",
-              borderRight: `1px solid ${isDark ? alpha('#fff', 0.12) : alpha('#000', 0.12)}`,
+              borderRight: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.1)}`,
               boxShadow: '4px 0 24px rgba(0,0,0,0.2)',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 4,
-                background: 'linear-gradient(90deg, #0288d1, #01579b, #0288d1)',
-                backgroundSize: '200% 100%',
-                animation: `${shimmer} 3s linear infinite`,
-              },
             },
           }}
         >
@@ -1248,8 +1138,8 @@ const ModernSidebar = () => {
             height: '100vh',
             width: isCollapsed ? 80 : 280,
             backgroundColor: isDark ? '#1a2332' : '#ffffff',
-            borderRight: `1px solid ${isDark ? alpha('#fff', 0.12) : alpha('#000', 0.12)}`,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            borderRight: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.1)}`,
+            transition: 'width 0.25s ease',
             display: 'flex',
             flexDirection: 'column',
             position: 'relative',
@@ -1257,17 +1147,6 @@ const ModernSidebar = () => {
             boxShadow: isDark
               ? '4px 0 24px rgba(0,0,0,0.3)'
               : '4px 0 24px rgba(0,0,0,0.08)',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: 4,
-              background: 'linear-gradient(90deg, #0288d1, #01579b, #0288d1)',
-              backgroundSize: '200% 100%',
-              animation: `${shimmer} 3s linear infinite`,
-            },
           }}
         >
           {sidebarContent}

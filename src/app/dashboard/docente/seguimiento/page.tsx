@@ -3,7 +3,7 @@
 // Restiladla al sistema de tokens brand/brandDim/brandBorder — mismo patrón que gestión de notas.
 // Funcionalidad 100% intacta.
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Box, Container, Typography, Fade, Alert, Button, LinearProgress,
   IconButton, Tooltip, Chip, useTheme, alpha, Snackbar,
@@ -23,6 +23,7 @@ import { useMisAsignaciones } from '@/hooks/useAsistencia';
 import { useResumenPorAsignacion } from '@/hooks/useSeguimientoPedagogico';
 import { AsignacionDocente } from '@/services/asistenciaService';
 import { ResumenEstudianteAsignacion } from '@/types/seguimientoPedagogicoTypes';
+import { sortCursos } from '@/utils/cursoUtils';
 
 // ── animaciones ───────────────────────────────────────────────────────────────
 const bounceIcon = keyframes`
@@ -124,7 +125,7 @@ export default function DocenteSeguimientoPage() {
     refrescarResumen();
   }, [refrescarResumen]);
 
-  const materiasAdaptadas = asignaciones.map(adaptarAsignacion);
+  const materiasAdaptadas = useMemo(() => sortCursos(asignaciones.map(adaptarAsignacion)), [asignaciones]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
@@ -327,6 +328,7 @@ export default function DocenteSeguimientoPage() {
           asignaciones.find(a => a.asignacion_id === materiaSeleccionada)?.periodo_academico_id ?? 0
         }
         onClose={handleCerrarDrawer}
+        onObservacionGuardada={handleObservacionGuardada}
       />
 
       {/* ══ SNACKBAR ══ */}

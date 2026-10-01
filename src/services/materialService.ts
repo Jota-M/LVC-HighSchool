@@ -20,6 +20,7 @@ import {
   ActualizarUnidadTematicaDTO,
   CrearTemaDTO,
   ActualizarTemaDTO,
+  OpcionesGenerarContenidoDTO,
   CrearMaterialDTO,
   ActualizarMaterialDTO,
   PublicarMaterialDTO,
@@ -41,7 +42,12 @@ import {
   RespuestaQuizDTO,
   QuizListResponse,
   QuizCompletoResponse,
-  GenerarQuizResponse
+  GenerarQuizResponse,
+  EstudiantesQuizResponse,
+  QuizConfigResponse,
+  ConfigQuizDTO,
+  GuardarPreguntaQuizDTO,
+  PreguntaQuizResponse
 } from '@/types/materialTypes';
 
 // =============================================
@@ -153,10 +159,13 @@ export const temaService = {
 
   async generarContenido(
     id: number,
-    forzar = false
+    opciones: OpcionesGenerarContenidoDTO | boolean = false
   ): Promise<{ success: boolean; message: string; data: { tema: Tema; generado: boolean } }> {
+    const isBool = typeof opciones === 'boolean';
+    const forzar = isBool ? opciones : (opciones.forzar ?? true);
+    const body = isBool ? { forzar } : { ...opciones, forzar };
     const query = forzar ? '?forzar=true' : '';
-    const response = await api.post(`/materiales/temas/${id}/generar-contenido${query}`);
+    const response = await api.post(`/materiales/temas/${id}/generar-contenido${query}`, body);
     return response.data;
   },
 };
@@ -259,7 +268,11 @@ export const materialAcademicoService = {
       const formData = new FormData();
       Object.entries(data).forEach(([key, value]) => {
         if (value !== null && value !== undefined && key !== 'archivo') {
-          formData.append(key, value.toString());
+          if (key === 'temas') {
+            formData.append('temas', typeof value === 'string' ? value : JSON.stringify(value));
+          } else {
+            formData.append(key, value.toString());
+          }
         }
       });
       formData.append('archivo', data.archivo);
@@ -479,6 +492,62 @@ export const temaQuizService = {
     const response = await api.get(
       `/materiales/temas/${id}/quiz/resumen?paralelo_id=${paralelo_id}&periodo_academico_id=${periodo_academico_id}`
     );
+    return response.data;
+  },
+
+  /**
+   * GET /api/materiales/temas/:id/quiz/estudiantes?paralelo_id=X&periodo_academico_id=Y
+   * Lista detallada de estudiantes y sus resultados en el quiz.
+   */
+  async getEstudiantes(id: number, paralelo_id: number, periodo_academico_id: number): Promise<EstudiantesQuizResponse> {
+    const response = await api.get(
+      `/materiales/temas/${id}/quiz/estudiantes?paralelo_id=${paralelo_id}&periodo_academico_id=${periodo_academico_id}`
+    );
+    return response.data;
+  },
+
+  /**
+   * GET /api/materiales/temas/:id/quiz/config?paralelo_id=X
+   * Configuración de fechas, cierre y límite de intentos.
+   */
+  async getConfig(id: number, paralelo_id: number): Promise<QuizConfigResponse> {
+    const response = await api.get(`/materiales/temas/${id}/quiz/config?paralelo_id=${paralelo_id}`);
+    return response.data;
+  },
+
+  /**
+   * PUT /api/materiales/temas/:id/quiz/config
+   * Guardar configuración del quiz (cierre, fechas, intentos).
+   */
+  async guardarConfig(id: number, data: ConfigQuizDTO): Promise<QuizConfigResponse> {
+    const response = await api.put(`/materiales/temas/${id}/quiz/config`, data);
+    return response.data;
+  },
+
+  /**
+   * POST /api/materiales/temas/:id/quiz/preguntas
+   * Agrega una nueva pregunta al quiz manualmente.
+   */
+  async crearPregunta(id: number, data: GuardarPreguntaQuizDTO): Promise<PreguntaQuizResponse> {
+    const response = await api.post(`/materiales/temas/${id}/quiz/preguntas`, data);
+    return response.data;
+  },
+
+  /**
+   * PUT /api/materiales/temas/:id/quiz/preguntas/:pregunta_id
+   * Modifica una pregunta existente.
+   */
+  async actualizarPregunta(id: number, pregunta_id: number, data: Partial<GuardarPreguntaQuizDTO>): Promise<PreguntaQuizResponse> {
+    const response = await api.put(`/materiales/temas/${id}/quiz/preguntas/${pregunta_id}`, data);
+    return response.data;
+  },
+
+  /**
+   * DELETE /api/materiales/temas/:id/quiz/preguntas/:pregunta_id
+   * Elimina una pregunta del quiz.
+   */
+  async eliminarPregunta(id: number, pregunta_id: number): Promise<{ success: boolean; message: string }> {
+    const response = await api.delete(`/materiales/temas/${id}/quiz/preguntas/${pregunta_id}`);
     return response.data;
   },
 };

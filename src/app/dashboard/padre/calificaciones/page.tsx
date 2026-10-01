@@ -4,7 +4,7 @@
 // azul fijo de página reemplazado por el token de marca compartido
 // (ámbar en modo oscuro / azul en modo claro).
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Box, Container, Typography, Fade, Chip, Skeleton,
   useTheme, alpha, IconButton, Tooltip, Avatar,
@@ -13,11 +13,16 @@ import { keyframes } from '@mui/system';
 import SchoolRoundedIcon from '@mui/icons-material/SchoolRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded';
+import AutoAwesomeMosaicRoundedIcon from '@mui/icons-material/AutoAwesomeMosaicRounded';
+import ChildCareRoundedIcon from '@mui/icons-material/ChildCareRounded';
 
 import BoletinNotas from '@/components/padre/notas/BoletinNotas';
+import BoletinGeneralAnual from '@/components/padre/notas/BoletinGeneralAnual';
+import BoletinCualitativoInicial from '@/components/padre/notas/BoletinCualitativoInicial';
 import { useHijosDelPadre } from '@/hooks/usePadreAsistencia';
-import { usePeriodosEvaluacion, useBoletinNotas } from '@/hooks/usePadreNotas';
+import { usePeriodosEvaluacion, useBoletinNotas, useBoletinAnualPadre } from '@/hooks/usePadreNotas';
 import type { HijoInfo } from '@/types/padreAsistenciaTypes';
+import type { PeriodoEvaluacion } from '@/types/padreNotasTypes';
 
 const bounce = keyframes`
   0%, 100% { transform: translateY(0); }
@@ -108,34 +113,42 @@ const SelectorHijo: React.FC<{
 };
 
 // ──────────────────────────────────────────────
-// SELECTOR DE TRIMESTRE
+// SELECTOR DE TRIMESTRE / GENERAL
 // ──────────────────────────────────────────────
 const SelectorTrimestre: React.FC<{
-  periodos: any[];
-  periodoActivo: any;
-  onChange: (p: any) => void;
+  periodos: PeriodoEvaluacion[];
+  tabActivo: number | 'anual';
+  onChange: (tab: number | 'anual') => void;
   isLoading: boolean;
   isDark: boolean;
   primary: string;
   gradBg: string;
-}> = ({ periodos, periodoActivo, onChange, isLoading, isDark, primary, gradBg }) => {
+}> = ({ periodos, tabActivo, onChange, isLoading, isDark, primary, gradBg }) => {
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', gap: 1 }}>
-        {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" width={130} height={34} sx={{ borderRadius: 2.5 }} />)}
+        {[1, 2, 3, 4].map(i => <Skeleton key={i} variant="rounded" width={130} height={34} sx={{ borderRadius: 2.5 }} />)}
       </Box>
     );
   }
 
+  const periodosOrdenados = [...periodos].sort((a, b) => a.orden - b.orden);
+
   return (
     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-      {periodos.map(p => {
-        const activo = p.id === periodoActivo?.id;
+      {periodosOrdenados.map(p => {
+        const activo = tabActivo === p.id;
         return (
           <Chip
-            key={p.id} label={p.nombre} onClick={() => onChange(p)}
+            key={p.id}
+            label={p.nombre}
+            onClick={() => onChange(p.id)}
             sx={{
-              height: 34, fontWeight: 700, fontSize: 13, borderRadius: 2.5, cursor: 'pointer',
+              height: 34,
+              fontWeight: 700,
+              fontSize: 13,
+              borderRadius: 2.5,
+              cursor: 'pointer',
               transition: 'all 0.2s ease',
               ...(activo
                 ? { background: gradBg, color: isDark ? '#000' : '#fff', boxShadow: `0 4px 12px ${alpha(primary, 0.35)}`, border: 'none' }
@@ -144,6 +157,24 @@ const SelectorTrimestre: React.FC<{
           />
         );
       })}
+
+      {/* Tab adicional: Resumen General / 3 Trimestres */}
+      <Chip
+        icon={<AutoAwesomeMosaicRoundedIcon sx={{ fontSize: '16px !important', color: tabActivo === 'anual' ? (isDark ? '#000 !important' : '#fff !important') : primary }} />}
+        label="General (3 Trimestres)"
+        onClick={() => onChange('anual')}
+        sx={{
+          height: 34,
+          fontWeight: 800,
+          fontSize: 13,
+          borderRadius: 2.5,
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          ...(tabActivo === 'anual'
+            ? { background: gradBg, color: isDark ? '#000' : '#fff', boxShadow: `0 4px 12px ${alpha(primary, 0.35)}`, border: 'none' }
+            : { bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04), color: 'text.secondary', border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`, '&:hover': { bgcolor: alpha(primary, isDark ? 0.15 : 0.08), color: primary } }),
+        }}
+      />
     </Box>
   );
 };
@@ -159,28 +190,69 @@ export default function PadreNotasPage() {
   const { periodos, periodoActivo, setPeriodoActivo, isLoading: loadingPeriodos } =
     usePeriodosEvaluacion(hijoActivo);
 
+  const [tabActivo, setTabActivo] = useState<number | 'anual'>('anual');
+
+  // Sincronizar tabActivo inicial cuando carguen los periodos
+  React.useEffect(() => {
+    if (periodoActivo && tabActivo !== 'anual' && !periodos.some(p => p.id === tabActivo)) {
+      setTabActivo(periodoActivo.id);
+    }
+  }, [periodoActivo, periodos, tabActivo]);
+
+  // Trimestre individual
+  const periodoIdSeleccionado = tabActivo === 'anual' ? null : tabActivo;
   const {
     boletin, isLoading: loadingBoletin,
     aprobadas, reprobadas, sinNota, promedio,
     refrescar: refrescarBoletin,
   } = useBoletinNotas(
     hijoActivo?.matricula_id ?? null,
-    periodoActivo?.id ?? null
+    periodoIdSeleccionado
+  );
+
+  // Resumen general / anual (3 trimestres)
+  const {
+    materiasAnuales,
+    isLoading: loadingAnual,
+    promedioGeneralAnual,
+    aprobadas: aprobadasAnual,
+    reprobadas: reprobadasAnual,
+    sinNota: sinNotaAnual,
+    refrescar: refrescarAnual,
+  } = useBoletinAnualPadre(
+    hijoActivo?.matricula_id ?? null,
+    periodos
   );
 
   const handleCambioHijo = useCallback((hijo: HijoInfo) => {
     setHijoActivo(hijo);
   }, [setHijoActivo]);
 
-  const handleCambioPeriodo = useCallback((p: any) => {
-    setPeriodoActivo(p);
-  }, [setPeriodoActivo]);
+  const handleCambioTab = useCallback((tab: number | 'anual') => {
+    setTabActivo(tab);
+    if (tab !== 'anual') {
+      const p = periodos.find(item => item.id === tab);
+      if (p) setPeriodoActivo(p);
+    }
+  }, [periodos, setPeriodoActivo]);
+
+  const handleRefrescar = useCallback(() => {
+    if (tabActivo === 'anual') {
+      refrescarAnual();
+    } else {
+      refrescarBoletin();
+    }
+  }, [tabActivo, refrescarAnual, refrescarBoletin]);
+
+  const promedioAMostrar = tabActivo === 'anual' ? promedioGeneralAnual : promedio;
+  const textoPromedioHeader = tabActivo === 'anual' ? 'Promedio Anual' : 'Promedio';
+  const esInicial = hijoActivo?.nivel_nombre?.toLowerCase().includes('inicial') ?? false;
 
   return (
     <Box sx={{ minHeight: '100vh', py: 4 }}>
       <Container maxWidth="xl">
 
-        {/* ══ HEADER — mismo patrón que financiero/seguimiento: sin contenedor ══ */}
+        {/* ══ HEADER ══ */}
         <Fade in timeout={500}>
           <Box sx={{ mb: 4 }}>
             <Box
@@ -243,10 +315,24 @@ export default function PadreNotasPage() {
                   justifyContent: { xs: 'flex-start', md: 'flex-end' },
                 }}
               >
-                {promedio != null && (
+                {esInicial ? (
+                  <Chip
+                    icon={<ChildCareRoundedIcon sx={{ fontSize: '16px !important' }} />}
+                    label="Educación Inicial: Evaluación Cualitativa"
+                    size="small"
+                    sx={{
+                      height: 28, fontWeight: 800, fontSize: 12,
+                      bgcolor: isDark ? alpha(primary, 0.15) : alpha(primary, 0.1),
+                      color: primary,
+                      border: `1px solid ${alpha(primary, 0.3)}`,
+                      borderRadius: 2,
+                      '& .MuiChip-icon': { color: primary },
+                    }}
+                  />
+                ) : promedioAMostrar != null && (
                   <Chip
                     icon={<BarChartRoundedIcon sx={{ fontSize: '16px !important' }} />}
-                    label={`Promedio: ${promedio}`}
+                    label={`${textoPromedioHeader}: ${promedioAMostrar}`}
                     size="small"
                     sx={{
                       height: 28, fontWeight: 800, fontSize: 12,
@@ -260,9 +346,9 @@ export default function PadreNotasPage() {
                 )}
                 <Tooltip title="Actualizar">
                   <IconButton
-                    onClick={refrescarBoletin}
+                    onClick={handleRefrescar}
                     size="small"
-                    disabled={loadingBoletin}
+                    disabled={loadingBoletin || loadingAnual}
                     sx={{
                       bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
                       border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
@@ -294,15 +380,15 @@ export default function PadreNotasPage() {
               </Box>
             )}
 
-            {/* Selector de trimestre */}
+            {/* Selector de trimestre / general */}
             <Box>
               <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                Trimestre
+                Vista por Trimestre
               </Typography>
               <SelectorTrimestre
                 periodos={periodos}
-                periodoActivo={periodoActivo}
-                onChange={handleCambioPeriodo}
+                tabActivo={tabActivo}
+                onChange={handleCambioTab}
                 isLoading={loadingPeriodos}
                 isDark={isDark}
                 primary={primary}
@@ -312,19 +398,39 @@ export default function PadreNotasPage() {
           </Box>
         </Fade>
 
-        {/* ── BOLETÍN ── */}
+        {/* ── CONTENIDO: BOLETÍN TRIMESTRAL, GENERAL O INICIAL CUALITATIVO ── */}
         <Fade in timeout={700}>
           <Box sx={{ animation: `${fadeSlideUp} 0.5s ease-out 0.15s both`, pb: 6 }}>
-            <BoletinNotas
-              boletin={boletin}
-              isLoading={loadingBoletin || loadingHijo}
-              aprobadas={aprobadas}
-              reprobadas={reprobadas}
-              sinNota={sinNota}
-              promedio={promedio}
-              matriculaId={hijoActivo?.matricula_id ?? null}
-              periodoEvaluacionId={periodoActivo?.id ?? null}
-            />
+            {esInicial && hijoActivo ? (
+              <BoletinCualitativoInicial
+                matriculaId={hijoActivo.matricula_id}
+                periodoId={tabActivo === 'anual' ? (periodoActivo?.id || periodos[0]?.id || 1) : tabActivo}
+                periodoNombre={periodos.find(p => p.id === (tabActivo === 'anual' ? (periodoActivo?.id || periodos[0]?.id || 1) : tabActivo))?.nombre || 'Primer Trimestre'}
+                estudianteNombre={`${hijoActivo.nombres} ${hijoActivo.apellidos}`.trim()}
+                gradoNombre={hijoActivo.grado_nombre || 'Educación Inicial'}
+              />
+            ) : tabActivo === 'anual' ? (
+              <BoletinGeneralAnual
+                materiasAnuales={materiasAnuales}
+                periodos={periodos}
+                isLoading={loadingAnual || loadingHijo}
+                promedioGeneral={promedioGeneralAnual}
+                aprobadas={aprobadasAnual}
+                reprobadas={reprobadasAnual}
+                sinNota={sinNotaAnual}
+              />
+            ) : (
+              <BoletinNotas
+                boletin={boletin}
+                isLoading={loadingBoletin || loadingHijo}
+                aprobadas={aprobadas}
+                reprobadas={reprobadas}
+                sinNota={sinNota}
+                promedio={promedio}
+                matriculaId={hijoActivo?.matricula_id ?? null}
+                periodoEvaluacionId={periodoIdSeleccionado}
+              />
+            )}
           </Box>
         </Fade>
 

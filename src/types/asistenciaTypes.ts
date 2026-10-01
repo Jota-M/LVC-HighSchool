@@ -203,6 +203,13 @@ export interface ListaDiaResponse {
     total: number;
     ya_marcados: number;
     pendientes: number;
+    tiene_clase_programada?: boolean;
+    dia_semana?: number;
+    dia_semana_nombre?: string;
+    dias_permitidos?: string[];
+    mensaje_horario?: string | null;
+    horarios_dia?: string | null;
+    aula_dia?: string | null;
   };
 }
 

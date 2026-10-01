@@ -90,29 +90,34 @@ const BtnEstado: React.FC<{
   cfg: typeof ESTADOS_CONFIG[0];
   selected: boolean;
   onClick: () => void;
-}> = ({ cfg, selected, onClick }) => {
+  disabled?: boolean;
+}> = ({ cfg, selected, onClick, disabled = false }) => {
   const { isDark } = usePalette();
   return (
-    <Tooltip title={cfg.label} placement="top">
-      <Box
-        onClick={onClick}
-        sx={{
-          px: 1.2, py: 0.7, borderRadius: 2, cursor: 'pointer',
-          border: `1.5px solid ${selected ? cfg.color : 'transparent'}`,
-          bgcolor: selected ? alpha(cfg.color, 0.15) : isDark ? alpha('#fff', 0.04) : alpha('#000', 0.03),
-          color: selected ? cfg.color : 'text.disabled',
-          fontWeight: 800, fontSize: 12,
-          transition: 'all 0.15s',
-          userSelect: 'none',
-          '&:hover': {
-            border: `1.5px solid ${cfg.color}`,
-            color: cfg.color,
-            bgcolor: alpha(cfg.color, 0.08),
-          },
-        }}
-      >
-        {cfg.labelCorto}
-      </Box>
+    <Tooltip title={disabled ? 'Deshabilitado: sin clase programada hoy' : cfg.label} placement="top">
+      <span>
+        <Box
+          onClick={disabled ? undefined : onClick}
+          sx={{
+            px: 1.2, py: 0.7, borderRadius: 2, cursor: disabled ? 'not-allowed' : 'pointer',
+            opacity: disabled ? 0.38 : 1,
+            pointerEvents: disabled ? 'none' : 'auto',
+            border: `1.5px solid ${selected ? cfg.color : 'transparent'}`,
+            bgcolor: selected ? alpha(cfg.color, 0.15) : isDark ? alpha('#fff', 0.04) : alpha('#000', 0.03),
+            color: selected ? cfg.color : 'text.disabled',
+            fontWeight: 800, fontSize: 12,
+            transition: 'all 0.15s',
+            userSelect: 'none',
+            '&:hover': disabled ? {} : {
+              border: `1.5px solid ${cfg.color}`,
+              color: cfg.color,
+              bgcolor: alpha(cfg.color, 0.08),
+            },
+          }}
+        >
+          {cfg.labelCorto}
+        </Box>
+      </span>
     </Tooltip>
   );
 };
@@ -122,7 +127,8 @@ const FilaEstudianteLista: React.FC<{
   num: number;
   marcacion?: RegistroMasivoItem;
   onMarcar: (id: number, datos: Partial<RegistroMasivoItem>) => void;
-}> = ({ est, num, marcacion, onMarcar }) => {
+  disabled?: boolean;
+}> = ({ est, num, marcacion, onMarcar, disabled = false }) => {
   const { isDark } = usePalette();
   const [showObs, setShowObs] = useState(false);
   const [obs, setObs] = useState(marcacion?.observaciones ?? '');
@@ -132,6 +138,7 @@ const FilaEstudianteLista: React.FC<{
   const iniciales = `${est.estudiante_nombres[0]}${est.estudiante_apellidos[0]}`;
 
   const handleEstado = (valor: EstadoAsistencia) => {
+    if (disabled) return;
     if (estadoActual === valor) {
       onMarcar(est.matricula_id, { estado: undefined as any });
     } else {
@@ -182,15 +189,17 @@ const FilaEstudianteLista: React.FC<{
           </Box>
 
           {/* Observación toggle — se mueve acá arriba en mobile */}
-          <Tooltip title="Observación">
-            <IconButton size="small" onClick={() => setShowObs(s => !s)} sx={{
-              flexShrink: 0,
-              color: obs ? '#f59e0b' : 'text.disabled',
-              bgcolor: obs ? alpha('#f59e0b', 0.1) : 'transparent',
-              '&:hover': { color: '#f59e0b', bgcolor: alpha('#f59e0b', 0.08) },
-            }}>
-              {showObs ? <ExpandLessIcon fontSize="small" /> : <CommentRoundedIcon fontSize="small" />}
-            </IconButton>
+          <Tooltip title={disabled ? 'Observación deshabilitada' : 'Observación'}>
+            <span>
+              <IconButton size="small" disabled={disabled} onClick={() => setShowObs(s => !s)} sx={{
+                flexShrink: 0,
+                color: obs ? '#f59e0b' : 'text.disabled',
+                bgcolor: obs ? alpha('#f59e0b', 0.1) : 'transparent',
+                '&:hover': { color: '#f59e0b', bgcolor: alpha('#f59e0b', 0.08) },
+              }}>
+                {showObs ? <ExpandLessIcon fontSize="small" /> : <CommentRoundedIcon fontSize="small" />}
+              </IconButton>
+            </span>
           </Tooltip>
         </Box>
 
@@ -203,14 +212,15 @@ const FilaEstudianteLista: React.FC<{
           pl: { xs: '52px', sm: 0 }, // alinea con el nombre (22px num + 36px avatar aprox + gaps)
         }}>
           {ESTADOS_CONFIG.map(op => (
-            <BtnEstado key={op.value} cfg={op} selected={estadoActual === op.value} onClick={() => handleEstado(op.value)} />
+            <BtnEstado key={op.value} cfg={op} selected={estadoActual === op.value} onClick={() => handleEstado(op.value)} disabled={disabled} />
           ))}
         </Box>
       </Box>
 
-      <Collapse in={showObs}>
+      <Collapse in={showObs && !disabled}>
         <Box sx={{ px: 2, pb: 2 }}>
           <TextField size="small" fullWidth placeholder="Observación (opcional)"
+            disabled={disabled}
             value={obs}
             onChange={e => setObs(e.target.value)}
             onBlur={() => estadoActual && onMarcar(est.matricula_id, { observaciones: obs || undefined })}
@@ -229,7 +239,7 @@ const SeccionLista: React.FC<{
 }> = ({ asignacionId, fecha, onGuardadoExito }) => {
   const { isDark, gold, gradBg } = usePalette();
   const {
-    lista, marcaciones, isLoading, isSaving, porcentajeCompletado,
+    lista, marcaciones, horarioInfo, isLoading, isSaving, porcentajeCompletado,
     cargarLista, marcarEstudiante, marcarTodos, guardarMasivo,
   } = useListaDia();
 
@@ -248,8 +258,13 @@ const SeccionLista: React.FC<{
 
   const marcados = Object.keys(marcaciones).length;
   const isComplete = porcentajeCompletado === 100;
+  const noProgramada = horarioInfo?.tiene_clase_programada === false;
 
   const handleGuardar = async () => {
+    if (noProgramada) {
+      toast.error(horarioInfo?.mensaje_horario || 'No se puede registrar asistencia en un día sin clase programada según el horario oficial escolar.');
+      return;
+    }
     const ok = await guardarMasivo(asignacionId, fecha);
     if (ok) onGuardadoExito();
   };
@@ -277,6 +292,53 @@ const SeccionLista: React.FC<{
 
   return (
     <Box>
+      {/* Alerta de día sin clase programada según horario */}
+      {noProgramada && (
+        <Alert
+          severity="warning"
+          icon={<WarningAmberRoundedIcon sx={{ fontSize: 24 }} />}
+          sx={{
+            borderRadius: '14px',
+            mb: 3,
+            border: `1.5px solid ${alpha('#f59e0b', 0.4)}`,
+            bgcolor: isDark ? alpha('#f59e0b', 0.12) : alpha('#f59e0b', 0.08),
+            '& .MuiAlert-message': { width: '100%' },
+          }}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Typography variant="subtitle2" fontWeight={800} sx={{ color: '#d97706' }}>
+              Sin clase programada según el horario escolar oficial
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.84rem' }}>
+              {horarioInfo?.mensaje_horario || 'Esta materia no tiene clases asignadas para el día de hoy.'}
+            </Typography>
+            {horarioInfo?.dias_permitidos && horarioInfo.dias_permitidos.length > 0 && (
+              <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary', mt: 0.3 }}>
+                📅 Días con clase programada: <strong>{horarioInfo.dias_permitidos.join(', ')}</strong>
+              </Typography>
+            )}
+            <Typography variant="caption" sx={{ color: '#d97706', fontWeight: 600, mt: 0.5 }}>
+              ⚠️ El pase de lista está deshabilitado para esta fecha. Si requieres tomar asistencia de otra fecha, cambia el día en el selector.
+            </Typography>
+          </Box>
+        </Alert>
+      )}
+
+      {/* Banner de clase programada si aplica */}
+      {horarioInfo?.tiene_clase_programada === true && horarioInfo.horarios_dia && (
+        <Box sx={{
+          display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5, p: 1.5, px: 2, borderRadius: '12px',
+          bgcolor: isDark ? alpha(gold, 0.09) : alpha(gold, 0.05),
+          border: `1px solid ${alpha(gold, 0.25)}`,
+        }}>
+          <AccessTimeRoundedIcon sx={{ color: gold, fontSize: 20 }} />
+          <Typography variant="body2" fontWeight={700} sx={{ color: gold, fontSize: '0.82rem' }}>
+            Clase programada hoy: <strong>{horarioInfo.horarios_dia}</strong>
+            {horarioInfo.aula_dia ? ` · Aula ${horarioInfo.aula_dia}` : ''}
+          </Typography>
+        </Box>
+      )}
+
       {/* Barra de progreso */}
       <Box sx={{
         p: 2.5, borderRadius: '12px', mb: 3,
@@ -324,20 +386,25 @@ const SeccionLista: React.FC<{
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <Typography variant="caption" color="text.disabled" fontWeight={700}>Todos:</Typography>
           {ESTADOS_CONFIG.slice(0, 3).map(op => (
-            <Tooltip key={op.value} title={`Marcar todos: ${op.label}`}>
-              <Box
-                onClick={() => marcarTodos(op.value)}
-                sx={{
-                  px: 1.5, py: 0.6, borderRadius: 2, cursor: 'pointer',
-                  border: `1.5px solid ${alpha(op.color, 0.4)}`,
-                  color: op.color, fontWeight: 800, fontSize: 12,
-                  bgcolor: alpha(op.color, 0.06),
-                  transition: 'all 0.15s',
-                  '&:hover': { bgcolor: alpha(op.color, 0.15) },
-                }}
-              >
-                {op.labelCorto}
-              </Box>
+            <Tooltip key={op.value} title={noProgramada ? 'Deshabilitado: sin clase programada en esta fecha' : `Marcar todos: ${op.label}`}>
+              <span>
+                <Box
+                  onClick={noProgramada ? undefined : () => marcarTodos(op.value)}
+                  sx={{
+                    px: 1.5, py: 0.6, borderRadius: 2,
+                    cursor: noProgramada ? 'not-allowed' : 'pointer',
+                    opacity: noProgramada ? 0.38 : 1,
+                    pointerEvents: noProgramada ? 'none' : 'auto',
+                    border: `1.5px solid ${alpha(op.color, 0.4)}`,
+                    color: op.color, fontWeight: 800, fontSize: 12,
+                    bgcolor: alpha(op.color, 0.06),
+                    transition: 'all 0.15s',
+                    '&:hover': noProgramada ? {} : { bgcolor: alpha(op.color, 0.15) },
+                  }}
+                >
+                  {op.labelCorto}
+                </Box>
+              </span>
             </Tooltip>
           ))}
         </Box>
@@ -351,6 +418,7 @@ const SeccionLista: React.FC<{
             est={est} num={i + 1}
             marcacion={marcaciones[est.matricula_id]}
             onMarcar={marcarEstudiante}
+            disabled={noProgramada}
           />
         ))}
       </Stack>
@@ -372,23 +440,27 @@ const SeccionLista: React.FC<{
             </Typography>
           )}
         </Box>
-        <Button
-          variant="contained" size="large"
-          onClick={handleGuardar}
-          disabled={isSaving || marcados === 0}
-          startIcon={isSaving ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : <SaveRoundedIcon />}
-          sx={{
-            background: marcados > 0 ? gradBg : undefined,
-            color: '#fff', fontWeight: 800,
-            px: 4, py: 1.2, borderRadius: 2.5,
-            textTransform: 'none', fontSize: '0.95rem',
-            boxShadow: marcados > 0 ? `0 4px 16px ${alpha(isDark ? '#facc15' : '#0288d1', 0.35)}` : undefined,
-            '&:hover': { background: marcados > 0 ? gradBg : undefined, filter: 'brightness(1.08)' },
-            '&:disabled': { bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06), color: 'text.disabled' },
-          }}
-        >
-          {isSaving ? 'Guardando...' : `Guardar lista (${marcados})`}
-        </Button>
+        <Tooltip title={noProgramada ? 'No se puede guardar: día sin clase programada en el horario oficial' : ''}>
+          <span>
+            <Button
+              variant="contained" size="large"
+              onClick={handleGuardar}
+              disabled={isSaving || marcados === 0 || noProgramada}
+              startIcon={isSaving ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : <SaveRoundedIcon />}
+              sx={{
+                background: (marcados > 0 && !noProgramada) ? gradBg : undefined,
+                color: '#fff', fontWeight: 800,
+                px: 4, py: 1.2, borderRadius: 2.5,
+                textTransform: 'none', fontSize: '0.95rem',
+                boxShadow: (marcados > 0 && !noProgramada) ? `0 4px 16px ${alpha(isDark ? '#facc15' : '#0288d1', 0.35)}` : undefined,
+                '&:hover': { background: (marcados > 0 && !noProgramada) ? gradBg : undefined, filter: 'brightness(1.08)' },
+                '&:disabled': { bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06), color: 'text.disabled' },
+              }}
+            >
+              {isSaving ? 'Guardando...' : noProgramada ? 'Día sin clase' : `Guardar lista (${marcados})`}
+            </Button>
+          </span>
+        </Tooltip>
       </Box>
     </Box>
   );
@@ -1247,12 +1319,17 @@ export default function DocenteAsistenciaDetailPage() {
   const searchParams = useSearchParams();
 
   const asignacionId = Number(params.id);
-  const fecha = searchParams.get('fecha') ?? new Date().toISOString().slice(0, 10);
+  const fecha = searchParams.get('fecha') ?? (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
 
   const { asignaciones, isLoading: loadingAsig } = useMisAsignaciones();
   const asignacion: AsignacionDocente | undefined = asignaciones.find(a => a.asignacion_id === asignacionId);
 
-  const [tab, setTab] = useState(0);
+  const searchTab = searchParams.get('tab');
+  const initialTab = searchTab === 'resumen' ? 1 : searchTab === 'permisos' ? 2 : 0;
+  const [tab, setTab] = useState(initialTab);
   const [triggerResumen, setTriggerResumen] = useState(0);
 
   useEffect(() => {

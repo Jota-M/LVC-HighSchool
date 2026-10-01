@@ -44,6 +44,8 @@ import {
   TIPOS_CONTRATO,
   NIVELES_FORMACION,
 } from '@/types/docenteTypes';
+import PostgradosField from '@/components/docentes/PostgradosField';
+import CredencialesDocenteModal, { DocenteRegistradoData } from '@/components/docentes/CredencialesDocenteModal';
 
 const steps = ['Datos Personales', 'Datos Profesionales', 'Usuario y Acceso'];
 
@@ -53,6 +55,8 @@ export const RegistroCompletoDocente: React.FC = () => {
   const isDark = theme.palette.mode === 'dark';
   const [activeStep, setActiveStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modalData, setModalData] = useState<DocenteRegistradoData | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   // =============================================
   // ESTADO DEL FORMULARIO (SIN ASIGNACIONES)
@@ -235,19 +239,9 @@ export const RegistroCompletoDocente: React.FC = () => {
         cv || undefined
       );
 
-      toast.success(response.message);
-
-      // Mostrar credenciales si se creó usuario
-      if (response.data.credenciales) {
-        toast.success(
-          `Usuario creado: ${response.data.credenciales.username}\n` +
-          `Contraseña: ${response.data.credenciales.password}`,
-          { duration: 10000 }
-        );
-      }
-
-      // Redirigir al detalle del docente
-      router.push(`/dashboard/docentes/${response.data.docente.id}`);
+      toast.success(response.message || 'Docente registrado exitosamente');
+      setModalData(response.data);
+      setModalOpen(true);
     } catch (error: any) {
       console.error('Error al registrar docente:', error);
       toast.error(error.response?.data?.message || 'Error al registrar docente');
@@ -476,13 +470,15 @@ export const RegistroCompletoDocente: React.FC = () => {
                 onChange={(e) => handleInputChange('titulo_profesional', e.target.value)}
               />
             </Grid>
-            <Grid size={{xs:12, sm:6}}>
-              <TextField
-                sx={fieldStyle}
-                fullWidth
-                label="Título de Postgrado"
+            <Grid size={{xs:12}}>
+              <PostgradosField
                 value={formData.docente.titulo_postgrado}
-                onChange={(e) => handleInputChange('titulo_postgrado', e.target.value)}
+                onChange={(val) => handleInputChange('titulo_postgrado', val)}
+                onNivelAutoUpdate={(sugerido) => {
+                  if (!formData.docente.nivel_formacion || formData.docente.nivel_formacion === 'licenciatura') {
+                    handleInputChange('nivel_formacion', sugerido);
+                  }
+                }}
               />
             </Grid>
             <Grid size={{xs:12, sm:6}}>
@@ -685,7 +681,7 @@ export const RegistroCompletoDocente: React.FC = () => {
                     label="Username (opcional)"
                     value={formData.credenciales?.username || ''}
                     onChange={(e) => handleCredencialesChange('username', e.target.value)}
-                    helperText="Se generará automáticamente si se deja vacío"
+                    helperText="Se generará automáticamente (ej: Prof.SusanaRamirez) si se deja vacío"
                   />
                 </Grid>
                 <Grid size={{xs:12, sm:6}}>
@@ -854,6 +850,16 @@ export const RegistroCompletoDocente: React.FC = () => {
           )}
         </Box>
       </Container>
+
+      {/* Modal de Confirmación y Entrega de Credenciales */}
+      <CredencialesDocenteModal
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          router.push('/dashboard/docentes');
+        }}
+        data={modalData}
+      />
     </Box>
   );
 };

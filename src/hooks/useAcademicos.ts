@@ -7,6 +7,7 @@ import academicosService, {
 interface UseAcademicosOptions {
   autoLoad?: boolean;
   loadPeriodos?: boolean;
+  todosLosPeriodos?: boolean;
   loadTurnos?: boolean;
   loadNiveles?: boolean;
   loadGrados?: boolean;
@@ -39,7 +40,7 @@ interface UseAcademicosReturn {
   
   // Métodos
   refetch: () => Promise<void>;
-  cargarPeriodos: () => Promise<void>;
+  cargarPeriodos: (params?: { activo?: boolean; limit?: number }) => Promise<void>;
   cargarPeriodoActivo: () => Promise<void>;
   cargarTurnos: () => Promise<void>;
   cargarNiveles: () => Promise<void>;
@@ -59,6 +60,7 @@ export const useAcademicos = (options: UseAcademicosOptions = {}): UseAcademicos
   const {
     autoLoad = true,
     loadPeriodos = true,
+    todosLosPeriodos = false,
     loadTurnos = true,
     loadNiveles = true,
     loadGrados = true,
@@ -91,11 +93,14 @@ export const useAcademicos = (options: UseAcademicosOptions = {}): UseAcademicos
                   loadingGrados || loadingParalelos || loadingMaterias || loadingGradoMaterias;
 
   // Cargar periodos
-  const cargarPeriodos = useCallback(async () => {
+  const cargarPeriodos = useCallback(async (customParams?: { activo?: boolean; limit?: number }) => {
     try {
       setLoadingPeriodos(true);
       setError(null);
-      const response = await academicosService.listarPeriodos({ activo: true });
+      const params = customParams !== undefined
+        ? customParams
+        : (todosLosPeriodos ? { limit: 50 } : { activo: true });
+      const response = await academicosService.listarPeriodos(params);
       setPeriodos(response.data.periodos || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al cargar periodos');
@@ -103,7 +108,7 @@ export const useAcademicos = (options: UseAcademicosOptions = {}): UseAcademicos
     } finally {
       setLoadingPeriodos(false);
     }
-  }, []);
+  }, [todosLosPeriodos]);
 
   // Cargar periodo activo
   const cargarPeriodoActivo = useCallback(async () => {

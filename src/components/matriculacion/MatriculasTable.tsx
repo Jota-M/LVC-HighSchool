@@ -79,9 +79,13 @@ const MatriculaCard: React.FC<{
   const getEstadoColor = (estado: string) => {
     switch (estado) {
       case 'activo': return 'success';
+      case 'inactivo': return 'error';
       case 'retirado': return 'error';
       case 'trasladado': return 'warning';
       case 'graduado': return 'info';
+      case 'suspendido': return 'warning';
+      case 'congelado': return 'info';
+      case 'anulado': return 'default';
       default: return 'default';
     }
   };
@@ -89,11 +93,13 @@ const MatriculaCard: React.FC<{
   const getEstadoLabel = (estado: string) => {
     const labels: Record<string, string> = {
       activo: 'Activo',
+      inactivo: 'Inactivo',
       retirado: 'Retirado',
       trasladado: 'Trasladado',
       graduado: 'Graduado',
       suspendido: 'Suspendido',
       congelado: 'Congelado',
+      anulado: 'Anulado',
     };
     return labels[estado] || estado;
   };
@@ -397,9 +403,13 @@ export const MatriculasTable: React.FC<Props> = ({
   const getEstadoColor = (estado: string) => {
     switch (estado) {
       case 'activo': return 'success';
+      case 'inactivo': return 'error';
       case 'retirado': return 'error';
       case 'trasladado': return 'warning';
       case 'graduado': return 'info';
+      case 'suspendido': return 'warning';
+      case 'congelado': return 'info';
+      case 'anulado': return 'default';
       default: return 'default';
     }
   };
@@ -407,11 +417,13 @@ export const MatriculasTable: React.FC<Props> = ({
   const getEstadoLabel = (estado: string) => {
     const labels: Record<string, string> = {
       activo: 'Activo',
+      inactivo: 'Inactivo',
       retirado: 'Retirado',
       trasladado: 'Trasladado',
       graduado: 'Graduado',
       suspendido: 'Suspendido',
       congelado: 'Congelado',
+      anulado: 'Anulado',
     };
     return labels[estado] || estado;
   };

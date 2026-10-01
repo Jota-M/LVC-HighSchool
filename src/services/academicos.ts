@@ -90,7 +90,7 @@ export interface GradoMateria {
 // ============== SERVICIO ==============
 class AcademicosService {
   // ========== PERIODOS ACADÉMICOS ==========
-  async listarPeriodos(params?: { activo?: boolean; cerrado?: boolean }): Promise<any> {
+  async listarPeriodos(params?: { activo?: boolean; cerrado?: boolean; limit?: number; page?: number }): Promise<any> {
     const { data } = await api.get('/periodo-academico', { params });
     return data;
   }

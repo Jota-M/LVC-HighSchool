@@ -41,6 +41,7 @@ import {
   NIVELES_RELEVANCIA,
   CrearObservacionDTO,
 } from '@/types/seguimientoPedagogicoTypes';
+import { formatDate } from '@/utils/dateUtils';
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(8px); }
@@ -81,7 +82,7 @@ const LineaTiempoItemCard: React.FC<LineaTiempoItemCardProps> = ({
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
-  const fecha = new Date(item.fecha_ocurrencia + 'T12:00:00').toLocaleDateString('es-BO', {
+  const fecha = formatDate(item.fecha_ocurrencia, {
     weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
   });
 
@@ -445,10 +446,11 @@ interface DrawerObservacionesEstudianteProps {
   asignacionId: number;
   periodoId: number;
   onClose: () => void;
+  onObservacionGuardada?: () => void;
 }
 
 const DrawerObservacionesEstudiante: React.FC<DrawerObservacionesEstudianteProps> = ({
-  open, estudiante, asignacionId, periodoId, onClose,
+  open, estudiante, asignacionId, periodoId, onClose, onObservacionGuardada,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -496,8 +498,10 @@ const DrawerObservacionesEstudiante: React.FC<DrawerObservacionesEstudianteProps
     : observaciones.filter(o => o.nivel_relevancia === filtroNivel);
 
   const handleToggleVisibilidad = useCallback(async (id: number, visible: boolean) => {
-    return visible ? publicar(id) : ocultar(id);
-  }, [publicar, ocultar]);
+    const ok = await (visible ? publicar(id) : ocultar(id));
+    if (ok) onObservacionGuardada?.();
+    return ok;
+  }, [publicar, ocultar, onObservacionGuardada]);
 
   const iniciales = estudiante
     ? `${estudiante.estudiante_nombres.charAt(0)}${estudiante.estudiante_apellidos.charAt(0)}`
@@ -727,6 +731,7 @@ const DrawerObservacionesEstudiante: React.FC<DrawerObservacionesEstudianteProps
                   onExito={() => {
                     setMostrarFormulario(false);
                     refrescar();
+                    onObservacionGuardada?.();
                   }}
                   onCancelar={() => setMostrarFormulario(false)}
                   brand={brand}

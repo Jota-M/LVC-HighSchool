@@ -215,6 +215,24 @@ export const estudianteService = {
     };
   },
 
+  /**
+   * POST /api/estudianted/autoevaluacion
+   * Envía la autoevaluación del estudiante (1-5 pts) y sus reflexiones
+   */
+  async enviarAutoevaluacion(data: {
+    evaluacion_id: number;
+    puntaje: number;
+    respuestas?: { p1?: string; p2?: string; p3?: string };
+    reflexion?: string;
+  }) {
+    const res = await api.post('/estudianted/autoevaluacion', data);
+    return res.data as {
+      success: boolean;
+      message: string;
+      data: { calificacion: any };
+    };
+  },
+
   // ── ASISTENCIA ────────────────────────────────────────────────
   async getAsistenciaResumen(opts: {
     asignacion_docente_id?: number;

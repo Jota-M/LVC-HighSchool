@@ -75,7 +75,7 @@ import {
 // ============================================================
 const getEstadoColor = (estado: string): any => {
   const map: Record<string, string> = {
-    activo: 'success', retirado: 'error', trasladado: 'warning',
+    activo: 'success', inactivo: 'error', retirado: 'error', trasladado: 'warning',
     anulado: 'default', suspendido: 'warning', congelado: 'info',
   };
   return map[estado] ?? 'default';
@@ -83,7 +83,7 @@ const getEstadoColor = (estado: string): any => {
 
 const formatFecha = (fecha: string | null | undefined) => {
   if (!fecha) return '—';
-  try { return format(new Date(fecha), 'dd MMM yyyy', { locale: es }); }
+  try { return format(new Date(fecha), 'dd MMM yyyy',); }
   catch { return fecha; }
 };
 
@@ -686,17 +686,21 @@ const DrawerEditar: React.FC<DrawerEditarProps> = ({
             {cambiandoParalelo && (
               <Box sx={{ mt: 1.5 }}>
                 {isVerificando ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1.5, borderRadius: '12px',
-                    backgroundColor: alpha(accentColor, 0.08), border: `1px solid ${alpha(accentColor, 0.2)}` }}>
+                  <Box sx={{
+                    display: 'flex', alignItems: 'center', gap: 1, p: 1.5, borderRadius: '12px',
+                    backgroundColor: alpha(accentColor, 0.08), border: `1px solid ${alpha(accentColor, 0.2)}`
+                  }}>
                     <CircularProgress size={16} sx={{ color: accentColor }} />
                     <Typography variant="caption" color="text.secondary">Verificando disponibilidad...</Typography>
                   </Box>
                 ) : disponibilidad ? (
                   <Alert
                     severity={disponibilidad.capacidad.puede_matricular ? 'success' : 'error'}
-                    sx={{ borderRadius: '12px', border: '1px solid', py: 0.5,
+                    sx={{
+                      borderRadius: '12px', border: '1px solid', py: 0.5,
                       borderColor: disponibilidad.capacidad.puede_matricular
-                        ? alpha('#10b981', 0.4) : alpha('#ef4444', 0.4) }}
+                        ? alpha('#10b981', 0.4) : alpha('#ef4444', 0.4)
+                    }}
                   >
                     <Typography variant="body2" fontWeight={700}>
                       {disponibilidad.paralelo.nombre} · {disponibilidad.paralelo.grado}

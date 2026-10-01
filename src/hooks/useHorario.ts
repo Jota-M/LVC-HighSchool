@@ -6,7 +6,7 @@ import horarioService from '@/services/horarioService';
 import type {
   BloqueHorarioCreate, BloqueHorarioUpdate,
   HorarioCreate, HorarioUpdate,
-  HorarioDetalleCreate, HorarioDetalleUpdate,
+  HorarioDetalle, HorarioDetalleCreate, HorarioDetalleUpdate,
   HorariosFilters, BloquesFilters, HorarioEstado,
 } from '@/types/horariotypes';
 
@@ -221,14 +221,62 @@ export const useHorarioCeldas = (horarioId: number | null) => {
       enqueueSnackbar(error.response?.data?.message || 'Error al eliminar celda', { variant: 'error' }),
   });
 
+  const agregarBatchMutation = useMutation<
+    { message?: string; creadas: HorarioDetalle[]; total_procesadas: number; errores: any[] },
+    any,
+    { celdas: HorarioDetalleCreate[]; sobrescribir?: boolean }
+  >({
+    mutationFn: ({ celdas, sobrescribir = true }) =>
+      horarioService.agregarBatch(horarioId!, celdas, sobrescribir),
+    onSuccess: (res) => {
+      invalidate();
+      enqueueSnackbar(res.message || `${res.total_procesadas} celdas asignadas`, { variant: 'success' });
+      if (res.errores && res.errores.length > 0) {
+        enqueueSnackbar(`Hubo ${res.errores.length} advertencia(s)`, { variant: 'warning' });
+      }
+    },
+    onError: (error: any) =>
+      enqueueSnackbar(error.response?.data?.message || 'Error al asignar celdas en lote', { variant: 'error' }),
+  });
+
+  const clonarDiaMutation = useMutation<
+    { message?: string; clonadas: number; conflictos: any[] },
+    any,
+    { dia_origen: number; dias_destino: number[]; sobrescribir?: boolean }
+  >({
+    mutationFn: ({
+      dia_origen,
+      dias_destino,
+      sobrescribir = true,
+    }) => horarioService.clonarDia(horarioId!, dia_origen, dias_destino, sobrescribir),
+    onSuccess: (res) => {
+      invalidate();
+      enqueueSnackbar(res.message || `Día clonado exitosamente`, { variant: 'success' });
+      if (res.conflictos && res.conflictos.length > 0) {
+        enqueueSnackbar(`${res.conflictos.length} clase(s) no se pudieron copiar por choque de docente`, { variant: 'warning' });
+      }
+    },
+    onError: (error: any) =>
+      enqueueSnackbar(error.response?.data?.message || 'Error al clonar día', { variant: 'error' }),
+  });
+
   return {
     agregar: agregarMutation.mutateAsync,
     actualizar: actualizarMutation.mutateAsync,
     eliminar: eliminarMutation.mutateAsync,
+    agregarBatch: agregarBatchMutation.mutateAsync,
+    clonarDia: clonarDiaMutation.mutateAsync,
     isAgregando: agregarMutation.isPending,
     isActualizando: actualizarMutation.isPending,
     isEliminando: eliminarMutation.isPending,
-    isBusy: agregarMutation.isPending || actualizarMutation.isPending || eliminarMutation.isPending,
+    isAgregandoBatch: agregarBatchMutation.isPending,
+    isClonandoDia: clonarDiaMutation.isPending,
+    isBusy:
+      agregarMutation.isPending ||
+      actualizarMutation.isPending ||
+      eliminarMutation.isPending ||
+      agregarBatchMutation.isPending ||
+      clonarDiaMutation.isPending,
   };
 };
 

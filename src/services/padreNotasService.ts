@@ -68,20 +68,23 @@ export const getBoletin = async (
  * Transforma el boletín en ResumenMateriaPadre con nivel calculado.
  */
 export const transformarBoletin = (boletin: BoletinItem[]): ResumenMateriaPadre[] => {
-  return boletin.map(item => ({
-    materia_nombre:   item.materia_nombre,
-    materia_codigo:   item.materia_codigo,
-    grado_materia_id: 0, // se completa desde nota_dimension si es necesario
-    nota_final:       item.nota_final ?? null,
-    nota_minima:      Number(item.nota_minima),
-    aprobado:         item.aprobado,
-    estado_periodo:   item.estado_periodo,
-    nota_ser:         item.nota_ser   ?? null,
-    nota_saber:       item.nota_saber ?? null,
-    nota_hacer:       item.nota_hacer ?? null,
-    nota_auto:        item.nota_auto  ?? null,
-    nivel:            getNivelRendimiento(item.nota_final),
-  }));
+  return boletin.map(item => {
+    const notaFinal = item.nota_final != null ? Number(item.nota_final) : null;
+    return {
+      materia_nombre:   item.materia_nombre,
+      materia_codigo:   item.materia_codigo,
+      grado_materia_id: 0, // se completa desde nota_dimension si es necesario
+      nota_final:       notaFinal,
+      nota_minima:      Number(item.nota_minima),
+      aprobado:         item.aprobado,
+      estado_periodo:   item.estado_periodo,
+      nota_ser:         item.nota_ser != null ? Number(item.nota_ser) : null,
+      nota_saber:       item.nota_saber != null ? Number(item.nota_saber) : null,
+      nota_hacer:       item.nota_hacer != null ? Number(item.nota_hacer) : null,
+      nota_auto:        item.nota_auto != null ? Number(item.nota_auto) : null,
+      nivel:            getNivelRendimiento(notaFinal),
+    };
+  });
 };
 
 // =============================================

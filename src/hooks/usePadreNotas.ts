@@ -11,6 +11,8 @@ import {
 } from '@/services/padreNotasService';
 import {
   ResumenMateriaPadre,
+  ResumenMateriaAnual,
+  getNivelRendimiento,
   DimensionEvaluacion,
   PeriodoEvaluacion,
   NotaDimension,
@@ -102,17 +104,125 @@ export const useBoletinNotas = (
   // Stats calculados
   const aprobadas  = boletin.filter(m => m.aprobado === true).length;
   const reprobadas = boletin.filter(m => m.aprobado === false).length;
-  const sinNota    = boletin.filter(m => m.nota_final === null).length;
-  const promedio   = boletin.length > 0
+  const sinNota    = boletin.filter(m => m.nota_final === null || m.nota_final === undefined).length;
+  const materiasConNota = boletin.filter(m => m.nota_final !== null && m.nota_final !== undefined && !isNaN(Number(m.nota_final)));
+  const promedio   = materiasConNota.length > 0
     ? Math.round(
-        boletin
-          .filter(m => m.nota_final !== null)
-          .reduce((acc, m) => acc + (m.nota_final ?? 0), 0) /
-        Math.max(boletin.filter(m => m.nota_final !== null).length, 1)
+        materiasConNota.reduce((acc, m) => acc + Number(m.nota_final), 0) /
+        materiasConNota.length
       )
     : null;
 
   return { boletin, isLoading, aprobadas, reprobadas, sinNota, promedio, refrescar: cargar };
+};
+
+// =============================================
+// HOOK: BOLETÍN GENERAL / ANUAL (3 TRIMESTRES)
+// =============================================
+
+export const useBoletinAnualPadre = (
+  matriculaId: number | null,
+  periodos: PeriodoEvaluacion[]
+) => {
+  const [materiasAnuales, setMateriasAnuales] = useState<ResumenMateriaAnual[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const cargar = useCallback(async () => {
+    if (!matriculaId || periodos.length === 0) {
+      setMateriasAnuales([]);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const periodosOrdenados = [...periodos].sort((a, b) => a.orden - b.orden);
+
+      const boletinesPorPeriodo = await Promise.all(
+        periodosOrdenados.map(async (p) => {
+          try {
+            const data = await getBoletin(matriculaId, p.id);
+            return { periodo: p, boletin: transformarBoletin(data) };
+          } catch {
+            return { periodo: p, boletin: [] };
+          }
+        })
+      );
+
+      const mapaMaterias = new Map<string, ResumenMateriaAnual>();
+
+      boletinesPorPeriodo.forEach(({ periodo, boletin }) => {
+        boletin.forEach((item) => {
+          if (!mapaMaterias.has(item.materia_codigo)) {
+            mapaMaterias.set(item.materia_codigo, {
+              materia_nombre: item.materia_nombre,
+              materia_codigo: item.materia_codigo,
+              nota_minima: item.nota_minima,
+              trimestres: periodosOrdenados.map(p => ({
+                periodo_id: p.id,
+                periodo_nombre: p.nombre,
+                periodo_orden: p.orden,
+                nota_final: null,
+                aprobado: null,
+              })),
+              promedio_anual: null,
+              aprobado_anual: null,
+              nivel: 'sin_nota',
+            });
+          }
+
+          const entrada = mapaMaterias.get(item.materia_codigo)!;
+          const tri = entrada.trimestres.find(t => t.periodo_id === periodo.id);
+          if (tri) {
+            tri.nota_final = item.nota_final;
+            tri.aprobado = item.aprobado;
+          }
+        });
+      });
+
+      const resultado: ResumenMateriaAnual[] = Array.from(mapaMaterias.values()).map(mat => {
+        const notasValidas = mat.trimestres.filter(
+          t => t.nota_final !== null && t.nota_final !== undefined && !isNaN(Number(t.nota_final))
+        );
+        const promedioAnual = notasValidas.length > 0
+          ? Math.round(notasValidas.reduce((acc, t) => acc + Number(t.nota_final), 0) / notasValidas.length)
+          : null;
+
+        return {
+          ...mat,
+          promedio_anual: promedioAnual,
+          aprobado_anual: promedioAnual != null ? promedioAnual >= mat.nota_minima : null,
+          nivel: getNivelRendimiento(promedioAnual),
+        };
+      });
+
+      setMateriasAnuales(resultado);
+    } catch {
+      toast.error('Error al cargar el resumen anual de notas');
+      setMateriasAnuales([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [matriculaId, periodos]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const materiasConNota = materiasAnuales.filter(m => m.promedio_anual !== null);
+  const promedioGeneralAnual = materiasConNota.length > 0
+    ? Math.round(materiasConNota.reduce((acc, m) => acc + Number(m.promedio_anual), 0) / materiasConNota.length)
+    : null;
+
+  const aprobadas = materiasAnuales.filter(m => m.aprobado_anual === true).length;
+  const reprobadas = materiasAnuales.filter(m => m.aprobado_anual === false).length;
+  const sinNota = materiasAnuales.filter(m => m.promedio_anual === null).length;
+
+  return {
+    materiasAnuales,
+    isLoading,
+    promedioGeneralAnual,
+    aprobadas,
+    reprobadas,
+    sinNota,
+    refrescar: cargar,
+  };
 };
 
 // =============================================

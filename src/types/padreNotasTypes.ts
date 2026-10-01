@@ -40,6 +40,24 @@ export interface ResumenMateriaPadre {
   nivel: NivelRendimiento;
 }
 
+export interface NotaTrimestreAnual {
+  periodo_id: number;
+  periodo_nombre: string;
+  periodo_orden: number;
+  nota_final: number | null;
+  aprobado: boolean | null;
+}
+
+export interface ResumenMateriaAnual {
+  materia_nombre: string;
+  materia_codigo: string;
+  nota_minima: number;
+  trimestres: NotaTrimestreAnual[];
+  promedio_anual: number | null;
+  aprobado_anual: boolean | null;
+  nivel: NivelRendimiento;
+}
+
 export type NivelRendimiento = 'excelente' | 'bueno' | 'regular' | 'bajo' | 'sin_nota';
 
 export function getNivelRendimiento(nota: number | null | undefined): NivelRendimiento {

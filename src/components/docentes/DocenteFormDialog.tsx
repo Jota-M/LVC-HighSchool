@@ -18,6 +18,7 @@ import {
   NavigateBefore as BackIcon
 } from '@mui/icons-material';
 import { Docente, DocenteFormData, RegistroCompletoData } from '../../services/docentes';
+import { PostgradosField } from './PostgradosField';
 
 interface DocenteFormDialogProps {
   open: boolean;
@@ -221,9 +222,15 @@ const DocenteFormDialog: React.FC<DocenteFormDialogProps> = ({
                 placeholder="Ej: Licenciado en Matemáticas" />
             </Grid>
             <Grid size={{xs:12}}>
-              <TextField fullWidth label="Título de Postgrado" value={formData.titulo_postgrado}
-                onChange={(e) => handleChange('titulo_postgrado', e.target.value)}
-                placeholder="Ej: Maestría en Educación" />
+              <PostgradosField
+                value={formData.titulo_postgrado}
+                onChange={(val) => handleChange('titulo_postgrado', val)}
+                onNivelAutoUpdate={(sugerido) => {
+                  if (!formData.nivel_formacion || formData.nivel_formacion === 'licenciatura') {
+                    handleChange('nivel_formacion', sugerido);
+                  }
+                }}
+              />
             </Grid>
             <Grid size={{xs:12, sm:6}}>
               <TextField fullWidth label="Especialidad" value={formData.especialidad}
@@ -236,7 +243,10 @@ const DocenteFormDialog: React.FC<DocenteFormDialogProps> = ({
                 <Select value={formData.nivel_formacion} label="Nivel de Formación"
                   onChange={(e) => handleChange('nivel_formacion', e.target.value)}>
                   <MenuItem value="bachiller">Bachiller</MenuItem>
+                  <MenuItem value="tecnico">Técnico Superior</MenuItem>
                   <MenuItem value="licenciatura">Licenciatura</MenuItem>
+                  <MenuItem value="diplomado">Diplomado</MenuItem>
+                  <MenuItem value="especialidad">Especialidad</MenuItem>
                   <MenuItem value="maestria">Maestría</MenuItem>
                   <MenuItem value="doctorado">Doctorado</MenuItem>
                 </Select>
@@ -315,7 +325,7 @@ const DocenteFormDialog: React.FC<DocenteFormDialogProps> = ({
                     <Grid size={{xs:12}}>
                       <TextField fullWidth label="Username" value={credenciales.username}
                         onChange={(e) => setCredenciales({ ...credenciales, username: e.target.value })}
-                        helperText="Déjalo vacío para generar automáticamente" />
+                        helperText="Déjalo vacío para generar automáticamente (ej: Prof.SusanaRamirez)" />
                     </Grid>
                     <Grid size={{xs:12}}>
                       <TextField fullWidth label="Contraseña" value={credenciales.password}

@@ -4,22 +4,20 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, alpha, useTheme, useMediaQuery, keyframes,
-  Fade, Skeleton, Paper, Chip, Tooltip, IconButton,
-  Grid, Divider, LinearProgress,
+  Fade, Skeleton, Paper, Chip, Tooltip, IconButton, ButtonBase,
+  Grid, Divider, Alert, Dialog, DialogContent, DialogActions, Button,
 } from '@mui/material';
 import {
-  Schedule as ScheduleIcon,
-  Refresh as RefreshIcon,
-  ViewWeek as WeekIcon,
-  ViewDay as DayIcon,
-  AccessTime as TimeIcon,
-  Room as RoomIcon,
+  CalendarMonth as CalendarIcon,
+  MenuBook as MateriaIcon,
+  AccessTime as HoraIcon,
   Person as PersonIcon,
-  EventBusy as NoHorarioIcon,
-  Circle as DotIcon,
-  PlayArrow as NowIcon,
-  Info as InfoIcon,
-  TrendingUp as TrendingIcon,
+  MeetingRoom as AulaIcon,
+  Refresh as RefreshIcon,
+  FiberManualRecord as DotIcon,
+  Close as CloseIcon,
+  Coffee as RecreoIcon,
+  Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import { useHorarioEstudiante } from '@/hooks/useEstudiante';
 import type { BloqueHorario, DiaHorario, HorarioEstudiante } from '@/types/estudiante';
@@ -28,39 +26,20 @@ import type { BloqueHorario, DiaHorario, HorarioEstudiante } from '@/types/estud
 // ANIMACIONES
 // ─────────────────────────────────────────────────────────────
 const float = keyframes`
-  0%,100% { transform: translateY(0) rotate(-3deg); }
-  50%      { transform: translateY(-6px) rotate(3deg); }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 `;
-const slideUp = keyframes`
-  from { opacity:0; transform:translateY(16px); }
-  to   { opacity:1; transform:translateY(0); }
-`;
-const slideIn = keyframes`
-  from { opacity:0; transform:translateX(-12px); }
-  to   { opacity:1; transform:translateX(0); }
-`;
-const pulseRing = keyframes`
-  0%   { box-shadow: 0 0 0 0 rgba(99,102,241,.5); }
-  70%  { box-shadow: 0 0 0 8px rgba(99,102,241,0); }
-  100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
-`;
-const blink = keyframes`
-  0%,100% { opacity:1; }
-  50%      { opacity:.3; }
-`;
-const growBar = keyframes`
-  from { transform: scaleY(0); }
-  to   { transform: scaleY(1); }
+const pulse = keyframes`
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.9); }
 `;
 
 // ─────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────
-const DIAS_LABEL: Record<number, string> = {
-  1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado',
-};
-const DIAS_SHORT: Record<number, string> = {
-  1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb',
+const DIAS_L_V = [1, 2, 3, 4, 5];
+const DIAS_SEMANA: Record<number, string> = {
+  1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes',
 };
 
 const PALETTE = [
@@ -77,8 +56,9 @@ const getColor = (str: string, override?: string | null) => {
 const fmtHora = (h: string) => h?.slice(0, 5) ?? '';
 
 const toMin = (h: string) => {
+  if (!h) return 0;
   const [hh, mm] = h.split(':').map(Number);
-  return hh * 60 + mm;
+  return (hh || 0) * 60 + (mm || 0);
 };
 
 const ahoraMin = () => {
@@ -88,267 +68,321 @@ const ahoraMin = () => {
 
 const diaActual = (): number | null => {
   const d = new Date().getDay();
-  return d === 0 ? null : d;
+  return d === 0 || d === 6 ? null : d;
 };
 
-/** Porcentaje de la semana laboral completada (lunes=0% → viernes 17:00=100%) */
-const semanaProgreso = (): number => {
-  const now = new Date();
-  const dow = now.getDay(); // 0=Dom, 1=Lun … 5=Vie, 6=Sáb
-  if (dow === 0) return 0;
-  if (dow === 6) return 100;
-  // minutos transcurridos desde el inicio del lunes 07:00
-  const minPorDia = 24 * 60;
-  const minDesdeInicio = (dow - 1) * minPorDia + now.getHours() * 60 + now.getMinutes();
-  const totalSemana = 5 * minPorDia;
-  return Math.min(100, Math.round((minDesdeInicio / totalSemana) * 100));
-};
-
-/** Geometría para el anillo de progreso SVG */
-const ringGeom = (pct: number, radius = 18) => {
-  const circ = 2 * Math.PI * radius;
-  const clamped = Math.min(100, Math.max(0, pct));
-  const offset = circ * (1 - clamped / 100);
-  return { circ, offset, radius };
-};
-
-type Vista = 'semana' | 'dia';
 interface Props { user?: any }
 
 // ═════════════════════════════════════════════════════════════
-// COMPONENTE PRINCIPAL
+// COMPONENTE PRINCIPAL — Horario Estudiante (estilo Docente)
 // ═════════════════════════════════════════════════════════════
 export const EstudianteHorario: React.FC<Props> = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
-  const accent = isDark ? '#818CF8' : '#6366F1';
-  const accentDeep = isDark ? '#6366F1' : '#4338CA';
-  const accentSoft = alpha(accent, isDark ? 0.15 : 0.08);
-  const gradient = `linear-gradient(135deg, ${accent} 0%, ${accentDeep} 100%)`;
+  const accentColor = isDark ? '#facc15' : '#0288d1';
 
   const { horario, isLoading, refrescar } = useHorarioEstudiante();
 
-  const [vista, setVista] = useState<Vista>('semana');
-  const [diaVista, setDiaVista] = useState<number>(diaActual() ?? 1);
   const [ahora, setAhora] = useState(ahoraMin());
+  const [detalleCelda, setDetalleCelda] = useState<BloqueHorario | null>(null);
 
   useEffect(() => {
-    const id = setInterval(() => setAhora(ahoraMin()), 60_000);
-    return () => clearInterval(id);
+    const timer = setInterval(() => setAhora(ahoraMin()), 60_000);
+    return () => clearInterval(timer);
   }, []);
 
-  // En mobile arrancamos en vista "día" para evitar overflow horizontal
-  useEffect(() => {
-    if (isMobile) setVista('dia');
-  }, [isMobile]);
-
-  const claseEnCurso = useMemo<BloqueHorario | null>(() => {
-    if (!horario || !diaActual()) return null;
-    const hoy = horario.grilla.find(d => d.dia_numero === diaActual());
-    return hoy?.bloques.find(b =>
-      !b.es_recreo && toMin(b.hora_inicio) <= ahora && toMin(b.hora_fin) > ahora
-    ) ?? null;
-  }, [horario, ahora]);
-
-  const proximaClase = useMemo<BloqueHorario | null>(() => {
-    if (!horario || !diaActual() || claseEnCurso) return null;
-    const hoy = horario.grilla.find(d => d.dia_numero === diaActual());
-    return hoy?.bloques.find(b =>
-      !b.es_recreo && toMin(b.hora_inicio) > ahora
-    ) ?? null;
-  }, [horario, ahora, claseEnCurso]);
-
-  const diasRender: DiaHorario[] = useMemo(() => {
-    if (!horario) return [];
-    return vista === 'dia'
-      ? horario.grilla.filter(d => d.dia_numero === diaVista)
-      : horario.grilla;
-  }, [horario, vista, diaVista]);
+  const diasActivos = useMemo(
+    () => (horario
+      ? horario.grilla.map(d => d.dia_numero).filter(d => d >= 1 && d <= 5).sort((a, b) => a - b)
+      : DIAS_L_V),
+    [horario]
+  );
 
   const bloquesEje = useMemo(() => {
     if (!horario) return [];
     return horario.grilla
+      .filter(d => d.dia_numero >= 1 && d.dia_numero <= 5)
       .flatMap(d => d.bloques)
       .filter((b, i, arr) => arr.findIndex(x => x.bloque_numero === b.bloque_numero) === i)
       .sort((a, b) => a.bloque_numero - b.bloque_numero);
   }, [horario]);
 
-  /** Clases por día para el mini chart */
-  const clasesPorDia = useMemo(() => {
-    if (!horario) return [];
-    return horario.grilla.map(d => ({
-      dia: d.dia_numero,
-      count: d.bloques.filter(b => !b.es_recreo).length,
-    }));
+  const celdaMap = useMemo(() => {
+    const map: Record<string, BloqueHorario> = {};
+    if (!horario) return map;
+    horario.grilla.forEach(d => {
+      d.bloques.forEach(b => { map[`${d.dia_numero}-${b.bloque_numero}`] = b; });
+    });
+    return map;
   }, [horario]);
 
-  if (isLoading) return <HorarioSkeleton isDark={isDark} />;
+  const claseAhora = useMemo<BloqueHorario | null>(() => {
+    const hoy = diaActual();
+    if (!hoy || !horario) return null;
+    const dia = horario.grilla.find(d => d.dia_numero === hoy);
+    return dia?.bloques.find(b => !b.es_recreo && toMin(b.hora_inicio) <= ahora && ahora < toMin(b.hora_fin)) ?? null;
+  }, [horario, ahora]);
 
-  if (!horario) return (
-    <Box sx={{ pb: 4 }}>
-      <HorarioPageHeader
-        accent={accent} gradient={gradient} isDark={isDark}
-        onRefresh={refrescar} vista={vista} setVista={setVista}
-        diaVista={diaVista} setDiaVista={setDiaVista}
-        diasDisponibles={[]} showControls={false}
-      />
-      <Fade in>
-        <Paper elevation={0} sx={{
-          p: { xs: 6, md: 10 }, textAlign: 'center', borderRadius: 4,
-          border: `2px dashed ${alpha(accent, 0.3)}`, bgcolor: accentSoft,
-        }}>
-          <NoHorarioIcon sx={{ fontSize: 72, color: alpha(accent, 0.35), mb: 2 }} />
-          <Typography variant="h6" fontWeight={700} gutterBottom>Horario aún no disponible</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360, mx: 'auto' }}>
-            El horario de tu curso todavía no fue publicado. Consultá con la dirección del colegio.
-          </Typography>
-        </Paper>
-      </Fade>
-    </Box>
-  );
+  const proximaClase = useMemo<BloqueHorario | null>(() => {
+    const hoy = diaActual();
+    if (!hoy || !horario || claseAhora) return null;
+    const dia = horario.grilla.find(d => d.dia_numero === hoy);
+    return dia?.bloques.find(b => !b.es_recreo && toMin(b.hora_inicio) > ahora) ?? null;
+  }, [horario, ahora, claseAhora]);
+
+  const totalHoras = horario?.total_celdas ?? 0;
+
+  const materiasUnicas = useMemo(() => {
+    if (!horario) return [];
+    return Array.from(new Set(
+      horario.grilla.flatMap(d => d.bloques.filter(b => !b.es_recreo).map(b => b.materia_nombre))
+    ));
+  }, [horario]);
+
+  const diasConClases = useMemo(() => {
+    if (!horario) return [];
+    return horario.grilla.filter(d => d.bloques.some(b => !b.es_recreo));
+  }, [horario]);
+
+  const horasPorDia = useMemo(() => {
+    return DIAS_L_V.reduce<Record<number, number>>((acc, dia) => {
+      const d = horario?.grilla.find(g => g.dia_numero === dia);
+      acc[dia] = d ? d.bloques.filter(b => !b.es_recreo).length : 0;
+      return acc;
+    }, {});
+  }, [horario]);
+
+  const materiasResumen = useMemo(() => {
+    const map = new Map<string, { nombre: string; color: string; horas: number; docente: string }>();
+    if (!horario) return [];
+    horario.grilla.forEach(d => {
+      d.bloques.forEach(b => {
+        if (b.es_recreo || !b.materia_nombre) return;
+        const color = getColor(b.materia_nombre, b.materia_color);
+        if (!map.has(b.materia_nombre)) {
+          map.set(b.materia_nombre, {
+            nombre: b.materia_nombre,
+            color,
+            horas: 1,
+            docente: b.docente_apellidos ? `Prof. ${b.docente_nombres ?? ''} ${b.docente_apellidos}` : '',
+          });
+        } else {
+          map.get(b.materia_nombre)!.horas++;
+        }
+      });
+    });
+    return Array.from(map.values()).sort((a, b) => b.horas - a.horas);
+  }, [horario]);
+
+  if (isLoading) return <HorarioSkeleton />;
 
   return (
-    <Box sx={{ pb: 6 }}>
+    <Box sx={{ pb: 4 }}>
+      <Fade in timeout={450}>
+        <Box>
 
-      {/* ── Header ─────────────────────────────────────────── */}
-      <HorarioPageHeader
-        accent={accent} gradient={gradient} isDark={isDark}
-        onRefresh={refrescar} vista={vista} setVista={setVista}
-        diaVista={diaVista} setDiaVista={setDiaVista}
-        diasDisponibles={horario.grilla.map(d => d.dia_numero)}
-        showControls
-      />
-
-      {/* ── Stat chips ──────────────────────────────────────── */}
-      <Fade in timeout={350}>
-        <Grid container spacing={1.5} sx={{ mb: 2 }}>
-          {[
-            { label: 'materias', value: new Set(horario.grilla.flatMap(d => d.bloques.filter(b => !b.es_recreo).map(b => b.materia_nombre))).size },
-            { label: 'horas / semana', value: `${horario.total_celdas}h` },
-            { label: 'clases hoy', value: horario.grilla.find(d => d.dia_numero === diaActual())?.bloques.filter(b => !b.es_recreo).length ?? 0 },
-            { label: 'profesores', value: new Set(horario.grilla.flatMap(d => d.bloques.filter(b => !b.es_recreo && b.docente_apellidos).map(b => b.docente_apellidos))).size },
-          ].map(({ label, value }) => (
-            <Grid key={label} size={{ xs: 6, sm: 3 }}>
-              <Paper elevation={0} sx={{
-                p: 1.5, borderRadius: 2.5, textAlign: 'center',
-                bgcolor: isDark ? alpha('#fff', 0.04) : alpha('#000', 0.03),
-                border: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06)}`,
-              }}>
-                <Typography variant="h5" fontWeight={800} sx={{ color: accent, lineHeight: 1 }}>
-                  {value}
+          {/* ── HEADER ── */}
+          <Box sx={{ mb: 4, display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <CalendarIcon sx={{ color: accentColor, fontSize: 34, animation: `${float} 2.5s ease-in-out infinite` }} />
+              <Box>
+                <Typography
+                  variant="h1"
+                  sx={{
+                    fontSize: { xs: '1.4rem', sm: '1.9rem', md: '2.2rem' },
+                    fontWeight: 800,
+                    background: isDark ? 'linear-gradient(135deg,#facc15,#f59e0b)' : 'linear-gradient(135deg,#0288d1,#01579b)',
+                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', lineHeight: 1.1,
+                  }}
+                >
+                  Mi Horario
                 </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                  {label}
+                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                  {horario && horario.grilla.length > 0
+                    ? `${totalHoras} clases semanales · ${materiasUnicas.length} materias · ${diasConClases.length} días activos`
+                    : 'Horario académico semanal'}
                 </Typography>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
-      </Fade>
-
-      {/* ── Info + Próxima clase ────────────────────────────── */}
-      <Fade in timeout={400}>
-        <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid size={{ xs: 12, md: claseEnCurso || proximaClase ? 6 : 12 }}>
-            <InfoHorario horario={horario} isDark={isDark} accent={accent} progreso={semanaProgreso()} />
-          </Grid>
-          {(claseEnCurso || proximaClase) && (
-            <Grid size={{ xs: 12, md: 6 }}>
-              <ClaseActualCard
-                clase={claseEnCurso ?? proximaClase!}
-                tipo={claseEnCurso ? 'enCurso' : 'proxima'}
-                ahora={ahora}
-                isDark={isDark}
-                accent={accent}
-              />
-            </Grid>
-          )}
-        </Grid>
-      </Fade>
-
-      {/* ── Mini chart distribución semanal ─────────────────── */}
-      {clasesPorDia.length > 0 && (
-        <Fade in timeout={450}>
-          <Box sx={{ mb: 2.5 }}>
-            <DistribucionSemanal
-              datos={clasesPorDia}
-              diaHoy={diaActual()}
-              isDark={isDark}
-              accent={accent}
-            />
-          </Box>
-        </Fade>
-      )}
-
-      {/* ── Grilla / Lista ────────────────────────────────────── */}
-      <Fade in timeout={500}>
-        <Box sx={{ animation: `${slideUp} .35s ease-out` }}>
-          {isMobile && vista === 'dia' ? (
-            <VistaListaMobile
-              dia={diasRender[0]}
-              claseEnCurso={claseEnCurso}
-              proximaClase={proximaClase}
-              isDark={isDark}
-              accent={accent}
-            />
-          ) : (
-            <Box sx={{ overflowX: 'auto', pb: 1 }}>
-              <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: vista === 'semana'
-                  ? `72px repeat(${diasRender.length}, minmax(130px, 1fr))`
-                  : '72px 1fr',
-                gap: '6px',
-                minWidth: vista === 'semana' ? `${72 + diasRender.length * 132}px` : 'auto',
-              }}>
-                <Box />
-                {diasRender.map(d => (
-                  <DiaHeader
-                    key={d.dia_numero}
-                    dia={d}
-                    esHoy={d.dia_numero === diaActual()}
-                    seleccionado={vista === 'dia' && d.dia_numero === diaVista}
-                    isDark={isDark}
-                    accent={accent}
-                    onClick={() => { setDiaVista(d.dia_numero); setVista('dia'); }}
-                  />
-                ))}
-
-                {bloquesEje.map(bq => (
-                  <React.Fragment key={bq.bloque_numero}>
-                    <EjeHora bloque={bq} ahora={ahora} isDark={isDark} accent={accent} />
-                    {diasRender.map(d => {
-                      const celda = d.bloques.find(b => b.bloque_numero === bq.bloque_numero) ?? null;
-                      const enCurso = !!claseEnCurso &&
-                        d.dia_numero === diaActual() &&
-                        celda?.bloque_numero === claseEnCurso.bloque_numero;
-                      const esProxima = !!proximaClase &&
-                        d.dia_numero === diaActual() &&
-                        celda?.bloque_numero === proximaClase.bloque_numero;
-                      return (
-                        <CeldaHorario
-                          key={`${d.dia_numero}-${bq.bloque_numero}`}
-                          celda={celda}
-                          esHoy={d.dia_numero === diaActual()}
-                          enCurso={enCurso}
-                          esProxima={esProxima}
-                          isDark={isDark}
-                        />
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
               </Box>
             </Box>
+
+            <Tooltip title="Actualizar horario">
+              <IconButton
+                onClick={() => void refrescar()}
+                size="small"
+                sx={{
+                  p: 1, borderRadius: 2, border: `1px solid ${alpha(accentColor, 0.25)}`, color: accentColor,
+                  transition: 'all 0.3s ease',
+                  '&:hover': { bgcolor: alpha(accentColor, 0.1), transform: 'rotate(180deg)' },
+                }}
+              >
+                <RefreshIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+
+          {!horario || horario.grilla.length === 0 ? (
+            <Alert severity="warning" sx={{ borderRadius: 3 }}>
+              <Typography variant="body2" fontWeight={600}>
+                Tu horario todavía no fue publicado.
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Consultá con la dirección del colegio para más información.
+              </Typography>
+            </Alert>
+          ) : (
+            <>
+              {/* ── RESUMEN ── */}
+              <Paper
+                sx={{
+                  mb: 3, p: 2, borderRadius: 3, border: `1px solid ${alpha(accentColor, 0.2)}`,
+                  background: isDark
+                    ? `linear-gradient(135deg,${alpha('#facc15', 0.06)},transparent)`
+                    : `linear-gradient(135deg,${alpha('#0288d1', 0.05)},transparent)`,
+                  display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center',
+                }}
+              >
+                <Box sx={{
+                  width: 52, height: 52, borderRadius: '50%', flexShrink: 0,
+                  bgcolor: alpha(accentColor, 0.15), color: accentColor,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <ScheduleIcon sx={{ fontSize: 26 }} />
+                </Box>
+
+                <Box sx={{ flex: 1, minWidth: 180 }}>
+                  <Typography variant="h6" fontWeight={800} sx={{ lineHeight: 1.2 }}>
+                    {horario.nombre ?? 'Horario vigente'}
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8, mt: 0.8 }}>
+                    <Chip
+                      size="small"
+                      icon={<PersonIcon sx={{ fontSize: 12 }} />}
+                      label="Estudiante"
+                      sx={{
+                        height: 22, fontSize: '0.68rem', bgcolor: alpha(accentColor, 0.1), color: accentColor, fontWeight: 700,
+                        '& .MuiChip-icon': { color: accentColor },
+                      }}
+                    />
+                    {horario.publicado_en && (
+                      <Chip
+                        size="small"
+                        label={`Publicado el ${new Date(horario.publicado_en).toLocaleDateString('es-BO', { day: '2-digit', month: 'long', year: 'numeric' })}`}
+                        sx={{ height: 22, fontSize: '0.68rem' }}
+                      />
+                    )}
+                    {claseAhora && (
+                      <Chip
+                        size="small"
+                        icon={<DotIcon sx={{ fontSize: 10, animation: `${pulse} 1.5s infinite` }} />}
+                        label={`En curso: ${claseAhora.etiqueta_personalizada || claseAhora.materia_nombre}${claseAhora.aula ? ` · Aula ${claseAhora.aula}` : ''}`}
+                        sx={{
+                          height: 22, fontSize: '0.68rem', fontWeight: 700,
+                          bgcolor: alpha('#10b981', 0.15), color: '#10b981',
+                          border: `1px solid ${alpha('#10b981', 0.3)}`,
+                          '& .MuiChip-icon': { color: '#10b981' },
+                        }}
+                      />
+                    )}
+                    {!claseAhora && proximaClase && (
+                      <Chip
+                        size="small"
+                        icon={<HoraIcon sx={{ fontSize: 12 }} />}
+                        label={`Próxima: ${proximaClase.etiqueta_personalizada || proximaClase.materia_nombre} · ${fmtHora(proximaClase.hora_inicio)}`}
+                        sx={{
+                          height: 22, fontSize: '0.68rem', fontWeight: 700,
+                          bgcolor: alpha(accentColor, 0.12), color: accentColor,
+                        }}
+                      />
+                    )}
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  {[
+                    { valor: totalHoras, label: 'hrs/sem', color: accentColor },
+                    { valor: materiasUnicas.length, label: 'materias', color: '#8b5cf6' },
+                    { valor: diasConClases.length, label: 'días activos', color: '#10b981' },
+                  ].map(s => (
+                    <Box key={s.label} sx={{ textAlign: 'center' }}>
+                      <Typography variant="h5" fontWeight={800} sx={{ color: s.color, lineHeight: 1 }}>{s.valor}</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.62rem' }}>{s.label}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Paper>
+
+              {/* ── GRILLA PRINCIPAL ── */}
+              <Paper
+                sx={{
+                  borderRadius: 3, border: `1px solid ${alpha(accentColor, 0.15)}`, overflow: 'hidden', mb: 3,
+                  background: isDark
+                    ? `linear-gradient(135deg,${alpha('#facc15', 0.06)},transparent)`
+                    : `linear-gradient(135deg,${alpha('#0288d1', 0.05)},transparent)`,
+                }}
+              >
+                <Box
+                  sx={{
+                    px: 2.5, py: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    flexWrap: 'wrap', gap: 1, borderBottom: `1px solid ${alpha(accentColor, 0.1)}`,
+                    background: isDark ? alpha('#facc15', 0.04) : alpha('#0288d1', 0.04),
+                  }}
+                >
+                  <Typography variant="subtitle2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CalendarIcon sx={{ color: accentColor, fontSize: 18 }} />
+                    Horario Semanal
+                    <Chip
+                      size="small"
+                      label={`${totalHoras} clases`}
+                      sx={{ height: 20, fontSize: '0.65rem', bgcolor: alpha(accentColor, 0.1), color: accentColor, fontWeight: 700 }}
+                    />
+                  </Typography>
+
+                  {claseAhora && (
+                    <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <DotIcon sx={{ fontSize: 12, animation: `${pulse} 1.2s infinite` }} />
+                      En clase: {claseAhora.etiqueta_personalizada || claseAhora.materia_nombre} ({fmtHora(claseAhora.hora_inicio)}–{fmtHora(claseAhora.hora_fin)})
+                    </Typography>
+                  )}
+                </Box>
+
+                <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
+                  {isMobile ? (
+                    <AgendaMobile
+                      horario={horario}
+                      diasActivos={diasActivos}
+                      accentColor={accentColor}
+                      isDark={isDark}
+                      onCeldaClick={setDetalleCelda}
+                    />
+                  ) : (
+                    <GrillaDesktop
+                      diasActivos={diasActivos}
+                      bloquesEje={bloquesEje}
+                      celdaMap={celdaMap}
+                      accentColor={accentColor}
+                      isDark={isDark}
+                      onCeldaClick={setDetalleCelda}
+                    />
+                  )}
+                </Box>
+              </Paper>
+
+              {/* ── RESUMEN INFERIOR ── */}
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 7 }}>
+                  <ClasesPorDiaCard horario={horario} horasPorDia={horasPorDia} accentColor={accentColor} isDark={isDark} />
+                </Grid>
+                <Grid size={{ xs: 12, md: 5 }}>
+                  <MateriasCard materiasResumen={materiasResumen} accentColor={accentColor} isDark={isDark} />
+                </Grid>
+              </Grid>
+            </>
           )}
         </Box>
       </Fade>
 
-      {/* ── Leyenda ──────────────────────────────────────────── */}
-      <Leyenda horario={horario} isDark={isDark} accent={accent} />
-
+      <DetalleCeldaModal celda={detalleCelda} onClose={() => setDetalleCelda(null)} accentColor={accentColor} isDark={isDark} />
     </Box>
   );
 };
@@ -357,779 +391,561 @@ export const EstudianteHorario: React.FC<Props> = () => {
 // SUB-COMPONENTES
 // ═════════════════════════════════════════════════════════════
 
-// ── Header ────────────────────────────────────────────────────
-const HorarioPageHeader: React.FC<{
-  accent: string; gradient: string; isDark: boolean;
-  onRefresh: () => void;
-  vista: Vista; setVista: (v: Vista) => void;
-  diaVista: number; setDiaVista: (d: number) => void;
-  diasDisponibles: number[];
-  showControls: boolean;
-}> = ({ accent, gradient, isDark, onRefresh, vista, setVista, diaVista, setDiaVista, diasDisponibles, showControls }) => (
-  <Fade in timeout={300}>
-    <Box sx={{ mb: 2.5 }}>
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: showControls ? 2 : 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box sx={{
-            p: 1.25, borderRadius: 2.5, background: gradient,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: `0 4px 14px ${alpha(accent, 0.4)}`,
-            animation: `${float} 3.5s ease-in-out infinite`,
-          }}>
-            <ScheduleIcon sx={{ color: '#fff', fontSize: 28 }} />
-          </Box>
-          <Box>
-            <Typography variant="h4" fontWeight={800} sx={{
-              background: gradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              letterSpacing: '-0.5px',
-            }}>
-              Mi Horario
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Horario semanal de clases · {new Date().toLocaleDateString('es-BO', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </Typography>
-          </Box>
-        </Box>
+const MIN_COL = 138, ROW_HEIGHT = 96, RECREO_HEIGHT = 38, HORA_COL = 92, GAP = 10;
 
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          {showControls && (
-            <Box sx={{
-              display: 'flex', gap: 0, p: 0.5, borderRadius: 2,
-              bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
-              border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.07)}`,
-            }}>
-              {(['semana', 'dia'] as Vista[]).map((key) => (
-                <Box
-                  key={key}
-                  onClick={() => setVista(key)}
-                  sx={{
-                    px: 1.5, py: 0.75, borderRadius: 1.5, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 0.5,
-                    transition: 'all .2s',
-                    bgcolor: vista === key ? accent : 'transparent',
-                    color: vista === key ? '#fff' : 'text.secondary',
-                    fontWeight: vista === key ? 700 : 500,
-                    fontSize: '0.8rem',
-                    '&:hover': { bgcolor: vista === key ? accent : alpha(accent, 0.1) },
-                  }}
-                >
-                  {key === 'semana' ? <WeekIcon sx={{ fontSize: 18 }} /> : <DayIcon sx={{ fontSize: 18 }} />}
-                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                    {key === 'semana' ? 'Semana' : 'Día'}
-                  </Box>
-                </Box>
-              ))}
-            </Box>
-          )}
-          <Tooltip title="Actualizar datos">
-            <IconButton onClick={onRefresh} size="small" sx={{
-              bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.03),
-              '&:hover': { bgcolor: alpha(accent, 0.12), color: accent },
-            }}>
-              <RefreshIcon sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
-
-      {showControls && vista === 'dia' && diasDisponibles.length > 0 && (
-        <Fade in>
-          <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-            {diasDisponibles.map(n => (
-              <Chip
-                key={n}
-                label={DIAS_LABEL[n]}
-                onClick={() => setDiaVista(n)}
-                icon={n === diaActual() ? <DotIcon sx={{ fontSize: '10px !important', color: `${accent} !important`, animation: `${blink} 1.5s ease-in-out infinite` }} /> : undefined}
-                sx={{
-                  cursor: 'pointer', fontWeight: 600,
-                  bgcolor: diaVista === n ? accent : 'transparent',
-                  color: diaVista === n ? '#fff' : n === diaActual() ? accent : 'text.secondary',
-                  border: `1px solid ${diaVista === n ? accent : alpha(accent, 0.3)}`,
-                  '&:hover': { bgcolor: diaVista === n ? accent : alpha(accent, 0.12) },
-                  transition: 'all .2s',
-                }}
-              />
-            ))}
-          </Box>
-        </Fade>
-      )}
-    </Box>
-  </Fade>
-);
-
-// ── Info card con progress bar ────────────────────────────────
-const InfoHorario: React.FC<{
-  horario: HorarioEstudiante; isDark: boolean; accent: string; progreso: number;
-}> = ({ horario, isDark, accent, progreso }) => (
-  <Paper elevation={0} sx={{
-    p: 2.5, borderRadius: 3, height: '100%',
-    bgcolor: isDark ? alpha('#fff', 0.03) : alpha(accent, 0.04),
-    border: `1px solid ${alpha(accent, isDark ? 0.12 : 0.1)}`,
-  }}>
-    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-      <Box sx={{
-        p: 1.5, borderRadius: 2, bgcolor: alpha(accent, 0.12),
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}>
-        <InfoIcon sx={{ color: accent, fontSize: 22 }} />
-      </Box>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="body2" fontWeight={700} sx={{ color: accent }}>
-          {horario.nombre ?? 'Horario vigente'}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {horario.total_celdas} clases semanales · {horario.grilla.length} días lectivos
-        </Typography>
-        {horario.publicado_en && (
-          <Typography variant="caption" color="text.disabled" display="block">
-            Publicado el {new Date(horario.publicado_en).toLocaleDateString('es-BO', { day: '2-digit', month: 'long', year: 'numeric' })}
-          </Typography>
-        )}
-
-        {/* Barra de progreso semanal */}
-        <Box sx={{ mt: 1.5 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
-              Progreso de la semana
-            </Typography>
-            <Typography variant="caption" fontWeight={700} sx={{ color: accent, fontSize: '0.68rem' }}>
-              {progreso}%
-            </Typography>
-          </Box>
-          <LinearProgress
-            variant="determinate"
-            value={progreso}
-            sx={{
-              height: 5, borderRadius: 3,
-              bgcolor: alpha(accent, 0.12),
-              '& .MuiLinearProgress-bar': {
-                borderRadius: 3,
-                background: `linear-gradient(90deg, ${accent}, ${alpha(accent, 0.7)})`,
-              },
-            }}
-          />
-        </Box>
-      </Box>
-    </Box>
-  </Paper>
-);
-
-// ── Clase en curso / próxima — con anillo de progreso ──────────
-const ClaseActualCard: React.FC<{
-  clase: BloqueHorario;
-  tipo: 'enCurso' | 'proxima';
-  ahora: number;
+// ── Grilla de escritorio (fluida, estilo docente) ───────────────
+const GrillaDesktop: React.FC<{
+  diasActivos: number[];
+  bloquesEje: BloqueHorario[];
+  celdaMap: Record<string, BloqueHorario>;
+  accentColor: string;
   isDark: boolean;
-  accent: string;
-}> = ({ clase, tipo, ahora, isDark, accent }) => {
-  const color = getColor(clase.materia_nombre ?? '', clase.materia_color);
-  const esActual = tipo === 'enCurso';
-
-  // Tiempo restante / tiempo hasta inicio
-  const minInicio = toMin(clase.hora_inicio);
-  const minFin = toMin(clase.hora_fin);
-  const durTotal = minFin - minInicio;
-
-  const tiempoLabel = esActual
-    ? `${minFin - ahora} min restantes`
-    : `en ${minInicio - ahora} min`;
-
-  const progresoClase = esActual
-    ? Math.round(((ahora - minInicio) / durTotal) * 100)
-    : 0;
-
-  const ring = ringGeom(progresoClase);
-
-  return (
-    <Paper elevation={0} sx={{
-      p: 2.5, borderRadius: 3, height: '100%',
-      bgcolor: isDark ? alpha(color, 0.12) : alpha(color, 0.07),
-      border: `1px solid ${alpha(color, esActual ? 0.4 : 0.2)}`,
-      position: 'relative', overflow: 'hidden',
-      animation: esActual ? `${pulseRing} 2s ease-in-out infinite` : 'none',
-    }}>
-      {/* Fondo decorativo */}
-      <Box sx={{
-        position: 'absolute', top: -20, right: -20,
-        width: 100, height: 100, borderRadius: '50%',
-        bgcolor: alpha(color, 0.08),
-      }} />
-
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-        {esActual ? (
-          // ── Anillo de progreso circular ──
-          <Box sx={{ position: 'relative', width: 44, height: 44, flexShrink: 0 }}>
-            <svg width="44" height="44" viewBox="0 0 44 44" style={{ transform: 'rotate(-90deg)' }}>
-              <circle
-                cx="22" cy="22" r={ring.radius}
-                fill="none" stroke={alpha(color, 0.15)} strokeWidth={4}
-              />
-              <circle
-                cx="22" cy="22" r={ring.radius}
-                fill="none" stroke={color} strokeWidth={4}
-                strokeDasharray={ring.circ}
-                strokeDashoffset={ring.offset}
-                strokeLinecap="round"
-                style={{ transition: 'stroke-dashoffset .6s ease' }}
-              />
-            </svg>
-            <Box sx={{
-              position: 'absolute', inset: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <NowIcon sx={{ color, fontSize: 18, animation: `${blink} 1.5s ease-in-out infinite` }} />
-            </Box>
-          </Box>
-        ) : (
-          <Box sx={{
-            p: 0.75, borderRadius: 1.5, flexShrink: 0,
-            bgcolor: alpha(color, 0.15), border: `1px solid ${alpha(color, 0.25)}`,
-          }}>
-            <TimeIcon sx={{ color, fontSize: 20 }} />
-          </Box>
-        )}
-
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-            <Chip
-              label={esActual ? '● En curso' : '⏱ Próxima clase'}
-              size="small"
-              sx={{
-                height: 20, fontSize: '0.65rem', fontWeight: 700,
-                bgcolor: alpha(color, 0.12), color,
-                border: `1px solid ${alpha(color, 0.2)}`,
-              }}
-            />
-            <Typography variant="caption" fontWeight={700} sx={{ color, fontSize: '0.72rem' }}>
-              {tiempoLabel}
+  onCeldaClick: (b: BloqueHorario) => void;
+}> = ({ diasActivos, bloquesEje, celdaMap, accentColor, isDark, onCeldaClick }) => (
+  <Box sx={{ overflowX: 'auto', pb: 1 }}>
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: `${HORA_COL}px repeat(${diasActivos.length}, minmax(${MIN_COL}px, 1fr))`,
+        gap: `${GAP}px`,
+        minWidth: HORA_COL + (MIN_COL + GAP) * diasActivos.length,
+        width: '100%',
+      }}
+    >
+      <Box />
+      {diasActivos.map(dia => {
+        const esHoy = dia === diaActual();
+        return (
+          <Box
+            key={`h-${dia}`}
+            sx={{
+              textAlign: 'center', px: 1, py: 1.2, borderRadius: 2,
+              background: esHoy
+                ? isDark ? 'linear-gradient(135deg,#facc1530,#f59e0b18)' : 'linear-gradient(135deg,#0288d128,#01579b14)'
+                : isDark ? '#ffffff08' : '#f9fafb',
+            }}
+          >
+            <Typography variant="subtitle2" fontWeight={700} sx={{ color: esHoy ? accentColor : 'text.disabled', fontSize: '0.85rem' }}>
+              {DIAS_SEMANA[dia]}
             </Typography>
           </Box>
+        );
+      })}
 
-          <Typography variant="subtitle1" fontWeight={800} sx={{ color, lineHeight: 1.2 }} noWrap>
-            {clase.materia_nombre}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.25 }}>
-            {fmtHora(clase.hora_inicio)} – {fmtHora(clase.hora_fin)}
-          </Typography>
-
-          {clase.docente_apellidos && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-              <PersonIcon sx={{ fontSize: 13, color: alpha(color, 0.7) }} />
-              <Typography variant="caption" color="text.secondary">
-                Prof. {clase.docente_nombres} {clase.docente_apellidos}
+      {bloquesEje.map(bloque => {
+        const isRecreo = bloque.es_recreo;
+        const height = isRecreo ? RECREO_HEIGHT : ROW_HEIGHT;
+        return (
+          <React.Fragment key={bloque.bloque_numero}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', pr: 1.5, height }}>
+              <Typography variant="caption" fontWeight={700} sx={{ fontSize: '0.7rem', color: 'text.primary', lineHeight: 1.3 }}>
+                {fmtHora(bloque.hora_inicio)}
+              </Typography>
+              <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', lineHeight: 1.3 }}>
+                {fmtHora(bloque.hora_fin)}
               </Typography>
             </Box>
-          )}
-          {clase.aula && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
-              <RoomIcon sx={{ fontSize: 13, color: alpha(color, 0.7) }} />
-              <Typography variant="caption" color="text.secondary">Aula {clase.aula}</Typography>
-            </Box>
-          )}
-        </Box>
-      </Box>
-    </Paper>
-  );
-};
 
-// ── Distribución semanal (mini bar chart) ─────────────────────
-const DistribucionSemanal: React.FC<{
-  datos: { dia: number; count: number }[];
-  diaHoy: number | null;
-  isDark: boolean;
-  accent: string;
-}> = ({ datos, diaHoy, isDark, accent }) => {
-  const maxCount = Math.max(...datos.map(d => d.count), 1);
-
-  return (
-    <Paper elevation={0} sx={{
-      p: 2, borderRadius: 3,
-      bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
-      border: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06)}`,
-    }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <TrendingIcon sx={{ fontSize: 16, color: accent }} />
-          <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.68rem' }}>
-            Distribución semanal
-          </Typography>
-        </Box>
-        <Chip
-          label={`${datos.reduce((s, d) => s + d.count, 0)} clases totales`}
-          size="small"
-          sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600, bgcolor: alpha(accent, 0.1), color: accent }}
-        />
-      </Box>
-
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', height: 52 }}>
-        {datos.map(({ dia, count }) => {
-          const esHoy = dia === diaHoy;
-          const pct = (count / maxCount) * 100;
-          return (
-            <Tooltip key={dia} title={`${DIAS_LABEL[dia]}: ${count} clase${count !== 1 ? 's' : ''}`} placement="top">
-              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, height: '100%', justifyContent: 'flex-end' }}>
-                <Typography variant="caption" sx={{ fontSize: '0.62rem', fontWeight: esHoy ? 800 : 500, color: esHoy ? accent : 'text.disabled' }}>
-                  {count}
-                </Typography>
-                <Box sx={{
-                  width: '100%', height: `${pct}%`, minHeight: 6, borderRadius: '3px 3px 0 0',
-                  bgcolor: esHoy ? accent : alpha(accent, isDark ? 0.3 : 0.25),
-                  transition: 'height .4s cubic-bezier(.4,0,.2,1)',
-                  transformOrigin: 'bottom',
-                  animation: `${growBar} .5s ease-out`,
-                }} />
-                <Typography variant="caption" sx={{ fontSize: '0.62rem', fontWeight: esHoy ? 700 : 400, color: esHoy ? accent : 'text.secondary' }}>
-                  {DIAS_SHORT[dia]}
+            {isRecreo ? (
+              <Box
+                sx={{
+                  gridColumn: `span ${diasActivos.length}`, height: RECREO_HEIGHT, borderRadius: 2,
+                  bgcolor: isDark ? '#ffffff07' : '#f3f4f6', border: `1px dashed ${isDark ? '#ffffff18' : '#d1d5db'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+                }}
+              >
+                <RecreoIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+                <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: '0.65rem' }}>
+                  Recreo · {fmtHora(bloque.hora_inicio)}–{fmtHora(bloque.hora_fin)}
                 </Typography>
               </Box>
-            </Tooltip>
-          );
-        })}
-      </Box>
-    </Paper>
-  );
-};
-
-// ── Cabecera de día ───────────────────────────────────────────
-const DiaHeader: React.FC<{
-  dia: DiaHorario; esHoy: boolean; seleccionado: boolean;
-  isDark: boolean; accent: string; onClick: () => void;
-}> = ({ dia, esHoy, seleccionado, isDark, accent, onClick }) => (
-  <Paper
-    elevation={0}
-    onClick={onClick}
-    sx={{
-      py: 1.25, px: 1, textAlign: 'center', borderRadius: 2.5, cursor: 'pointer',
-      bgcolor: esHoy ? accent : isDark ? alpha('#fff', 0.04) : alpha('#000', 0.03),
-      border: seleccionado && !esHoy
-        ? `1px solid ${alpha(accent, 0.5)}`
-        : `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06)}`,
-      transition: 'all .2s',
-      '&:hover': { bgcolor: esHoy ? accent : alpha(accent, 0.1), transform: 'translateY(-1px)' },
-    }}
-  >
-    <Typography variant="caption" fontWeight={700} sx={{
-      color: esHoy ? '#fff' : 'text.secondary',
-      textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.7rem',
-    }}>
-      {DIAS_SHORT[dia.dia_numero]}
-    </Typography>
-    {esHoy && (
-      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'rgba(255,255,255,.8)', mx: 'auto', mt: 0.25 }} />
-    )}
-  </Paper>
+            ) : (
+              diasActivos.map(dia => {
+                const celda = celdaMap[`${dia}-${bloque.bloque_numero}`];
+                return (
+                  <CeldaDesktop
+                    key={dia}
+                    celda={celda}
+                    height={height}
+                    accentColor={accentColor}
+                    isDark={isDark}
+                    onClick={() => celda && onCeldaClick(celda)}
+                  />
+                );
+              })
+            )}
+          </React.Fragment>
+        );
+      })}
+    </Box>
+  </Box>
 );
 
-// ── Eje de horas ──────────────────────────────────────────────
-const EjeHora: React.FC<{
-  bloque: BloqueHorario; ahora: number; isDark: boolean; accent: string;
-}> = ({ bloque, ahora, isDark, accent }) => {
-  const inicio = toMin(bloque.hora_inicio);
-  const fin = toMin(bloque.hora_fin);
-  const pasando = inicio <= ahora && ahora < fin;
+// ── Celda de escritorio ──────────────────────────────────────
+const CeldaDesktop: React.FC<{
+  celda?: BloqueHorario; height: number; accentColor: string; isDark: boolean; onClick: () => void;
+}> = ({ celda, height, isDark, onClick }) => {
+  if (!celda) {
+    return (
+      <Box sx={{
+        width: '100%', height, borderRadius: 2,
+        border: `1.5px dashed ${isDark ? '#ffffff0f' : '#e5e7eb'}`,
+        bgcolor: isDark ? '#ffffff04' : 'transparent',
+      }} />
+    );
+  }
+
+  const cellColor = getColor(celda.materia_nombre ?? '', celda.materia_color);
 
   return (
-    <Box sx={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      py: 0.5, minHeight: 88, position: 'relative',
-    }}>
-      {pasando && (
-        <Box sx={{
-          position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-          width: 3, height: '60%', borderRadius: 2, bgcolor: accent,
-        }} />
-      )}
-      {bloque.es_recreo ? (
-        <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.disabled', fontWeight: 600, letterSpacing: '0.05em' }}>
-          RECREO
-        </Typography>
-      ) : (
-        <>
-          <Typography variant="caption" sx={{
-            fontWeight: pasando ? 800 : 600,
-            color: pasando ? accent : 'text.secondary',
-            fontSize: '0.72rem',
-          }}>
-            {fmtHora(bloque.hora_inicio)}
-          </Typography>
-          <Box sx={{ width: 16, height: 1, bgcolor: alpha(accent, 0.2), my: 0.3 }} />
-          <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.disabled' }}>
-            {fmtHora(bloque.hora_fin)}
-          </Typography>
-        </>
-      )}
-    </Box>
-  );
-};
-
-// ── Celda con hover glow + indicador de "próxima" ──────────────
-const CeldaHorario: React.FC<{
-  celda: BloqueHorario | null;
-  esHoy: boolean;
-  enCurso: boolean;
-  esProxima: boolean;
-  isDark: boolean;
-}> = ({ celda, esHoy, enCurso, esProxima, isDark }) => {
-  const [hover, setHover] = useState(false);
-
-  if (!celda) return (
-    <Box sx={{
-      borderRadius: 2, minHeight: 88,
-      bgcolor: isDark ? alpha('#fff', 0.015) : alpha('#000', 0.015),
-      border: `1px dashed ${isDark ? alpha('#fff', 0.04) : alpha('#000', 0.05)}`,
-    }} />
-  );
-
-  if (celda.es_recreo) return (
-    <Box sx={{
-      borderRadius: 2, minHeight: 88, display: 'flex',
-      alignItems: 'center', justifyContent: 'center',
-      bgcolor: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02),
-      border: `1px dashed ${isDark ? alpha('#fff', 0.05) : alpha('#000', 0.06)}`,
-    }}>
-      <Typography sx={{ fontSize: '1.1rem' }}>☕</Typography>
-    </Box>
-  );
-
-  const color = getColor(celda.materia_nombre ?? '', celda.materia_color);
-
-  // Borde más grueso para la próxima clase
-  const borderWidth = enCurso || esProxima ? 2 : 1;
-  const borderColor = hover
-    ? color
-    : enCurso
-      ? alpha(color, 0.55)
-      : esProxima
-        ? alpha(color, 0.45)
-        : alpha(color, 0.2);
-
-  return (
-    <Tooltip
-      placement="top"
-      title={
-        <Box sx={{ p: 0.25 }}>
-          <Typography variant="body2" fontWeight={700} gutterBottom>{celda.materia_nombre}</Typography>
-          <Typography variant="caption" display="block" sx={{ color: alpha('#fff', 0.8) }}>
-            🕐 {fmtHora(celda.hora_inicio)} – {fmtHora(celda.hora_fin)}
-          </Typography>
-          {celda.docente_nombres && (
-            <Typography variant="caption" display="block" sx={{ color: alpha('#fff', 0.8) }}>
-              👤 Prof. {celda.docente_nombres} {celda.docente_apellidos}
-            </Typography>
-          )}
-          {celda.aula && (
-            <Typography variant="caption" display="block" sx={{ color: alpha('#fff', 0.8) }}>
-              📍 Aula {celda.aula}
-            </Typography>
-          )}
-        </Box>
-      }
-      arrow
-    >
-      <Paper
-        elevation={0}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
+    <Tooltip title="Toca para ver detalles" placement="top" arrow>
+      <ButtonBase
+        onClick={onClick}
         sx={{
-          borderRadius: 2.5, minHeight: 88, p: 1.5,
-          display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-          cursor: 'default', overflow: 'hidden', position: 'relative',
-          bgcolor: isDark ? alpha(color, hover ? 0.22 : 0.16) : alpha(color, hover ? 0.13 : 0.09),
-          border: `${borderWidth}px solid ${borderColor}`,
-          boxShadow: esHoy
-            ? `inset 3px 0 0 ${color}`
-            : enCurso
-              ? `0 0 0 2px ${alpha(color, 0.4)}, inset 3px 0 0 ${color}`
-              : 'none',
-          transition: 'all .25s cubic-bezier(.4,0,.2,1)',
-          transform: hover ? 'translateY(-3px) scale(1.015)' : 'none',
-          ...(hover && {
-            boxShadow: `0 0 0 3px ${alpha(color, 0.15)}, 0 6px 18px ${alpha(color, 0.3)}, inset 3px 0 0 ${color}`,
-          }),
+          width: '100%', height, borderRadius: 2,
+          background: isDark
+            ? `linear-gradient(135deg, ${alpha(cellColor, 0.22)}, ${alpha(cellColor, 0.07)})`
+            : `linear-gradient(135deg, ${alpha(cellColor, 0.16)}, ${alpha(cellColor, 0.05)})`,
+          border: `1px solid ${alpha(cellColor, 0.55)}`,
+          borderLeft: `5px solid ${cellColor}`,
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-between',
+          p: 1.2, textAlign: 'left', overflow: 'hidden', transition: 'all 0.18s', cursor: 'pointer',
+          '&:hover': {
+            transform: 'scale(1.015)', borderColor: cellColor, boxShadow: `0 6px 18px ${alpha(cellColor, 0.32)}`,
+            background: isDark
+              ? `linear-gradient(135deg, ${alpha(cellColor, 0.3)}, ${alpha(cellColor, 0.1)})`
+              : `linear-gradient(135deg, ${alpha(cellColor, 0.22)}, ${alpha(cellColor, 0.08)})`,
+          },
+          '&:active': { transform: 'scale(0.98)' },
         }}
       >
-        {/* Dot en curso */}
-        {enCurso && (
-          <Box sx={{
-            position: 'absolute', top: 6, right: 6,
-            width: 7, height: 7, borderRadius: '50%', bgcolor: color,
-            animation: `${blink} 1.2s ease-in-out infinite`,
-          }} />
-        )}
-        {/* Ícono reloj para próxima */}
-        {esProxima && !enCurso && (
-          <Box sx={{ position: 'absolute', top: 5, right: 6 }}>
-            <TimeIcon sx={{ fontSize: 11, color: alpha(color, 0.6) }} />
-          </Box>
-        )}
-
-        <Typography variant="caption" fontWeight={800} sx={{
-          color, lineHeight: 1.25, fontSize: '0.75rem',
-          display: '-webkit-box', WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        }}>
-          {celda.materia_nombre}
+        <Typography
+          variant="caption"
+          fontWeight={800}
+          sx={{
+            color: cellColor, fontSize: '0.75rem', lineHeight: 1.25,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', width: '100%',
+          }}
+        >
+          {celda.etiqueta_personalizada || celda.materia_nombre}
         </Typography>
 
-        <Box>
+        <Box sx={{ width: '100%' }}>
           {celda.docente_apellidos && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.5 }}>
-              <PersonIcon sx={{ fontSize: 10, color: alpha(color, 0.65) }} />
-              <Typography variant="caption" sx={{ fontSize: '0.65rem', color: alpha(color, 0.85), lineHeight: 1 }} noWrap>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mb: 0.2 }}>
+              <PersonIcon sx={{ fontSize: 12, color: 'text.secondary' }} />
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', maxWidth: '90%' }}>
                 {celda.docente_apellidos}
               </Typography>
             </Box>
           )}
           {celda.aula && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.25 }}>
-              <RoomIcon sx={{ fontSize: 10, color: alpha(color, 0.55) }} />
-              <Typography variant="caption" sx={{ fontSize: '0.62rem', color: 'text.disabled', lineHeight: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+              <AulaIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
+              <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.64rem', lineHeight: 1 }}>
                 {celda.aula}
               </Typography>
             </Box>
           )}
         </Box>
-      </Paper>
+      </ButtonBase>
     </Tooltip>
   );
 };
 
-// ── Vista lista vertical para mobile (vista "día") ──────────────
-const VistaListaMobile: React.FC<{
-  dia: DiaHorario | undefined;
-  claseEnCurso: BloqueHorario | null;
-  proximaClase: BloqueHorario | null;
+// ── Agenda mobile: selector de día + lista apilada ─────────────
+const AgendaMobile: React.FC<{
+  horario: HorarioEstudiante;
+  diasActivos: number[];
+  accentColor: string;
   isDark: boolean;
-  accent: string;
-}> = ({ dia, claseEnCurso, proximaClase, isDark, accent }) => {
-  if (!dia) return null;
+  onCeldaClick: (b: BloqueHorario) => void;
+}> = ({ horario, diasActivos, accentColor, isDark, onCeldaClick }) => {
+  const primerDiaConClases = diasActivos.find(
+    d => horario.grilla.find(g => g.dia_numero === d)?.bloques.some(b => !b.es_recreo)
+  ) ?? diasActivos[0];
+  const [diaSeleccionado, setDiaSeleccionado] = useState<number>(diaActual() ?? primerDiaConClases);
 
-  if (dia.bloques.length === 0) {
-    return (
-      <Paper elevation={0} sx={{
-        p: 4, textAlign: 'center', borderRadius: 3,
-        border: `1px dashed ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
-        bgcolor: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02),
-      }}>
-        <Typography variant="body2" color="text.secondary">
-          No hay clases programadas para este día.
-        </Typography>
-      </Paper>
-    );
-  }
+  useEffect(() => {
+    if (!diasActivos.includes(diaSeleccionado)) setDiaSeleccionado(diasActivos[0]);
+  }, [diasActivos, diaSeleccionado]);
+
+  const dia = horario.grilla.find(d => d.dia_numero === diaSeleccionado);
+  const bloques = dia?.bloques.slice().sort((a, b) => a.bloque_numero - b.bloque_numero) ?? [];
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-      {dia.bloques.map(b => {
-        // ── Recreo ──
-        if (b.es_recreo) {
+    <Box>
+      <Box sx={{
+        display: 'flex', gap: 1, overflowX: 'auto', pb: 1, mb: 2,
+        '&::-webkit-scrollbar': { display: 'none' }, scrollbarWidth: 'none',
+      }}>
+        {diasActivos.map(d => {
+          const activo = d === diaSeleccionado;
+          const tieneClases = horario.grilla.find(g => g.dia_numero === d)?.bloques.some(b => !b.es_recreo);
           return (
-            <Box key={b.bloque_numero} sx={{ display: 'flex', gap: 1.5 }}>
-              <Box sx={{
-                minWidth: 54, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: 0.5,
-              }}>
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.disabled' }}>
+            <ButtonBase
+              key={d}
+              onClick={() => setDiaSeleccionado(d)}
+              sx={{
+                px: 2, py: 1, borderRadius: 2.5, flexShrink: 0, fontWeight: 700, fontSize: '0.78rem',
+                bgcolor: activo ? accentColor : (isDark ? '#ffffff08' : '#f3f4f6'),
+                color: activo ? (isDark ? '#000' : '#fff') : (tieneClases ? 'text.primary' : 'text.disabled'),
+                border: `1px solid ${activo ? accentColor : alpha(accentColor, 0.15)}`,
+                transition: 'all 0.15s',
+              }}
+            >
+              {DIAS_SEMANA[d]}
+            </ButtonBase>
+          );
+        })}
+      </Box>
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {bloques.length === 0 && (
+          <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic', textAlign: 'center', py: 3, display: 'block' }}>
+            No hay clases programadas para este día.
+          </Typography>
+        )}
+        {bloques.map(b => {
+          if (b.es_recreo) {
+            return (
+              <Box
+                key={b.bloque_numero}
+                sx={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, py: 1, borderRadius: 2,
+                  border: `1px dashed ${isDark ? '#ffffff18' : '#d1d5db'}`, bgcolor: isDark ? '#ffffff07' : '#f3f4f6',
+                }}
+              >
+                <RecreoIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+                <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ fontSize: '0.68rem' }}>
+                  Recreo · {fmtHora(b.hora_inicio)}–{fmtHora(b.hora_fin)}
+                </Typography>
+              </Box>
+            );
+          }
+
+          const cellColor = getColor(b.materia_nombre ?? '', b.materia_color);
+
+          return (
+            <ButtonBase
+              key={b.bloque_numero}
+              onClick={() => onCeldaClick(b)}
+              sx={{
+                display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, borderRadius: 2, width: '100%', textAlign: 'left',
+                background: isDark
+                  ? `linear-gradient(135deg, ${alpha(cellColor, 0.22)}, ${alpha(cellColor, 0.07)})`
+                  : `linear-gradient(135deg, ${alpha(cellColor, 0.16)}, ${alpha(cellColor, 0.05)})`,
+                border: `1px solid ${alpha(cellColor, 0.55)}`,
+                borderLeft: `5px solid ${cellColor}`,
+                transition: 'all 0.15s',
+                '&:active': { transform: 'scale(0.98)' },
+              }}
+            >
+              <Box sx={{ width: 54, flexShrink: 0 }}>
+                <Typography variant="caption" fontWeight={700} sx={{ fontSize: '0.72rem', display: 'block' }}>
                   {fmtHora(b.hora_inicio)}
                 </Typography>
-                <Box sx={{ width: 2, flex: 1, bgcolor: alpha('#000', isDark ? 0.15 : 0.08), my: 0.5 }} />
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.disabled' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.62rem', display: 'block' }}>
                   {fmtHora(b.hora_fin)}
                 </Typography>
               </Box>
-              <Box sx={{
-                flex: 1, borderRadius: 2.5, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', minHeight: 48, opacity: 0.5,
-                bgcolor: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02),
-                border: `1px dashed ${isDark ? alpha('#fff', 0.05) : alpha('#000', 0.06)}`,
-              }}>
-                <Typography sx={{ fontSize: '1.1rem' }}>☕</Typography>
-              </Box>
-            </Box>
-          );
-        }
 
-        const color = getColor(b.materia_nombre ?? '', b.materia_color);
-        const enCurso = claseEnCurso?.bloque_numero === b.bloque_numero;
-        const esProxima = proximaClase?.bloque_numero === b.bloque_numero;
-
-        return (
-          <Box key={b.bloque_numero} sx={{ display: 'flex', gap: 1.5 }}>
-            {/* Eje de horas */}
-            <Box sx={{
-              minWidth: 54, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', gap: 0.5,
-            }}>
-              <Typography variant="caption" fontWeight={700} sx={{
-                fontSize: '0.7rem',
-                color: enCurso ? accent : 'text.primary',
-              }}>
-                {fmtHora(b.hora_inicio)}
-              </Typography>
-              <Box sx={{ width: 2, flex: 1, bgcolor: alpha('#000', isDark ? 0.15 : 0.08), my: 0.5 }} />
-              <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.disabled' }}>
-                {fmtHora(b.hora_fin)}
-              </Typography>
-            </Box>
-
-            {/* Card de la clase */}
-            <Paper
-              elevation={0}
-              sx={{
-                flex: 1, borderRadius: 2.5, p: 1.5, position: 'relative',
-                bgcolor: isDark ? alpha(color, 0.16) : alpha(color, 0.09),
-                border: `${enCurso || esProxima ? 2 : 1}px solid ${alpha(color, enCurso ? 0.55 : esProxima ? 0.45 : 0.2)}`,
-                boxShadow: enCurso ? `inset 4px 0 0 ${color}` : 'none',
-              }}
-            >
-              {enCurso && (
-                <Chip
-                  label="Ahora"
-                  size="small"
-                  sx={{
-                    position: 'absolute', top: 8, right: 10, height: 20,
-                    fontSize: '0.65rem', fontWeight: 700,
-                    bgcolor: alpha(color, 0.18), color,
-                  }}
-                />
-              )}
-              {esProxima && !enCurso && (
-                <Box sx={{ position: 'absolute', top: 10, right: 10 }}>
-                  <TimeIcon sx={{ fontSize: 14, color: alpha(color, 0.6) }} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={800} sx={{ color: cellColor, lineHeight: 1.25 }}>
+                  {b.etiqueta_personalizada || b.materia_nombre}
+                </Typography>
+                {b.etiqueta_personalizada && (
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', display: 'block', fontStyle: 'italic' }}>
+                    {b.materia_nombre}
+                  </Typography>
+                )}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.2, mt: 0.4 }}>
+                  {b.docente_apellidos && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                      <PersonIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
+                        {b.docente_nombres} {b.docente_apellidos}
+                      </Typography>
+                    </Box>
+                  )}
+                  {b.aula && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                      <AulaIcon sx={{ fontSize: 13, color: 'text.disabled' }} />
+                      <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.68rem' }}>
+                        {b.aula}
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
-              )}
-
-              <Typography variant="body2" fontWeight={700} sx={{ color, pr: 4 }}>
-                {b.materia_nombre}
-              </Typography>
-
-              <Box sx={{ display: 'flex', gap: 1.5, mt: 0.75, flexWrap: 'wrap' }}>
-                {b.docente_apellidos && (
-                  <Typography variant="caption" sx={{
-                    color: alpha(color, 0.85), display: 'flex', alignItems: 'center', gap: 0.4,
-                  }}>
-                    <PersonIcon sx={{ fontSize: 13 }} />
-                    {b.docente_nombres} {b.docente_apellidos}
-                  </Typography>
-                )}
-                {b.aula && (
-                  <Typography variant="caption" sx={{
-                    color: alpha(color, 0.85), display: 'flex', alignItems: 'center', gap: 0.4,
-                  }}>
-                    <RoomIcon sx={{ fontSize: 13 }} />
-                    Aula {b.aula}
-                  </Typography>
-                )}
               </Box>
-            </Paper>
-          </Box>
-        );
-      })}
+            </ButtonBase>
+          );
+        })}
+      </Box>
     </Box>
   );
 };
 
-// ── Leyenda ───────────────────────────────────────────────────
-const Leyenda: React.FC<{
-  horario: HorarioEstudiante; isDark: boolean; accent: string;
-}> = ({ horario, isDark, accent }) => {
-  const materias = useMemo(() => {
-    const map = new Map<string, { color: string; docente: string; horas: number }>();
-    for (const dia of horario.grilla) {
-      for (const b of dia.bloques) {
-        if (!b.es_recreo && b.materia_nombre) {
-          if (!map.has(b.materia_nombre)) {
-            map.set(b.materia_nombre, {
-              color: getColor(b.materia_nombre, b.materia_color),
-              docente: b.docente_apellidos ? `Prof. ${b.docente_nombres} ${b.docente_apellidos}` : '',
-              horas: 1,
-            });
-          } else {
-            map.get(b.materia_nombre)!.horas++;
-          }
-        }
-      }
-    }
-    return Array.from(map.entries()).sort((a, b) => b[1].horas - a[1].horas);
-  }, [horario]);
+// ── Clases por día (columna izquierda, estilo docente) ─────────
+const ClasesPorDiaCard: React.FC<{
+  horario: HorarioEstudiante; horasPorDia: Record<number, number>; accentColor: string; isDark: boolean;
+}> = ({ horario, horasPorDia, accentColor, isDark }) => (
+  <Paper
+    sx={{
+      borderRadius: 3, border: `1px solid ${alpha(accentColor, 0.15)}`, overflow: 'hidden', height: '100%',
+      display: 'flex', flexDirection: 'column',
+      background: isDark
+        ? `linear-gradient(135deg,${alpha('#facc15', 0.06)},transparent)`
+        : `linear-gradient(135deg,${alpha('#0288d1', 0.05)},transparent)`,
+    }}
+  >
+    <Box
+      sx={{
+        px: 2.5, py: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: 1, borderBottom: `1px solid ${alpha(accentColor, 0.1)}`,
+        background: isDark ? alpha('#facc15', 0.04) : alpha('#0288d1', 0.04),
+      }}
+    >
+      <Typography variant="subtitle2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <CalendarIcon sx={{ color: accentColor, fontSize: 18 }} />
+        Clases por día
+      </Typography>
+      <Chip
+        size="small"
+        label={`${horario.total_celdas} clases`}
+        sx={{ height: 20, fontSize: '0.65rem', bgcolor: alpha(accentColor, 0.1), color: accentColor, fontWeight: 700 }}
+      />
+    </Box>
 
-  if (materias.length === 0) return null;
+    <Box sx={{ p: { xs: 1.5, sm: 2 }, display: 'flex', flexDirection: 'column', gap: 1.5, flex: 1 }}>
+      {DIAS_L_V.filter(d => (horasPorDia[d] ?? 0) > 0).map(dia => {
+        const clasesDelDia = horario.grilla.find(g => g.dia_numero === dia)?.bloques
+          .filter(b => !b.es_recreo)
+          .sort((a, b) => a.bloque_numero - b.bloque_numero) ?? [];
+
+        return (
+          <Paper
+            key={dia}
+            sx={{
+              borderRadius: 2.5, overflow: 'hidden', border: `1px solid ${alpha(accentColor, 0.12)}`,
+              background: isDark ? alpha('#000', 0.25) : alpha('#fff', 0.7),
+            }}
+          >
+            <Box
+              sx={{
+                px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                bgcolor: isDark ? alpha('#facc15', 0.08) : alpha('#0288d1', 0.06),
+                borderBottom: `1px solid ${alpha(accentColor, 0.08)}`,
+              }}
+            >
+              <Typography variant="caption" fontWeight={700}>{DIAS_SEMANA[dia]}</Typography>
+              <Chip
+                size="small"
+                label={`${clasesDelDia.length} clases`}
+                sx={{ height: 16, fontSize: '0.58rem', fontWeight: 700, bgcolor: alpha(accentColor, 0.15), color: accentColor }}
+              />
+            </Box>
+
+            <Box sx={{ px: 2, py: 1.2, display: 'flex', flexDirection: 'column', gap: 0.8 }}>
+              {clasesDelDia.map(c => {
+                const color = getColor(c.materia_nombre ?? '', c.materia_color);
+                return (
+                  <Box key={c.bloque_numero} sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                    <Box sx={{ width: 3, height: 22, borderRadius: 2, bgcolor: color, flexShrink: 0 }} />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography
+                        variant="caption" fontWeight={700}
+                        sx={{ color, display: 'block', lineHeight: 1.2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
+                      >
+                        {c.etiqueta_personalizada || c.materia_nombre}
+                      </Typography>
+                      <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.62rem' }}>
+                        {fmtHora(c.hora_inicio)} – {fmtHora(c.hora_fin)}
+                      </Typography>
+                    </Box>
+                    {c.docente_apellidos && (
+                      <Typography
+                        variant="caption" color="text.secondary"
+                        sx={{ fontSize: '0.62rem', flexShrink: 0, maxWidth: 130, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
+                      >
+                        {c.docente_apellidos}
+                      </Typography>
+                    )}
+                    {c.aula && (
+                      <Chip
+                        size="small" label={c.aula}
+                        sx={{ height: 16, fontSize: '0.58rem', flexShrink: 0, bgcolor: alpha(accentColor, 0.07), color: 'text.secondary' }}
+                      />
+                    )}
+                  </Box>
+                );
+              })}
+            </Box>
+          </Paper>
+        );
+      })}
+    </Box>
+  </Paper>
+);
+
+// ── Materias del período (columna derecha, estilo docente) ─────
+const MateriasCard: React.FC<{
+  materiasResumen: { nombre: string; color: string; horas: number; docente: string }[];
+  accentColor: string; isDark: boolean;
+}> = ({ materiasResumen, accentColor, isDark }) => (
+  <Paper
+    sx={{
+      borderRadius: 3, border: `1px solid ${alpha(accentColor, 0.15)}`, overflow: 'hidden', height: '100%',
+      display: 'flex', flexDirection: 'column',
+      background: isDark
+        ? `linear-gradient(135deg,${alpha('#facc15', 0.06)},transparent)`
+        : `linear-gradient(135deg,${alpha('#0288d1', 0.05)},transparent)`,
+    }}
+  >
+    <Box
+      sx={{
+        px: 2.5, py: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: 1, borderBottom: `1px solid ${alpha(accentColor, 0.1)}`,
+        background: isDark ? alpha('#facc15', 0.04) : alpha('#0288d1', 0.04),
+      }}
+    >
+      <Typography variant="subtitle2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <MateriaIcon sx={{ color: accentColor, fontSize: 18 }} />
+        Materias del período
+      </Typography>
+      <Chip
+        size="small"
+        label={`${materiasResumen.length} materias`}
+        sx={{ height: 20, fontSize: '0.65rem', bgcolor: alpha(accentColor, 0.1), color: accentColor, fontWeight: 700 }}
+      />
+    </Box>
+
+    <Box sx={{ flex: 1 }}>
+      {materiasResumen.map((m, idx, arr) => (
+        <Box key={m.nombre}>
+          <Box
+            sx={{
+              px: 2, py: 1.5, display: 'flex', alignItems: 'flex-start', gap: 1.5,
+              transition: 'background-color 0.15s ease',
+              '&:hover': { bgcolor: isDark ? alpha('#facc15', 0.02) : alpha('#0288d1', 0.02) },
+            }}
+          >
+            <Box sx={{
+              width: 38, height: 38, borderRadius: '50%', bgcolor: alpha(m.color, 0.15), color: m.color,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <MateriaIcon sx={{ fontSize: 18 }} />
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" fontWeight={700} sx={{ lineHeight: 1.2 }}>{m.nombre}</Typography>
+                <Chip
+                  size="small" label={`${m.horas} hrs/sem`}
+                  sx={{ height: 18, fontSize: '0.58rem', fontWeight: 700, bgcolor: alpha(m.color, 0.12), color: m.color }}
+                />
+              </Box>
+              {m.docente && (
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem', mt: 0.3, display: 'block' }}>
+                  {m.docente}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+          {idx < arr.length - 1 && <Divider sx={{ mx: 2, borderColor: alpha(accentColor, 0.08) }} />}
+        </Box>
+      ))}
+
+      {materiasResumen.length === 0 && (
+        <Box sx={{ p: 4, textAlign: 'center' }}>
+          <MateriaIcon sx={{ fontSize: 36, opacity: 0.2, mb: 1, color: accentColor }} />
+          <Typography variant="caption" color="text.disabled">Sin materias asignadas aún</Typography>
+        </Box>
+      )}
+    </Box>
+  </Paper>
+);
+
+// ── Modal de detalle de celda ────────────────────────────────
+const DetalleCeldaModal: React.FC<{
+  celda: BloqueHorario | null; onClose: () => void; accentColor: string; isDark: boolean;
+}> = ({ celda, onClose, accentColor }) => {
+  if (!celda) return null;
+  const cellColor = getColor(celda.materia_nombre ?? '', celda.materia_color);
 
   return (
-    <Fade in timeout={600}>
-      <Box sx={{ mt: 4, animation: `${slideIn} .4s ease-out` }}>
-        <Divider sx={{ mb: 2.5 }}>
-          <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ textTransform: 'uppercase', letterSpacing: '0.08em', px: 1 }}>
-            Materias del período
-          </Typography>
-        </Divider>
-
-        <Grid container spacing={1.5}>
-          {materias.map(([nombre, data]) => (
-            <Grid key={nombre} size={{ xs: 12, sm: 6, md: 4 }}>
-              <Paper elevation={0} sx={{
-                p: 2, borderRadius: 2.5, display: 'flex', alignItems: 'center', gap: 1.5,
-                bgcolor: isDark ? alpha(data.color, 0.07) : alpha(data.color, 0.05),
-                border: `1px solid ${alpha(data.color, isDark ? 0.15 : 0.12)}`,
-                transition: 'all .2s',
-                '&:hover': { bgcolor: alpha(data.color, isDark ? 0.13 : 0.1), transform: 'translateX(3px)' },
-              }}>
-                <Box sx={{ width: 4, height: 36, borderRadius: 2, bgcolor: data.color, flexShrink: 0 }} />
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="body2" fontWeight={700} noWrap sx={{ color: data.color }}>
-                    {nombre}
-                  </Typography>
-                  {data.docente && (
-                    <Typography variant="caption" color="text.secondary" noWrap display="block">
-                      {data.docente}
-                    </Typography>
-                  )}
-                </Box>
-                <Chip
-                  label={`${data.horas}h`}
-                  size="small"
-                  sx={{
-                    height: 20, fontSize: '0.68rem', fontWeight: 700, flexShrink: 0,
-                    bgcolor: alpha(data.color, 0.15), color: data.color,
-                  }}
-                />
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
+    <Dialog open={!!celda} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}>
+      <Box sx={{ background: `linear-gradient(135deg, ${cellColor}ee, ${cellColor}88)`, p: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="h6" fontWeight={800} sx={{ color: '#fff', textShadow: '0 1px 3px #0005', lineHeight: 1.2 }}>
+              {celda.etiqueta_personalizada || celda.materia_nombre}
+            </Typography>
+            {celda.etiqueta_personalizada && (
+              <Typography variant="caption" sx={{ color: '#ffffffdd', display: 'block', fontStyle: 'italic' }}>
+                Materia oficial: {celda.materia_nombre}
+              </Typography>
+            )}
+            <Typography variant="caption" sx={{ color: '#ffffffcc', display: 'block' }}>
+              {fmtHora(celda.hora_inicio)} – {fmtHora(celda.hora_fin)}
+            </Typography>
+          </Box>
+          <IconButton onClick={onClose} sx={{ color: '#fff' }} size="small"><CloseIcon /></IconButton>
+        </Box>
       </Box>
-    </Fade>
+
+      <DialogContent sx={{ p: 2.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <InfoRow icon={<HoraIcon sx={{ fontSize: 18, color: accentColor }} />} label="Horario" value={`${fmtHora(celda.hora_inicio)} – ${fmtHora(celda.hora_fin)}`} />
+          <Divider />
+          {celda.docente_apellidos && (
+            <InfoRow icon={<PersonIcon sx={{ fontSize: 18, color: accentColor }} />} label="Docente" value={`${celda.docente_apellidos}, ${celda.docente_nombres ?? ''}`} />
+          )}
+          {celda.aula && (
+            <InfoRow icon={<AulaIcon sx={{ fontSize: 18, color: accentColor }} />} label="Aula" value={celda.aula} />
+          )}
+        </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ px: 2.5, pb: 2.5 }}>
+        <Button
+          onClick={onClose} variant="contained" fullWidth
+          sx={{ borderRadius: 2, bgcolor: cellColor, color: '#fff', fontWeight: 700, '&:hover': { bgcolor: cellColor, filter: 'brightness(0.9)' } }}
+        >
+          Cerrar
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
+const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
+  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+    <Box sx={{ mt: 0.2, flexShrink: 0 }}>{icon}</Box>
+    <Box>
+      <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ textTransform: 'uppercase', fontSize: '0.62rem', letterSpacing: 0.5, display: 'block' }}>
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={600}>{value}</Typography>
+    </Box>
+  </Box>
+);
+
 // ── Skeleton ──────────────────────────────────────────────────
-const HorarioSkeleton: React.FC<{ isDark: boolean }> = () => (
+const HorarioSkeleton: React.FC = () => (
   <Box sx={{ pb: 4 }}>
     <Box sx={{ display: 'flex', gap: 1.5, mb: 3, alignItems: 'center' }}>
-      <Skeleton variant="rounded" width={52} height={52} sx={{ borderRadius: 2.5 }} />
+      <Skeleton variant="circular" width={34} height={34} />
       <Box>
         <Skeleton variant="text" width={160} height={36} />
         <Skeleton variant="text" width={220} height={18} />
       </Box>
     </Box>
-    <Grid container spacing={1.5} sx={{ mb: 2 }}>
-      {[1, 2, 3, 4].map(i => (
-        <Grid key={i} size={{ xs: 6, sm: 3 }}>
-          <Skeleton variant="rounded" height={64} sx={{ borderRadius: 2.5 }} />
-        </Grid>
-      ))}
+    <Skeleton variant="rounded" height={100} sx={{ borderRadius: 3, mb: 2 }} />
+    <Skeleton variant="rounded" height={420} sx={{ borderRadius: 3, mb: 2 }} />
+    <Grid container spacing={2}>
+      <Grid size={{ xs: 12, md: 7 }}><Skeleton variant="rounded" height={260} sx={{ borderRadius: 3 }} /></Grid>
+      <Grid size={{ xs: 12, md: 5 }}><Skeleton variant="rounded" height={260} sx={{ borderRadius: 3 }} /></Grid>
     </Grid>
-    <Grid container spacing={2} sx={{ mb: 2 }}>
-      <Grid size={{ xs: 12, md: 6 }}><Skeleton variant="rounded" height={100} sx={{ borderRadius: 3 }} /></Grid>
-      <Grid size={{ xs: 12, md: 6 }}><Skeleton variant="rounded" height={100} sx={{ borderRadius: 3 }} /></Grid>
-    </Grid>
-    <Skeleton variant="rounded" height={80} sx={{ borderRadius: 3, mb: 2 }} />
-    <Box sx={{ display: 'grid', gridTemplateColumns: '72px repeat(5, 1fr)', gap: '6px' }}>
-      {Array.from({ length: 36 }).map((_, i) => (
-        <Skeleton key={i} variant="rounded" height={88} sx={{ borderRadius: 2.5 }} />
-      ))}
-    </Box>
   </Box>
 );
 

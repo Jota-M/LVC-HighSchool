@@ -77,8 +77,13 @@ function Navbar() {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-4">
+          {/* Botón Reserva de Cupo (Regulares) */}
+          <button className="relative bg-emerald-700 px-5 py-2 rounded-lg text-white shadow-lg overflow-hidden hover:bg-emerald-600 transition-transform transform hover:scale-105 active:scale-95 text-sm font-semibold">
+            <a href="/reserva-cupo">Reserva de Cupo</a>
+          </button>
+
           {/* Botón Admisiones */}
-          <button className="relative bg-blue-700 px-6 py-2 rounded-lg text-white shadow-lg overflow-hidden hover:bg-green-600 transition-transform transform hover:scale-105 active:scale-95 before:absolute before:inset-0 before:bg-white/20 before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700">
+          <button className="relative bg-blue-700 px-5 py-2 rounded-lg text-white shadow-lg overflow-hidden hover:bg-blue-600 transition-transform transform hover:scale-105 active:scale-95 text-sm font-semibold">
             <a href="/PreInscripcion/estado">Estado Pre-inscripción</a>
           </button>
 

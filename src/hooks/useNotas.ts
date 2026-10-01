@@ -1,5 +1,6 @@
 // hooks/useNotas.ts
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import {
   misMateriasNotasService,
@@ -26,7 +27,10 @@ import {
   RegistroCalificacionItem,
   EvaluacionFiltros,
   CodigoDimension,
-  TemaConEvaluaciones 
+  TemaConEvaluaciones,
+  DIMENSIONES_CONFIG,
+  DIMENSIONES_ORDEN,
+  DimensionConfigItem,
 } from '@/types/notasTypes';
 
 // =============================================
@@ -34,40 +38,44 @@ import {
 // =============================================
 
 export const useMisMateriasNotas = () => {
-  const [materias, setMaterias]       = useState<MateriaDocenteNotas[]>([]);
-  const [isLoading, setIsLoading]     = useState(false);
-  const [sinMaterias, setSinMaterias] = useState(false);
+  const queryClient = useQueryClient();
 
-  const cargar = useCallback(async () => {
-    setIsLoading(true);
-    setSinMaterias(false);
-    try {
-      const res = await misMateriasNotasService.getMisMaterias();
-      setMaterias(res.data.materias);
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        setMaterias([]);
-        setSinMaterias(true);
-      } else {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['docente-mis-materias-notas'],
+    queryFn: async () => {
+      try {
+        const res = await misMateriasNotasService.getMisMaterias();
+        return {
+          materias: (res.data?.materias ?? []) as MateriaDocenteNotas[],
+          sinMaterias: false,
+        };
+      } catch (error: any) {
+        if (error.response?.status === 404) {
+          return { materias: [] as MateriaDocenteNotas[], sinMaterias: true };
+        }
         toast.error(error.response?.data?.message || 'Error al cargar tus materias');
-        setMaterias([]);
+        return { materias: [] as MateriaDocenteNotas[], sinMaterias: true };
       }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    staleTime: 1000 * 60 * 3, // 3 min de caché fresca
+  });
 
-  useEffect(() => { cargar(); }, []);
+  const materias = data?.materias ?? [];
+  const sinMaterias = data?.sinMaterias ?? false;
 
   const incrementarEvaluaciones = useCallback((asignacion_id: number, periodo_evaluacion_id: number) => {
-    setMaterias(prev =>
-      prev.map(m =>
-        m.asignacion_id === asignacion_id && m.periodo_evaluacion_id === periodo_evaluacion_id
-          ? { ...m, total_evaluaciones: m.total_evaluaciones + 1 }
-          : m
-      )
-    );
-  }, []);
+    queryClient.setQueryData(['docente-mis-materias-notas'], (old: any) => {
+      if (!old) return old;
+      return {
+        ...old,
+        materias: old.materias.map((m: MateriaDocenteNotas) =>
+          m.asignacion_id === asignacion_id && m.periodo_evaluacion_id === periodo_evaluacion_id
+            ? { ...m, total_evaluaciones: m.total_evaluaciones + 1 }
+            : m
+        ),
+      };
+    });
+  }, [queryClient]);
 
   const actualizarNotasFinal = useCallback((
     asignacion_id: number,
@@ -75,14 +83,18 @@ export const useMisMateriasNotas = () => {
     aprobados: number,
     reprobados: number
   ) => {
-    setMaterias(prev =>
-      prev.map(m =>
-        m.asignacion_id === asignacion_id && m.periodo_evaluacion_id === periodo_evaluacion_id
-          ? { ...m, estudiantes_con_nota_final: aprobados + reprobados, aprobados, reprobados }
-          : m
-      )
-    );
-  }, []);
+    queryClient.setQueryData(['docente-mis-materias-notas'], (old: any) => {
+      if (!old) return old;
+      return {
+        ...old,
+        materias: old.materias.map((m: MateriaDocenteNotas) =>
+          m.asignacion_id === asignacion_id && m.periodo_evaluacion_id === periodo_evaluacion_id
+            ? { ...m, estudiantes_con_nota_final: aprobados + reprobados, aprobados, reprobados }
+            : m
+        ),
+      };
+    });
+  }, [queryClient]);
 
   return {
     materias,
@@ -90,7 +102,7 @@ export const useMisMateriasNotas = () => {
     sinMaterias,
     incrementarEvaluaciones,
     actualizarNotasFinal,
-    refrescar: cargar,
+    refrescar: () => refetch(),
   };
 };
 // =============================================
@@ -143,21 +155,70 @@ export const useTemario = (
 // =============================================
 
 export const useDimensiones = () => {
-  const [dimensiones, setDimensiones] = useState<DimensionEvaluacion[]>([]);
-  const [isLoading, setIsLoading]     = useState(false);
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['dimensiones-evaluacion'],
+    queryFn: async () => {
+      try {
+        const res = await dimensionesService.listar();
+        return (res.data?.dimensiones ?? []) as DimensionEvaluacion[];
+      } catch (err) {
+        console.error('Error al cargar dimensiones:', err);
+        return [] as DimensionEvaluacion[];
+      }
+    },
+    staleTime: 1000 * 60 * 5, // 5 min de caché fresca
+  });
 
-  useEffect(() => {
-    setIsLoading(true);
-    dimensionesService.listar()
-      .then(res => setDimensiones(res.data.dimensiones))
-      .catch(() => toast.error('Error al cargar dimensiones'))
-      .finally(() => setIsLoading(false));
-  }, []);
+  const dimensiones = data ?? [];
 
-  const getDimension         = useCallback((id: number) => dimensiones.find(d => d.id === id), [dimensiones]);
+  const dimensionesConfig = useMemo<Record<CodigoDimension, DimensionConfigItem>>(() => {
+    const config: Record<CodigoDimension, DimensionConfigItem> = {
+      SER: { ...DIMENSIONES_CONFIG.SER },
+      SAB: { ...DIMENSIONES_CONFIG.SAB },
+      HAC: { ...DIMENSIONES_CONFIG.HAC },
+      AUT: { ...DIMENSIONES_CONFIG.AUT },
+    };
+
+    if (dimensiones.length > 0) {
+      dimensiones.forEach(d => {
+        const cod = d.codigo as CodigoDimension;
+        if (config[cod]) {
+          config[cod] = {
+            ...config[cod],
+            label: d.nombre || config[cod].label,
+            porcentaje: Number(d.porcentaje_ponderacion) || config[cod].porcentaje,
+            color: d.color || config[cod].color,
+            descripcion: d.descripcion || config[cod].descripcion,
+          };
+        }
+      });
+    }
+
+    return config;
+  }, [dimensiones]);
+
+  const dimensionesOrden = useMemo<CodigoDimension[]>(() => {
+    if (dimensiones.length > 0) {
+      return [...dimensiones]
+        .filter(d => d.activo !== false)
+        .sort((a, b) => a.orden - b.orden)
+        .map(d => d.codigo as CodigoDimension);
+    }
+    return DIMENSIONES_ORDEN;
+  }, [dimensiones]);
+
+  const getDimension = useCallback((id: number) => dimensiones.find(d => d.id === id), [dimensiones]);
   const getDimensionByCodigo = useCallback((c: CodigoDimension) => dimensiones.find(d => d.codigo === c), [dimensiones]);
 
-  return { dimensiones, isLoading, getDimension, getDimensionByCodigo };
+  return {
+    dimensiones,
+    isLoading,
+    refetch,
+    getDimension,
+    getDimensionByCodigo,
+    dimensionesConfig,
+    dimensionesOrden,
+  };
 };
 
 // =============================================
@@ -275,12 +336,53 @@ export const useEvaluaciones = (filtrosIniciales: EvaluacionFiltros = {}) => {
 
   const actualizar = useCallback(async (
     id: number,
-    data: ActualizarEvaluacionDTO
+    data: ActualizarEvaluacionDTO,
+    foto?: File,
+    pdf?: File,
+    criterios?: CriterioRubrica[]
   ): Promise<boolean> => {
     setIsSubmitting(true);
+    const pasos: string[]   = ['Evaluación actualizada'];
+    const errores: string[] = [];
+
     try {
       await evaluacionesService.actualizar(id, data);
-      toast.success('Evaluación actualizada');
+
+      if (foto) {
+        try {
+          await adjuntosService.subirFoto(id, foto);
+          pasos.push('Foto actualizada');
+        } catch (err: any) {
+          errores.push(`Foto: ${err.response?.data?.message || err.message}`);
+        }
+      }
+
+      if (pdf) {
+        try {
+          await adjuntosService.subirPdf(id, pdf);
+          pasos.push('PDF actualizado');
+        } catch (err: any) {
+          errores.push(`PDF: ${err.response?.data?.message || err.message}`);
+        }
+      }
+
+      const criteriosValidos = criterios?.filter(c => c.criterio.trim() && c.puntos_posibles > 0);
+      if (criteriosValidos && criteriosValidos.length > 0) {
+        try {
+          await rubricaService.reemplazar(id, criteriosValidos);
+          pasos.push(`Rúbrica actualizada (${criteriosValidos.length} criterios)`);
+        } catch (err: any) {
+          errores.push(`Rúbrica: ${err.response?.data?.message || err.message}`);
+        }
+      }
+
+      if (errores.length === 0) {
+        toast.success(pasos.join(' · '));
+      } else {
+        toast.success(`${pasos[0]} ✓`);
+        errores.forEach(e => toast.error(e, { duration: 5000 }));
+      }
+
       await cargar();
       return true;
     } catch (error: any) {

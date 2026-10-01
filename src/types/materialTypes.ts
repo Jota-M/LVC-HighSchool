@@ -89,8 +89,11 @@ export interface MaterialAcademico {
   fecha_despublicacion?: string | null;
   requiere_descarga: boolean;
   es_destacado: boolean;
+  es_publicado?: boolean;
   total_vistas: number;
   total_descargas: number;
+  contador_vistas?: number | null;
+  contador_descargas?: number | null;
   activo: boolean;
   deleted_at?: string | null;
   created_at: string;
@@ -223,6 +226,8 @@ export interface EstadisticasMaterial {
   total_favoritos: number;
   promedio_duracion_segundos: number;
   total_completados: number;
+  estudiantes_unicos?: number;
+  total_dudas_abiertas?: number;
 }
 export interface ResumenProgresoTema {
   tema_id: number;
@@ -292,6 +297,47 @@ export interface ResumenQuizTema {
   aprobados: number;
 }
 
+export interface TemaQuizConfig {
+  id?: number;
+  tema_id: number;
+  paralelo_id: number;
+  activo: boolean;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  limite_intentos: number | null;
+  estado_calculado: 'abierto' | 'cerrado' | 'programado' | 'vencido';
+  puede_responder: boolean;
+  motivo_bloqueo: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ConfigQuizDTO {
+  paralelo_id: number;
+  activo?: boolean;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  limite_intentos?: number | null;
+}
+
+export interface EstudianteQuizItem {
+  matricula_id: number;
+  numero_matricula: string;
+  estudiante_id: number;
+  estudiante_codigo: string;
+  estudiante_nombres: string;
+  estudiante_apellidos: string;
+  estudiante_foto: string | null;
+  ha_resuelto: boolean;
+  total_intentos: number;
+  mejor_puntaje: number | null;
+  ultimo_puntaje: number | null;
+  correctas: number | null;
+  total_preguntas: number | null;
+  ultimo_intento_fecha: string | null;
+  ultimas_respuestas?: ResultadoPregunta[] | null;
+}
+
 // ============================================
 // RESPUESTAS DE LA API — QUIZ
 // ============================================
@@ -333,6 +379,35 @@ export interface ResumenQuizResponse {
   success: boolean;
   data: { resumen: ResumenQuizTema };
 }
+
+export interface EstudiantesQuizResponse {
+  success: boolean;
+  data: {
+    estudiantes: EstudianteQuizItem[];
+    total: number;
+    total_resolvieron: number;
+    total_pendientes: number;
+  };
+}
+
+export interface QuizConfigResponse {
+  success: boolean;
+  message?: string;
+  data: { config: TemaQuizConfig };
+}
+
+export interface GuardarPreguntaQuizDTO {
+  pregunta: string;
+  opciones: string[];
+  respuesta_correcta: number;
+  explicacion?: string | null;
+}
+
+export interface PreguntaQuizResponse {
+  success: boolean;
+  message?: string;
+  data: { pregunta: QuizPreguntaCompleta };
+}
 // ============================================
 // DTOs
 // ============================================
@@ -370,6 +445,23 @@ export interface ActualizarTemaDTO extends Partial<Omit<CrearTemaDTO, 'unidad_te
   activo?: boolean;
 }
 
+export interface OpcionesGenerarContenidoDTO {
+  forzar?: boolean;
+  instruccionesDocente?: string;
+  enfoque?: string;
+  incluirEjemplos?: boolean;
+  incluirEjercicios?: boolean;
+  incluirGlosario?: boolean;
+  tono?: string;
+  // Secciones estructurales
+  incluirIntroduccion?: boolean;
+  incluirConceptosClave?: boolean;
+  incluirDesarrollo?: boolean;
+  incluirResumen?: boolean;
+  // Secciones extra definidas por el docente
+  seccionesPersonalizadas?: string[];
+}
+
 export interface CrearMaterialDTO {
   asignacion_docente_id: number;
   tipo_material_id: number;
@@ -390,18 +482,22 @@ export interface ActualizarMaterialDTO {
   tipo_material_id?: number;
   titulo?: string;
   descripcion?: string;
+  es_enlace_externo?: boolean;
   url_externa?: string;
   visible_para_estudiantes?: boolean;
   fecha_publicacion?: string;
   fecha_despublicacion?: string;
   requiere_descarga?: boolean;
   es_destacado?: boolean;
+  despublicar?: boolean;
+  temas?: { tema_id: number; es_principal?: boolean; orden?: number }[];
   archivo?: File;
 }
 
 export interface PublicarMaterialDTO {
   fecha_publicacion?: string;
   fecha_despublicacion?: string;
+  despublicar?: boolean;
 }
 
 export interface VincularTemaDTO {

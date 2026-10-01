@@ -55,6 +55,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { useDocenteDetalle } from '@/hooks/useDocenteDetalle';
 import { toast } from 'react-hot-toast';
 import docenteService from '@/services/docenteService';
+import PostgradosDisplay from '@/components/docentes/PostgradosDisplay';
+import CredencialesDocenteModal, { DocenteRegistradoData } from '@/components/docentes/CredencialesDocenteModal';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -83,6 +85,8 @@ export default function DocenteDetalle() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
+  const [modalCredencialesData, setModalCredencialesData] = useState<DocenteRegistradoData | null>(null);
+  const [modalCredencialesOpen, setModalCredencialesOpen] = useState(false);
 
   if (!idParam || isNaN(docenteId) || docenteId <= 0) {
     return (
@@ -139,8 +143,33 @@ export default function DocenteDetalle() {
       });
       toast.success('Usuario creado exitosamente');
       const { usuario } = response.data;
-      toast.success(`Username: ${usuario.username}\nContraseña: ${usuario.password_temporal}`, { duration: 10000 });
       setCreateUserDialogOpen(false);
+      if (docente) {
+        setModalCredencialesData({
+          docente: {
+            id: docente.id,
+            codigo: docente.codigo,
+            nombres: docente.nombres,
+            apellidos: docente.apellidos,
+            ci: docente.ci,
+            celular: docente.celular,
+            email: docente.email,
+            titulo_profesional: docente.titulo_profesional,
+            titulo_postgrado: docente.titulo_postgrado,
+            especialidad: docente.especialidad,
+            nivel_formacion: docente.nivel_formacion,
+            foto_url: docente.foto_url,
+            cv_url: docente.cv_url,
+            usuario_id: usuario.id
+          },
+          credenciales: {
+            username: usuario.username,
+            password: usuario.password_temporal,
+            debe_cambiar_password: true
+          }
+        });
+        setModalCredencialesOpen(true);
+      }
       refrescar();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Error al crear usuario');
@@ -205,7 +234,7 @@ export default function DocenteDetalle() {
             <Box sx={{ mb: 3 }}>
               <Button
                 startIcon={<BackIcon />}
-                onClick={() => router.back()}
+                onClick={() => router.push('/dashboard/docentes')}
                 sx={{
                   textTransform: 'none',
                   fontWeight: 600,
@@ -645,10 +674,12 @@ export default function DocenteDetalle() {
                       </Paper>
                     </Grid>
 
-                    <Grid size={{ xs: 12, md: 6 }}>
+                    <Grid size={{ xs: 12 }}>
                       <Paper elevation={0} sx={{ p: 3, borderRadius: '16px', bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
-                        <Typography variant="caption" color="text.secondary">Título de Postgrado</Typography>
-                        <Typography variant="body1" fontWeight={600}>{docente.titulo_postgrado || 'No especificado'}</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                          Diplomados, Maestrías y Postgrados
+                        </Typography>
+                        <PostgradosDisplay value={docente.titulo_postgrado} />
                       </Paper>
                     </Grid>
 
@@ -841,6 +872,13 @@ export default function DocenteDetalle() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Modal de Confirmación y Credenciales al crear usuario */}
+      <CredencialesDocenteModal
+        open={modalCredencialesOpen}
+        onClose={() => setModalCredencialesOpen(false)}
+        data={modalCredencialesData}
+      />
     </Box>
   );
-}
+};

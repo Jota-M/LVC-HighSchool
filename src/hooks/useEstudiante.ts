@@ -349,8 +349,9 @@ export const useBoletinEstudiante = (periodo_evaluacion_id: number | null) => {
 
   const aprobadas = boletin.filter(b => b.aprobado === true).length;
   const reprobadas = boletin.filter(b => b.aprobado === false).length;
-  const promedio = boletin.length > 0
-    ? Math.round(boletin.reduce((acc, b) => acc + (b.nota_final ?? 0), 0) / boletin.length)
+  const materiasConNota = boletin.filter(b => b.nota_final !== null && b.nota_final !== undefined && !isNaN(Number(b.nota_final)));
+  const promedio = materiasConNota.length > 0
+    ? Math.round(materiasConNota.reduce((acc, b) => acc + Number(b.nota_final), 0) / materiasConNota.length)
     : 0;
 
   return { boletin, isLoading, aprobadas, reprobadas, promedio, refrescar: cargar };
@@ -401,10 +402,10 @@ export const useHorarioEstudiante = () => {
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  // Día actual (1=Lunes … 6=Sábado, 0/7=Domingo → null)
+  // Día actual (1=Lunes … 5=Viernes, fin de semana → null)
   const diaCursor = (() => {
     const d = new Date().getDay(); // 0=Dom, 1=Lun … 6=Sab
-    return d === 0 ? null : d;
+    return (d === 0 || d === 6) ? null : d;
   })();
 
   return { horario, isLoading, diaCursor, refrescar: cargar };

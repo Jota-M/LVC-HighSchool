@@ -8,7 +8,65 @@ export type Genero = 'masculino' | 'femenino' | 'otro';
 
 export type TipoContrato = 'planta' | 'contrato' | 'honorarios' | 'medio_tiempo';
 
-export type NivelFormacion = 'bachiller' | 'licenciatura' | 'maestria' | 'doctorado';
+export type NivelFormacion = 'bachiller' | 'tecnico' | 'licenciatura' | 'diplomado' | 'especialidad' | 'maestria' | 'doctorado';
+
+export type TipoPostgrado = 'diplomado' | 'maestria' | 'doctorado' | 'especialidad' | 'otro';
+
+export interface PostgradoItem {
+  tipo: TipoPostgrado;
+  nombre: string;
+}
+
+export const TIPOS_POSTGRADO: { value: TipoPostgrado; label: string; color: string; bg: string }[] = [
+  { value: 'diplomado', label: 'Diplomado', color: '#0284c7', bg: '#e0f2fe' },
+  { value: 'maestria', label: 'Maestría', color: '#7c3aed', bg: '#ede9fe' },
+  { value: 'doctorado', label: 'Doctorado', color: '#dc2626', bg: '#fee2e2' },
+  { value: 'especialidad', label: 'Especialidad', color: '#059669', bg: '#d1fae5' },
+  { value: 'otro', label: 'Otro', color: '#4b5563', bg: '#f3f4f6' },
+];
+
+/**
+ * Parsea el campo titulo_postgrado (JSON o texto plano) a un array de PostgradoItem
+ */
+export function parsePostgrados(raw?: string | null): PostgradoItem[] {
+  if (!raw || !raw.trim()) return [];
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item: any) => ({
+          tipo: item.tipo || 'diplomado',
+          nombre: item.nombre || (typeof item === 'string' ? item : '')
+        })).filter(i => i.nombre.trim() !== '');
+      }
+    } catch {
+      // Fallback a texto plano
+    }
+  }
+
+  // Si es texto plano separado por comas o saltos de línea
+  return trimmed
+    .split(/[\n,]+/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .map(nombre => {
+      const lower = nombre.toLowerCase();
+      let tipo: TipoPostgrado = 'diplomado';
+      if (lower.includes('maestr')) tipo = 'maestria';
+      else if (lower.includes('doctor')) tipo = 'doctorado';
+      else if (lower.includes('especial')) tipo = 'especialidad';
+      return { tipo, nombre };
+    });
+}
+
+/**
+ * Convierte un array de PostgradoItem a string para guardar en la BD
+ */
+export function formatPostgrados(items: PostgradoItem[]): string {
+  if (!items || items.length === 0) return '';
+  return JSON.stringify(items);
+}
 
 // ============================================
 // INTERFAZ PRINCIPAL - DOCENTE
@@ -213,6 +271,7 @@ export interface DocentesFiltros {
   activo?: boolean;
   tipo_contrato?: TipoContrato;
   especialidad?: string;
+  simple?: boolean;
 }
 
 // ============================================
@@ -254,7 +313,10 @@ export const TIPOS_CONTRATO: { value: TipoContrato; label: string }[] = [
 
 export const NIVELES_FORMACION: { value: NivelFormacion; label: string }[] = [
   { value: 'bachiller', label: 'Bachiller' },
+  { value: 'tecnico', label: 'Técnico Superior' },
   { value: 'licenciatura', label: 'Licenciatura' },
+  { value: 'diplomado', label: 'Diplomado' },
+  { value: 'especialidad', label: 'Especialidad' },
   { value: 'maestria', label: 'Maestría' },
   { value: 'doctorado', label: 'Doctorado' },
 ];

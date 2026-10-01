@@ -1,5 +1,6 @@
 'use client';
 // components/estudiante/asistencia/FiltrosAsistencia.tsx
+// Panel de filtros de búsqueda con estilo institucional
 
 import React, { useMemo } from 'react';
 import {
@@ -8,9 +9,9 @@ import {
   InputLabel, Grid,
 } from '@mui/material';
 import {
-  Clear as ClearIcon,
-  FilterList as FilterIcon,
-  CalendarMonth as CalendarIcon,
+  ClearRounded as ClearIcon,
+  FilterListRounded as FilterIcon,
+  CalendarMonthRounded as CalendarIcon,
 } from '@mui/icons-material';
 import { useMisMaterias } from '@/hooks/useEstudiante';
 
@@ -82,67 +83,82 @@ export const FiltrosAsistencia: React.FC<FiltrosAsistenciaProps> = ({
     onFechaFinChange(filtro.fechaFin);
   };
 
-  const hayFiltrosActivos = fechaInicio || fechaFin || asignacionId !== undefined;
+  const hayFiltrosActivos = Boolean(fechaInicio || fechaFin || asignacionId !== undefined);
 
   return (
     <Paper
       elevation={0}
       sx={{
-        bgcolor: isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02),
-        border: `1px solid ${isDark ? alpha('#fff', 0.05) : alpha('#000', 0.05)}`,
-        borderRadius: '12px',
-        p: 2.5,
-        mt: 2,
+        p: { xs: 2, sm: 2.5 },
+        borderRadius: '18px',
+        bgcolor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+        border: `1.5px solid ${alpha(isDark ? '#fff' : '#000', 0.08)}`,
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-        <FilterIcon sx={{ fontSize: 20, color: accent }} />
-        <Typography variant="subtitle2" fontWeight={600}>
-          Filtros de búsqueda
-        </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <FilterIcon sx={{ fontSize: 20, color: accent }} />
+          <Typography variant="subtitle2" fontWeight={800} sx={{ letterSpacing: -0.2 }}>
+            Filtros y Períodos de Asistencia
+          </Typography>
+        </Box>
 
         {hayFiltrosActivos && (
           <Chip
-            label="Activos"
+            label="Filtros Activos"
             size="small"
             sx={{
-              height: 20,
-              fontSize: '0.7rem',
-              bgcolor: alpha(accent, 0.15),
+              height: 24,
+              fontSize: '0.72rem',
+              bgcolor: alpha(accent, 0.16),
               color: accent,
-              fontWeight: 600,
+              fontWeight: 800,
+              borderRadius: '8px',
+              border: `1px solid ${alpha(accent, 0.3)}`,
             }}
           />
         )}
       </Box>
 
-      {/* Filtros rápidos */}
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+      {/* Chips de períodos predefinidos */}
+      <Box sx={{ mb: 2.5 }}>
+        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ mb: 1, display: 'block', textTransform: 'uppercase', fontSize: '0.68rem' }}>
           Períodos predefinidos
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {filtrosRapidos.map((filtro, idx) => (
-            <Chip
-              key={idx}
-              label={filtro.label}
-              size="small"
-              onClick={() => aplicarFiltroRapido(filtro)}
-              sx={{
-                bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
-                '&:hover': {
-                  bgcolor: alpha(accent, 0.15),
-                  color: accent,
-                },
-                transition: 'all 0.2s',
-              }}
-            />
-          ))}
+          {filtrosRapidos.map((filtro, idx) => {
+            const isSelected = fechaInicio === filtro.fechaInicio && fechaFin === filtro.fechaFin;
+            return (
+              <Chip
+                key={idx}
+                label={filtro.label}
+                size="small"
+                onClick={() => aplicarFiltroRapido(filtro)}
+                clickable
+                sx={{
+                  height: 30,
+                  borderRadius: '10px',
+                  fontWeight: isSelected ? 800 : 600,
+                  fontSize: '0.78rem',
+                  bgcolor: isSelected ? accent : (isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04)),
+                  color: isSelected ? (isDark ? '#000' : '#fff') : 'text.secondary',
+                  border: `1.5px solid ${isSelected ? accent : alpha(isDark ? '#fff' : '#000', 0.08)}`,
+                  boxShadow: isSelected ? `0 2px 8px ${alpha(accent, 0.3)}` : 'none',
+                  '&:hover': {
+                    bgcolor: isSelected ? accent : alpha(accent, 0.15),
+                    borderColor: accent,
+                    color: isSelected ? (isDark ? '#000' : '#fff') : accent,
+                  },
+                  transition: 'all 0.2s ease',
+                }}
+              />
+            );
+          })}
         </Box>
       </Box>
 
-      {/* Filtros personalizados */}
+      {/* Filtros personalizados por rango y materia */}
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <TextField
@@ -155,7 +171,14 @@ export const FiltrosAsistencia: React.FC<FiltrosAsistenciaProps> = ({
             InputLabelProps={{ shrink: true }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                bgcolor: isDark ? alpha('#fff', 0.03) : '#fff',
+                borderRadius: '12px',
+                bgcolor: isDark ? alpha('#000', 0.2) : '#fff',
+                '& fieldset': {
+                  borderColor: alpha(isDark ? '#fff' : '#000', 0.12),
+                },
+                '&:hover fieldset': {
+                  borderColor: accent,
+                },
               },
             }}
           />
@@ -172,7 +195,14 @@ export const FiltrosAsistencia: React.FC<FiltrosAsistenciaProps> = ({
             InputLabelProps={{ shrink: true }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                bgcolor: isDark ? alpha('#fff', 0.03) : '#fff',
+                borderRadius: '12px',
+                bgcolor: isDark ? alpha('#000', 0.2) : '#fff',
+                '& fieldset': {
+                  borderColor: alpha(isDark ? '#fff' : '#000', 0.12),
+                },
+                '&:hover fieldset': {
+                  borderColor: accent,
+                },
               },
             }}
           />
@@ -186,7 +216,14 @@ export const FiltrosAsistencia: React.FC<FiltrosAsistenciaProps> = ({
               onChange={(e) => onAsignacionChange(e.target.value ? Number(e.target.value) : undefined)}
               label="Materia"
               sx={{
-                bgcolor: isDark ? alpha('#fff', 0.03) : '#fff',
+                borderRadius: '12px',
+                bgcolor: isDark ? alpha('#000', 0.2) : '#fff',
+                '& fieldset': {
+                  borderColor: alpha(isDark ? '#fff' : '#000', 0.12),
+                },
+                '&:hover fieldset': {
+                  borderColor: accent,
+                },
               }}
             >
               <MenuItem value="">
@@ -197,8 +234,8 @@ export const FiltrosAsistencia: React.FC<FiltrosAsistenciaProps> = ({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Box
                       sx={{
-                        width: 8,
-                        height: 8,
+                        width: 9,
+                        height: 9,
                         borderRadius: '50%',
                         bgcolor: materia.materia_color || accent,
                       }}
@@ -220,11 +257,14 @@ export const FiltrosAsistencia: React.FC<FiltrosAsistenciaProps> = ({
             disabled={!hayFiltrosActivos}
             sx={{
               height: 40,
+              borderRadius: '12px',
+              fontWeight: 700,
+              fontSize: '0.82rem',
               borderColor: isDark ? alpha('#fff', 0.15) : alpha('#000', 0.15),
               color: 'text.secondary',
               '&:hover': {
                 borderColor: accent,
-                bgcolor: alpha(accent, 0.08),
+                bgcolor: alpha(accent, 0.1),
                 color: accent,
               },
             }}
@@ -234,11 +274,11 @@ export const FiltrosAsistencia: React.FC<FiltrosAsistenciaProps> = ({
         </Grid>
       </Grid>
 
-      {/* Resumen de filtros activos */}
+      {/* Resumen de chips con filtros aplicados */}
       {hayFiltrosActivos && (
-        <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${isDark ? alpha('#fff', 0.05) : alpha('#000', 0.05)}` }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-            Filtros aplicados:
+        <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${alpha(isDark ? '#fff' : '#000', 0.06)}` }}>
+          <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ mb: 1, display: 'block', textTransform: 'uppercase', fontSize: '0.66rem' }}>
+            Filtros activos actualmente:
           </Typography>
 
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -248,8 +288,12 @@ export const FiltrosAsistencia: React.FC<FiltrosAsistenciaProps> = ({
                 size="small"
                 onDelete={() => onFechaInicioChange('')}
                 sx={{
-                  bgcolor: alpha(accent, 0.1),
+                  borderRadius: '8px',
+                  bgcolor: alpha(accent, 0.12),
                   color: accent,
+                  fontWeight: 700,
+                  fontSize: '0.74rem',
+                  border: `1px solid ${alpha(accent, 0.3)}`,
                 }}
               />
             )}
@@ -260,20 +304,28 @@ export const FiltrosAsistencia: React.FC<FiltrosAsistenciaProps> = ({
                 size="small"
                 onDelete={() => onFechaFinChange('')}
                 sx={{
-                  bgcolor: alpha(accent, 0.1),
+                  borderRadius: '8px',
+                  bgcolor: alpha(accent, 0.12),
                   color: accent,
+                  fontWeight: 700,
+                  fontSize: '0.74rem',
+                  border: `1px solid ${alpha(accent, 0.3)}`,
                 }}
               />
             )}
 
             {asignacionId && (
               <Chip
-                label={`Materia: ${materias.find(m => m.asignacion_docente_id === asignacionId)?.materia_nombre}`}
+                label={`Materia: ${materias.find(m => m.asignacion_docente_id === asignacionId)?.materia_nombre || 'Asignada'}`}
                 size="small"
                 onDelete={() => onAsignacionChange(undefined)}
                 sx={{
-                  bgcolor: alpha(accent, 0.1),
+                  borderRadius: '8px',
+                  bgcolor: alpha(accent, 0.12),
                   color: accent,
+                  fontWeight: 700,
+                  fontSize: '0.74rem',
+                  border: `1px solid ${alpha(accent, 0.3)}`,
                 }}
               />
             )}
@@ -283,3 +335,5 @@ export const FiltrosAsistencia: React.FC<FiltrosAsistenciaProps> = ({
     </Paper>
   );
 };
+
+export default FiltrosAsistencia;

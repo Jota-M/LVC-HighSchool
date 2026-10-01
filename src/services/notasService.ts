@@ -18,6 +18,7 @@ import {
   RubricaResponse,
   CriterioRubrica,
   TemaConEvaluaciones,
+  EstudianteEntregaItem,
 } from '@/types/notasTypes';
 
 // ──────────────────────────────────────────────
@@ -278,6 +279,17 @@ export const calificacionesService = {
     const response = await api.post('/notas/calificaciones/masivo', data);
     return response.data;
   },
+
+  async guardarIndividual(data: {
+    evaluacion_id: number;
+    matricula_id: number;
+    puntaje_obtenido: number;
+    esta_ausente?: boolean;
+    observacion?: string;
+  }): Promise<{ success: boolean; message: string; data: { calificacion: any } }> {
+    const response = await api.post('/notas/calificaciones', data);
+    return response.data;
+  },
 };
 
 // =============================================
@@ -330,6 +342,48 @@ export const notasCalculoService = {
   },
 };
 
+// =============================================
+// ENTREGAS DE TAREAS Y PRÁCTICAS DIGITALES
+// =============================================
+
+export const entregasService = {
+  /**
+   * Obtener las entregas enviadas por los estudiantes de una evaluación (vista docente)
+   */
+  async obtenerEntregasDocente(evaluacion_id: number): Promise<{ success: boolean; data: { entregas: EstudianteEntregaItem[]; total: number } }> {
+    const res = await api.get(`/notas/evaluaciones/${evaluacion_id}/entregas`);
+    return res.data;
+  },
+
+  /**
+   * Subir entrega de archivo o múltiples fotos (estudiante)
+   */
+  async entregarTareaEstudiante(evaluacion_id: number, archivo: File | File[], comentario?: string) {
+    const formData = new FormData();
+    const filesArray = Array.isArray(archivo) ? archivo : [archivo];
+    filesArray.forEach((f) => {
+      formData.append('archivos', f);
+      // Mantener 'archivo' para compatibilidad en caso de ser único
+      if (filesArray.length === 1) {
+        formData.append('archivo', f);
+      }
+    });
+    if (comentario) formData.append('comentario', comentario);
+    const res = await api.post(`/estudianted/tareas/${evaluacion_id}/entrega`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+
+  /**
+   * Anular entrega de archivo antes del vencimiento (estudiante)
+   */
+  async eliminarEntregaEstudiante(evaluacion_id: number) {
+    const res = await api.delete(`/estudianted/tareas/${evaluacion_id}/entrega`);
+    return res.data;
+  }
+};
+
 export default {
   misMaterias:    misMateriasNotasService,
   dimensiones:    dimensionesService,
@@ -339,5 +393,6 @@ export default {
   rubrica:        rubricaService,
   calificaciones: calificacionesService,
   calculo:        notasCalculoService,
-  temario:       temarioService,
+  temario:        temarioService,
+  entregas:       entregasService,
 };

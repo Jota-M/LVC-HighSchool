@@ -30,6 +30,7 @@ import {
   ActualizarUnidadTematicaDTO,
   CrearTemaDTO,
   ActualizarTemaDTO,
+  OpcionesGenerarContenidoDTO,
   CrearMaterialDTO,
   ActualizarMaterialDTO,
   PublicarMaterialDTO,
@@ -44,6 +45,10 @@ import {
   QuizPregunta,
   ResultadoPregunta,
   IntentoQuiz,
+  TemaQuizConfig,
+  ConfigQuizDTO,
+  EstudianteQuizItem,
+  GuardarPreguntaQuizDTO,
 } from '@/types/materialTypes';
 
 // =============================================
@@ -78,7 +83,7 @@ export const useTiposMaterial = () => {
 export const useUnidadesTematicas = (filtrosIniciales: UnidadFiltros = {}) => {
   const [unidades, setUnidades] = useState<UnidadTematica[]>([]);
   const [paginacion, setPaginacion] = useState<Paginacion>({ total: 0, page: 1, limit: 50, totalPages: 0 });
-  const [filters, setFilters] = useState<UnidadFiltros>({ page: 1, limit: 50, ...filtrosIniciales });
+  const [filters, setFilters] = useState<UnidadFiltros>({ page: 1, limit: 50, activo: true, ...filtrosIniciales });
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -212,7 +217,7 @@ export const useTemario = (grado_materia_id: number | null, periodo_evaluacion_i
 export const useTemas = (filtrosIniciales: TemaFiltros = {}) => {
   const [temas, setTemas] = useState<Tema[]>([]);
   const [paginacion, setPaginacion] = useState<Paginacion>({ total: 0, page: 1, limit: 50, totalPages: 0 });
-  const [filters, setFilters] = useState<TemaFiltros>({ page: 1, limit: 50, ...filtrosIniciales });
+  const [filters, setFilters] = useState<TemaFiltros>({ page: 1, limit: 50, activo: true, ...filtrosIniciales });
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -288,11 +293,11 @@ export const useTemas = (filtrosIniciales: TemaFiltros = {}) => {
 
   const generarContenido = useCallback(async (
     id: number,
-    forzar = false
+    opciones: OpcionesGenerarContenidoDTO | boolean = false
   ): Promise<{ tema: Tema; generado: boolean } | null> => {
     setGenerandoIA(id);
     try {
-      const res = await temaService.generarContenido(id, forzar);
+      const res = await temaService.generarContenido(id, opciones);
       if (res.data.generado) {
         toast.success('Contenido generado con IA');
       }
@@ -398,12 +403,12 @@ export const useMateriales = (filtrosIniciales: MaterialFiltros = {}) => {
   ): Promise<boolean> => {
     setIsSubmitting(true);
     try {
-      await materialAcademicoService.publicar(id, data);
-      toast.success('Material publicado exitosamente');
+      const res = await materialAcademicoService.publicar(id, data);
+      toast.success(res.message || (data.despublicar ? 'Material guardado como borrador' : 'Material publicado exitosamente'));
       await cargar();
       return true;
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error al publicar material');
+      toast.error(error.response?.data?.message || 'Error al actualizar estado de publicación');
       return false;
     } finally {
       setIsSubmitting(false);
@@ -783,7 +788,55 @@ export const useQuizTema = (tema_id: number | null) => {
     }
   }, [tema_id]);
 
-  return { preguntas, isLoading, generando, generar, refrescar: cargar };
+  const crearPregunta = useCallback(async (data: GuardarPreguntaQuizDTO): Promise<boolean> => {
+    if (!tema_id) return false;
+    try {
+      const res = await temaQuizService.crearPregunta(tema_id, data);
+      toast.success(res.message || 'Pregunta agregada');
+      await cargar();
+      return true;
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error al agregar la pregunta');
+      return false;
+    }
+  }, [tema_id, cargar]);
+
+  const actualizarPregunta = useCallback(async (pregunta_id: number, data: Partial<GuardarPreguntaQuizDTO>): Promise<boolean> => {
+    if (!tema_id) return false;
+    try {
+      const res = await temaQuizService.actualizarPregunta(tema_id, pregunta_id, data);
+      toast.success(res.message || 'Pregunta actualizada');
+      await cargar();
+      return true;
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error al actualizar la pregunta');
+      return false;
+    }
+  }, [tema_id, cargar]);
+
+  const eliminarPregunta = useCallback(async (pregunta_id: number): Promise<boolean> => {
+    if (!tema_id) return false;
+    try {
+      const res = await temaQuizService.eliminarPregunta(tema_id, pregunta_id);
+      toast.success(res.message || 'Pregunta eliminada');
+      await cargar();
+      return true;
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error al eliminar la pregunta');
+      return false;
+    }
+  }, [tema_id, cargar]);
+
+  return {
+    preguntas,
+    isLoading,
+    generando,
+    generar,
+    crearPregunta,
+    actualizarPregunta,
+    eliminarPregunta,
+    refrescar: cargar
+  };
 };
 
 // =============================================
@@ -876,4 +929,115 @@ export const useResumenQuizTema = (
   useEffect(() => { cargar(); }, [cargar]);
 
   return { resumen, isLoading, refrescar: cargar };
+};
+
+// =============================================
+// HOOK: ESTUDIANTES DEL QUIZ DE UN TEMA (vista docente)
+// =============================================
+
+export const useEstudiantesQuizTema = (
+  tema_id: number | null,
+  paralelo_id: number | null,
+  periodo_academico_id: number | null
+) => {
+  const [estudiantes, setEstudiantes] = useState<EstudianteQuizItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalResolvieron, setTotalResolvieron] = useState(0);
+  const [totalPendientes, setTotalPendientes] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const cargar = useCallback(async () => {
+    if (!tema_id || !paralelo_id || !periodo_academico_id) {
+      setEstudiantes([]);
+      setTotal(0);
+      setTotalResolvieron(0);
+      setTotalPendientes(0);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await temaQuizService.getEstudiantes(tema_id, paralelo_id, periodo_academico_id);
+      setEstudiantes(res.data.estudiantes);
+      setTotal(res.data.total);
+      setTotalResolvieron(res.data.total_resolvieron);
+      setTotalPendientes(res.data.total_pendientes);
+    } catch {
+      setEstudiantes([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [tema_id, paralelo_id, periodo_academico_id]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  return {
+    estudiantes,
+    total,
+    totalResolvieron,
+    totalPendientes,
+    isLoading,
+    refrescar: cargar,
+  };
+};
+
+// =============================================
+// HOOK: CONFIGURACIÓN DEL QUIZ (cierre, fechas, intentos)
+// =============================================
+
+export const useConfigQuizTema = (
+  tema_id: number | null,
+  paralelo_id: number | null
+) => {
+  const [config, setConfig] = useState<TemaQuizConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+
+  const cargar = useCallback(async () => {
+    if (!tema_id || !paralelo_id) { setConfig(null); return; }
+    setIsLoading(true);
+    try {
+      const res = await temaQuizService.getConfig(tema_id, paralelo_id);
+      setConfig(res.data.config);
+    } catch {
+      setConfig(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [tema_id, paralelo_id]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const guardarConfig = useCallback(async (data: Partial<ConfigQuizDTO>): Promise<boolean> => {
+    if (!tema_id || !paralelo_id) return false;
+    setGuardando(true);
+    try {
+      const res = await temaQuizService.guardarConfig(tema_id, {
+        paralelo_id,
+        ...data,
+      });
+      setConfig(res.data.config);
+      toast.success(res.message || 'Configuración actualizada');
+      return true;
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error al guardar la configuración');
+      return false;
+    } finally {
+      setGuardando(false);
+    }
+  }, [tema_id, paralelo_id]);
+
+  const toggleActivo = useCallback(async (): Promise<boolean> => {
+    if (!config) return false;
+    const nuevoEstado = !config.activo;
+    return await guardarConfig({ activo: nuevoEstado });
+  }, [config, guardarConfig]);
+
+  return {
+    config,
+    isLoading,
+    guardando,
+    guardarConfig,
+    toggleActivo,
+    refrescar: cargar,
+  };
 };

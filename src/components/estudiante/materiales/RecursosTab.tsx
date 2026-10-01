@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
     Box, Typography, Grid, Card, CardContent, Chip, IconButton,
     TextField, InputAdornment, Skeleton, alpha, Tooltip, Fade,
-    Pagination, Button, Divider, CircularProgress, Badge,
+    Pagination, Button, Divider, CircularProgress, Badge, Avatar,
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -21,6 +21,14 @@ import {
     Folder as FolderIcon,
     NewReleases as NewIcon,
     School as SchoolIcon,
+    Link as LinkIcon,
+    PictureAsPdf as PdfIcon,
+    PlayCircle as VideoIcon,
+    Slideshow as SlidesIcon,
+    Description as DocIcon,
+    ChevronRight as ChevronRightIcon,
+    CloudDownload as DownloadIcon,
+    InsertDriveFile as FileIcon,
 } from '@mui/icons-material';
 import {
     useMaterialesEstudiante,
@@ -75,6 +83,15 @@ const getIconoExterno = (origen?: string | null) => {
     if (origen === 'youtube') return '🎬';
     if (origen === 'khan_academy') return '📐';
     return '🔗';
+};
+
+const getFileIcon = (mime?: string | null, esEnlace?: boolean) => {
+    if (esEnlace) return <LinkIcon sx={{ fontSize: 22 }} />;
+    if (!mime) return <DocIcon sx={{ fontSize: 22 }} />;
+    if (mime.includes('pdf')) return <PdfIcon sx={{ fontSize: 22 }} />;
+    if (mime.includes('video')) return <VideoIcon sx={{ fontSize: 22 }} />;
+    if (mime.includes('presentation') || mime.includes('powerpoint')) return <SlidesIcon sx={{ fontSize: 22 }} />;
+    return <DocIcon sx={{ fontSize: 22 }} />;
 };
 
 const formatBytes = (bytes?: number | null) => {
@@ -138,13 +155,13 @@ export const RecursosTab: React.FC<RecursosTabProps> = ({
                 borderBottom: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06)}`,
                 pb: 0,
             }}>
-                {([
-                    { key: 'repositorio', label: 'Repositorio', icon: <FolderIcon sx={{ fontSize: 15 }} /> },
+                {[
+                    { key: 'repositorio', label: 'Repositorio', icon: <FolderIcon sx={{ fontSize: 15 }} />, badge: 0 },
                     { key: 'docente', label: 'Del docente', icon: <SchoolIcon sx={{ fontSize: 15 }} />, badge: pendientes },
-                ] as const).map(s => (
+                ].map(s => (
                     <Box
                         key={s.key}
-                        onClick={() => setSeccion(s.key)}
+                        onClick={() => setSeccion(s.key as Seccion)}
                         sx={{
                             display: 'flex', alignItems: 'center', gap: 0.6,
                             px: 2, py: 1, cursor: 'pointer',
@@ -332,7 +349,7 @@ const RepositorioSection: React.FC<{
     );
 };
 
-// ── Card de recurso — diseño horizontal ──────────────────────
+// ── CARD GRID (DISEÑO INSTITUCIONAL IDÉNTICO AL DOCENTE / CALIFICACIONES / NOTAS) ──────
 
 const RecursoCard: React.FC<{
     material: MaterialEstudiante;
@@ -345,163 +362,293 @@ const RecursoCard: React.FC<{
     destacado?: boolean;
 }> = ({ material, accent, isDark, esFavorito, toggling, onToggleFav, onAbrir, destacado }) => {
     const iconColor = material.tipo_material_color || accent;
-    const emoji = getMaterialEmoji(material.tipo_material_icono, material.tipo_mime, material.es_enlace_externo);
-    const tamano = formatBytes(material.tamano_bytes);
-    const [hovered, setHovered] = React.useState(false);
+    const vistas = Number(material.contador_vistas ?? 0);
+    const descargas = Number(material.contador_descargas ?? 0);
+    const comentarios = Number(material.total_comentarios ?? 0);
 
     return (
-        <Fade in timeout={280}>
-            <Box
+        <Fade in timeout={300}>
+            <Card
                 onClick={onAbrir}
-                onMouseEnter={() => setHovered(true)}
-                onMouseLeave={() => setHovered(false)}
                 sx={{
-                    display: 'flex', alignItems: 'center', gap: 1.75,
-                    p: 1.5, borderRadius: '14px', cursor: 'pointer',
-                    border: `1px solid ${hovered ? alpha(iconColor, 0.35) : isDark ? alpha('#fff', 0.07) : alpha('#000', 0.07)}`,
-                    bgcolor: hovered
-                        ? isDark ? alpha(iconColor, 0.06) : alpha(iconColor, 0.03)
-                        : isDark ? alpha('#fff', 0.02) : '#fff',
-                    transition: 'all 0.18s ease',
-                    boxShadow: hovered ? `0 4px 20px ${alpha(iconColor, 0.12)}` : 'none',
-                    position: 'relative', overflow: 'hidden',
+                    height: '100%',
+                    borderRadius: '18px',
+                    border: `1px solid ${alpha(isDark ? '#fff' : '#000', 0.08)}`,
+                    bgcolor: isDark ? alpha('#fff', 0.02) : '#fff',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    overflow: 'visible',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    '&:hover': {
+                        transform: 'translateY(-6px)',
+                        boxShadow: `0 10px 22px ${alpha(iconColor, 0.18)}`,
+                        borderColor: iconColor,
+                        '& .btn-gestionar': {
+                            backgroundColor: alpha(iconColor, 0.15),
+                            borderColor: iconColor,
+                            transform: 'translateX(2px)',
+                        },
+                    },
                 }}
             >
-                {/* Acento izquierdo animado */}
-                <Box sx={{
-                    position: 'absolute', left: 0, top: '15%', bottom: '15%',
-                    width: 3, borderRadius: '0 3px 3px 0',
-                    bgcolor: iconColor,
-                    opacity: hovered ? 1 : 0,
-                    transition: 'opacity 0.18s',
-                }} />
+                {/* Badge de Código o Tipo arriba a la izquierda */}
+                <Chip
+                    label={material.tipo_material_nombre || material.codigo_material || 'Material'}
+                    size="small"
+                    sx={{
+                        position: 'absolute',
+                        top: 10,
+                        left: 10,
+                        zIndex: 1,
+                        fontWeight: 700,
+                        fontSize: '0.68rem',
+                        height: 22,
+                        backgroundColor: isDark ? alpha(iconColor, 0.15) : alpha(iconColor, 0.1),
+                        color: iconColor,
+                        border: `1px solid ${alpha(iconColor, 0.25)}`,
+                    }}
+                />
 
-                {/* Icono tipo */}
-                <Box sx={{
-                    width: 46, height: 46, borderRadius: '12px', flexShrink: 0,
-                    bgcolor: isDark ? alpha(iconColor, 0.15) : alpha(iconColor, 0.1),
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '1.4rem',
-                    border: `1px solid ${alpha(iconColor, 0.15)}`,
-                    transition: 'transform 0.18s',
-                    transform: hovered ? 'scale(1.05)' : 'scale(1)',
-                }}>
-                    {emoji}
+                {/* Chip de Estado / Destacado / Favorito arriba a la derecha */}
+                <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 1, display: 'flex', alignItems: 'center', gap: 0.6 }}>
+                    {destacado && (
+                        <Tooltip title="Material Destacado">
+                            <Chip
+                                icon={<StarIcon sx={{ fontSize: '13px !important', color: '#f59e0b !important' }} />}
+                                label="⭐"
+                                size="small"
+                                sx={{
+                                    fontWeight: 700,
+                                    fontSize: '0.65rem',
+                                    height: 22,
+                                    backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.12)',
+                                    color: '#f59e0b',
+                                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                                    '& .MuiChip-label': { px: 0.6 },
+                                }}
+                            />
+                        </Tooltip>
+                    )}
+
+                    <Chip
+                        label={material.ya_accedido ? 'Revisado' : 'Nuevo'}
+                        size="small"
+                        icon={material.ya_accedido ? <CheckIcon sx={{ fontSize: '12px !important' }} /> : undefined}
+                        sx={{
+                            fontWeight: 700,
+                            fontSize: '0.65rem',
+                            height: 22,
+                            backgroundColor: material.ya_accedido
+                                ? isDark ? 'rgba(22, 163, 74, 0.15)' : 'rgba(22, 163, 74, 0.1)'
+                                : isDark ? alpha(accent, 0.15) : alpha(accent, 0.12),
+                            color: material.ya_accedido ? '#16a34a' : accent,
+                            border: `1px solid ${material.ya_accedido ? alpha('#16a34a', 0.25) : alpha(accent, 0.25)}`,
+                        }}
+                    />
+
+                    <Tooltip title={esFavorito ? "Quitar de guardados" : "Guardar recurso"}>
+                        <IconButton
+                            size="small"
+                            disabled={toggling}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleFav();
+                            }}
+                            sx={{
+                                width: 24,
+                                height: 24,
+                                color: esFavorito ? '#ef4444' : 'text.secondary',
+                                '&:hover': { color: '#ef4444', backgroundColor: alpha('#ef4444', 0.1) },
+                            }}
+                        >
+                            {esFavorito ? <FavIcon sx={{ fontSize: 16 }} /> : <FavBorderIcon sx={{ fontSize: 16 }} />}
+                        </IconButton>
+                    </Tooltip>
                 </Box>
 
-                {/* Info */}
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                    {/* Título */}
+                {/* Contenido principal centrado */}
+                <CardContent sx={{ p: 2.2, pt: 4.8, pb: 1.5, textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    {/* Avatar circular centrado con icono del tipo */}
+                    <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'center' }}>
+                        <Avatar
+                            sx={{
+                                width: 64,
+                                height: 64,
+                                margin: '0 auto',
+                                bgcolor: isDark ? alpha(iconColor, 0.18) : alpha(iconColor, 0.12),
+                                color: iconColor,
+                                border: `3px solid ${alpha(iconColor, 0.25)}`,
+                                boxShadow: `0 6px 14px ${alpha(iconColor, 0.22)}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '1.75rem',
+                            }}
+                        >
+                            {material.tipo_material_icono ? (
+                                <span>{material.tipo_material_icono}</span>
+                            ) : (
+                                getFileIcon(material.tipo_mime, material.es_enlace_externo)
+                            )}
+                        </Avatar>
+                    </Box>
+
+                    {/* Título del Material */}
                     <Typography
-                        variant="body2"
-                        fontWeight={700}
+                        variant="subtitle1"
+                        fontWeight={800}
+                        gutterBottom
                         sx={{
-                            lineHeight: 1.3, mb: 0.3,
-                            overflow: 'hidden', display: '-webkit-box',
-                            WebkitLineClamp: 1, WebkitBoxOrient: 'vertical',
-                            color: hovered ? iconColor : 'text.primary',
-                            transition: 'color 0.18s',
+                            fontSize: '1.02rem',
+                            lineHeight: 1.25,
+                            mb: 0.4,
+                            color: 'text.primary',
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
                         }}
                     >
                         {material.titulo}
                     </Typography>
 
-                    {/* Descripción */}
-                    {material.descripcion && (
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{
-                                display: 'block', lineHeight: 1.4, mb: 0.5,
-                                overflow: 'hidden', WebkitLineClamp: 2,
-                            }}
-                        >
-                            {material.descripcion}
-                        </Typography>
-                    )}
+                    {/* Subtítulo o Código / Descripción */}
+                    <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        gutterBottom
+                        fontWeight={600}
+                        sx={{
+                            fontSize: '0.78rem',
+                            mb: 0.5,
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 1,
+                            WebkitBoxOrient: 'vertical',
+                        }}
+                    >
+                        {material.descripcion || (material.temas?.[0]?.tema_titulo ? `Tema: ${material.temas[0].tema_titulo}` : material.codigo_material)}
+                    </Typography>
 
-                    {/* Meta row */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                        <Chip
-                            label={material.tipo_material_nombre}
-                            size="small"
-                            sx={{
-                                height: 17, fontSize: '0.58rem', fontWeight: 700,
-                                bgcolor: alpha(iconColor, 0.1), color: iconColor,
-                                borderRadius: '5px',
-                            }}
-                        />
-                        {tamano && (
-                            <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem' }}>
-                                {tamano}
-                            </Typography>
-                        )}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-                            <EyeIcon sx={{ fontSize: 11, color: 'text.disabled' }} />
-                            <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem' }}>
-                                {material.contador_vistas ?? 0}
-                            </Typography>
-                        </Box>
-                        {(material.total_comentarios ?? 0) > 0 && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-                                <ChatIcon sx={{ fontSize: 10, color: 'text.disabled' }} />
-                                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem' }}>
-                                    {material.total_comentarios}
-                                </Typography>
-                            </Box>
-                        )}
-                        {material.ya_accedido && (
-                            <Tooltip title="Ya revisado">
-                                <CheckIcon sx={{ fontSize: 12, color: '#22c55e' }} />
-                            </Tooltip>
-                        )}
-                        {destacado && (
-                            <StarIcon sx={{ fontSize: 12, color: '#f59e0b' }} />
+                    {/* Chip de Formato / Peso */}
+                    <Box sx={{ my: 0.6, display: 'flex', justifyContent: 'center', gap: 0.6 }}>
+                        {material.es_enlace_externo ? (
+                            <Chip
+                                icon={<LinkIcon sx={{ fontSize: '12px !important', color: `${iconColor} !important` }} />}
+                                label="Enlace web"
+                                size="small"
+                                sx={{
+                                    fontFamily: 'monospace',
+                                    fontWeight: 700,
+                                    fontSize: '0.68rem',
+                                    height: 22,
+                                    backgroundColor: isDark ? alpha(iconColor, 0.15) : alpha(iconColor, 0.1),
+                                    color: iconColor,
+                                    border: `1px solid ${alpha(iconColor, 0.25)}`,
+                                }}
+                            />
+                        ) : (
+                            <Chip
+                                icon={<FileIcon sx={{ fontSize: '12px !important' }} />}
+                                label={material.tamano_bytes ? formatBytes(material.tamano_bytes) : (material.codigo_material || 'Documento')}
+                                size="small"
+                                sx={{
+                                    fontFamily: 'monospace',
+                                    fontWeight: 700,
+                                    fontSize: '0.68rem',
+                                    height: 22,
+                                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                                    color: 'text.secondary',
+                                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+                                }}
+                            />
                         )}
                     </Box>
-                </Box>
 
-                {/* Acciones */}
-                <Box
-                    sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}
-                    onClick={e => e.stopPropagation()}
-                >
-                    {(material.url_archivo || material.url_externa) && (
-                        <Tooltip title={material.es_enlace_externo ? 'Abrir enlace' : 'Ver archivo'}>
-                            <IconButton
-                                size="small"
-                                component="a"
-                                href={(material.url_externa || material.url_archivo)!}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                sx={{
-                                    p: 0.6, borderRadius: '8px', color: iconColor,
-                                    bgcolor: hovered ? alpha(iconColor, 0.12) : 'transparent',
-                                    '&:hover': { bgcolor: alpha(iconColor, 0.18) },
-                                    transition: 'all 0.15s',
-                                }}
-                            >
-                                <OpenIcon sx={{ fontSize: 15 }} />
-                            </IconButton>
-                        </Tooltip>
-                    )}
-                    <Tooltip title={esFavorito ? 'Quitar favorito' : 'Guardar'}>
-                        <IconButton
+                    {/* Botón Ver material (animado con .btn-gestionar) */}
+                    <Box sx={{ display: 'flex', justifyContent: 'center', my: 1 }}>
+                        <Button
+                            className="btn-gestionar"
                             size="small"
-                            disabled={toggling}
-                            onClick={onToggleFav}
+                            variant="outlined"
+                            endIcon={<ChevronRightIcon sx={{ fontSize: 16 }} />}
                             sx={{
-                                p: 0.6, borderRadius: '8px',
-                                color: esFavorito ? '#ef4444' : 'text.disabled',
-                                '&:hover': { bgcolor: alpha('#ef4444', 0.08), color: '#ef4444' },
-                                transition: 'color 0.15s',
+                                borderRadius: '10px',
+                                textTransform: 'none',
+                                fontWeight: 700,
+                                fontSize: '0.74rem',
+                                px: 2,
+                                py: 0.4,
+                                borderColor: alpha(iconColor, 0.4),
+                                color: iconColor,
+                                transition: 'all 0.2s ease',
                             }}
                         >
-                            {esFavorito ? <FavIcon sx={{ fontSize: 15 }} /> : <FavBorderIcon sx={{ fontSize: 15 }} />}
-                        </IconButton>
+                            Ver material
+                        </Button>
+                    </Box>
+                </CardContent>
+
+                {/* Footer métricas integrado idéntico al docente */}
+                <Box
+                    sx={{
+                        p: 1.2,
+                        px: 2,
+                        borderTop: `1px solid ${alpha(isDark ? '#fff' : '#000', 0.08)}`,
+                        bgcolor: isDark ? alpha('#fff', 0.015) : alpha('#000', 0.015),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        borderRadius: '0 0 18px 18px',
+                    }}
+                >
+                    <Tooltip title={`${vistas} visualizaciones`}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <EyeIcon sx={{ fontSize: 14, color: vistas > 0 ? '#0288d1' : 'text.disabled' }} />
+                            <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color: 'text.secondary' }}>
+                                {vistas} {vistas === 1 ? 'vista' : 'vistas'}
+                            </Typography>
+                        </Box>
+                    </Tooltip>
+
+                    <Tooltip title={`${descargas} descargas realizadas`}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <DownloadIcon sx={{ fontSize: 14, color: descargas > 0 ? '#16a34a' : 'text.disabled' }} />
+                            <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color: 'text.secondary' }}>
+                                {descargas} desc.
+                            </Typography>
+                        </Box>
+                    </Tooltip>
+
+                    <Tooltip title={`${comentarios} comentarios`}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                px: comentarios > 0 ? 0.8 : 0,
+                                py: comentarios > 0 ? 0.2 : 0,
+                                borderRadius: '6px',
+                                bgcolor: comentarios > 0 ? alpha('#8b5cf6', 0.14) : 'transparent',
+                            }}
+                        >
+                            <ChatIcon sx={{ fontSize: 14, color: comentarios > 0 ? '#8b5cf6' : 'text.disabled' }} />
+                            <Typography
+                                sx={{
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    color: comentarios > 0 ? '#8b5cf6' : 'text.secondary',
+                                }}
+                            >
+                                {comentarios} com.
+                            </Typography>
+                        </Box>
                     </Tooltip>
                 </Box>
-            </Box>
+            </Card>
         </Fade>
     );
 };
@@ -593,51 +740,118 @@ const AsignadoCard: React.FC<{
 }> = ({ m, accent, isDark, marcando, onMarcarVisto, onAbrir }) => {
     const esIA = m.origen === 'gemini' || m.origen === 'web_search' || m.origen === 'automatico';
     const esNuevo = !m.visto_por_estudiante;
+    const cardColor = m.tipo_color || accent;
 
     return (
-        <Box sx={{
-            p: 2, borderRadius: '14px',
-            border: `1.5px solid ${esNuevo ? alpha(accent, 0.4) : isDark ? alpha('#fff', 0.07) : alpha('#000', 0.07)}`,
-            bgcolor: esNuevo
-                ? isDark ? alpha(accent, 0.06) : alpha(accent, 0.03)
-                : isDark ? alpha('#fff', 0.02) : '#fff',
-            display: 'flex', gap: 1.5, alignItems: 'center',
-            transition: 'all 0.15s',
-        }}>
-            <Box sx={{ width: 40, height: 40, borderRadius: '10px', bgcolor: alpha(accent, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
-                {m.tipo_recurso === 'externo' ? getIconoExterno(m.origen_externo) : '📄'}
-            </Box>
+        <Card
+            elevation={0}
+            onClick={m.url_final ? undefined : onAbrir}
+            {...(m.url_final ? { component: 'a', href: m.url_final, target: '_blank', rel: 'noopener noreferrer' } : {})}
+            sx={{
+                borderRadius: '16px',
+                border: `1.5px solid ${esNuevo ? alpha(cardColor, 0.4) : isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
+                bgcolor: esNuevo
+                    ? isDark ? alpha(cardColor, 0.05) : alpha(cardColor, 0.02)
+                    : isDark ? alpha('#fff', 0.02) : '#fff',
+                transition: 'all 0.25s ease',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                overflow: 'hidden',
+                '&:hover': {
+                    transform: 'translateY(-3px)',
+                    boxShadow: `0 10px 26px ${alpha(cardColor, 0.16)}`,
+                    borderColor: alpha(cardColor, 0.45),
+                },
+            }}
+        >
+            <Box
+                sx={{
+                    height: 4,
+                    background: `linear-gradient(90deg, ${cardColor}, ${alpha(cardColor, 0.35)})`,
+                }}
+            />
+            <CardContent sx={{ p: { xs: 1.8, sm: 2 } }}>
+                <Box sx={{ display: 'flex', gap: 1.75, alignItems: 'center' }}>
+                    <Box sx={{
+                        width: 44, height: 44, borderRadius: '12px',
+                        bgcolor: alpha(cardColor, 0.12), color: cardColor,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '1.35rem', flexShrink: 0,
+                        border: `1px solid ${alpha(cardColor, 0.2)}`,
+                    }}>
+                        {m.tipo_recurso === 'externo' ? getIconoExterno(m.origen_externo) : '📄'}
+                    </Box>
 
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box sx={{ display: 'flex', gap: 0.5, mb: 0.3, flexWrap: 'wrap' }}>
-                    {esIA && (
-                        <Chip size="small" icon={<AIIcon sx={{ fontSize: '9px !important', color: '#f59e0b !important' }} />} label="IA" sx={{ height: 16, fontSize: '0.58rem', fontWeight: 700, bgcolor: alpha('#f59e0b', 0.12), color: '#f59e0b' }} />
-                    )}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Box sx={{ display: 'flex', gap: 0.6, alignItems: 'center', mb: 0.4, flexWrap: 'wrap' }}>
+                            {esNuevo && (
+                                <Chip
+                                    size="small"
+                                    label="Nuevo"
+                                    sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, bgcolor: alpha(accent, 0.12), color: accent }}
+                                />
+                            )}
+                            {esIA && (
+                                <Chip
+                                    size="small"
+                                    icon={<AIIcon sx={{ fontSize: '10px !important', color: '#f59e0b !important' }} />}
+                                    label="IA"
+                                    sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, bgcolor: alpha('#f59e0b', 0.12), color: '#f59e0b' }}
+                                />
+                            )}
+                            {m.tipo_codigo && (
+                                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.04em' }}>
+                                    {m.tipo_codigo}
+                                </Typography>
+                            )}
+                        </Box>
+
+                        <Typography variant="subtitle2" fontWeight={800} sx={{ lineHeight: 1.35, mb: 0.4 }}>
+                            {m.titulo_final}
+                        </Typography>
+
+                        {m.mensaje_docente && (
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.72rem', display: 'block', mb: 0.5 }}>
+                                💬 {m.mensaje_docente}
+                            </Typography>
+                        )}
+                    </Box>
+
+                    <Box sx={{ display: 'flex', gap: 0.8, alignItems: 'center', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                        {esNuevo && (
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => onMarcarVisto(m.id)}
+                                disabled={marcando === m.id}
+                                sx={{
+                                    fontSize: '0.68rem',
+                                    py: 0.4,
+                                    px: 1.2,
+                                    borderRadius: '8px',
+                                    fontWeight: 700,
+                                    borderColor: alpha(accent, 0.4),
+                                    color: accent,
+                                    textTransform: 'none',
+                                }}
+                            >
+                                {marcando === m.id ? <CircularProgress size={12} /> : 'Marcar visto'}
+                            </Button>
+                        )}
+                        {(m.url_final || m.material_id) && (
+                            <IconButton
+                                size="small"
+                                onClick={m.url_final ? undefined : onAbrir}
+                                {...(m.url_final ? { component: 'a', href: m.url_final, target: '_blank', rel: 'noopener noreferrer' } : {})}
+                                sx={{ p: 0.7, borderRadius: '8px', color: cardColor, bgcolor: alpha(cardColor, 0.08) }}
+                            >
+                                <OpenIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                        )}
+                    </Box>
                 </Box>
-                <Typography variant="body2" fontWeight={700} noWrap>{m.titulo_final}</Typography>
-                {m.mensaje_docente && (
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block' }} noWrap>
-                        💬 {m.mensaje_docente}
-                    </Typography>
-                )}
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 0.75, flexShrink: 0 }}>
-                {esNuevo && (
-                    <Button size="small" variant="outlined" onClick={() => onMarcarVisto(m.id)} disabled={marcando === m.id}
-                        sx={{ fontSize: '0.68rem', py: 0.35, px: 1, borderRadius: '7px', fontWeight: 600, borderColor: alpha(accent, 0.4), color: accent }}>
-                        {marcando === m.id ? <CircularProgress size={11} /> : 'Visto'}
-                    </Button>
-                )}
-                {(m.url_final || m.material_id) && (
-                    <IconButton size="small" onClick={m.url_final ? undefined : onAbrir}
-                        {...(m.url_final ? { component: 'a', href: m.url_final, target: '_blank' } : {})}
-                        sx={{ p: 0.6, borderRadius: '8px', color: accent, bgcolor: alpha(accent, 0.08) }}>
-                        <OpenIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-                )}
-            </Box>
-        </Box>
+            </CardContent>
+        </Card>
     );
 };
 

@@ -284,7 +284,12 @@ class DocentesService {
   getNivelFormacionLabel(nivel?: string): string {
     const labels: Record<string, string> = {
       bachiller: 'Bachiller',
+      tecnico: 'Técnico Superior',
+      tecnico_superior: 'Técnico Superior',
+      tecnico_medio: 'Técnico Medio',
       licenciatura: 'Licenciatura',
+      diplomado: 'Diplomado',
+      especialidad: 'Especialidad',
       maestria: 'Maestría',
       doctorado: 'Doctorado'
     };

@@ -29,11 +29,12 @@ import { useTutores } from '@/hooks/useTutores';
 interface TutoresTabProps {
   tutores: TutorConRelacion[];
   estudianteId: number;
+  readOnly?: boolean;
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export const TutoresTab: React.FC<TutoresTabProps> = ({ tutores, estudianteId }) => {
+export const TutoresTab: React.FC<TutoresTabProps> = ({ tutores, estudianteId, readOnly = false }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const accent = isDark ? '#facc15' : '#0288d1';
@@ -102,23 +103,25 @@ export const TutoresTab: React.FC<TutoresTabProps> = ({ tutores, estudianteId })
             {tutores.length} tutor{tutores.length !== 1 ? 'es' : ''} registrado{tutores.length !== 1 ? 's' : ''}
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<PersonAddIcon />}
-          onClick={handleOpenCreate}
-          sx={{
-            textTransform: 'none', fontWeight: 700, borderRadius: '12px', px: 2.5,
-            bgcolor: accent, color: isDark ? '#000' : '#fff', boxShadow: 'none',
-            '&:hover': { bgcolor: isDark ? '#e5b800' : '#0277bd', boxShadow: 'none' },
-          }}
-        >
-          Agregar tutor
-        </Button>
+        {!readOnly && (
+          <Button
+            variant="contained"
+            startIcon={<PersonAddIcon />}
+            onClick={handleOpenCreate}
+            sx={{
+              textTransform: 'none', fontWeight: 700, borderRadius: '12px', px: 2.5,
+              bgcolor: accent, color: isDark ? '#000' : '#fff', boxShadow: 'none',
+              '&:hover': { bgcolor: isDark ? '#e5b800' : '#0277bd', boxShadow: 'none' },
+            }}
+          >
+            Agregar tutor
+          </Button>
+        )}
       </Box>
 
       {/* Lista */}
       {tutores.length === 0 ? (
-        <EmptyState onAdd={handleOpenCreate} isDark={isDark} accent={accent} />
+        <EmptyState onAdd={handleOpenCreate} isDark={isDark} accent={accent} readOnly={readOnly} />
       ) : (
         <Grid container spacing={3}>
           {tutores.map((tutor, index) => (
@@ -127,6 +130,7 @@ export const TutoresTab: React.FC<TutoresTabProps> = ({ tutores, estudianteId })
                 tutor={tutor}
                 isDark={isDark}
                 accent={accent}
+                readOnly={readOnly}
                 onEdit={() => handleOpenEdit(tutor)}
                 onDelete={() => setDeleteConfirm(tutor)}
               />
@@ -136,25 +140,29 @@ export const TutoresTab: React.FC<TutoresTabProps> = ({ tutores, estudianteId })
       )}
 
       {/* Modal crear/editar */}
-      <TutorFormDialog
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        mode={editingTutor ? 'edit' : 'create'}
-        tutorActual={editingTutor ?? undefined}
-        onSubmitNuevo={handleSubmitNuevo}
-        onSubmitEditar={handleSubmitEditar}
-        onBuscarCI={buscarTutorPorCI}
-        onAsignarExistente={handleAsignarExistente}
-      />
+      {!readOnly && (
+        <>
+          <TutorFormDialog
+            open={formOpen}
+            onClose={() => setFormOpen(false)}
+            mode={editingTutor ? 'edit' : 'create'}
+            tutorActual={editingTutor ?? undefined}
+            onSubmitNuevo={handleSubmitNuevo}
+            onSubmitEditar={handleSubmitEditar}
+            onBuscarCI={buscarTutorPorCI}
+            onAsignarExistente={handleAsignarExistente}
+          />
 
-      {/* Confirm remover */}
-      <RemoverDialog
-        tutor={deleteConfirm}
-        loading={isRemoviendo}
-        isDark={isDark}
-        onConfirm={handleRemover}
-        onCancel={() => setDeleteConfirm(null)}
-      />
+          {/* Confirm remover */}
+          <RemoverDialog
+            tutor={deleteConfirm}
+            loading={isRemoviendo}
+            isDark={isDark}
+            onConfirm={handleRemover}
+            onCancel={() => setDeleteConfirm(null)}
+          />
+        </>
+      )}
     </Box>
   );
 };
@@ -165,9 +173,10 @@ const TutorCard: React.FC<{
   tutor: TutorConRelacion;
   isDark: boolean;
   accent: string;
+  readOnly?: boolean;
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ tutor, isDark, accent, onEdit, onDelete }) => {
+}> = ({ tutor, isDark, accent, readOnly = false, onEdit, onDelete }) => {
   const initials = `${tutor.nombres?.charAt(0) ?? ''}${tutor.apellido_paterno?.charAt(0) ?? ''}`;
   const fullName = [tutor.nombres, tutor.apellido_paterno, tutor.apellido_materno]
     .filter(Boolean).join(' ');
@@ -186,28 +195,30 @@ const TutorCard: React.FC<{
       }}
     >
       {/* Acciones */}
-      <Box sx={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 0.5 }}>
-        <Tooltip title="Editar tutor">
-          <IconButton size="small" onClick={onEdit}
-            sx={{
-              bgcolor: isDark ? 'rgba(250,204,21,0.1)' : 'rgba(2,136,209,0.1)', color: accent,
-              '&:hover': { bgcolor: isDark ? 'rgba(250,204,21,0.2)' : 'rgba(2,136,209,0.2)' },
-            }}
-          >
-            <EditIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Remover del estudiante">
-          <IconButton size="small" onClick={onDelete}
-            sx={{ bgcolor: 'rgba(239,68,68,0.1)', color: '#ef4444', '&:hover': { bgcolor: 'rgba(239,68,68,0.2)' } }}
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </Box>
+      {!readOnly && (
+        <Box sx={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 0.5 }}>
+          <Tooltip title="Editar tutor">
+            <IconButton size="small" onClick={onEdit}
+              sx={{
+                bgcolor: isDark ? 'rgba(250,204,21,0.1)' : 'rgba(2,136,209,0.1)', color: accent,
+                '&:hover': { bgcolor: isDark ? 'rgba(250,204,21,0.2)' : 'rgba(2,136,209,0.2)' },
+              }}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Remover del estudiante">
+            <IconButton size="small" onClick={onDelete}
+              sx={{ bgcolor: 'rgba(239,68,68,0.1)', color: '#ef4444', '&:hover': { bgcolor: 'rgba(239,68,68,0.2)' } }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      )}
 
       {/* Avatar + nombre */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2.5, pr: 8 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2.5, pr: readOnly ? 2 : 8 }}>
         <Avatar
           sx={{
             width: 52, height: 52, fontWeight: 700, fontSize: '1.1rem',
@@ -301,25 +312,27 @@ const PermisoBadge: React.FC<{ icon: React.ReactNode; label: string; isDark: boo
   </Box>
 );
 
-const EmptyState: React.FC<{ onAdd: () => void; isDark: boolean; accent: string }> = ({ onAdd, isDark, accent }) => (
+const EmptyState: React.FC<{ onAdd: () => void; isDark: boolean; accent: string; readOnly?: boolean }> = ({ onAdd, isDark, accent, readOnly = false }) => (
   <Box sx={{
     textAlign: 'center', py: 8, px: 4, borderRadius: '20px',
     border: `2px dashed ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
   }}>
     <PersonAddIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
     <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>Sin tutores registrados</Typography>
-    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-      Este estudiante no tiene tutores asignados aún.
+    <Typography variant="body2" color="text.secondary" sx={{ mb: readOnly ? 0 : 3 }}>
+      Este estudiante no tiene tutores registrados aún.
     </Typography>
-    <Button variant="contained" startIcon={<PersonAddIcon />} onClick={onAdd}
-      sx={{
-        textTransform: 'none', fontWeight: 700, borderRadius: '12px', px: 3,
-        bgcolor: accent, color: isDark ? '#000' : '#fff', boxShadow: 'none',
-        '&:hover': { bgcolor: isDark ? '#e5b800' : '#0277bd', boxShadow: 'none' },
-      }}
-    >
-      Agregar primer tutor
-    </Button>
+    {!readOnly && (
+      <Button variant="contained" startIcon={<PersonAddIcon />} onClick={onAdd}
+        sx={{
+          textTransform: 'none', fontWeight: 700, borderRadius: '12px', px: 3,
+          bgcolor: accent, color: isDark ? '#000' : '#fff', boxShadow: 'none',
+          '&:hover': { bgcolor: isDark ? '#e5b800' : '#0277bd', boxShadow: 'none' },
+        }}
+      >
+        Agregar primer tutor
+      </Button>
+    )}
   </Box>
 );
 

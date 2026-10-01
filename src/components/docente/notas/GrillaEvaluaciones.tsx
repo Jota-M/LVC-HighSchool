@@ -52,15 +52,19 @@ const EditorRubrica: React.FC<{ criterios: CriterioRubrica[]; puntajeMaximo: num
   const { isDark, gold } = usePalette();
   const suma = criterios.reduce((s, c) => s + Number(c.puntos_posibles || 0), 0);
   const excede = suma > puntajeMaximo;
+  const noAlcanza = criterios.length > 0 && suma < puntajeMaximo;
+  const coincide = criterios.length > 0 && Math.round(suma * 100) === Math.round(puntajeMaximo * 100);
   const agregar = () => onChange([...criterios, { orden: criterios.length + 1, criterio: '', puntos_posibles: 0 }]);
   const upd = (i: number, k: keyof CriterioRubrica, v: any) => { const cp = [...criterios]; (cp[i] as any)[k] = v; onChange(cp); };
   const del = (i: number) => onChange(criterios.filter((_, j) => j !== i).map((c, j) => ({ ...c, orden: j + 1 })));
   const sx = { '& .MuiOutlinedInput-root': { borderRadius: '10px', '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: gold } } };
   return (
     <Box>
-      {excede && <Alert severity="error" sx={{ mb: 2, borderRadius: '12px' }}>Suma ({suma}) supera el máximo ({puntajeMaximo}).</Alert>}
+      {excede && <Alert severity="error" sx={{ mb: 2, borderRadius: '12px' }}>⚠️ La suma de criterios ({suma} pts) supera el máximo ({puntajeMaximo} pts).</Alert>}
+      {noAlcanza && <Alert severity="warning" sx={{ mb: 2, borderRadius: '12px' }}>⚠️ Faltan {(puntajeMaximo - suma).toFixed(1)} pts para completar el puntaje máximo ({puntajeMaximo} pts).</Alert>}
+      {coincide && <Alert severity="success" sx={{ mb: 2, borderRadius: '12px' }}>✓ La suma de los criterios coincide exactamente con el puntaje máximo ({puntajeMaximo} pts).</Alert>}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="body2" color="text.secondary">Suma: <strong style={{ color: excede ? '#dc2626' : '#16a34a' }}>{suma}</strong> / {puntajeMaximo} pts</Typography>
+        <Typography variant="body2" color="text.secondary">Suma: <strong style={{ color: excede ? '#dc2626' : noAlcanza ? '#f59e0b' : '#16a34a' }}>{suma}</strong> / {puntajeMaximo} pts</Typography>
         <Button size="small" startIcon={<AddCircleOutlineIcon />} onClick={agregar} sx={{ textTransform: 'none', fontWeight: 600, color: gold }}>Agregar criterio</Button>
       </Box>
       {criterios.length === 0 && <Box sx={{ textAlign: 'center', py: 4, borderRadius: '12px', border: `1.5px dashed ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.1)}` }}><Typography variant="caption" color="text.disabled" fontWeight={600}>Sin criterios todavía</Typography></Box>}
@@ -94,7 +98,19 @@ const ModalCrearEvaluacion: React.FC<ModalProps> = ({ open, onClose, onCrear, as
   const { isDark, gold, gradBg } = usePalette();
   const [tab, setTab] = useState(0);
   const dimActiva = dimensiones.find(d => d.codigo === dimensionActiva);
-  const [form, setForm] = useState<Partial<CrearEvaluacionDTO>>({ asignacion_docente_id, periodo_evaluacion_id, dimension_evaluacion_id: dimActiva?.id, puntaje_maximo: 100, peso_en_dimension: 1, visible_para_padres: false });
+  const maxDefecto = dimActiva?.porcentaje_ponderacion ?? 100;
+  const hoyStr = new Date().toISOString().split('T')[0];
+  const [form, setForm] = useState<Partial<CrearEvaluacionDTO>>({
+    asignacion_docente_id,
+    periodo_evaluacion_id,
+    dimension_evaluacion_id: dimActiva?.id,
+    tipo: dimActiva?.codigo === 'SER' ? 'general' : dimActiva?.codigo === 'AUT' ? undefined : 'practica',
+    puntaje_maximo: maxDefecto,
+    peso_en_dimension: 1,
+    visible_para_padres: false,
+    fecha: hoyStr,
+    permite_entrega_archivo: false,
+  });
   const [foto, setFoto] = useState<File | null>(null);
   const [pdf, setPdf] = useState<File | null>(null);
   const [criterios, setCriterios] = useState<CriterioRubrica[]>([]);
@@ -104,15 +120,48 @@ const ModalCrearEvaluacion: React.FC<ModalProps> = ({ open, onClose, onCrear, as
   React.useEffect(() => {
     if (open) {
       setTab(0);
-      setForm({ asignacion_docente_id, periodo_evaluacion_id, dimension_evaluacion_id: dimActiva?.id, puntaje_maximo: 100, peso_en_dimension: 1, visible_para_padres: false });
+      const esSer = dimActiva?.codigo === 'SER';
+      const esAut = dimActiva?.codigo === 'AUT';
+      setForm({
+        asignacion_docente_id,
+        periodo_evaluacion_id,
+        dimension_evaluacion_id: dimActiva?.id,
+        tipo: esSer ? 'general' : esAut ? undefined : 'practica',
+        puntaje_maximo: dimActiva?.porcentaje_ponderacion ?? 100,
+        peso_en_dimension: 1,
+        visible_para_padres: false,
+        fecha: hoyStr,
+        permite_entrega_archivo: false,
+      });
       setFoto(null); setPdf(null); setCriterios([]);
     }
-  }, [open, dimActiva?.id]);
+  }, [open, dimActiva?.id, dimActiva?.codigo, dimActiva?.porcentaje_ponderacion, hoyStr]);
 
   const set = (k: keyof CrearEvaluacionDTO, v: any) => setForm(p => ({ ...p, [k]: v }));
+  const curDim = dimensiones.find(d => d.id === form.dimension_evaluacion_id) || dimActiva;
+  const esCurSer = curDim?.codigo === 'SER';
+  const esCurAut = curDim?.codigo === 'AUT';
+
   const handleSubmit = () => {
     if (!form.nombre || !form.dimension_evaluacion_id) return;
-    onCrear(form as CrearEvaluacionDTO, foto ?? undefined, pdf ?? undefined, criterios.length > 0 ? criterios : undefined);
+    if (form.permite_entrega_archivo && !form.fecha_limite) {
+      toast.error('Debes definir la fecha límite para habilitar la entrega de archivos.');
+      return;
+    }
+    const criteriosValidos = criterios.filter(c => c.criterio.trim());
+    if (criteriosValidos.length > 0) {
+      const suma = criteriosValidos.reduce((s, c) => s + Number(c.puntos_posibles || 0), 0);
+      const max = Number(form.puntaje_maximo ?? maxDefecto);
+      if (Math.round(suma * 100) !== Math.round(max * 100)) {
+        toast.error(`La suma de la rúbrica (${suma} pts) debe ser exactamente igual al puntaje máximo (${max} pts).`);
+        return;
+      }
+    }
+    const finalForm: CrearEvaluacionDTO = {
+      ...(form as CrearEvaluacionDTO),
+      tipo: esCurSer ? 'general' : esCurAut ? undefined : form.tipo,
+    };
+    onCrear(finalForm, foto ?? undefined, pdf ?? undefined, criteriosValidos.length > 0 ? criteriosValidos : undefined);
     onClose();
   };
 
@@ -142,24 +191,102 @@ const ModalCrearEvaluacion: React.FC<ModalProps> = ({ open, onClose, onCrear, as
               <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth size="small" required sx={sx}>
                   <InputLabel>Dimensión</InputLabel>
-                  <Select value={form.dimension_evaluacion_id ?? ''} label="Dimensión" onChange={e => set('dimension_evaluacion_id', e.target.value)}>
+                  <Select value={form.dimension_evaluacion_id ?? ''} label="Dimensión" onChange={e => {
+                    const selId = Number(e.target.value);
+                    const selDim = dimensiones.find(d => d.id === selId);
+                    const isSer = selDim?.codigo === 'SER';
+                    const isAut = selDim?.codigo === 'AUT';
+                    const defaultTipo = isSer ? 'general' : isAut ? undefined : (TIPOS_POR_DIMENSION[selDim?.codigo as CodigoDimension]?.[0] || 'examen');
+                    setForm(p => ({
+                      ...p,
+                      dimension_evaluacion_id: selId,
+                      puntaje_maximo: selDim?.porcentaje_ponderacion ?? p.puntaje_maximo,
+                      tipo: defaultTipo,
+                    }));
+                  }}>
                     {dimensiones.map(d => { const c = DIMENSIONES_CONFIG[d.codigo as CodigoDimension]; return <MenuItem key={d.id} value={d.id}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: c?.color ?? d.color }} />{d.nombre} ({d.porcentaje_ponderacion}%)</Box></MenuItem>; })}
                   </Select>
                 </FormControl>
               </Grid>
+              {!esCurSer && !esCurAut && (
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <FormControl fullWidth size="small" sx={sx}>
+                    <InputLabel>Tipo</InputLabel>
+                    <Select value={form.tipo ?? ''} label="Tipo" onChange={e => set('tipo', e.target.value)}>
+                      {TIPOS_EVALUACION.filter(t => curDim?.codigo && TIPOS_POR_DIMENSION[curDim.codigo as CodigoDimension]?.includes(t.value)).map(t => <MenuItem key={t.value} value={t.value}>{t.icon} {t.label}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
+              {esCurSer && (
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Box sx={{
+                    height: '100%', minHeight: 40, px: 2, borderRadius: '10px',
+                    bgcolor: isDark ? alpha('#10b981', 0.1) : alpha('#10b981', 0.06),
+                    border: `1px solid ${alpha('#10b981', 0.2)}`,
+                    display: 'flex', alignItems: 'center', gap: 1,
+                  }}>
+                    <Chip label="⭐ General" size="small" sx={{ bgcolor: alpha('#10b981', 0.18), color: '#10b981', fontWeight: 800, fontSize: 11 }} />
+                    <Typography variant="caption" color="text.secondary">
+                      Evaluación actitudinal por defecto
+                    </Typography>
+                  </Box>
+                </Grid>
+              )}
               <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth size="small" sx={sx}>
-                  <InputLabel>Tipo</InputLabel>
-                  <Select value={form.tipo ?? ''} label="Tipo" onChange={e => set('tipo', e.target.value)}>
-                    {TIPOS_EVALUACION.map(t => <MenuItem key={t.value} value={t.value}>{t.icon} {t.label}</MenuItem>)}
-                  </Select>
-                </FormControl>
+                <TextField
+                  label="Puntaje máximo *"
+                  type="number"
+                  fullWidth
+                  size="small"
+                  value={form.puntaje_maximo ?? dimActiva?.porcentaje_ponderacion ?? 100}
+                  onChange={e => {
+                    const val = parseFloat(e.target.value);
+                    const tope = dimActiva?.porcentaje_ponderacion ?? 100;
+                    set('puntaje_maximo', isNaN(val) ? '' : Math.min(Math.max(val, 0), tope));
+                  }}
+                  inputProps={{ min: 1, max: dimActiva?.porcentaje_ponderacion ?? 100, step: 1 }}
+                  helperText={`Tope de dimensión: ${dimActiva?.porcentaje_ponderacion ?? 100} pts`}
+                  sx={sx}
+                />
               </Grid>
-              <Grid size={{ xs: 6, sm: 4 }}><TextField label="Puntaje máximo *" type="number" fullWidth size="small" value={form.puntaje_maximo ?? 100} onChange={e => set('puntaje_maximo', parseFloat(e.target.value))} inputProps={{ min: 1, step: 1 }} sx={sx} /></Grid>
-              <Grid size={{ xs: 6, sm: 4 }}><TextField label="Peso en dimensión" type="number" fullWidth size="small" value={form.peso_en_dimension ?? 1} onChange={e => set('peso_en_dimension', parseFloat(e.target.value))} inputProps={{ min: 0.1, step: 0.1 }} helperText="Peso relativo" sx={sx} /></Grid>
-              <Grid size={{ xs: 12, sm: 4 }}><TextField label="Fecha" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} value={form.fecha ?? ''} onChange={e => set('fecha', e.target.value || undefined)} sx={sx} /></Grid>
-              <Grid size={{ xs: 12, sm: 6 }}><TextField label="Fecha límite" type="datetime-local" fullWidth size="small" InputLabelProps={{ shrink: true }} helperText="Para tareas y proyectos" value={form.fecha_limite ?? ''} onChange={e => set('fecha_limite', e.target.value || undefined)} sx={sx} /></Grid>
+              <Grid size={{ xs: 12, sm: 6 }}><TextField label="Fecha" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} value={form.fecha ?? ''} onChange={e => set('fecha', e.target.value || undefined)} sx={sx} /></Grid>
+              {!esCurSer && !esCurAut && (
+                <Grid size={{ xs: 12, sm: 12 }}>
+                  <TextField
+                    label={form.permite_entrega_archivo ? 'Fecha límite de entrega * (requerida)' : 'Fecha límite (opcional)'}
+                    type="datetime-local" fullWidth size="small"
+                    InputLabelProps={{ shrink: true }}
+                    helperText={form.permite_entrega_archivo ? 'El sistema bloqueará entregas al vencer el plazo' : 'Plazo máximo de entrega o rendición'}
+                    value={form.fecha_limite ?? ''}
+                    onChange={e => set('fecha_limite', e.target.value || undefined)}
+                    error={Boolean(form.permite_entrega_archivo && !form.fecha_limite)}
+                    sx={sx}
+                  />
+                </Grid>
+              )}
             </Grid>
+            {!esCurSer && !esCurAut && (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={form.permite_entrega_archivo ?? false}
+                    onChange={e => {
+                      const val = e.target.checked;
+                      set('permite_entrega_archivo', val);
+                      if (val) set('visible_para_padres', true);
+                    }}
+                    sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: gold }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: gold } }}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" fontWeight={700}>Permitir entrega digital (subir archivo a la plataforma)</Typography>
+                    <Typography variant="caption" color="text.secondary">Estudiantes suben sus prácticas/exámenes resueltos para revisarlos por aquí</Typography>
+                  </Box>
+                }
+              />
+            )}
             <TextField label="Instrucciones (visible para padres)" fullWidth size="small" multiline rows={2} value={form.instrucciones ?? ''} onChange={e => set('instrucciones', e.target.value)} sx={sx} />
             <TextField label="Descripción interna" fullWidth size="small" multiline rows={2} value={form.descripcion ?? ''} onChange={e => set('descripcion', e.target.value)} sx={sx} />
             <FormControlLabel control={<Switch checked={form.visible_para_padres ?? false} onChange={e => set('visible_para_padres', e.target.checked)} sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: gold }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: gold } }} />} label={<Typography variant="body2">Publicar inmediatamente (visible para padres)</Typography>} />
@@ -239,7 +366,11 @@ const EvaluacionCard: React.FC<{
             <Typography variant="body2" fontWeight={700} noWrap sx={{ color: isSelected ? dimensionColor : 'text.primary' }}>{evaluacion.nombre}</Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
-            {tipo && <Chip label={`${tipo.icon} ${tipo.label}`} size="small" sx={{ fontSize: 10, height: 18, bgcolor: isDark ? alpha('#fff', 0.07) : '#f0f0f0' }} />}
+            {evaluacion.dimension_codigo === 'SER' || evaluacion.tipo === 'general' || evaluacion.tipo === 'ser' ? (
+              <Chip label="⭐ General" size="small" sx={{ fontSize: 10, height: 18, bgcolor: isDark ? alpha('#10b981', 0.15) : alpha('#10b981', 0.1), color: '#10b981', fontWeight: 700 }} />
+            ) : tipo ? (
+              <Chip label={`${tipo.icon} ${tipo.label}`} size="small" sx={{ fontSize: 10, height: 18, bgcolor: isDark ? alpha('#fff', 0.07) : '#f0f0f0' }} />
+            ) : null}
             <Chip label={`Máx: ${evaluacion.puntaje_maximo}`} size="small" sx={{ fontSize: 10, height: 18, bgcolor: isSelected ? alpha(dimensionColor, 0.15) : isDark ? alpha('#fff', 0.07) : '#f0f0f0', color: isSelected ? dimensionColor : undefined }} />
             {evaluacion.peso_en_dimension != null && <Chip label={`Peso: ${evaluacion.peso_en_dimension}`} size="small" sx={{ fontSize: 10, height: 18, bgcolor: isDark ? alpha('#fff', 0.07) : '#f0f0f0' }} />}
             {evaluacion.fecha && <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10 }}>📅 {evaluacion.fecha}</Typography>}

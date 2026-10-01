@@ -1,6 +1,5 @@
 // hooks/usePeriodosPublicos.ts
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 
 export interface PeriodoPublico {
@@ -12,82 +11,54 @@ export interface PeriodoPublico {
   activo: boolean;
 }
 
-// ─────────────────────────────────────────────────
-// ESTRATEGIA:
-// Intenta los endpoints en orden hasta que uno
-// responda 200. Así funciona para cualquier rol.
-// ─────────────────────────────────────────────────
-
-async function fetchPeriodoActivo(): Promise<PeriodoPublico | null> {
-  // Opción A: endpoint dedicado para periodo activo (más limpio)
-  try {
-    const { data } = await api.get('/periodo-academico/publico/activo');
-    return data.data.periodo ?? data.data ?? null;
-  } catch {}
-
-  // Opción B: el perfil del usuario ya trae el periodo activo
-  try {
-    const { data } = await api.get('/auth/me');
-    const periodo = data.data?.periodo_activo ?? data.data?.user?.periodo_activo;
-    if (periodo) return periodo;
-  } catch {}
-
-  // Opción C: endpoint estándar (puede fallar con 403 para roles bajos)
-  try {
-    const { data } = await api.get('/periodo-academico/activo');
-    return data.data.periodo ?? data.data ?? null;
-  } catch {}
-
-  return null;
+interface PeriodosData {
+  periodos: PeriodoPublico[];
+  periodoActivo: PeriodoPublico | null;
 }
 
-async function fetchPeriodos(): Promise<PeriodoPublico[]> {
-  // Opción A: endpoint público de lista
-  try {
-    const { data } = await api.get('/periodo-academico/publico');
-    return data.data.periodos ?? data.data ?? [];
-  } catch {}
+async function fetchPeriodosData(): Promise<PeriodosData> {
+  const { data } = await api.get('/periodo-academico', {
+    params: { limit: 50 },
+  });
 
-  // Opción B: endpoint estándar con activo=true
-  try {
-    const { data } = await api.get('/periodo-academico', {
-      params: { activo: true },
-    });
-    return data.data.periodos ?? data.data ?? [];
-  } catch {}
+  const periodos: PeriodoPublico[] = data.data?.periodos ?? [];
+  const periodoActivo =
+    periodos.find((p) => p.activo) ?? (periodos.length > 0 ? periodos[0] : null);
 
-  return [];
+  return { periodos, periodoActivo };
 }
 
 // ─────────────────────────────────────────────────
 // HOOK principal
 // ─────────────────────────────────────────────────
 export const usePeriodosPublicos = () => {
-  const { data: periodoActivo, isLoading: loadingActivo } = useQuery<PeriodoPublico | null>({
-    queryKey: ['periodo-activo-publico'],
-    queryFn: fetchPeriodoActivo,
-    staleTime: 1000 * 60 * 10,
-    retry: false, // no reintentar 403
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery<PeriodosData>({
+    queryKey: ['periodos-academicos-lista'],
+    queryFn: async () => {
+      const res = await fetchPeriodosData();
+      if (res.periodoActivo) {
+        // Mantener sincronizado el periodo activo en caché global para otros componentes
+        queryClient.setQueryData(['periodo-academico-activo'], res.periodoActivo);
+      }
+      return res;
+    },
+    staleTime: 1000 * 60 * 30, // 30 min
+    retry: 1,
   });
 
-  const { data: periodos, isLoading: loadingLista } = useQuery<PeriodoPublico[]>({
-    queryKey: ['periodos-publicos'],
-    queryFn: fetchPeriodos,
-    staleTime: 1000 * 60 * 10,
-    retry: false,
-  });
+  // Si ya tenemos en caché el periodo activo de otra consulta (ej. dashboard docente home)
+  const cachedPeriodoActivo = queryClient.getQueryData<PeriodoPublico | null>([
+    'periodo-academico-activo',
+  ]);
 
-  // Si la lista falla pero tenemos el activo, lo usamos como lista
-  const periodosList: PeriodoPublico[] =
-    periodos && periodos.length > 0
-      ? periodos
-      : periodoActivo
-      ? [periodoActivo]
-      : [];
+  const periodoActivo = data?.periodoActivo ?? cachedPeriodoActivo ?? null;
+  const periodos = data?.periodos ?? (periodoActivo ? [periodoActivo] : []);
 
   return {
-    periodos: periodosList,
-    periodoActivo: periodoActivo ?? null,
-    isLoading: loadingActivo || loadingLista,
+    periodos,
+    periodoActivo,
+    isLoading,
   };
-};
+};

@@ -159,7 +159,7 @@ export default function NotificacionCampana() {
   const accentDark  = isDark ? '#f59e0b' : '#01579b';
 
   const { count, refrescar: refrescarContador } = useContadorNoLeidas();
-  const { notificaciones, noLeidas, isLoading, marcarLeido, marcarTodasLeidas, refrescar } = useBandeja();
+  const { notificaciones, noLeidas, isLoading, marcarLeido, marcarTodasLeidas, refrescar } = useBandeja(open);
 
   const handleToggle = () => {
     if (!open) refrescar();

@@ -601,9 +601,7 @@ const PaymentMethodRow: React.FC<PaymentMethodRowProps> = ({
       </Typography>
     </Box>
   );
-};
-
-export const DashboardIngresos: React.FC = () => {
+};export const DashboardIngresos: React.FC = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   
@@ -617,20 +615,33 @@ export const DashboardIngresos: React.FC = () => {
     cargarResumenMetodosPago,
   } = useIngresos();
 
+  const [filtroPeriodo, setFiltroPeriodo] = useState<'gestion' | 'mes' | 'todo'>('gestion');
+
   const yellowColor = isDark ? '#facc15' : '#f59e0b';
   const greenColor = '#10b981';
   const blueColor = '#3b82f6';
   const purpleColor = '#a855f7';
 
   useEffect(() => {
-    cargarDatos();
-  }, []);
+    cargarDatos(filtroPeriodo);
+  }, [filtroPeriodo]);
 
-  const cargarDatos = async () => {
-    const filtros = {
-      fecha_desde: ingresosService.obtenerFechaInicioPeriodo('mes'),
-      fecha_hasta: ingresosService.obtenerFechaFinPeriodo('mes'),
-    };
+  const cargarDatos = async (periodo = filtroPeriodo) => {
+    let fecha_desde: string | undefined;
+    let fecha_hasta: string | undefined;
+    const anioActual = new Date().getFullYear();
+
+    if (periodo === 'mes') {
+      fecha_desde = ingresosService.obtenerFechaInicioPeriodo('mes');
+      fecha_hasta = ingresosService.obtenerFechaFinPeriodo('mes');
+    } else if (periodo === 'gestion') {
+      fecha_desde = `${anioActual}-01-01`;
+      fecha_hasta = `${anioActual}-12-31`;
+    } // 'todo' no envía fechas para abarcar todo
+
+    const filtros: any = {};
+    if (fecha_desde) filtros.fecha_desde = fecha_desde;
+    if (fecha_hasta) filtros.fecha_hasta = fecha_hasta;
     
     await Promise.all([
       cargarEstadisticas(filtros),
@@ -644,7 +655,7 @@ export const DashboardIngresos: React.FC = () => {
       <Box 
         sx={{ 
           display: 'flex', 
-          flexDirection: 'column',
+          flexDirection: 'column', 
           justifyContent: 'center', 
           alignItems: 'center', 
           minHeight: 400,
@@ -668,19 +679,79 @@ export const DashboardIngresos: React.FC = () => {
     );
   }
 
+  const anioActual = new Date().getFullYear();
+
   return (
     <Box>
+      {/* Filtro de Período del Dashboard */}
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        mb: 3,
+        flexWrap: 'wrap',
+        gap: 1.5,
+        p: 1.5,
+        borderRadius: '16px',
+        bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+        border: '1px solid',
+        borderColor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06)
+      }}>
+        <Box>
+          <Typography variant="subtitle1" fontWeight={700}>
+            Período Visualizado:{' '}
+            <Typography component="span" fontWeight={800} color="primary.main">
+              {filtroPeriodo === 'gestion' ? `Gestión ${anioActual}` : filtroPeriodo === 'mes' ? 'Mes Actual' : 'Histórico Total'}
+            </Typography>
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {filtroPeriodo === 'gestion'
+              ? `Mostrando todos los cobros y mensualidades registradas en el año ${anioActual}`
+              : filtroPeriodo === 'mes'
+              ? 'Filtrando solo ingresos con fecha del mes en curso'
+              : 'Mostrando la totalidad acumulada sin filtro de fechas'}
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Chip
+            label={`Gestión ${anioActual}`}
+            onClick={() => setFiltroPeriodo('gestion')}
+            color={filtroPeriodo === 'gestion' ? 'primary' : 'default'}
+            variant={filtroPeriodo === 'gestion' ? 'filled' : 'outlined'}
+            clickable
+            sx={{ fontWeight: filtroPeriodo === 'gestion' ? 700 : 500 }}
+          />
+          <Chip
+            label="Mes Actual"
+            onClick={() => setFiltroPeriodo('mes')}
+            color={filtroPeriodo === 'mes' ? 'primary' : 'default'}
+            variant={filtroPeriodo === 'mes' ? 'filled' : 'outlined'}
+            clickable
+            sx={{ fontWeight: filtroPeriodo === 'mes' ? 700 : 500 }}
+          />
+          <Chip
+            label="Todo el Histórico"
+            onClick={() => setFiltroPeriodo('todo')}
+            color={filtroPeriodo === 'todo' ? 'primary' : 'default'}
+            variant={filtroPeriodo === 'todo' ? 'filled' : 'outlined'}
+            clickable
+            sx={{ fontWeight: filtroPeriodo === 'todo' ? 700 : 500 }}
+          />
+        </Box>
+      </Box>
+
       {/* Estadísticas Principales con animación stagger */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
-            title="Ingresos del Mes"
+            title={filtroPeriodo === 'mes' ? 'Ingresos del Mes' : filtroPeriodo === 'gestion' ? `Ingresos ${anioActual}` : 'Total Recaudado'}
             value={ingresosService.formatearMonto(estadisticas?.monto_total || 0)}
             subtitle="monto total recaudado"
             icon={<MoneyIcon />}
             color={yellowColor}
             delay={0}
-            info="Total de ingresos del mes actual"
+            info={filtroPeriodo === 'mes' ? 'Total de ingresos del mes actual' : `Total recaudado en la gestión ${anioActual}`}
           />
         </Grid>
 

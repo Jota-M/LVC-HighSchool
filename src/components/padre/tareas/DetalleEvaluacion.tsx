@@ -19,6 +19,7 @@ import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import GradeIcon from '@mui/icons-material/Grade';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import ChildCareRoundedIcon from '@mui/icons-material/ChildCareRounded';
 
 import {
   ESTADO_TAREA_CONFIG,
@@ -56,7 +57,10 @@ interface CriterioRubrica {
   orden: number;
 }
 
+import ComputerRoundedIcon from '@mui/icons-material/ComputerRounded';
+
 interface DetalleCompleto {
+  modalidad?: 'presencial' | 'virtual';
   foto_url?: string | null;
   pdf_url?: string | null;
   pdf_nombre?: string | null;
@@ -241,6 +245,7 @@ const DetalleEvaluacion: React.FC<Props> = ({ tarea, open, onClose }) => {
         const ev = evalRes.data.data.evaluacion;
         const criterios: CriterioRubrica[] = rubricaRes.data.data?.criterios ?? [];
         setDetalle({
+          modalidad:    ev.modalidad    ?? 'presencial',
           foto_url:     ev.foto_url     ?? null,
           pdf_url:      ev.pdf_url      ?? null,
           pdf_nombre:   ev.pdf_nombre   ?? null,
@@ -249,7 +254,7 @@ const DetalleEvaluacion: React.FC<Props> = ({ tarea, open, onClose }) => {
           rubrica:      criterios,
         });
       })
-      .catch(() => setDetalle({ foto_url: null, pdf_url: null, pdf_nombre: null, instrucciones: null, descripcion: null, rubrica: [] }))
+      .catch(() => setDetalle({ modalidad: 'presencial', foto_url: null, pdf_url: null, pdf_nombre: null, instrucciones: null, descripcion: null, rubrica: [] }))
       .finally(() => setIsLoading(false));
   }, [open, tarea?.evaluacion_id]);
 
@@ -328,7 +333,21 @@ const DetalleEvaluacion: React.FC<Props> = ({ tarea, open, onClose }) => {
                   boxShadow: `0 2px 8px ${alpha(estadoCfg.color, 0.4)}`,
                 }}
               />
-              {tarea.nota_sobre_100 != null && (
+              {tarea.materia_codigo?.startsWith('INI-') || tarea.materia_nombre?.toLowerCase().includes('desarrollo') ? (
+                <Box
+                  sx={{
+                    display: 'flex', alignItems: 'center', gap: 0.5,
+                    px: 1.5, py: 0.25, borderRadius: 2,
+                    bgcolor: alpha('#8b5cf6', isDark ? 0.25 : 0.12),
+                    border: '1px solid rgba(139, 92, 246, 0.4)',
+                  }}
+                >
+                  <ChildCareRoundedIcon sx={{ fontSize: 15, color: '#8b5cf6' }} />
+                  <Typography variant="caption" fontWeight={800} sx={{ color: isDark ? '#c4b5fd' : '#6d28d9', fontSize: 11 }}>
+                    Desarrollo Cualitativo
+                  </Typography>
+                </Box>
+              ) : tarea.nota_sobre_100 != null && (
                 <Box
                   sx={{
                     display: 'flex', alignItems: 'center', gap: 0.5,
@@ -374,6 +393,26 @@ const DetalleEvaluacion: React.FC<Props> = ({ tarea, open, onClose }) => {
           </Stack>
         ) : (
           <Stack spacing={3} divider={<Divider sx={{ borderColor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.06) }} />}>
+
+            {/* ── BANNER MODALIDAD VIRTUAL ── */}
+            {detalle?.modalidad === 'virtual' && (
+              <Box sx={{
+                p: 2, borderRadius: 2.5,
+                bgcolor: isDark ? alpha('#10b981', 0.12) : alpha('#10b981', 0.08),
+                border: `1.5px solid ${alpha('#10b981', 0.3)}`,
+                display: 'flex', alignItems: 'center', gap: 1.5,
+              }}>
+                <ComputerRoundedIcon sx={{ color: '#10b981', fontSize: 26 }} />
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={800} sx={{ color: '#10b981' }}>
+                    Evaluación en Modalidad Virtual
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.4 }}>
+                    Esta evaluación fue rendida de forma virtual en la plataforma institucional del colegio.
+                  </Typography>
+                </Box>
+              </Box>
+            )}
 
             {/* ── FECHAS ── */}
             <Seccion label="Fechas" icon={<EventIcon sx={{ fontSize: 14 }} />}>

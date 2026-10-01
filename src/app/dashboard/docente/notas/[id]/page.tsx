@@ -4,7 +4,8 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Box, Container, Typography, Tabs, Tab, Chip, Fade,
   useTheme, alpha, LinearProgress, Stack, Collapse,
-  CircularProgress, Tooltip,
+  CircularProgress, Tooltip, Button, Paper,
+  Dialog, DialogTitle, DialogContent, DialogActions, IconButton,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 import GradeRoundedIcon from '@mui/icons-material/GradeRounded';
@@ -28,15 +29,25 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import ComputerRoundedIcon from '@mui/icons-material/ComputerRounded';
+import CloudUploadRoundedIcon from '@mui/icons-material/CloudUploadRounded';
+import EditRoundedIcon from '@mui/icons-material/EditRounded';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import AssessmentRoundedIcon from '@mui/icons-material/AssessmentRounded';
+import ShuffleRoundedIcon from '@mui/icons-material/ShuffleRounded';
+import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
+import GradingRoundedIcon from '@mui/icons-material/GradingRounded';
+import DeleteForeverRoundedIcon from '@mui/icons-material/DeleteForeverRounded';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useMisMateriasNotas, useEvaluaciones } from '@/hooks/useNotas';
+import { useMisMateriasNotas, useEvaluaciones, useDimensiones } from '@/hooks/useNotas';
 import {
   MateriaDocenteNotas, Evaluacion,
   CriterioRubrica, TIPOS_EVALUACION,
   DIMENSIONES_CONFIG, DIMENSIONES_ORDEN, CodigoDimension,
 } from '@/types/notasTypes';
 import { adjuntosService, rubricaService } from '@/services/notasService';
+import { PanelTareasInicial } from '@/components/docente/inicial/PanelTareasInicial';
 import { toast } from 'react-hot-toast';
 
 // ─── Animaciones ──────────────────────────────────────────────────────────────
@@ -69,6 +80,8 @@ const DetallePanel: React.FC<{
   dimColor: string;
   isDark: boolean;
 }> = ({ ev, dimColor, isDark }) => {
+  const router = useRouter();
+  const { gradBg } = usePalette();
   const [criterios, setCriterios] = useState<CriterioRubrica[]>([]);
   const [loadingRubrica, setLoadingRubrica] = useState(false);
   const fetched = useRef(false);
@@ -102,10 +115,63 @@ const DetallePanel: React.FC<{
     })
     : null;
 
+  const fechaInicioVirtual = ev.fecha_hora_inicio
+    ? new Date(ev.fecha_hora_inicio).toLocaleString('es-BO', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    })
+    : null;
+
+  const fechaFinVirtual = ev.fecha_hora_fin
+    ? new Date(ev.fecha_hora_fin).toLocaleString('es-BO', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    })
+    : null;
+
+  const esVirtual = ev.modalidad === 'virtual';
+
   return (
     <Box sx={{ p: 2 }}>
+      {/* Barra superior con botón de edición completa */}
+      <Box sx={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        flexWrap: 'wrap', gap: 1.5, mb: 2, pb: 1.5,
+        borderBottom: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
+      }}>
+        <Typography variant="subtitle2" fontWeight={800} sx={{ color: dimColor, fontSize: 13, display: 'flex', alignItems: 'center', gap: 0.8 }}>
+          <AssignmentRoundedIcon sx={{ fontSize: 16 }} />
+          Detalles de la Evaluación
+        </Typography>
+
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<EditRoundedIcon sx={{ fontSize: 15 }} />}
+          onClick={() => router.push(`/dashboard/docente/notas/${ev.asignacion_docente_id}-${ev.periodo_evaluacion_id}/nueva?evaluacionId=${ev.id}`)}
+          sx={{
+            borderRadius: '9px',
+            textTransform: 'none',
+            fontWeight: 800,
+            fontSize: 12,
+            py: 0.6, px: 2,
+            background: gradBg,
+            color: isDark ? '#000' : '#fff',
+            boxShadow: 'none',
+            transition: 'all 0.15s ease',
+            '&:hover': {
+              opacity: 0.9,
+              transform: 'translateY(-1px)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            }
+          }}
+        >
+          Editar práctica completa
+        </Button>
+      </Box>
+
       {/* Info básica */}
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: 2.5 }}>
         {tipo && (
           <Box sx={rowSx}>
             <Typography sx={lblSx}><InfoOutlinedIcon sx={{ fontSize: 12 }} />Tipo</Typography>
@@ -137,7 +203,7 @@ const DetallePanel: React.FC<{
             <Typography sx={{ ...valSx, color: '#f59e0b', fontWeight: 600 }}>{fechaLimite}</Typography>
           </Box>
         )}
-        <Box sx={{ ...rowSx, borderBottom: 'none' }}>
+        <Box sx={rowSx}>
           <Typography sx={lblSx}><InfoOutlinedIcon sx={{ fontSize: 12 }} />Visible a padres</Typography>
           <Chip
             label={ev.visible_para_padres ? '✓ Publicada' : '✗ No publicada'} size="small"
@@ -149,8 +215,141 @@ const DetallePanel: React.FC<{
             }}
           />
         </Box>
+        <Box sx={{ ...rowSx, borderBottom: 'none', alignItems: 'center' }}>
+          <Typography sx={lblSx}><ComputerRoundedIcon sx={{ fontSize: 12 }} />Modalidad</Typography>
+          <Chip
+            icon={esVirtual ? <ComputerRoundedIcon sx={{ fontSize: '13px !important' }} /> : undefined}
+            label={esVirtual ? '🌐 Virtual (Examen en línea)' : '📝 Presencial'}
+            size="small"
+            sx={{
+              fontSize: 11,
+              height: 24,
+              fontWeight: 800,
+              bgcolor: esVirtual ? alpha('#10b981', 0.16) : isDark ? alpha('#fff', 0.08) : '#f3f4f6',
+              color: esVirtual ? '#10b981' : 'text.secondary',
+              border: `1.5px solid ${esVirtual ? alpha('#10b981', 0.4) : isDark ? alpha('#fff', 0.12) : alpha('#000', 0.1)}`,
+            }}
+          />
+        </Box>
       </Box>
 
+      {/* ── Si la modalidad es Virtual: Tarjeta de Resumen con Acciones Claras ── */}
+      {esVirtual && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.2,
+            mb: 3,
+            borderRadius: '14px',
+            border: `1.5px solid ${alpha('#10b981', 0.35)}`,
+            background: isDark
+              ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 78, 59, 0.15) 100%)'
+              : 'linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, #f0fdf4 100%)',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, mb: 1.8 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+              <Box sx={{
+                width: 40, height: 40, borderRadius: '10px',
+                bgcolor: alpha('#10b981', isDark ? 0.25 : 0.15),
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#10b981',
+              }}>
+                <ComputerRoundedIcon sx={{ fontSize: 24 }} />
+              </Box>
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="subtitle2" fontWeight={800} sx={{ fontSize: 14 }}>
+                    Examen Virtual
+                  </Typography>
+                  <Chip
+                    label="Virtual Activo"
+                    size="small"
+                    sx={{
+                      fontSize: 10, height: 20, fontWeight: 800,
+                      bgcolor: alpha('#10b981', 0.2), color: '#10b981',
+                      border: `1px solid ${alpha('#10b981', 0.4)}`,
+                    }}
+                  />
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  Las preguntas y ponderaciones se gestionan desde el editor completo
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<EditRoundedIcon sx={{ fontSize: 16 }} />}
+                onClick={() => router.push(`/dashboard/docente/notas/${ev.asignacion_docente_id}-${ev.periodo_evaluacion_id}/nueva?evaluacionId=${ev.id}`)}
+                sx={{
+                  borderRadius: '9px',
+                  textTransform: 'none',
+                  fontWeight: 800,
+                  fontSize: 12,
+                  py: 0.6,
+                  px: 2,
+                  background: gradBg,
+                  color: isDark ? '#000' : '#fff',
+                  boxShadow: 'none',
+                  transition: 'all 0.15s ease',
+                  '&:hover': { opacity: 0.9, transform: 'translateY(-1px)' },
+                }}
+              >
+                Editar práctica y banco de preguntas
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Grilla de parámetros */}
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
+            gap: 1.2,
+            pt: 1.4,
+            borderTop: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
+          }}>
+            <Box sx={{ p: 1.2, borderRadius: '8px', bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02) }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: 10, fontWeight: 700 }}>
+                <AccessTimeRoundedIcon sx={{ fontSize: 13, color: '#10b981' }} /> DURACIÓN
+              </Typography>
+              <Typography variant="body2" fontWeight={700} sx={{ mt: 0.4, fontSize: 13 }}>
+                {ev.duracion_minutos ? `${ev.duracion_minutos} minutos` : 'Sin límite de tiempo'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ p: 1.2, borderRadius: '8px', bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02) }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: 10, fontWeight: 700 }}>
+                <CheckCircleOutlineRoundedIcon sx={{ fontSize: 13, color: '#10b981' }} /> INTENTOS
+              </Typography>
+              <Typography variant="body2" fontWeight={700} sx={{ mt: 0.4, fontSize: 13 }}>
+                {ev.intentos_permitidos ? `${ev.intentos_permitidos} intento(s)` : '1 intento permitido'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ p: 1.2, borderRadius: '8px', bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02) }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: 10, fontWeight: 700 }}>
+                <ShuffleRoundedIcon sx={{ fontSize: 13, color: '#10b981' }} /> ORDEN PREGUNTAS
+              </Typography>
+              <Typography variant="body2" fontWeight={700} sx={{ mt: 0.4, fontSize: 13 }}>
+                {ev.orden_aleatorio ? 'Aleatorio (barajadas)' : 'Secuencial original'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ p: 1.2, borderRadius: '8px', bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02) }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: 10, fontWeight: 700 }}>
+                <CalendarTodayRoundedIcon sx={{ fontSize: 13, color: '#10b981' }} /> PERÍODO ACTIVO
+              </Typography>
+              <Typography variant="body2" fontWeight={700} sx={{ mt: 0.4, fontSize: 12 }} noWrap>
+                {fechaInicioVirtual ? `${fechaInicioVirtual.slice(0, 12)}` : 'Abierto'}
+                {fechaFinVirtual ? ` → ${fechaFinVirtual.slice(0, 12)}` : ''}
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
+      )}
       {/* Descripción */}
       {ev.descripcion && (
         <Box sx={{ mb: 2 }}>
@@ -302,10 +501,11 @@ const EvaluacionCard: React.FC<{
   dimColor: string;
   dimBg: string;
   isDark: boolean;
-  onEliminar: (id: number) => void;
+  onEliminar: (ev: Evaluacion) => void;
   onPublicar: (id: number) => void;
   onDespublicar: (id: number) => void;
 }> = ({ ev, index, dimColor, dimBg, isDark, onEliminar, onPublicar, onDespublicar }) => {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const tipo = TIPOS_EVALUACION.find(t => t.value === ev.tipo);
 
@@ -361,6 +561,22 @@ const EvaluacionCard: React.FC<{
               <Chip label={`${tipo.icon} ${tipo.label}`} size="small"
                 sx={{ fontSize: 10, height: 17, bgcolor: isDark ? alpha('#fff', 0.07) : '#f3f4f6' }} />
             )}
+            {ev.modalidad === 'virtual' && (
+              <Chip
+                icon={<ComputerRoundedIcon sx={{ fontSize: '11px !important' }} />}
+                label="Virtual"
+                size="small"
+                sx={{ fontSize: 10, height: 17, bgcolor: alpha('#10b981', 0.15), color: '#10b981', fontWeight: 800 }}
+              />
+            )}
+            {ev.permite_entrega_archivo && (
+              <Chip
+                icon={<CloudUploadRoundedIcon sx={{ fontSize: '11px !important' }} />}
+                label="Entrega en plataforma"
+                size="small"
+                sx={{ fontSize: 10, height: 17, bgcolor: alpha('#3b82f6', 0.15), color: '#3b82f6', fontWeight: 800 }}
+              />
+            )}
             <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10, fontWeight: 600 }}>
               {ev.puntaje_maximo} pts
             </Typography>
@@ -386,43 +602,100 @@ const EvaluacionCard: React.FC<{
         </Box>
 
         {/* Acciones inline */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-          <Tooltip title={ev.visible_para_padres ? 'Ocultar a padres' : 'Publicar a padres'}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+          {/* Publicar / Ocultar a padres */}
+          <Tooltip title={ev.visible_para_padres ? 'Visible a padres (clic para ocultar)' : 'Oculto a padres (clic para publicar)'}>
             <Box
+              component="button"
+              type="button"
               onClick={() => ev.visible_para_padres ? onDespublicar(ev.id) : onPublicar(ev.id)}
               sx={{
-                width: 28, height: 28, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 32, borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
-                bgcolor: ev.visible_para_padres ? alpha('#16a34a', 0.12) : 'transparent',
-                color: ev.visible_para_padres ? '#16a34a' : isDark ? alpha('#fff', 0.25) : '#d1d5db',
-                border: `1px solid ${ev.visible_para_padres ? alpha('#16a34a', 0.3) : 'transparent'}`,
-                transition: 'all 0.15s',
-                '&:hover': { color: '#16a34a', bgcolor: alpha('#16a34a', 0.08) },
+                bgcolor: ev.visible_para_padres
+                  ? alpha('#16a34a', isDark ? 0.22 : 0.12)
+                  : isDark ? alpha('#fff', 0.07) : alpha('#000', 0.05),
+                color: ev.visible_para_padres ? '#22c55e' : isDark ? 'rgba(255,255,255,0.7)' : '#64748b',
+                border: `1.5px solid ${ev.visible_para_padres ? alpha('#22c55e', 0.4) : isDark ? alpha('#fff', 0.15) : alpha('#000', 0.12)}`,
+                transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  color: '#22c55e',
+                  bgcolor: alpha('#22c55e', 0.2),
+                  borderColor: '#22c55e',
+                  transform: 'scale(1.06)',
+                },
               }}
             >
               {ev.visible_para_padres
-                ? <VisibilityIcon sx={{ fontSize: 14 }} />
-                : <VisibilityOffIcon sx={{ fontSize: 14 }} />}
+                ? <VisibilityIcon sx={{ fontSize: 16 }} />
+                : <VisibilityOffIcon sx={{ fontSize: 16 }} />}
             </Box>
           </Tooltip>
-          <Tooltip title="Eliminar evaluación">
+
+          {/* Editar práctica completa */}
+          <Tooltip title="Editar práctica completa y preguntas">
             <Box
-              onClick={() => onEliminar(ev.id)}
+              component="button"
+              type="button"
+              onClick={() => router.push(`/dashboard/docente/notas/${ev.asignacion_docente_id}-${ev.periodo_evaluacion_id}/nueva?evaluacionId=${ev.id}`)}
               sx={{
-                width: 28, height: 28, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 32, borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
-                color: isDark ? alpha('#fff', 0.2) : '#d1d5db',
-                transition: 'all 0.15s',
-                '&:hover': { color: '#dc2626', bgcolor: alpha('#dc2626', 0.08) },
+                bgcolor: isDark ? alpha('#3b82f6', 0.16) : alpha('#3b82f6', 0.08),
+                color: isDark ? '#60a5fa' : '#2563eb',
+                border: `1.5px solid ${alpha('#3b82f6', isDark ? 0.38 : 0.28)}`,
+                transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  color: '#fff',
+                  bgcolor: '#2563eb',
+                  borderColor: '#2563eb',
+                  transform: 'scale(1.06)',
+                },
               }}
             >
-              <DeleteRoundedIcon sx={{ fontSize: 14 }} />
+              <EditRoundedIcon sx={{ fontSize: 16 }} />
             </Box>
           </Tooltip>
-          <Box sx={{ color: open ? dimColor : 'text.disabled', transition: 'color 0.18s', display: 'flex' }}>
+
+          {/* Eliminar evaluación */}
+          <Tooltip title="Eliminar evaluación">
+            <Box
+              component="button"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEliminar(ev);
+              }}
+              sx={{
+                width: 32, height: 32, borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+                bgcolor: isDark ? alpha('#ef4444', 0.16) : alpha('#ef4444', 0.08),
+                color: isDark ? '#f87171' : '#dc2626',
+                border: `1.5px solid ${alpha('#ef4444', isDark ? 0.38 : 0.28)}`,
+                transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  color: '#fff',
+                  bgcolor: '#dc2626',
+                  borderColor: '#dc2626',
+                  transform: 'scale(1.06)',
+                },
+              }}
+            >
+              <DeleteRoundedIcon sx={{ fontSize: 16 }} />
+            </Box>
+          </Tooltip>
+
+          {/* Desplegar / Plegar */}
+          <Box sx={{
+            width: 32, height: 32, borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            bgcolor: open ? alpha(dimColor, 0.18) : isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04),
+            border: `1.5px solid ${open ? alpha(dimColor, 0.45) : isDark ? alpha('#fff', 0.12) : alpha('#000', 0.08)}`,
+            color: open ? dimColor : isDark ? 'rgba(255,255,255,0.75)' : 'text.primary',
+            transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}>
             {open
-              ? <KeyboardArrowUpRoundedIcon sx={{ fontSize: 18 }} />
-              : <KeyboardArrowDownRoundedIcon sx={{ fontSize: 18 }} />}
+              ? <KeyboardArrowUpRoundedIcon sx={{ fontSize: 20 }} />
+              : <KeyboardArrowDownRoundedIcon sx={{ fontSize: 20 }} />}
           </Box>
         </Box>
       </Box>
@@ -453,8 +726,9 @@ export default function DocenteNotasDetailPage() {
     m => m.asignacion_id === asignacionId && m.periodo_evaluacion_id === periodoId
   );
 
+  const { dimensionesConfig, dimensionesOrden } = useDimensiones();
   const [dimTab, setDimTab] = useState(0);
-  const dimensionActiva: CodigoDimension = DIMENSIONES_ORDEN[dimTab];
+  const dimensionActiva: CodigoDimension = dimensionesOrden[dimTab] || 'SER';
 
   const {
     porDimension, isLoading: loadingEv,
@@ -465,7 +739,11 @@ export default function DocenteNotasDetailPage() {
   });
 
   const evaluacionesDim: Evaluacion[] = porDimension[dimensionActiva] ?? [];
-  const cfg = DIMENSIONES_CONFIG[dimensionActiva];
+  const cfg = dimensionesConfig[dimensionActiva] || DIMENSIONES_CONFIG[dimensionActiva];
+
+  const [dlgEliminar, setDlgEliminar] = useState<Evaluacion | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+  const bgModal = isDark ? '#09101d' : '#ffffff';
 
   const handlePublicar = async (id: number) => {
     try { await adjuntosService.publicar(id); toast.success('Publicada'); refrescar(); }
@@ -475,8 +753,20 @@ export default function DocenteNotasDetailPage() {
     try { await adjuntosService.despublicar(id); toast.success('Ocultada'); refrescar(); }
     catch (e: any) { toast.error(e.response?.data?.message || 'Error'); }
   };
-  const handleEliminar = async (id: number) => {
-    await eliminarEv(id);
+  const handleEliminarClick = (ev: Evaluacion) => {
+    setDlgEliminar(ev);
+  };
+  const handleConfirmarEliminar = async () => {
+    if (!dlgEliminar) return;
+    setEliminando(true);
+    try {
+      const ok = await eliminarEv(dlgEliminar.id);
+      if (ok) {
+        setDlgEliminar(null);
+      }
+    } finally {
+      setEliminando(false);
+    }
   };
 
   useEffect(() => {
@@ -491,6 +781,23 @@ export default function DocenteNotasDetailPage() {
           <LinearProgress sx={{ borderRadius: 4, height: 4 }} />
         </Container>
       </Box>
+    );
+  }
+
+  const esInicial =
+    seleccionada.modalidad_evaluacion === 'cualitativa' ||
+    seleccionada.nivel_nombre?.toLowerCase().includes('inicial');
+
+  if (esInicial) {
+    return (
+      <PanelTareasInicial
+        materia={seleccionada}
+        asignacionId={asignacionId}
+        periodoId={periodoId}
+        paraleloId={seleccionada.paralelo_id}
+        gradoId={seleccionada.grado_id}
+        onVolver={() => router.push('/dashboard/docente/notas')}
+      />
     );
   }
 
@@ -536,7 +843,7 @@ export default function DocenteNotasDetailPage() {
               {/* Botón nueva evaluación */}
               <Box
                 component="button"
-                onClick={() => router.push(`/dashboard/docente/notas/${asignacionId}-${periodoId}/nueva`)}
+                onClick={() => router.push(`/dashboard/docente/notas/${asignacionId}-${periodoId}/nueva?dimension=${dimensionActiva}`)}
                 sx={{
                   display: 'flex', alignItems: 'center', gap: 0.8,
                   px: 2, py: 1, borderRadius: '12px', border: 'none',
@@ -590,8 +897,8 @@ export default function DocenteNotasDetailPage() {
                   backgroundColor: isDark ? '#000' : '#fff', height: 3, borderRadius: '3px 3px 0 0',
                 },
               }}>
-              {DIMENSIONES_ORDEN.map(k => {
-                const c = DIMENSIONES_CONFIG[k];
+              {dimensionesOrden.map(k => {
+                const c = dimensionesConfig[k] || DIMENSIONES_CONFIG[k];
                 const count = (porDimension[k] ?? []).length;
                 return (
                   <Tab key={k} label={
@@ -693,7 +1000,7 @@ export default function DocenteNotasDetailPage() {
                     ev={ev} index={i}
                     dimColor={cfg.color} dimBg={cfg.bgColor}
                     isDark={isDark}
-                    onEliminar={handleEliminar}
+                    onEliminar={handleEliminarClick}
                     onPublicar={handlePublicar}
                     onDespublicar={handleDespublicar}
                   />
@@ -704,6 +1011,140 @@ export default function DocenteNotasDetailPage() {
         </Fade>
 
       </Container>
+
+      {/* ══ DIALOG: CONFIRMAR ELIMINAR EVALUACIÓN (Idéntico a Temario) ══ */}
+      <Dialog
+        open={!!dlgEliminar}
+        onClose={() => !eliminando && setDlgEliminar(null)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '20px !important',
+            overflow: 'hidden',
+            background: bgModal,
+            border: `1.5px solid ${alpha('#dc2626', 0.35)}`,
+            boxShadow: isDark
+              ? '0 0 0 1px rgba(220,38,38,0.08), 0 32px 64px rgba(0,0,0,0.8)'
+              : '0 32px 64px rgba(0,0,0,0.2)',
+          },
+        }}
+      >
+        {/* Header */}
+        <Box sx={{
+          px: 3, pt: 2.5, pb: 2,
+          borderBottom: `1px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.07)}`,
+          background: isDark ? 'rgba(220,38,38,0.12)' : 'rgba(220,38,38,0.06)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{
+              width: 42, height: 42, borderRadius: '13px', flexShrink: 0,
+              background: alpha('#dc2626', 0.15),
+              border: `1.5px solid ${alpha('#dc2626', 0.35)}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <DeleteForeverRoundedIcon sx={{ color: '#dc2626', fontSize: 24 }} />
+            </Box>
+            <Box>
+              <Typography sx={{
+                fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em',
+                textTransform: 'uppercase', color: '#dc2626', mb: 0.2,
+              }}>
+                GESTIÓN DE TAREAS · ELIMINAR
+              </Typography>
+              <Typography sx={{ fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.15, color: 'text.primary' }}>
+                ¿Eliminar esta tarea?
+              </Typography>
+            </Box>
+          </Box>
+          <Box
+            onClick={() => !eliminando && setDlgEliminar(null)}
+            sx={{
+              width: 30, height: 30, borderRadius: '8px', cursor: eliminando ? 'default' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'text.secondary',
+              '&:hover': eliminando ? {} : { color: '#dc2626', bgcolor: alpha('#dc2626', 0.08) },
+            }}
+          >
+            <CloseRoundedIcon sx={{ fontSize: 16 }} />
+          </Box>
+        </Box>
+
+        {/* Body */}
+        <DialogContent sx={{ px: 3, py: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* Nombre de la tarea destacado */}
+          <Box sx={{
+            p: 2, borderRadius: '12px',
+            bgcolor: isDark ? alpha('#dc2626', 0.08) : alpha('#dc2626', 0.04),
+            border: `1px solid ${alpha('#dc2626', 0.2)}`,
+            display: 'flex', alignItems: 'center', gap: 1.5,
+          }}>
+            <AssignmentRoundedIcon sx={{ color: '#dc2626', fontSize: 22, flexShrink: 0, opacity: 0.85 }} />
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography sx={{ fontSize: '0.88rem', fontWeight: 700, color: 'text.primary', lineHeight: 1.4 }} noWrap>
+                {dlgEliminar?.nombre}
+              </Typography>
+              <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', mt: 0.2 }}>
+                {dlgEliminar?.tipo ? (TIPOS_EVALUACION.find(t => t.value === dlgEliminar.tipo)?.label ?? dlgEliminar.tipo) : 'Evaluación'} · {dlgEliminar?.puntaje_maximo ?? 100} pts · Dimensión {dlgEliminar?.dimension_codigo || dimensionActiva}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Mensaje de impacto */}
+          <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary', lineHeight: 1.7 }}>
+            Al eliminar esta tarea se removerá permanentemente junto con las calificaciones, archivos adjuntos y entregas registradas por los estudiantes.
+          </Typography>
+
+          {/* Warning box */}
+          <Box sx={{
+            display: 'flex', alignItems: 'flex-start', gap: 1.2,
+            p: 1.6, borderRadius: '10px',
+            bgcolor: isDark ? alpha('#f59e0b', 0.08) : alpha('#f59e0b', 0.06),
+            border: `1px solid ${alpha('#f59e0b', 0.3)}`,
+          }}>
+            <Typography sx={{ fontSize: '0.9rem', flexShrink: 0, mt: 0.1 }}>⚠️</Typography>
+            <Typography sx={{ fontSize: '0.76rem', color: isDark ? '#fcd34d' : '#92400e', lineHeight: 1.5 }}>
+              Esta acción <strong>no se puede deshacer</strong>. Las notas asociadas a esta tarea en el trimestre serán eliminadas.
+            </Typography>
+          </Box>
+        </DialogContent>
+
+        {/* Footer */}
+        <DialogActions sx={{
+          px: 3, py: 2,
+          borderTop: `1px solid ${isDark ? alpha('#fff', 0.07) : alpha('#000', 0.07)}`,
+          gap: 1,
+        }}>
+          <Button
+            onClick={() => setDlgEliminar(null)}
+            variant="outlined"
+            disabled={eliminando}
+            sx={{
+              borderRadius: '10px', textTransform: 'none', fontWeight: 600, fontSize: '0.82rem',
+              borderColor: isDark ? alpha('#fff', 0.15) : alpha('#000', 0.15),
+              color: 'text.secondary',
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmarEliminar}
+            variant="contained"
+            disabled={eliminando}
+            startIcon={eliminando ? <CircularProgress size={14} color="inherit" /> : <DeleteForeverRoundedIcon sx={{ fontSize: 17 }} />}
+            sx={{
+              borderRadius: '10px', textTransform: 'none', fontWeight: 700, fontSize: '0.82rem',
+              bgcolor: '#dc2626',
+              '&:hover': { bgcolor: '#b91c1c' },
+              boxShadow: '0 4px 14px rgba(220,38,38,0.35)',
+              px: 2.5,
+            }}
+          >
+            {eliminando ? 'Eliminando…' : 'Sí, eliminar tarea'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -1,5 +1,6 @@
 // hooks/useNotificaciones.ts
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { notificacionService, bandejaService } from '@/services/notificacionService';
 import {
@@ -177,7 +178,7 @@ export const useNotificacionDetalle = (id: number | null) => {
 // Usado por TODOS los roles (docente, padre, estudiante, etc.)
 // =============================================
 
-export const useBandeja = () => {
+export const useBandeja = (autoLoad = true) => {
   const [notificaciones, setNotificaciones] = useState<NotificacionBandeja[]>([]);
   const [noLeidas, setNoLeidas]             = useState(0);
   const [isLoading, setIsLoading]           = useState(false);
@@ -209,7 +210,11 @@ export const useBandeja = () => {
     }
   }, [page]);
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => {
+    if (autoLoad) {
+      cargar();
+    }
+  }, [autoLoad]);
 
   const marcarLeido = useCallback(async (notificacion_id: number) => {
     try {
@@ -255,24 +260,26 @@ export const useBandeja = () => {
 
 // =============================================
 // HOOK: CONTADOR NO LEÍDAS (para el ícono campana en navbar)
-// Hace polling cada 60 segundos
+// Con React Query para deduplicación automática y caché
 // =============================================
 
 export const useContadorNoLeidas = () => {
-  const [count, setCount] = useState(0);
+  const { data, refetch } = useQuery({
+    queryKey: ['notificaciones-contador-no-leidas'],
+    queryFn: async () => {
+      try {
+        const res = await bandejaService.obtener({ solo_no_leidas: true, limit: 1 });
+        return res.data?.no_leidas ?? 0;
+      } catch {
+        return 0;
+      }
+    },
+    staleTime: 1000 * 60 * 2, // 2 min en caché
+    refetchInterval: 300_000, // actualización cada 5 minutos
+  });
 
-  const fetchCount = useCallback(async () => {
-    try {
-      const res = await bandejaService.obtener({ solo_no_leidas: true, limit: 1 });
-      setCount(res.data.no_leidas);
-    } catch { /* silencioso */ }
-  }, []);
-
-  useEffect(() => {
-    fetchCount();
-    const interval = setInterval(fetchCount, 300_000); // cada 5 minutos
-    return () => clearInterval(interval);
-  }, [fetchCount]);
-
-  return { count, refrescar: fetchCount };
+  return {
+    count: data ?? 0,
+    refrescar: () => refetch(),
+  };
 };

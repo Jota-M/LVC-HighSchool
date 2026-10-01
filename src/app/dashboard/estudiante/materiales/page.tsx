@@ -2,7 +2,7 @@
 // app/dashboard/estudiante/materiales/page.tsx
 
 import { useAuth } from '@/context/AuthContext';
-import { Box, CircularProgress } from '@mui/material';
+import { Box, CircularProgress, Container } from '@mui/material';
 import MateriasSelector from '@/components/estudiante/materiales/MateriasSelector';
 
 export default function EstudianteMaterialesPage() {
@@ -16,5 +16,11 @@ export default function EstudianteMaterialesPage() {
     );
   }
 
-  return <MateriasSelector user={user} />;
+  return (
+    <Box sx={{ minHeight: '100vh', py: { xs: 2.5, sm: 4 } }}>
+      <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 3 } }}>
+        <MateriasSelector user={user} />
+      </Container>
+    </Box>
+  );
 }

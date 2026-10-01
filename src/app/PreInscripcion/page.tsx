@@ -283,6 +283,30 @@ function Header() {
           >
             Ver Cupos Disponibles
           </Button>
+
+          <Button
+            variant="contained"
+            color="success"
+            size="small"
+            startIcon={<CheckCircleIcon />}
+            href="/reserva-cupo"
+            sx={{
+              fontWeight: "bold",
+              fontSize: { xs: "0.5rem", md: "0.75rem" },
+              px: 4,
+              py: 1.5,
+              borderRadius: "50px",
+              boxShadow: "0 8px 25px rgba(22, 163, 74, 0.4)",
+              background: "linear-gradient(135deg, #15803d, #16a34a)",
+              "&:hover": {
+                transform: "translateY(-3px) scale(1.05)",
+                boxShadow: "0 12px 35px rgba(22, 163, 74, 0.5)",
+              },
+              transition: "all 0.3s ease",
+            }}
+          >
+            Reserva de Cupo (Regulares)
+          </Button>
         </Box>
 
         {/* Stats mejorados con contador animado */}

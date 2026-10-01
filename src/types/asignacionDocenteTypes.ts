@@ -26,12 +26,15 @@ export interface AsignacionDocente {
   docente_email?: string;
   docente_telefono?: string;
   especialidad?: string;
+  docente_especialidad?: string;
   
+  materia_id?: number;
   materia_nombre?: string;
   materia_codigo?: string;
   materia_color?: string;
   horas_semanales?: number;
   
+  grado_id?: number;
   grado_nombre?: string;
   nivel_nombre?: string;
   paralelo_nombre?: string;
@@ -162,6 +165,7 @@ export interface AsignacionesFiltros {
   paralelo_id?: number;
   periodo_academico_id?: number;
   activo?: boolean;
+  search?: string;
 }
 
 // ============================================

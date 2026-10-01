@@ -49,6 +49,7 @@ export const asignacionesDocenteService = {
     if (filters.periodo_academico_id)
       params.append('periodo_academico_id', filters.periodo_academico_id.toString());
     if (filters.activo !== undefined) params.append('activo', filters.activo.toString());
+    if (filters.search) params.append('search', filters.search);
 
     const response = await api.get(`/asignacion-docente?${params}`);
     return response.data;
@@ -185,6 +186,26 @@ export const datosAcademicosService = {
     } catch (error: any) {
       console.error('❌ Error al obtener materias:', error.response?.data || error);
       throw new Error(error.response?.data?.message || 'Error al obtener materias');
+    }
+  },
+
+  async obtenerTodosLosParalelos(anio?: number, activo: boolean = true): Promise<Paralelo[]> {
+    try {
+      const params = new URLSearchParams();
+      if (anio) params.append('anio', anio.toString());
+      if (activo !== undefined) params.append('activo', activo.toString());
+
+      const response = await api.get(`/paralelo?${params}`);
+
+      if (response.data.data?.paralelos) return response.data.data.paralelos;
+      if (response.data.data && Array.isArray(response.data.data)) return response.data.data;
+      if (response.data.paralelos) return response.data.paralelos;
+      if (Array.isArray(response.data)) return response.data;
+
+      return [];
+    } catch (error: any) {
+      console.error('❌ Error al obtener todos los paralelos:', error.response?.data || error);
+      return [];
     }
   },
 

@@ -49,6 +49,7 @@ export interface PerfilEstudiante {
   tiene_discapacidad:  boolean;
   tipo_discapacidad?:  string | null;
   matricula_id:        number;
+  paralelo_id?:        number;
   numero_matricula:    string;
   estado_matricula:    string;
   es_repitente:        boolean;
@@ -69,6 +70,8 @@ export interface PerfilEstudiante {
 export interface MateriaResumen {
   asignacion_docente_id: number;
   grado_materia_id:      number;
+  grado_id:              number;
+  nivel_nombre:          string;
   materia_id:            number;
   materia_codigo:        string;
   materia_nombre:        string;
@@ -262,6 +265,7 @@ export interface BloqueHorario {
   docente_foto?:    string | null;
   aula?:            string | null;
   celda_color?:     string | null;
+  etiqueta_personalizada?: string | null;
 }
 
 export interface DiaHorario {
@@ -291,6 +295,7 @@ export interface TareaEstudiante {
   instrucciones?:       string | null;
   foto_url?:            string | null;
   pdf_url?:             string | null;
+  pdf_nombre?:          string | null;
   fecha_evaluacion?:    string | null;
   fecha_limite?:        string | null;
   puntaje_maximo:       number;
@@ -315,6 +320,18 @@ export interface TareaEstudiante {
   nota_sobre_100?:      number | null;
   estado_calculado:     EstadoTarea;
   dias_restantes?:      number | null;
+  modalidad?:           'presencial' | 'virtual';
+  duracion_minutos?:    number | null;
+  fecha_hora_inicio?:   string | null;
+  fecha_hora_fin?:      string | null;
+  intentos_permitidos?: number | null;
+  permite_entrega_archivo?: boolean;
+  entrega_id?:             number | null;
+  entrega_archivo_url?:     string | null;
+  entrega_archivo_nombre?:  string | null;
+  entrega_archivos?:        Array<{ url: string; public_id?: string; nombre?: string; tipo?: string; tamano?: number }> | null;
+  entrega_fecha?:           string | null;
+  entrega_comentario?:      string | null;
 }
 
 export interface ResumenTareas {

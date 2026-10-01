@@ -26,6 +26,7 @@ import { keyframes } from '@mui/system';
 
 import { ObservacionHijo } from '@/types/seguimientoPadreTypes';
 import { getNivelRelevancia } from '@/types/seguimientoPedagogicoTypes';
+import { formatDateLong, formatDateShort } from '@/utils/dateUtils';
 
 const slideIn = keyframes`
   from { opacity: 0; transform: translateY(10px); }
@@ -63,19 +64,11 @@ const ObservacionCardPadre: React.FC<ObservacionCardPadreProps> = ({
       ? WarningIcon
       : InfoIcon;
 
-  const fechaOcurrencia = new Date(obs.fecha_ocurrencia + 'T12:00:00').toLocaleDateString('es-BO', {
-    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
-  });
+  const fechaOcurrencia = formatDateLong(obs.fecha_ocurrencia);
 
-  const fechaPublicacion = new Date(obs.fecha_publicacion).toLocaleDateString('es-BO', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  });
+  const fechaPublicacion = formatDateShort(obs.fecha_publicacion);
 
-  const fechaLectura = obs.fecha_lectura
-    ? new Date(obs.fecha_lectura).toLocaleDateString('es-BO', {
-      day: '2-digit', month: 'short', year: 'numeric',
-    })
-    : null;
+  const fechaLectura = obs.fecha_lectura ? formatDateShort(obs.fecha_lectura) : null;
 
   const handleAcusar = async () => {
     const ok = await onAcusar(obs.id, comentario.trim() || undefined);

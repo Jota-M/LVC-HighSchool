@@ -4,7 +4,9 @@ import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Tooltip, IconButton,
   Chip, alpha, useTheme, CircularProgress,
-  ButtonBase,
+  ButtonBase, Dialog, DialogTitle, DialogContent,
+  DialogActions, Button, FormGroup, FormControlLabel,
+  Checkbox, Divider,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -13,9 +15,15 @@ import {
   Coffee as RecresoIcon,
   EditNote as DraftIcon,
   Lock as LockIcon,
+  ContentCopy as CopyIcon,
+  CleaningServices as EraserIcon,
+  AutoFixHigh as PaintIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
-import { DIAS_SEMANA, BloqueHorario, HorarioDetalle, HorarioEstado } from '@/types/horariotypes';
+import { DIAS_SEMANA, BloqueHorario, HorarioDetalle, HorarioEstado, GradoMateria } from '@/types/horariotypes';
 import { CeldaModal } from './CeldaModal';
+import { QuickPalette } from './QuickPalette';
+import { useGradoMaterias, useAsignaciones, useHorarioCeldas } from '@/hooks/useHorario';
 
 interface CeldaTarget {
   dia_semana: number;
@@ -48,20 +56,31 @@ export const HorarioGrid: React.FC<Props> = ({
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const [modalTarget, setModalTarget] = useState<CeldaTarget | null>(null);
   const readonly = estado === 'archivado';
-
   const accentColor = isDark ? '#facc15' : '#0288d1';
 
-  // Fondo del contenedor principal — transparente, hereda del Paper padre (#11131f)
+  // Modal target para edición detallada
+  const [modalTarget, setModalTarget] = useState<CeldaTarget | null>(null);
+
+  // Paleta de asignación rápida (Modo Pincel)
+  const [selectedMateria, setSelectedMateria] = useState<GradoMateria | 'eraser' | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [isPaintMode, setIsPaintMode] = useState<boolean>(true);
+
+  // Modal de clonación de día
+  const [cloneModalOrigin, setCloneModalOrigin] = useState<number | null>(null);
+  const [cloneDestinos, setCloneDestinos] = useState<number[]>([]);
+
+  // Datos auxiliares y mutaciones
+  const { gradoMaterias } = useGradoMaterias(gradoId);
+  const { asignaciones } = useAsignaciones(paraleloId, periodoId);
+  const { agregar, actualizar, eliminar, clonarDia, isBusy } = useHorarioCeldas(horarioId);
+
+  // Fondos y bordes
   const gridBg = 'transparent';
-  // Fondo del header de días
   const headerBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
-  // Borde de la tabla
   const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
-  // Fondo columna de hora
   const timeBg = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
-  // Fondo recreo
   const recreoBg = isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)';
 
   const celdaMap = useMemo(() => {
@@ -70,9 +89,46 @@ export const HorarioGrid: React.FC<Props> = ({
     return map;
   }, [celdas]);
 
-  const handleCellClick = (dia: number, bloque: BloqueHorario) => {
+  // Manejo del clic en celda
+  const handleCellClick = async (dia: number, bloque: BloqueHorario) => {
     if (bloque.es_recreo || readonly) return;
     const existing = celdaMap[`${dia}-${bloque.id}`];
+
+    // Modo Pincel activo con herramienta seleccionada
+    if (isPaintMode && selectedMateria) {
+      if (selectedMateria === 'eraser') {
+        if (existing) {
+          await eliminar(existing.id);
+        }
+        return;
+      }
+
+      const gm = selectedMateria as GradoMateria;
+      const docenteTitular =
+        asignaciones.find((a) => a.grado_materia_id === gm.id && a.es_titular) ||
+        asignaciones.find((a) => a.grado_materia_id === gm.id);
+
+      const colorFinal = selectedColor || gm.materia_color || undefined;
+
+      const payload = {
+        grado_materia_id: gm.id,
+        asignacion_docente_id: docenteTitular?.id ?? null,
+        color: colorFinal,
+      };
+
+      if (existing) {
+        await actualizar({ detId: existing.id, payload });
+      } else {
+        await agregar({
+          dia_semana: dia,
+          bloque_horario_id: bloque.id,
+          ...payload,
+        });
+      }
+      return;
+    }
+
+    // Modo Detallado: abrir modal
     setModalTarget({
       dia_semana: dia,
       bloque_horario_id: bloque.id,
@@ -81,6 +137,30 @@ export const HorarioGrid: React.FC<Props> = ({
       hora_fin: bloque.hora_fin,
       existing,
     });
+  };
+
+  // Abrir modal de clonación
+  const handleOpenClone = (dia: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCloneModalOrigin(dia);
+    // Por defecto seleccionar los otros días activos
+    setCloneDestinos(diasActivos.filter((d) => d !== dia));
+  };
+
+  const handleConfirmClone = async () => {
+    if (!cloneModalOrigin || cloneDestinos.length === 0) return;
+    await clonarDia({
+      dia_origen: cloneModalOrigin,
+      dias_destino: cloneDestinos,
+      sobrescribir: true,
+    });
+    setCloneModalOrigin(null);
+  };
+
+  const handleToggleDestino = (dia: number) => {
+    setCloneDestinos((prev) =>
+      prev.includes(dia) ? prev.filter((d) => d !== dia) : [...prev, dia]
+    );
   };
 
   if (isLoading) {
@@ -93,20 +173,58 @@ export const HorarioGrid: React.FC<Props> = ({
 
   return (
     <>
+      {/* ── Paleta de Asignación Rápida ── */}
+      {!readonly && (
+        <QuickPalette
+          gradoMaterias={gradoMaterias}
+          asignaciones={asignaciones}
+          celdas={celdas}
+          selectedMateria={selectedMateria}
+          onSelectMateria={(m) => {
+            setSelectedMateria(m);
+            if (m && m !== 'eraser') {
+              setSelectedColor(m.materia_color || null);
+            } else {
+              setSelectedColor(null);
+            }
+          }}
+          selectedColor={selectedColor}
+          onSelectColor={setSelectedColor}
+          isPaintMode={isPaintMode}
+          onTogglePaintMode={setIsPaintMode}
+          readonly={readonly}
+        />
+      )}
+
       {/* ── Banner de estado ── */}
       {estado === 'borrador' && (
         <Box sx={{
           mb: 2, px: 2, py: 1.2, borderRadius: 2,
           bgcolor: isDark ? 'rgba(250,204,21,0.07)' : 'rgba(2,136,209,0.07)',
           border: `1px solid ${isDark ? 'rgba(250,204,21,0.18)' : 'rgba(2,136,209,0.18)'}`,
-          display: 'flex', alignItems: 'center', gap: 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap',
         }}>
-          <DraftIcon sx={{ fontSize: 15, color: accentColor }} />
-          <Typography variant="caption" sx={{ color: accentColor, fontWeight: 600 }}>
-            Modo borrador — Haz clic en cualquier celda para asignar o editar clases
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {isPaintMode && selectedMateria ? (
+              <PaintIcon sx={{ fontSize: 16, color: accentColor }} />
+            ) : (
+              <DraftIcon sx={{ fontSize: 16, color: accentColor }} />
+            )}
+            <Typography variant="caption" sx={{ color: accentColor, fontWeight: 600 }}>
+              {isPaintMode && selectedMateria
+                ? selectedMateria === 'eraser'
+                  ? 'Modo Borrador — Haz clic en celdas para borrarlas al instante'
+                  : `Pintando con "${(selectedMateria as GradoMateria).materia_nombre}" — Toca cualquier celda para asignarla de inmediato`
+                : 'Modo edición — Selecciona una materia arriba para pintar con 1-clic o toca una celda para ver opciones'}
+            </Typography>
+          </Box>
+
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.68rem' }}>
+            💡 Tip: Usa el botón 📋 en la cabecera de cada día para clonar su horario a otros días
           </Typography>
         </Box>
       )}
+
       {estado === 'archivado' && (
         <Box sx={{
           mb: 2, px: 2, py: 1.2, borderRadius: 2,
@@ -140,24 +258,44 @@ export const HorarioGrid: React.FC<Props> = ({
           }}>
             {/* Celda vacía esquina */}
             <Box sx={{ bgcolor: timeBg, borderRight: `0.5px solid ${borderColor}` }} />
-            {diasActivos.map((dia, idx) => (
-              <Box
-                key={dia}
-                sx={{
-                  px: 2, py: 1.2, textAlign: 'center',
-                  bgcolor: headerBg,
-                  borderRight: idx < diasActivos.length - 1 ? `0.5px solid ${borderColor}` : 'none',
-                }}
-              >
-                <Typography
-                  variant="caption"
-                  fontWeight={700}
-                  sx={{ color: accentColor, fontSize: '0.78rem', letterSpacing: 0.3 }}
+            {diasActivos.map((dia, idx) => {
+              const celdasEnEsteDia = celdas.filter((c) => c.dia_semana === dia).length;
+              return (
+                <Box
+                  key={dia}
+                  sx={{
+                    px: 1.5, py: 1, textAlign: 'center',
+                    bgcolor: headerBg,
+                    borderRight: idx < diasActivos.length - 1 ? `0.5px solid ${borderColor}` : 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.8,
+                  }}
                 >
-                  {DIAS_SEMANA[dia]}
-                </Typography>
-              </Box>
-            ))}
+                  <Typography
+                    variant="caption"
+                    fontWeight={700}
+                    sx={{ color: accentColor, fontSize: '0.78rem', letterSpacing: 0.3 }}
+                  >
+                    {DIAS_SEMANA[dia]}
+                  </Typography>
+
+                  {!readonly && celdasEnEsteDia > 0 && (
+                    <Tooltip title={`Copiar horario de ${DIAS_SEMANA[dia]} a otros días`}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleOpenClone(dia, e)}
+                        sx={{
+                          p: 0.3,
+                          color: 'text.secondary',
+                          '&:hover': { color: accentColor, bgcolor: alpha(accentColor, 0.1) },
+                        }}
+                      >
+                        <CopyIcon sx={{ fontSize: 13 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
+              );
+            })}
           </Box>
 
           {/* ── Filas de bloques ── */}
@@ -226,6 +364,8 @@ export const HorarioGrid: React.FC<Props> = ({
                         isDark={isDark}
                         borderColor={borderColor}
                         isLastCol={idx === diasActivos.length - 1}
+                        selectedMateria={isPaintMode ? selectedMateria : null}
+                        selectedColor={selectedColor}
                         onClick={() => handleCellClick(dia, bloque)}
                       />
                     );
@@ -240,7 +380,7 @@ export const HorarioGrid: React.FC<Props> = ({
       {/* ── Stats de completitud ── */}
       <GridStats celdas={celdas} bloques={bloques} diasActivos={diasActivos} accentColor={accentColor} />
 
-      {/* ── Modal de celda ── */}
+      {/* ── Modal de celda detallado ── */}
       <CeldaModal
         open={!!modalTarget}
         onClose={() => setModalTarget(null)}
@@ -249,14 +389,99 @@ export const HorarioGrid: React.FC<Props> = ({
         gradoId={gradoId}
         paraleloId={paraleloId}
         periodoId={periodoId}
+        bloques={bloques}
+        diasActivos={diasActivos}
         readonly={readonly}
       />
+
+      {/* ── Modal de Clonación de Día ── */}
+      <Dialog
+        open={!!cloneModalOrigin}
+        onClose={() => setCloneModalOrigin(null)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            bgcolor: isDark ? '#0f172a' : '#fff',
+            backgroundImage: 'none',
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CopyIcon sx={{ color: accentColor, fontSize: 20 }} />
+            <Typography variant="h6" fontWeight={700} fontSize="1.1rem">
+              Copiar horario de {cloneModalOrigin ? DIAS_SEMANA[cloneModalOrigin] : ''}
+            </Typography>
+          </Box>
+          <IconButton size="small" onClick={() => setCloneModalOrigin(null)}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <Divider />
+        <DialogContent sx={{ pt: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Selecciona los días en los que deseas replicar todas las clases configuradas en{' '}
+            <strong>{cloneModalOrigin ? DIAS_SEMANA[cloneModalOrigin] : ''}</strong>:
+          </Typography>
+
+          <FormGroup>
+            {diasActivos
+              .filter((d) => d !== cloneModalOrigin)
+              .map((dia) => (
+                <FormControlLabel
+                  key={dia}
+                  control={
+                    <Checkbox
+                      checked={cloneDestinos.includes(dia)}
+                      onChange={() => handleToggleDestino(dia)}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" fontWeight={600}>
+                      {DIAS_SEMANA[dia]}
+                    </Typography>
+                  }
+                />
+              ))}
+          </FormGroup>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            onClick={() => setCloneModalOrigin(null)}
+            variant="outlined"
+            size="small"
+            sx={{ borderRadius: '8px', textTransform: 'none' }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmClone}
+            variant="contained"
+            size="small"
+            disabled={cloneDestinos.length === 0 || isBusy}
+            startIcon={<CopyIcon />}
+            sx={{
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 700,
+              bgcolor: accentColor,
+              color: isDark ? '#000' : '#fff',
+              '&:hover': { bgcolor: isDark ? '#f59e0b' : '#01579b' },
+            }}
+          >
+            Copiar a {cloneDestinos.length} día(s)
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
 
 // =============================================
-// Sub: celda individual
+// Sub: celda individual con soporte de hover ghost
 // =============================================
 interface CeldaGridItemProps {
   celda?: HorarioDetalle;
@@ -265,38 +490,79 @@ interface CeldaGridItemProps {
   isDark: boolean;
   borderColor: string;
   isLastCol: boolean;
+  selectedMateria: GradoMateria | 'eraser' | null;
+  selectedColor: string | null;
   onClick: () => void;
 }
 
 const CeldaGridItem: React.FC<CeldaGridItemProps> = ({
-  celda, readonly, accentColor, isDark, borderColor, isLastCol, onClick,
+  celda, readonly, accentColor, isDark, borderColor, isLastCol, selectedMateria, selectedColor, onClick,
 }) => {
   const cellColor = celda?.color || celda?.materia_color || accentColor;
   const borderRight = isLastCol ? 'none' : `0.5px solid ${borderColor}`;
+  const nombreMostrar = celda?.etiqueta_personalizada || celda?.materia_nombre || '';
+
+  const isPaintingSubject = selectedMateria && selectedMateria !== 'eraser';
+  const isPaintingEraser = selectedMateria === 'eraser';
+  const paintColor = selectedColor || (isPaintingSubject ? (selectedMateria as GradoMateria).materia_color || accentColor : '');
+  const paintName = isPaintingSubject ? (selectedMateria as GradoMateria).materia_nombre : '';
 
   /* ── Celda vacía ── */
   if (!celda) {
     return (
       <ButtonBase
-        onClick={readonly ? undefined : onClick}
+        onClick={onClick}
+        disabled={readonly}
         sx={{
           minHeight: 68,
           borderRight,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: readonly ? 'default' : 'pointer',
-          bgcolor: 'transparent',
-          transition: 'background 0.15s',
-          '&:hover': readonly ? {} : {
-            bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(19, 20, 73, 0.03)',
-            '& .add-icon': { opacity: 0.6 },
+          cursor: readonly ? 'default' : isPaintingSubject ? 'crosshair' : 'pointer',
+          position: 'relative',
+          transition: 'all 0.12s',
+          '&:hover': {
+            bgcolor: readonly
+              ? 'transparent'
+              : isPaintingSubject
+                ? alpha(paintColor, 0.15)
+                : isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+            '& .add-icon': { opacity: 1, transform: 'scale(1.15)' },
+            '& .paint-ghost': { opacity: 1 },
           },
         }}
       >
         {!readonly && (
-          <AddIcon
-            className="add-icon"
-            sx={{ fontSize: 18, color: accentColor, opacity: 0.2, transition: 'opacity 0.15s' }}
-          />
+          <>
+            <AddIcon
+              className="add-icon"
+              sx={{
+                fontSize: 16, color: 'text.disabled', opacity: 0.25,
+                transition: 'all 0.15s ease',
+              }}
+            />
+
+            {/* Ghost preview when hovering in paint mode */}
+            {isPaintingSubject && (
+              <Box
+                className="paint-ghost"
+                sx={{
+                  position: 'absolute',
+                  inset: 5,
+                  borderRadius: '6px',
+                  bgcolor: alpha(paintColor, 0.4),
+                  border: `1.5px dashed ${paintColor}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  opacity: 0,
+                  transition: 'opacity 0.12s ease',
+                  pointerEvents: 'none',
+                }}
+              >
+                <Typography variant="caption" fontWeight={700} sx={{ color: '#fff', fontSize: '0.62rem', px: 0.5, textAlign: 'center' }}>
+                  + {paintName}
+                </Typography>
+              </Box>
+            )}
+          </>
         )}
       </ButtonBase>
     );
@@ -309,7 +575,14 @@ const CeldaGridItem: React.FC<CeldaGridItemProps> = ({
       placement="top"
       title={
         <Box sx={{ p: 0.5 }}>
-          <Typography variant="caption" fontWeight={700} display="block">{celda.materia_nombre}</Typography>
+          <Typography variant="caption" fontWeight={700} display="block">
+            {celda.etiqueta_personalizada ? `🏷️ ${celda.etiqueta_personalizada}` : celda.materia_nombre}
+          </Typography>
+          {celda.etiqueta_personalizada && (
+            <Typography variant="caption" display="block" sx={{ opacity: 0.85, fontStyle: 'italic' }}>
+              Materia oficial: {celda.materia_nombre}
+            </Typography>
+          )}
           {celda.docente_apellidos && (
             <Typography variant="caption" display="block" sx={{ opacity: 0.85 }}>
               Prof. {celda.docente_apellidos}
@@ -325,6 +598,11 @@ const CeldaGridItem: React.FC<CeldaGridItemProps> = ({
               {celda.observaciones}
             </Typography>
           )}
+          {isPaintingEraser && (
+            <Typography variant="caption" color="error.light" sx={{ display: 'block', mt: 0.5, fontWeight: 700 }}>
+              Clic para borrar esta clase
+            </Typography>
+          )}
         </Box>
       }
     >
@@ -335,9 +613,14 @@ const CeldaGridItem: React.FC<CeldaGridItemProps> = ({
           borderRight,
           display: 'flex', flexDirection: 'column',
           alignItems: 'stretch', justifyContent: 'stretch',
-          cursor: 'pointer', p: 0, overflow: 'hidden',
+          cursor: isPaintingEraser ? 'not-allowed' : isPaintingSubject ? 'crosshair' : 'pointer',
+          p: 0, overflow: 'hidden',
+          position: 'relative',
           transition: 'filter 0.15s',
-          '&:hover': { filter: 'brightness(1.06)' },
+          '&:hover': {
+            filter: 'brightness(1.06)',
+            '& .eraser-overlay': { opacity: 1 },
+          },
         }}
       >
         {/* Pill de color con contenido */}
@@ -353,7 +636,7 @@ const CeldaGridItem: React.FC<CeldaGridItemProps> = ({
             overflow: 'hidden',
           }}
         >
-          {/* Nombre materia */}
+          {/* Nombre materia / etiqueta */}
           <Typography
             variant="caption"
             fontWeight={700}
@@ -368,7 +651,7 @@ const CeldaGridItem: React.FC<CeldaGridItemProps> = ({
               textShadow: '0 1px 2px rgba(0,0,0,0.25)',
             }}
           >
-            {celda.materia_nombre}
+            {nombreMostrar}
           </Typography>
 
           {/* Info inferior */}
@@ -394,6 +677,24 @@ const CeldaGridItem: React.FC<CeldaGridItemProps> = ({
             )}
           </Box>
         </Box>
+
+        {/* Overlay cuando el borrador pasa por encima */}
+        {isPaintingEraser && (
+          <Box
+            className="eraser-overlay"
+            sx={{
+              position: 'absolute',
+              inset: 5,
+              borderRadius: '6px',
+              bgcolor: 'rgba(239, 68, 68, 0.75)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: 0,
+              transition: 'opacity 0.15s ease',
+            }}
+          >
+            <EraserIcon sx={{ color: '#fff', fontSize: 18 }} />
+          </Box>
+        )}
       </ButtonBase>
     </Tooltip>
   );

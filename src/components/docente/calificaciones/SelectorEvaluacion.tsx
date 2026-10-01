@@ -27,6 +27,7 @@ import {
   Evaluacion, DIMENSIONES_CONFIG, DIMENSIONES_ORDEN,
   CodigoDimension, TIPOS_EVALUACION,
 } from '@/types/notasTypes';
+import { useDimensiones } from '@/hooks/useNotas';
 
 // ── Animaciones ────────────────────────────────────────────────────────────────
 const slideIn = keyframes`
@@ -182,7 +183,8 @@ const SeccionDimension: React.FC<{
 }> = ({ codigo, evaluaciones, selectedId, onSelect }) => {
   const { isDark } = usePalette();
   const [open, setOpen] = useState(true);
-  const cfg = DIMENSIONES_CONFIG[codigo];
+  const { dimensionesConfig } = useDimensiones();
+  const cfg = dimensionesConfig[codigo] || DIMENSIONES_CONFIG[codigo];
 
   const completadas  = evaluaciones.filter(e =>
     e.total_alumnos > 0 && e.con_nota >= e.total_alumnos
@@ -298,6 +300,7 @@ const SelectorEvaluacion: React.FC<SelectorEvaluacionProps> = ({
   evaluaciones, selectedId, isLoading, onSelect, onRefrescar,
 }) => {
   const { isDark, gold, gradBg } = usePalette();
+  const { dimensionesOrden } = useDimensiones();
   const [busqueda, setBusqueda]   = useState('');
 
   // Filtrar por búsqueda
@@ -309,7 +312,7 @@ const SelectorEvaluacion: React.FC<SelectorEvaluacionProps> = ({
     : evaluaciones;
 
   // Agrupar por dimensión preservando el orden canónico
-  const porDimension = DIMENSIONES_ORDEN.reduce<Record<CodigoDimension, EvaluacionConProgreso[]>>(
+  const porDimension = dimensionesOrden.reduce<Record<CodigoDimension, EvaluacionConProgreso[]>>(
     (acc, k) => ({ ...acc, [k]: [] }),
     {} as Record<CodigoDimension, EvaluacionConProgreso[]>
   );
@@ -436,7 +439,7 @@ const SelectorEvaluacion: React.FC<SelectorEvaluacionProps> = ({
           </Box>
         ) : (
           <Stack spacing={2}>
-            {DIMENSIONES_ORDEN.map(codigo => (
+            {dimensionesOrden.map(codigo => (
               porDimension[codigo] !== undefined && (
                 // Solo mostrar dimensiones que tienen evaluaciones (o todas si no hay filtro)
                 (!busqueda.trim() || porDimension[codigo].length > 0) && (

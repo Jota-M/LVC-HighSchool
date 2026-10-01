@@ -33,7 +33,6 @@ const float = keyframes`
 `;
 
 const DIAS_L_V = [1, 2, 3, 4, 5];
-const DIAS_L_S = [1, 2, 3, 4, 5, 6];
 
 // ─────────────────────────────────────────────────
 // Página principal
@@ -50,8 +49,7 @@ export default function PadreHorarioPage() {
 
   const [periodoId, setPeriodoId] = useState<number | null>(null);
   const [hijoSeleccionado, setHijoSeleccionado] = useState<number>(0); // índice del tab
-  const [diasModo, setDiasModo] = useState<'lv' | 'ls'>('lv');
-  const diasActivos = diasModo === 'ls' ? DIAS_L_S : DIAS_L_V;
+  const diasActivos = DIAS_L_V;
 
   const { periodos, periodoActivo, isLoading: loadingPeriodos } = usePeriodosPublicos();
 
@@ -171,9 +169,6 @@ export default function PadreHorarioPage() {
                       <HijoHorarioPanel
                         hijo={hijoActivo}
                         periodoId={periodoId}
-                        diasActivos={diasActivos}
-                        diasModo={diasModo}
-                        onDiasModoChange={setDiasModo}
                         accentColor={accentColor}
                         isDark={isDark}
                       />
@@ -299,15 +294,12 @@ const HijoCard: React.FC<HijoCardProps> = ({ hijo, activo, accentColor, isDark, 
 interface HijoHorarioPanelProps {
   hijo: HijoResumen;
   periodoId: number;
-  diasActivos: number[];
-  diasModo: 'lv' | 'ls';
-  onDiasModoChange: (v: 'lv' | 'ls') => void;
   accentColor: string;
   isDark: boolean;
 }
 
 const HijoHorarioPanel: React.FC<HijoHorarioPanelProps> = ({
-  hijo, periodoId, diasActivos, diasModo, onDiasModoChange, accentColor, isDark,
+  hijo, periodoId, accentColor, isDark,
 }) => {
   const { celdas, bloques, materiasUnicas, totalHoras, isLoading } =
     useHorarioEstudiante(hijo.paralelo_id, periodoId);
@@ -429,31 +421,13 @@ const HijoHorarioPanel: React.FC<HijoHorarioPanelProps> = ({
                   sx={{ height: 20, fontSize: '0.65rem', bgcolor: alpha(accentColor, 0.1), color: accentColor, fontWeight: 700 }} />
               )}
             </Typography>
-
-            <ToggleButtonGroup
-              value={diasModo} exclusive
-              onChange={(_, v) => v && onDiasModoChange(v)}
-              size="small"
-              sx={{
-                '& .MuiToggleButton-root': {
-                  border: `1px solid ${alpha(accentColor, 0.3)}`,
-                  borderRadius: '8px !important',
-                  px: 1.5, py: 0.5,
-                  fontSize: '0.72rem', fontWeight: 600, textTransform: 'none',
-                  '&.Mui-selected': { bgcolor: accentColor, color: isDark ? '#000' : '#fff' },
-                },
-              }}
-            >
-              <ToggleButton value="lv">L – V</ToggleButton>
-              <ToggleButton value="ls">L – S</ToggleButton>
-            </ToggleButtonGroup>
           </Box>
 
           <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
             <HorarioReadonlyGrid
               celdas={celdas}
               bloques={bloques}
-              diasActivos={diasActivos}
+              diasActivos={DIAS_L_V}
               isLoading={isLoading}
             />
           </Box>

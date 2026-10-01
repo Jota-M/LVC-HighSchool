@@ -24,6 +24,7 @@ import {
 import { Docente, AsignacionDocente, DocenteEstadisticas, CargaHoraria } from '../../services/docentes';
 import docentesService from '../../services/docentes';
 import AsignacionesList from './AsignacionesList';
+import PostgradosDisplay from './PostgradosDisplay';
 
 interface DocenteDetailDrawerProps {
   open: boolean;
@@ -166,9 +167,12 @@ const DocenteDetailDrawer: React.FC<DocenteDetailDrawerProps> = ({
                 </ListItem>
               )}
               {docente.titulo_postgrado && (
-                <ListItem>
-                  <ListItemIcon><SchoolIcon fontSize="small" color="secondary" /></ListItemIcon>
-                  <ListItemText primary={docente.titulo_postgrado} secondary="Postgrado" />
+                <ListItem sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                    <SchoolIcon fontSize="small" color="secondary" />
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>Postgrados y Diplomados</Typography>
+                  </Box>
+                  <PostgradosDisplay value={docente.titulo_postgrado} dense />
                 </ListItem>
               )}
               {docente.especialidad && (

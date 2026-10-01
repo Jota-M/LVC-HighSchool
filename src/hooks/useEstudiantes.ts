@@ -1,5 +1,5 @@
 // hooks/useEstudiantes.ts
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Estudiante,
@@ -17,6 +17,14 @@ export const useEstudiantes = (filters?: EstudianteFilters) => {
 
   // Estado local para filtros
   const [localFilters, setLocalFilters] = useState<EstudianteFilters>(filters || {});
+
+  // Sincronizar automáticamente si cambian los filtros pasados por parámetro
+  const filtersKey = useMemo(() => JSON.stringify(filters || {}), [filters]);
+  useEffect(() => {
+    if (filters) {
+      setLocalFilters(filters);
+    }
+  }, [filtersKey]);
 
   // =============================================
   // QUERY: Listar estudiantes

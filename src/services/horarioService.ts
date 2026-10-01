@@ -88,6 +88,29 @@ class HorarioService {
     return data.data.celda;
   }
 
+  async agregarBatch(
+    horarioId: number,
+    celdas: HorarioDetalleCreate[],
+    sobrescribir: boolean = true
+  ): Promise<{ message?: string; creadas: HorarioDetalle[]; total_procesadas: number; errores: any[] }> {
+    const { data } = await api.post(`/horarios/${horarioId}/detalle/batch`, { celdas, sobrescribir });
+    return { message: data.message, ...data.data };
+  }
+
+  async clonarDia(
+    horarioId: number,
+    dia_origen: number,
+    dias_destino: number[],
+    sobrescribir: boolean = true
+  ): Promise<{ message?: string; clonadas: number; conflictos: any[] }> {
+    const { data } = await api.post(`/horarios/${horarioId}/detalle/clonar-dia`, {
+      dia_origen,
+      dias_destino,
+      sobrescribir,
+    });
+    return { message: data.message, ...data.data };
+  }
+
   async eliminarCelda(horarioId: number, detId: number): Promise<void> {
     await api.delete(`/horarios/${horarioId}/detalle/${detId}`);
   }

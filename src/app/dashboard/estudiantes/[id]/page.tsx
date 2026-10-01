@@ -561,7 +561,17 @@ export const EstudianteDetalle: React.FC = () => {
                               <Typography variant="h6" fontWeight={700}>
                                 {matricula.periodo}
                               </Typography>
-                              <Chip label={matricula.estado} size="small" color="success" />
+                              <Chip
+                                label={matricula.estado}
+                                size="small"
+                                color={
+                                  matricula.estado === 'activo' ? 'success' :
+                                  matricula.estado === 'inactivo' || matricula.estado === 'retirado' ? 'error' :
+                                  matricula.estado === 'trasladado' || matricula.estado === 'suspendido' ? 'warning' :
+                                  'default'
+                                }
+                                sx={{ textTransform: 'capitalize', fontWeight: 600 }}
+                              />
                             </Box>
 
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>

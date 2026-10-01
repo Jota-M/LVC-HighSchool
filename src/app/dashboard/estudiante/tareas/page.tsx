@@ -10,40 +10,53 @@ import { keyframes } from '@mui/system';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import VerifiedIcon from '@mui/icons-material/Verified';
 
+import { useRouter } from 'next/navigation';
 import TareasEstudianteList from '@/components/estudiante/tareas/TareasEstudianteList';
-import DetalleEvaluacionEstudiante from '@/components/estudiante/tareas/DetalleEvaluacionEstudiante';
-import { usePeriodosEstudiante } from '@/hooks/useEstudiante';
-import { useTareasEstudiante } from '@/hooks/useEstudiante';
+import { usePeriodosEstudiante, useTareasEstudiante } from '@/hooks/useEstudiante';
+import { useAuth } from '@/context/AuthContext';
 import type { TareaEstudiante, EstadoTarea } from '@/types/estudiante';
 
+// ─── Animaciones ──────────────────────────────────────────────
+const bounce = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+`;
+
 const fadeSlideUp = keyframes`
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 `;
 
-const shimmer = keyframes`
-  0%   { background-position: -1000px 0; }
-  100% { background-position:  1000px 0; }
-`;
+// ─── Paleta Dinámica Dual (Idéntica a Docente) ────────────────
+const usePalette = () => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const accentColor = isDark ? '#facc15' : '#0288d1';
+  const accentColorEnd = isDark ? '#f59e0b' : '#01579b';
+  const gradBg = `linear-gradient(135deg, ${accentColor} 0%, ${accentColorEnd} 100%)`;
+  const textOnAccent = isDark ? '#000000' : '#ffffff';
+  return { isDark, accentColor, accentColorEnd, gradBg, textOnAccent };
+};
 
 // ──────────────────────────────────────────────
-// SELECTOR DE TRIMESTRE
+// SELECTOR DE TRIMESTRE (Estilo Docente)
 // ──────────────────────────────────────────────
-
 const SelectorTrimestre: React.FC<{
-  periodos: { id: number; nombre: string }[];
+  periodos: { id: number; nombre: string; activo?: boolean }[];
   periodoActivo: number | null;
   onChange: (id: number) => void;
   isLoading: boolean;
-}> = ({ periodos, periodoActivo, onChange, isLoading }) => {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-
+  accentColor: string;
+  isDark: boolean;
+}> = ({ periodos, periodoActivo, onChange, isLoading, accentColor, isDark }) => {
   if (isLoading) return (
     <Box sx={{ display: 'flex', gap: 1 }}>
       {[1, 2, 3].map(i => (
-        <Skeleton key={i} variant="rounded" width={130} height={34} sx={{ borderRadius: 2.5 }} />
+        <Skeleton key={i} variant="rounded" width={130} height={36} sx={{ borderRadius: '12px' }} />
       ))}
     </Box>
   );
@@ -51,31 +64,60 @@ const SelectorTrimestre: React.FC<{
   return (
     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
       {periodos.map(p => {
-        const activo = p.id === periodoActivo;
+        const isSelected = p.id === periodoActivo;
         return (
           <Chip
             key={p.id}
-            label={p.nombre}
+            clickable
             onClick={() => onChange(p.id)}
+            icon={p.activo ? <VerifiedIcon sx={{ fontSize: '15px !important' }} /> : undefined}
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                <span>{p.nombre}</span>
+                {p.activo && (
+                  <Box
+                    component="span"
+                    sx={{
+                      fontSize: '0.62rem',
+                      fontWeight: 800,
+                      px: 0.7,
+                      py: 0.1,
+                      borderRadius: '6px',
+                      bgcolor: isSelected
+                        ? (isDark ? '#000' : '#fff')
+                        : accentColor,
+                      color: isSelected
+                        ? accentColor
+                        : (isDark ? '#000' : '#fff'),
+                    }}
+                  >
+                    ACTIVO
+                  </Box>
+                )}
+              </Box>
+            }
             sx={{
-              height: 34, fontWeight: 700, fontSize: 13, borderRadius: 2.5,
-              cursor: 'pointer', transition: 'all 0.2s ease',
-              ...(activo
-                ? {
-                    background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-                    color: '#fff',
-                    boxShadow: '0 4px 12px rgba(245,158,11,0.35)',
-                    border: 'none',
-                  }
-                : {
-                    bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04),
-                    color: 'text.secondary',
-                    border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`,
-                    '&:hover': {
-                      bgcolor: isDark ? alpha('#f59e0b', 0.15) : alpha('#f59e0b', 0.08),
-                      color: isDark ? '#fbbf24' : '#d97706',
-                    },
-                  }),
+              height: 38,
+              px: 1.2,
+              borderRadius: '12px',
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              transition: 'all 0.25s ease',
+              cursor: 'pointer',
+              backgroundColor: isSelected
+                ? accentColor
+                : (isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)'),
+              color: isSelected ? (isDark ? '#000' : '#fff') : 'text.primary',
+              border: `1.5px solid ${isSelected ? accentColor : alpha(isDark ? '#fff' : '#000', 0.08)}`,
+              boxShadow: isSelected ? `0 4px 14px ${alpha(accentColor, 0.3)}` : 'none',
+              '& .MuiChip-icon': {
+                color: isSelected ? (isDark ? '#000' : '#fff') : accentColor,
+              },
+              '&:hover': {
+                backgroundColor: isSelected ? accentColor : alpha(accentColor, 0.12),
+                borderColor: accentColor,
+                transform: 'translateY(-1px)',
+              },
             }}
           />
         );
@@ -85,156 +127,179 @@ const SelectorTrimestre: React.FC<{
 };
 
 // ──────────────────────────────────────────────
-// PÁGINA
+// PÁGINA PRINCIPAL
 // ──────────────────────────────────────────────
-
 export default function EstudianteTareasPage() {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
+  const { user } = useAuth();
+  const { isDark, accentColor, gradBg, textOnAccent } = usePalette();
 
   const { periodos, periodoActivo, setPeriodoActivo, isLoading: loadingPeriodos } =
     usePeriodosEstudiante();
 
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoTarea | undefined>(undefined);
 
-  const { tareas, resumen, isLoading, refrescar } = useTareasEstudiante({
+  const { tareas, resumen, proximasAvencer, isLoading, refrescar } = useTareasEstudiante({
     periodo_evaluacion_id: periodoActivo ?? undefined,
     estado: estadoFiltro,
   });
 
-  const [tareaSeleccionada, setTareaSeleccionada] = useState<TareaEstudiante | null>(null);
+  const router = useRouter();
 
-  const handleVerDetalle = useCallback((t: TareaEstudiante) => setTareaSeleccionada(t), []);
-  const handleCerrarDetalle = useCallback(() => setTareaSeleccionada(null), []);
+  const handleVerDetalle = useCallback((t: TareaEstudiante) => {
+    router.push(`/dashboard/estudiante/tareas/${t.evaluacion_id}`);
+  }, [router]);
 
   const handleCambioPeriodo = useCallback((id: number) => {
     setPeriodoActivo(id);
     setEstadoFiltro(undefined);
   }, [setPeriodoActivo]);
 
-  return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: isDark
-          ? 'radial-gradient(circle at top right, rgba(245,158,11,0.04), transparent 60%)'
-          : 'radial-gradient(circle at top right, rgba(245,158,11,0.02), transparent 60%)',
-      }}
-    >
-      <Container maxWidth="xl" disableGutters>
+  const nombreUsuario = user?.username || 'Estudiante';
 
-        {/* ── HEADER ── */}
-        <Fade in timeout={400}>
-          <Box sx={{ mb: 4, pt: 3 }}>
+  return (
+    <Box sx={{ minHeight: '100vh', py: 4 }}>
+      <Container maxWidth="xl">
+
+        {/* ══ HEADER INSTITUCIONAL DOCENTE ══ */}
+        <Fade in timeout={450}>
+          <Box sx={{ mb: 4 }}>
             <Box
               sx={{
-                p: 3.5, borderRadius: 4,
-                background: isDark
-                  ? 'linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)'
-                  : '#fff',
-                border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.05)}`,
-                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.06)',
-                position: 'relative', overflow: 'hidden',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: { xs: 'flex-start', md: 'center' },
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: { xs: 2, md: 0 },
+                mb: 3,
               }}
             >
-              {/* Shimmer */}
-              <Box sx={{
-                position: 'absolute', inset: 0,
-                background: `linear-gradient(90deg, transparent, ${alpha('#fff', isDark ? 0.03 : 0.08)}, transparent)`,
-                backgroundSize: '1000px 100%',
-                animation: `${shimmer} 4s linear infinite`,
-                pointerEvents: 'none',
-              }} />
-
-              <Box sx={{
-                display: 'flex', alignItems: 'flex-start',
-                justifyContent: 'space-between', flexWrap: 'wrap',
-                gap: 2, position: 'relative', zIndex: 1,
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box sx={{
-                    width: 56, height: 56, borderRadius: 3,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-                    boxShadow: '0 6px 20px rgba(245,158,11,0.4)',
-                  }}>
-                    <AssignmentIcon sx={{ fontSize: 30, color: '#fff' }} />
-                  </Box>
-                  <Box>
-                    <Typography
-                      variant="h4" fontWeight={900}
-                      sx={{
-                        background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                        letterSpacing: -0.5, lineHeight: 1.2,
-                      }}
-                    >
-                      Mis Tareas
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ mt: 0.25 }}>
-                      Evaluaciones y trabajos publicados por tus docentes
-                    </Typography>
-                  </Box>
-                </Box>
-
+              {/* IZQUIERDA: TÍTULO + SALUDO */}
+              <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  {resumen.atrasados > 0 && (
-                    <Chip
-                      icon={<WarningAmberIcon sx={{ fontSize: '16px !important' }} />}
-                      label={`${resumen.atrasados} atrasado${resumen.atrasados > 1 ? 's' : ''}`}
-                      size="small"
-                      sx={{
-                        height: 28, fontWeight: 800, fontSize: 12,
-                        bgcolor: isDark ? alpha('#ef4444', 0.15) : alpha('#ef4444', 0.1),
-                        color: isDark ? '#f87171' : '#ef4444',
-                        border: `1px solid ${alpha('#ef4444', 0.3)}`, borderRadius: 2,
-                        '& .MuiChip-icon': { color: isDark ? '#f87171' : '#ef4444' },
-                      }}
-                    />
-                  )}
-                  <Tooltip title="Actualizar">
-                    <IconButton
-                      onClick={refrescar}
-                      size="small"
-                      disabled={isLoading}
-                      sx={{
-                        bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04),
-                        border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`,
-                        borderRadius: 2, transition: 'all 0.3s ease',
-                        '&:hover': {
-                          bgcolor: isDark ? alpha('#f59e0b', 0.15) : alpha('#f59e0b', 0.08),
-                          transform: 'rotate(180deg)',
-                        },
-                      }}
-                    >
-                      <RefreshIcon sx={{ fontSize: 18, color: isDark ? '#fbbf24' : '#f59e0b' }} />
-                    </IconButton>
-                  </Tooltip>
+                  <AssignmentIcon
+                    sx={{
+                      color: accentColor,
+                      fontSize: { xs: 32, md: 38 },
+                      animation: `${bounce} 2s infinite ease-in-out`,
+                    }}
+                  />
+                  <Typography
+                    variant="h1"
+                    sx={{
+                      fontSize: { xs: '1.6rem', sm: '2rem', md: '2.4rem' },
+                      fontWeight: 800,
+                      background: gradBg,
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      letterSpacing: -0.5,
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    Mis Tareas y Evaluaciones
+                  </Typography>
                 </Box>
+                <Typography variant="body1" color="text.secondary" sx={{ mt: 0.8, fontWeight: 500 }}>
+                  Hola, <strong>{nombreUsuario}</strong> — revisá las tareas, actividades y exámenes asignados por tus docentes.
+                </Typography>
               </Box>
 
-              {/* Selector trimestre */}
-              <Box sx={{
-                mt: 2.5, pt: 2.5,
-                borderTop: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`,
-                position: 'relative', zIndex: 1,
-              }}>
-                <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                  Trimestre
-                </Typography>
+              {/* DERECHA: ALERTAS RESUMEN Y REFRESCAR */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                {resumen.atrasados > 0 && (
+                  <Chip
+                    icon={<WarningAmberIcon sx={{ fontSize: '15px !important' }} />}
+                    label={`${resumen.atrasados} atrasada${resumen.atrasados > 1 ? 's' : ''}`}
+                    size="small"
+                    sx={{
+                      height: 32,
+                      fontWeight: 800,
+                      fontSize: 12,
+                      bgcolor: isDark ? alpha('#ef4444', 0.18) : alpha('#ef4444', 0.1),
+                      color: isDark ? '#f87171' : '#dc2626',
+                      border: `1.5px solid ${alpha('#ef4444', 0.35)}`,
+                      borderRadius: '10px',
+                      '& .MuiChip-icon': { color: isDark ? '#f87171' : '#dc2626' },
+                    }}
+                  />
+                )}
+
+                {proximasAvencer && proximasAvencer.length > 0 && (
+                  <Chip
+                    icon={<AccessTimeIcon sx={{ fontSize: '15px !important' }} />}
+                    label={`${proximasAvencer.length} por vencer`}
+                    size="small"
+                    sx={{
+                      height: 32,
+                      fontWeight: 800,
+                      fontSize: 12,
+                      bgcolor: isDark ? alpha('#f59e0b', 0.18) : alpha('#f59e0b', 0.1),
+                      color: isDark ? '#fbbf24' : '#d97706',
+                      border: `1.5px solid ${alpha('#f59e0b', 0.35)}`,
+                      borderRadius: '10px',
+                      '& .MuiChip-icon': { color: isDark ? '#fbbf24' : '#d97706' },
+                    }}
+                  />
+                )}
+
+                <Tooltip title="Actualizar tareas">
+                  <IconButton
+                    onClick={refrescar}
+                    disabled={isLoading}
+                    sx={{
+                      borderRadius: '14px',
+                      border: `1px solid ${alpha(accentColor, 0.25)}`,
+                      bgcolor: isDark ? alpha(accentColor, 0.08) : alpha(accentColor, 0.05),
+                      color: accentColor,
+                      p: 1.1,
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        bgcolor: alpha(accentColor, 0.15),
+                        transform: 'rotate(180deg)',
+                      },
+                    }}
+                  >
+                    <RefreshIcon sx={{ fontSize: 20 }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
+
+            {/* ══ SELECTOR DE TRIMESTRE (PANEL ESTILO DOCENTE) ══ */}
+            {periodos.length > 0 && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  flexWrap: 'wrap',
+                  p: 1.5,
+                  borderRadius: '18px',
+                  bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.015)',
+                  border: `1px solid ${alpha(isDark ? '#fff' : '#000', 0.06)}`,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mr: 0.5 }}>
+                  <CalendarMonthIcon sx={{ fontSize: 20, color: accentColor }} />
+                  <Typography variant="subtitle2" fontWeight={800} color="text.secondary">
+                    Trimestre académico:
+                  </Typography>
+                </Box>
+
                 <SelectorTrimestre
                   periodos={periodos}
                   periodoActivo={periodoActivo}
                   onChange={handleCambioPeriodo}
                   isLoading={loadingPeriodos}
+                  accentColor={accentColor}
+                  isDark={isDark}
                 />
               </Box>
-            </Box>
+            )}
           </Box>
         </Fade>
 
-        {/* ── CONTENIDO ── */}
-        <Box sx={{ animation: `${fadeSlideUp} 0.5s ease-out 0.15s both`, pb: 6 }}>
+        {/* ── CONTENIDO PRINCIPAL: LISTADO Y FILTROS ── */}
+        <Box sx={{ animation: `${fadeSlideUp} 0.4s ease-out both`, pb: 6 }}>
           <TareasEstudianteList
             tareas={tareas}
             resumen={resumen}
@@ -242,17 +307,13 @@ export default function EstudianteTareasPage() {
             estadoFiltro={estadoFiltro ?? null}
             onEstadoFiltro={(e) => setEstadoFiltro(e ?? undefined)}
             onVerDetalle={handleVerDetalle}
+            accentColor={accentColor}
+            gradBg={gradBg}
+            textOnAccent={textOnAccent}
           />
         </Box>
 
       </Container>
-
-      {/* ── DRAWER DE DETALLE ── */}
-      <DetalleEvaluacionEstudiante
-        tarea={tareaSeleccionada}
-        open={!!tareaSeleccionada}
-        onClose={handleCerrarDetalle}
-      />
     </Box>
   );
 }

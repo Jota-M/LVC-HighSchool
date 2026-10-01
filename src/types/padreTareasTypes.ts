@@ -135,11 +135,27 @@ export function getColorDiasRestantes(dias: number | null, estado: EstadoTarea, 
 }
 
 export const TIPOS_EVALUACION_LABELS: Record<string, string> = {
-  examen:         'Examen',
-  practica:       'Práctica',
-  tarea:          'Tarea',
-  proyecto:       'Proyecto',
-  participacion:  'Participación',
-  exposicion:     'Exposición',
-  trabajo_grupal: 'Trabajo Grupal',
+  // Saber
+  examen:              'Examen',
+  exposicion:          'Exposición',
+  cuestionario:        'Cuestionario',
+  tarea:               'Tarea',
+  ficha_trabajo:       'Ficha de trabajo',
+  investigacion:       'Investigación',
+  evaluacion_oral:     'Evaluación oral',
+  // Hacer
+  trabajo_practico:    'Trabajo práctico',
+  manualidad:          'Manualidad',
+  experimento:         'Experimento',
+  actividad_practica:  'Actividad práctica',
+  ejercicio_practico:  'Ejercicio práctico',
+  trabajo_grupal:      'Trabajo grupal',
+  proyecto:            'Proyecto',
+  demostracion:        'Demostración',
+  produccion_creativa: 'Producción creativa',
+  // General y retrocompatibilidad
+  practica:            'Práctica',
+  participacion:       'Participación',
+  general:             'General',
+  ser:                 'Actitudinal',
 };

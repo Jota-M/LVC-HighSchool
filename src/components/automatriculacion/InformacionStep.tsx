@@ -185,8 +185,13 @@ export const InformacionStep: React.FC<InformacionStepProps> = ({
               <Chip
                 label={datosEstudiante.ultima_matricula.estado}
                 size="small"
-                color="success"
-                sx={{ fontWeight: 600 }}
+                color={
+                  datosEstudiante.ultima_matricula.estado === 'activo' ? 'success' :
+                  datosEstudiante.ultima_matricula.estado === 'inactivo' || datosEstudiante.ultima_matricula.estado === 'retirado' ? 'error' :
+                  datosEstudiante.ultima_matricula.estado === 'trasladado' || datosEstudiante.ultima_matricula.estado === 'suspendido' ? 'warning' :
+                  'default'
+                }
+                sx={{ fontWeight: 600, textTransform: 'capitalize' }}
               />
             </Grid>
           </Grid>

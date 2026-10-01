@@ -4,11 +4,13 @@ import React, { useState, useCallback } from 'react';
 import {
   Box, Container, Typography, Fade, Chip, Skeleton,
   useTheme, alpha, IconButton, Tooltip, Avatar,
+  FormControl, InputLabel, Select, MenuItem, Badge,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import CheckIcon from '@mui/icons-material/CheckCircle';
 
 import TareasHijo from '@/components/padre/tareas/TareasHijo';
 import DetalleEvaluacion from '@/components/padre/tareas/DetalleEvaluacion';
@@ -18,116 +20,85 @@ import { useTareasHijo } from '@/hooks/usePadreTareas';
 import type { TareaHijo } from '@/types/padreTareasTypes';
 import type { HijoInfo } from '@/types/padreAsistenciaTypes';
 
+const float = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+`;
+
 const fadeSlideUp = keyframes`
   from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }
 `;
 
-const shimmer = keyframes`
-  0%   { background-position: -1000px 0; }
-  100% { background-position:  1000px 0; }
-`;
-
 // ──────────────────────────────────────────────
-// SELECTOR DE HIJO (nuevo componente)
+// CARD SELECTOR DE HIJO (mismo lenguaje que HijoCard de horario)
 // ──────────────────────────────────────────────
-const SelectorHijo: React.FC<{
-  hijos: HijoInfo[];
-  hijoActivo: HijoInfo | null;
-  onChange: (h: HijoInfo) => void;
-  isLoading: boolean;
-}> = ({ hijos, hijoActivo, onChange, isLoading }) => {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-
-  if (isLoading) return (
-    <Box sx={{ display: 'flex', gap: 1 }}>
-      {[1, 2].map(i => (
-        <Skeleton key={i} variant="rounded" width={150} height={38} sx={{ borderRadius: 2.5 }} />
-      ))}
-    </Box>
-  );
-
-  // Si solo hay un hijo, no mostrar selector
-  if (hijos.length <= 1) return null;
+const HijoCardTareas: React.FC<{
+  hijo: HijoInfo;
+  activo: boolean;
+  accentColor: string;
+  isDark: boolean;
+  onClick: () => void;
+}> = ({ hijo, activo, accentColor, isDark, onClick }) => {
+  const iniciales = `${hijo.nombres?.charAt(0) ?? ''}${hijo.apellidos?.charAt(0) ?? ''}`.toUpperCase();
 
   return (
-    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-      {hijos.map(hijo => {
-        const activo = hijo.estudiante_id === hijoActivo?.estudiante_id;
-        const iniciales = `${hijo.nombres?.charAt(0) ?? ''}${hijo.apellidos?.charAt(0) ?? ''}`.toUpperCase();
-        return (
-          <Box
-            key={hijo.estudiante_id}
-            onClick={() => onChange(hijo)}
-            sx={{
-              display: 'flex', alignItems: 'center', gap: 1,
-              px: 1.5, py: 0.75, borderRadius: 2.5, cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              border: `2px solid ${activo ? '#f59e0b' : alpha(isDark ? '#fff' : '#000', 0.1)}`,
-              bgcolor: activo
-                ? alpha('#f59e0b', isDark ? 0.15 : 0.08)
-                : alpha(isDark ? '#fff' : '#000', 0.04),
-              '&:hover': {
-                borderColor: '#f59e0b',
-                bgcolor: alpha('#f59e0b', isDark ? 0.12 : 0.06),
-              },
-            }}
+    <Box
+      onClick={onClick}
+      sx={{
+        cursor: 'pointer',
+        p: 1.5,
+        borderRadius: 3,
+        minWidth: { xs: 140, sm: 170 },
+        maxWidth: { xs: 160, sm: 200 },
+        border: `2px solid ${activo ? accentColor : alpha(accentColor, 0.15)}`,
+        bgcolor: activo
+          ? isDark ? alpha('#facc15', 0.1) : alpha('#0288d1', 0.07)
+          : isDark ? '#ffffff06' : '#fafafa',
+        transition: 'all 0.18s',
+        position: 'relative',
+        overflow: 'hidden',
+        '&:hover': {
+          borderColor: accentColor,
+          transform: 'translateY(-2px)',
+          boxShadow: `0 6px 20px ${alpha(accentColor, 0.18)}`,
+        },
+      }}
+    >
+      {activo && (
+        <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, bgcolor: accentColor, borderRadius: '12px 12px 0 0' }} />
+      )}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+        <Badge
+          overlap="circular"
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          badgeContent={<CheckIcon sx={{ fontSize: 12, color: '#10b981', bgcolor: isDark ? '#1a1a1a' : '#fff', borderRadius: '50%' }} />}
+        >
+          <Avatar sx={{
+            width: 38, height: 38, fontSize: '0.9rem', fontWeight: 800,
+            bgcolor: activo ? accentColor : alpha(accentColor, 0.2),
+            color: activo ? (isDark ? '#000' : '#fff') : accentColor,
+          }}>
+            {iniciales}
+          </Avatar>
+        </Badge>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography
+            variant="body2" fontWeight={700}
+            sx={{ lineHeight: 1.2, color: activo ? accentColor : 'text.primary', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
           >
-            <Avatar sx={{
-              width: 26, height: 26, fontSize: '0.65rem', fontWeight: 800,
-              bgcolor: activo ? '#f59e0b' : alpha('#f59e0b', 0.2),
-              color: activo ? '#fff' : '#f59e0b',
-            }}>
-              {iniciales}
-            </Avatar>
-            <Box>
-              <Typography variant="caption" fontWeight={700} sx={{ color: activo ? '#f59e0b' : 'text.primary', display: 'block', lineHeight: 1.2 }}>
-                {hijo.nombres.split(' ')[0]} {hijo.apellidos.split(' ')[0]}
-              </Typography>
-              {hijo.grado_nombre && (
-                <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1 }}>
-                  {hijo.grado_nombre}
-                </Typography>
-              )}
-            </Box>
-          </Box>
-        );
-      })}
-    </Box>
-  );
-};
-
-// ──────────────────────────────────────────────
-// SELECTOR DE TRIMESTRE
-// ──────────────────────────────────────────────
-const SelectorTrimestre: React.FC<{
-  periodos: any[]; periodoActivo: any;
-  onChange: (p: any) => void; isLoading: boolean;
-}> = ({ periodos, periodoActivo, onChange, isLoading }) => {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  if (isLoading) return (
-    <Box sx={{ display: 'flex', gap: 1 }}>
-      {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" width={130} height={34} sx={{ borderRadius: 2.5 }} />)}
-    </Box>
-  );
-  return (
-    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-      {periodos.map(p => {
-        const activo = p.id === periodoActivo?.id;
-        return (
-          <Chip
-            key={p.id} label={p.nombre} onClick={() => onChange(p)}
-            sx={{
-              height: 34, fontWeight: 700, fontSize: 13, borderRadius: 2.5, cursor: 'pointer', transition: 'all 0.2s ease',
-              ...(activo
-                ? { background: 'linear-gradient(135deg, #f59e0b, #fbbf24)', color: '#fff', boxShadow: '0 4px 12px rgba(245,158,11,0.35)', border: 'none' }
-                : { bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04), color: 'text.secondary', border: `1px solid ${isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08)}`, '&:hover': { bgcolor: isDark ? alpha('#f59e0b', 0.15) : alpha('#f59e0b', 0.08) } }),
-            }}
-          />
-        );
-      })}
+            {hijo.nombres.split(' ')[0]}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', lineHeight: 1.2, display: 'block', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+            {hijo.apellidos}
+          </Typography>
+          {hijo.grado_nombre && (
+            <Typography variant="caption" sx={{ fontSize: '0.6rem', color: accentColor, fontWeight: 600, lineHeight: 1 }}>
+              {hijo.grado_nombre} {hijo.paralelo_nombre ? `"${hijo.paralelo_nombre}"` : ''}
+            </Typography>
+          )}
+        </Box>
+      </Box>
     </Box>
   );
 };
@@ -138,8 +109,8 @@ const SelectorTrimestre: React.FC<{
 export default function PadreTareasPage() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const accentColor = isDark ? '#facc15' : '#0288d1';
 
-  // ✅ Ahora usamos hijos (lista completa) y setHijoActivo
   const { hijos, hijoActivo, setHijoActivo, isLoading: loadingHijo } = useHijosDelPadre();
 
   const { periodos, periodoActivo, setPeriodoActivo, isLoading: loadingPeriodos } =
@@ -153,120 +124,145 @@ export default function PadreTareasPage() {
   const handleVerDetalle = useCallback((t: TareaHijo) => setTareaSeleccionada(t), []);
   const handleCerrarDetalle = useCallback(() => setTareaSeleccionada(null), []);
 
-  // ✅ Al cambiar de hijo, recargar tareas y limpiar filtros
   const handleCambioHijo = useCallback((hijo: HijoInfo) => {
     setHijoActivo(hijo);
     actualizarFiltros({ estado: null, materia: null, busqueda: null });
   }, [setHijoActivo, actualizarFiltros]);
 
-  const handleCambioPeriodo = useCallback((p: any) => {
+  const handleCambioPeriodo = useCallback((periodoId: number) => {
+    const p = periodos.find((per: any) => per.id === periodoId);
+    if (!p) return;
     setPeriodoActivo(p);
     cargar({ periodo_evaluacion_id: p.id });
     actualizarFiltros({ estado: null, materia: null, busqueda: null });
-  }, [setPeriodoActivo, cargar, actualizarFiltros]);
+  }, [periodos, setPeriodoActivo, cargar, actualizarFiltros]);
 
   return (
-    <Box sx={{ minHeight: '100vh', background: isDark ? 'radial-gradient(circle at top right, rgba(245,158,11,0.04), transparent 60%)' : 'radial-gradient(circle at top right, rgba(245,158,11,0.02), transparent 60%)' }}>
-      <Container maxWidth="xl" disableGutters>
+    <Box sx={{ minHeight: '100vh', py: 4 }}>
+      <Container maxWidth="xl">
+        <Fade in timeout={450}>
+          <Box>
 
-        {/* ── HEADER ── */}
-        <Fade in timeout={400}>
-          <Box sx={{ mb: 4, pt: 3 }}>
-            <Box
-              sx={{
-                p: 3.5, borderRadius: 4,
-                background: isDark ? 'linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)' : '#fff',
-                border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.05)}`,
-                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.3)' : '0 8px 32px rgba(0,0,0,0.06)',
-                position: 'relative', overflow: 'hidden',
-              }}
-            >
-              <Box sx={{ position: 'absolute', inset: 0, background: `linear-gradient(90deg, transparent, ${alpha('#fff', isDark ? 0.03 : 0.08)}, transparent)`, backgroundSize: '1000px 100%', animation: `${shimmer} 4s linear infinite`, pointerEvents: 'none' }} />
-
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, position: 'relative', zIndex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box sx={{ width: 56, height: 56, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f59e0b, #fbbf24)', boxShadow: '0 6px 20px rgba(245,158,11,0.4)' }}>
-                    <AssignmentIcon sx={{ fontSize: 30, color: '#fff' }} />
-                  </Box>
+            {/* ── HEADER ── */}
+            <Box sx={{ mb: 4, display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+                  <AssignmentIcon sx={{ color: accentColor, fontSize: 34, animation: `${float} 2.5s ease-in-out infinite` }} />
                   <Box>
-                    <Typography variant="h4" fontWeight={900} sx={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: -0.5, lineHeight: 1.2 }}>
+                    <Typography
+                      variant="h1"
+                      sx={{
+                        fontSize: { xs: '1.4rem', sm: '1.9rem', md: '2.2rem' },
+                        fontWeight: 800,
+                        background: isDark
+                          ? 'linear-gradient(135deg,#facc15,#f59e0b)'
+                          : 'linear-gradient(135deg,#0288d1,#01579b)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        lineHeight: 1.1,
+                      }}
+                    >
                       Tareas y Trabajos
                     </Typography>
-                    {hijoActivo && (
-                      <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ mt: 0.25 }}>
-                        {hijoActivo.nombres} {hijoActivo.apellidos} ·{' '}
-                        <Box component="span" sx={{ color: isDark ? '#fbbf24' : '#d97706', fontWeight: 800 }}>
-                          {hijoActivo.grado_nombre} "{hijoActivo.paralelo_nombre}"
-                        </Box>
-                      </Typography>
-                    )}
+                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                      {hijoActivo
+                        ? <>
+                          {hijoActivo.nombres} {hijoActivo.apellidos} ·{' '}
+                          <Box component="span" sx={{ color: accentColor, fontWeight: 700 }}>
+                            {hijoActivo.grado_nombre} "{hijoActivo.paralelo_nombre}"
+                          </Box>
+                        </>
+                        : 'Seguimiento académico familiar'}
+                    </Typography>
                   </Box>
                 </Box>
-
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  {resumen.atrasados > 0 && (
-                    <Chip
-                      icon={<WarningAmberIcon sx={{ fontSize: '16px !important' }} />}
-                      label={`${resumen.atrasados} atrasado${resumen.atrasados > 1 ? 's' : ''}`}
-                      size="small"
-                      sx={{ height: 28, fontWeight: 800, fontSize: 12, bgcolor: isDark ? alpha('#ef4444', 0.15) : alpha('#ef4444', 0.1), color: isDark ? '#f87171' : '#ef4444', border: `1px solid ${alpha('#ef4444', 0.3)}`, borderRadius: 2, '& .MuiChip-icon': { color: isDark ? '#f87171' : '#ef4444' } }}
-                    />
-                  )}
-                  <Tooltip title="Actualizar">
-                    <IconButton
-                      onClick={refrescar}
-                      size="small"
-                      disabled={isLoading}
-                      sx={{ bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04), border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`, borderRadius: 2, transition: 'all 0.3s ease', '&:hover': { bgcolor: isDark ? alpha('#f59e0b', 0.15) : alpha('#f59e0b', 0.08), transform: 'rotate(180deg)' } }}
-                    >
-                      <RefreshIcon sx={{ fontSize: 18, color: isDark ? '#fbbf24' : '#f59e0b' }} />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
               </Box>
 
-              {/* ✅ Selector de hijo — solo visible si hay más de uno */}
-              {hijos.length > 1 && (
-                <Box sx={{ mt: 2.5, pt: 2.5, borderTop: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`, position: 'relative', zIndex: 1 }}>
-                  <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                    Estudiante
-                  </Typography>
-                  <SelectorHijo
-                    hijos={hijos}
-                    hijoActivo={hijoActivo}
-                    onChange={handleCambioHijo}
-                    isLoading={loadingHijo}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                {resumen.atrasados > 0 && (
+                  <Chip
+                    icon={<WarningAmberIcon sx={{ fontSize: '16px !important' }} />}
+                    label={`${resumen.atrasados} atrasado${resumen.atrasados > 1 ? 's' : ''}`}
+                    size="small"
+                    sx={{ height: 28, fontWeight: 800, fontSize: 12, bgcolor: isDark ? alpha('#ef4444', 0.15) : alpha('#ef4444', 0.1), color: isDark ? '#f87171' : '#ef4444', border: `1px solid ${alpha('#ef4444', 0.3)}`, borderRadius: 2 }}
                   />
-                </Box>
-              )}
+                )}
 
-              {/* Selector trimestre */}
-              <Box sx={{ mt: 2.5, pt: 2.5, borderTop: `1px solid ${isDark ? alpha('#fff', 0.06) : alpha('#000', 0.05)}`, position: 'relative', zIndex: 1 }}>
-                <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                  Trimestre
-                </Typography>
-                <SelectorTrimestre
-                  periodos={periodos} periodoActivo={periodoActivo}
-                  onChange={handleCambioPeriodo} isLoading={loadingPeriodos}
-                />
+                {/* Selector período — mismo componente que horario */}
+                <FormControl size="small" sx={{ minWidth: 200 }}>
+                  <InputLabel>Trimestre</InputLabel>
+                  <Select
+                    value={periodoActivo?.id ?? ''}
+                    onChange={(e) => handleCambioPeriodo(e.target.value as number)}
+                    label="Trimestre"
+                    disabled={loadingPeriodos}
+                  >
+                    {periodos.map((p: any) => (
+                      <MenuItem key={p.id} value={p.id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {p.nombre}
+                          {p.activo && (
+                            <Typography component="span" sx={{ fontSize: '0.6rem', fontWeight: 700, px: 0.7, py: 0.15, borderRadius: 1, bgcolor: accentColor, color: isDark ? '#000' : '#fff' }}>
+                              ACTIVO
+                            </Typography>
+                          )}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Tooltip title="Actualizar">
+                  <IconButton
+                    onClick={refrescar}
+                    size="small"
+                    disabled={isLoading}
+                    sx={{ bgcolor: isDark ? alpha('#fff', 0.06) : alpha('#000', 0.04), border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06)}`, borderRadius: 2, transition: 'all 0.3s ease', '&:hover': { bgcolor: alpha(accentColor, isDark ? 0.15 : 0.08), transform: 'rotate(180deg)' } }}
+                  >
+                    <RefreshIcon sx={{ fontSize: 18, color: accentColor }} />
+                  </IconButton>
+                </Tooltip>
               </Box>
             </Box>
+
+            {/* ── SELECTOR DE HIJOS ── */}
+            {loadingHijo ? (
+              <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                {[1, 2].map((i) => (
+                  <Skeleton key={i} variant="rounded" width={160} height={80} sx={{ borderRadius: 3 }} />
+                ))}
+              </Box>
+            ) : hijos.length > 1 && (
+              <Box sx={{ display: 'flex', gap: 1.5, mb: 3, flexWrap: 'wrap' }}>
+                {hijos.map((hijo) => (
+                  <HijoCardTareas
+                    key={hijo.estudiante_id}
+                    hijo={hijo}
+                    activo={hijo.estudiante_id === hijoActivo?.estudiante_id}
+                    accentColor={accentColor}
+                    isDark={isDark}
+                    onClick={() => handleCambioHijo(hijo)}
+                  />
+                ))}
+              </Box>
+            )}
+
+            {/* ── CONTENIDO ── */}
+            <Box sx={{ animation: `${fadeSlideUp} 0.5s ease-out 0.15s both`, pb: 6 }}>
+              <TareasHijo
+                tareas={tareas}
+                resumen={resumen}
+                isLoading={isLoading || loadingHijo}
+                filtros={filtros}
+                materias={materias}
+                onFiltroChange={actualizarFiltros}
+                onVerDetalle={handleVerDetalle}
+                accentColor={accentColor}
+              />
+            </Box>
+
           </Box>
         </Fade>
-
-        {/* ── CONTENIDO ── */}
-        <Box sx={{ animation: `${fadeSlideUp} 0.5s ease-out 0.15s both`, pb: 6 }}>
-          <TareasHijo
-            tareas={tareas}
-            resumen={resumen}
-            isLoading={isLoading || loadingHijo}
-            filtros={filtros}
-            materias={materias}
-            onFiltroChange={actualizarFiltros}
-            onVerDetalle={handleVerDetalle}
-          />
-        </Box>
-
       </Container>
 
       {/* ── DRAWER DE DETALLE ── */}

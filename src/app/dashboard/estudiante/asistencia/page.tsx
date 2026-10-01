@@ -3,7 +3,7 @@
 
 import { useAuth } from '@/context/AuthContext';
 import EstudianteAsistencia from '@/components/estudiante/asistencia/EstudianteAsistencia';
-import { Box, CircularProgress } from '@mui/material';
+import { Box, CircularProgress, Container } from '@mui/material';
 
 export default function EstudianteAsistenciaPage() {
   const { user, loading } = useAuth();
@@ -16,5 +16,11 @@ export default function EstudianteAsistenciaPage() {
     );
   }
 
-  return <EstudianteAsistencia user={user} />;
+  return (
+    <Box sx={{ minHeight: '100vh', py: { xs: 2.5, sm: 4 } }}>
+      <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 3 } }}>
+        <EstudianteAsistencia user={user} />
+      </Container>
+    </Box>
+  );
 }
