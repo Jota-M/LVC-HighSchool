@@ -24,6 +24,7 @@ import {
   Tooltip,
   Switch,
   FormControlLabel,
+  Collapse,
   useTheme,
   alpha
 } from '@mui/material';
@@ -43,7 +44,8 @@ import {
   FamilyRestroom as FamilyIcon,
   Schedule as ScheduleIcon,
   Lock as LockIcon,
-  Clear as ClearIcon
+  Clear as ClearIcon,
+  CancelOutlined as CancelIcon
 } from '@mui/icons-material';
 import Header from '../login/Header';
 import reservaCupoService from '@/services/reservaCupoService';
@@ -108,6 +110,9 @@ export default function ReservaCupoPage() {
 
   // Resultados de la reserva confirmada
   const [reservasConfirmadas, setReservasConfirmadas] = useState<ReservaCupoData[]>([]);
+
+  // Determinar dinámicamente si al menos un estudiante continuará
+  const algunoContinuara = estudiantesSeleccionados.some(item => item.confirma_continuidad);
 
   // ========================================================
   // ESTILOS IDÉNTICOS A PREINSCRIPCIÓN
@@ -994,183 +999,234 @@ export default function ReservaCupoPage() {
               </Paper>
             )}
 
-            <Divider sx={{ my: 4 }} />
-
-            {/* SECCIÓN: DATOS DE QUIEN REALIZA LA RESERVA */}
-            <form onSubmit={handleConfirmarReserva}>
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h6" fontWeight={800} color={brandPrimary} sx={{ mb: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <FamilyIcon sx={{ color: brandPrimary }} /> Datos de la Persona que Realiza la Reserva
+            {/* Si no hay ningún estudiante que continúe, mostrar aviso amigable y NO abrir los datos del tutor */}
+            {!algunoContinuara && (
+              <Box
+                sx={{
+                  mt: 3,
+                  p: { xs: 2.5, sm: 3.5 },
+                  borderRadius: '16px',
+                  bgcolor: isDark ? alpha('#ef4444', 0.12) : '#fef2f2',
+                  border: `1.5px dashed ${isDark ? '#ef4444' : '#f87171'}`,
+                  textAlign: 'center'
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: '50%',
+                    bgcolor: alpha('#ef4444', 0.15),
+                    color: '#ef4444',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 1.5
+                  }}
+                >
+                  <CancelIcon sx={{ fontSize: 32 }} />
+                </Box>
+                <Typography variant="h6" fontWeight={800} sx={{ color: isDark ? '#f87171' : '#b91c1c', mb: 1 }}>
+                  No se registrará reserva de cupo
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Indica quién realiza el trámite en este momento (Tía, Madre, Padre, Abuelo, etc.) y su número de WhatsApp para contacto.
+                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 560, mx: 'auto', mb: 3 }}>
+                  Has marcado que el estudiante <strong>no continuará</strong> en la institución para la Gestión 2027.
+                  Por ello, <strong>el apartado de datos del tutor no se habilitará</strong> y no se emitirá cupo de reserva.
+                  Si deseas apartar su cupo, activa nuevamente la opción <strong>&quot;Continuará&quot;</strong> en la tarjeta de arriba.
                 </Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+                  <Button
+                    variant="outlined"
+                    startIcon={<ArrowBackIcon />}
+                    onClick={() => setActiveStep(0)}
+                    sx={outlineBtnStyle}
+                  >
+                    Volver a Consultar otro CI
+                  </Button>
+                </Stack>
+              </Box>
+            )}
 
-                <Grid container spacing={2.5}>
-                  <Grid size={{ xs: 12, sm: 8 }}>
-                    <TextField
-                      fullWidth
-                      label="Nombre Completo de Quien Reserva"
-                      placeholder="Ej: Carmen Morales Pérez"
-                      value={tutorNombre}
-                      onChange={(e) => setTutorNombre(e.target.value)}
-                      required
-                      disabled={isConfirmando}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: '14px',
-                          '&.Mui-focused fieldset': {
-                            borderColor: brandPrimary,
-                            borderWidth: '2px'
-                          }
-                        },
-                        '& .MuiInputLabel-root.Mui-focused': {
-                          color: brandPrimary
-                        }
-                      }}
-                      slotProps={{
-                        input: {
-                          startAdornment: <PersonIcon sx={{ color: brandPrimary, mr: 1 }} />
-                        }
-                      }}
-                    />
-                  </Grid>
+            {/* SECCIÓN: DATOS DE QUIEN REALIZA LA RESERVA (Solo se abre dinámicamente si continuará) */}
+            <Collapse in={algunoContinuara} unmountOnExit>
+              <Divider sx={{ my: 4 }} />
 
-                  <Grid size={{ xs: 12, sm: 4 }}>
-                    <FormControl fullWidth required>
-                      <InputLabel sx={{ '&.Mui-focused': { color: brandPrimary } }}>Parentesco</InputLabel>
-                      <Select
-                        value={tutorParentesco}
-                        label="Parentesco"
-                        onChange={(e) => setTutorParentesco(e.target.value)}
+              <form onSubmit={handleConfirmarReserva}>
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" fontWeight={800} color={brandPrimary} sx={{ mb: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FamilyIcon sx={{ color: brandPrimary }} /> Datos de la Persona que Realiza la Reserva
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    Indica quién realiza el trámite en este momento (Tía, Madre, Padre, Abuelo, etc.) y su número de WhatsApp para contacto.
+                  </Typography>
+
+                  <Grid container spacing={2.5}>
+                    <Grid size={{ xs: 12, sm: 8 }}>
+                      <TextField
+                        fullWidth
+                        label="Nombre Completo de Quien Reserva"
+                        placeholder="Ej: Carmen Morales Pérez"
+                        value={tutorNombre}
+                        onChange={(e) => setTutorNombre(e.target.value)}
+                        required
                         disabled={isConfirmando}
                         sx={{
-                          borderRadius: '14px',
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: brandPrimary,
-                            borderWidth: '2px'
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '14px',
+                            '&.Mui-focused fieldset': {
+                              borderColor: brandPrimary,
+                              borderWidth: '2px'
+                            }
+                          },
+                          '& .MuiInputLabel-root.Mui-focused': {
+                            color: brandPrimary
                           }
                         }}
-                      >
-                        {PARENTESCOS.map((p) => (
-                          <MenuItem key={p} value={p}>
-                            {p}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      fullWidth
-                      label="Carnet de Identidad (CI)"
-                      placeholder="Ej: 5423891 CB"
-                      value={tutorCi}
-                      onChange={(e) => setTutorCi(e.target.value)}
-                      required
-                      disabled={isConfirmando}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: '14px',
-                          '&.Mui-focused fieldset': {
-                            borderColor: brandPrimary,
-                            borderWidth: '2px'
+                        slotProps={{
+                          input: {
+                            startAdornment: <PersonIcon sx={{ color: brandPrimary, mr: 1 }} />
                           }
-                        },
-                        '& .MuiInputLabel-root.Mui-focused': {
-                          color: brandPrimary
-                        }
-                      }}
-                    />
-                  </Grid>
+                        }}
+                      />
+                    </Grid>
 
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <TextField
-                      fullWidth
-                      label="Número de Celular / WhatsApp"
-                      placeholder="Ej: 70712345"
-                      value={tutorTelefono}
-                      onChange={(e) => setTutorTelefono(e.target.value)}
-                      required
-                      disabled={isConfirmando}
-                      helperText="Aquí recibirá la confirmación y avisos del colegio"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: '14px',
-                          '&.Mui-focused fieldset': {
-                            borderColor: brandPrimary,
-                            borderWidth: '2px'
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                      <FormControl fullWidth required>
+                        <InputLabel sx={{ '&.Mui-focused': { color: brandPrimary } }}>Parentesco</InputLabel>
+                        <Select
+                          value={tutorParentesco}
+                          label="Parentesco"
+                          onChange={(e) => setTutorParentesco(e.target.value)}
+                          disabled={isConfirmando}
+                          sx={{
+                            borderRadius: '14px',
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: brandPrimary,
+                              borderWidth: '2px'
+                            }
+                          }}
+                        >
+                          {PARENTESCOS.map((p) => (
+                            <MenuItem key={p} value={p}>
+                              {p}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="Carnet de Identidad (CI)"
+                        placeholder="Ej: 5423891 CB"
+                        value={tutorCi}
+                        onChange={(e) => setTutorCi(e.target.value)}
+                        required
+                        disabled={isConfirmando}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '14px',
+                            '&.Mui-focused fieldset': {
+                              borderColor: brandPrimary,
+                              borderWidth: '2px'
+                            }
+                          },
+                          '& .MuiInputLabel-root.Mui-focused': {
+                            color: brandPrimary
                           }
-                        },
-                        '& .MuiInputLabel-root.Mui-focused': {
-                          color: brandPrimary
-                        }
-                      }}
-                      slotProps={{
-                        input: {
-                          startAdornment: <PhoneIcon sx={{ color: '#10b981', mr: 1 }} />
-                        }
-                      }}
-                    />
-                  </Grid>
+                        }}
+                      />
+                    </Grid>
 
-                  <Grid size={{ xs: 12 }}>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={2}
-                      label="Observaciones (Opcional)"
-                      placeholder="Ej: Trámite realizado por la tía a cargo..."
-                      value={observaciones}
-                      onChange={(e) => setObservaciones(e.target.value)}
-                      disabled={isConfirmando}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: '14px',
-                          '&.Mui-focused fieldset': {
-                            borderColor: brandPrimary,
-                            borderWidth: '2px'
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="Número de Celular / WhatsApp"
+                        placeholder="Ej: 70712345"
+                        value={tutorTelefono}
+                        onChange={(e) => setTutorTelefono(e.target.value)}
+                        required
+                        disabled={isConfirmando}
+                        helperText="Aquí recibirá la confirmación y avisos del colegio"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '14px',
+                            '&.Mui-focused fieldset': {
+                              borderColor: brandPrimary,
+                              borderWidth: '2px'
+                            }
+                          },
+                          '& .MuiInputLabel-root.Mui-focused': {
+                            color: brandPrimary
                           }
-                        },
-                        '& .MuiInputLabel-root.Mui-focused': {
-                          color: brandPrimary
-                        }
-                      }}
-                    />
+                        }}
+                        slotProps={{
+                          input: {
+                            startAdornment: <PhoneIcon sx={{ color: '#10b981', mr: 1 }} />
+                          }
+                        }}
+                      />
+                    </Grid>
+
+                    <Grid size={{ xs: 12 }}>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={2}
+                        label="Observaciones (Opcional)"
+                        placeholder="Ej: Trámite realizado por la tía a cargo..."
+                        value={observaciones}
+                        onChange={(e) => setObservaciones(e.target.value)}
+                        disabled={isConfirmando}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '14px',
+                            '&.Mui-focused fieldset': {
+                              borderColor: brandPrimary,
+                              borderWidth: '2px'
+                            }
+                          },
+                          '& .MuiInputLabel-root.Mui-focused': {
+                            color: brandPrimary
+                          }
+                        }}
+                      />
+                    </Grid>
                   </Grid>
-                </Grid>
-              </Box>
+                </Box>
 
-              {/* Botones de Navegación con alto contraste y estilo PreInscripción */}
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 4 }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => setActiveStep(0)}
-                  disabled={isConfirmando}
-                  startIcon={<ArrowBackIcon />}
-                  sx={outlineBtnStyle}
-                >
-                  Volver Atrás
-                </Button>
+                {/* Botones de Navegación con alto contraste y estilo PreInscripción */}
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 4 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => setActiveStep(0)}
+                    disabled={isConfirmando}
+                    startIcon={<ArrowBackIcon />}
+                    sx={outlineBtnStyle}
+                  >
+                    Volver Atrás
+                  </Button>
 
-                <Button
-                  type="submit"
-                  variant="contained"
-                  size="large"
-                  fullWidth
-                  disabled={isConfirmando}
-                  endIcon={isConfirmando ? <CircularProgress size={20} color="inherit" /> : <CheckCircleIcon />}
-                  sx={confirmBtnStyle}
-                >
-                  {isConfirmando
-                    ? 'Guardando Reserva...'
-                    : estudiantesSeleccionados.filter(i => i.confirma_continuidad).length > 1
-                      ? `Confirmar Reserva de los ${estudiantesSeleccionados.filter(i => i.confirma_continuidad).length} Estudiantes`
-                      : 'Confirmar y Emitir Recibo Oficial'}
-                </Button>
-              </Stack>
-            </form>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    size="large"
+                    fullWidth
+                    disabled={isConfirmando}
+                    endIcon={isConfirmando ? <CircularProgress size={20} color="inherit" /> : <CheckCircleIcon />}
+                    sx={confirmBtnStyle}
+                  >
+                    {isConfirmando
+                      ? 'Guardando Reserva...'
+                      : estudiantesSeleccionados.filter(i => i.confirma_continuidad).length > 1
+                        ? `Confirmar Reserva de los ${estudiantesSeleccionados.filter(i => i.confirma_continuidad).length} Estudiantes`
+                        : 'Confirmar y Emitir Recibo Oficial'}
+                  </Button>
+                </Stack>
+              </form>
+            </Collapse>
           </Paper>
         )}
 
