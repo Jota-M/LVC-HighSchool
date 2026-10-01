@@ -468,36 +468,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
             </Typography>
           </Box>
         </Box>
-
-        {/* 5. FIRMAS */}
-        <Grid container spacing={3} sx={{ mt: 2, pt: 2, textAlign: 'center' }}>
-          <Grid size={{ xs: 6 }}>
-            <Box sx={{ borderTop: `1px solid ${isDark ? '#64748b' : '#334155'}`, pt: 1, mx: 'auto', maxWidth: 220 }}>
-              <Typography variant="caption" fontWeight={800} display="block">
-                SOLICITANTE / QUIEN RESERVA
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block">
-                {reserva.tutor_nombre}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                CI: {reserva.tutor_ci} ({reserva.tutor_parentesco})
-              </Typography>
-            </Box>
-          </Grid>
-          <Grid size={{ xs: 6 }}>
-            <Box sx={{ borderTop: `1px solid ${isDark ? '#64748b' : '#334155'}`, pt: 1, mx: 'auto', maxWidth: 220 }}>
-              <Typography variant="caption" fontWeight={800} display="block">
-                SECRETARÍA ACADÉMICA
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block">
-                U.E.P. La Voz de Cristo
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Sello y Firma Autorizada
-              </Typography>
-            </Box>
-          </Grid>
-        </Grid>
       </Paper>
 
       {/* BOTONES DE ACCIÓN ESTILO PREINSCRIPCIÓN */}

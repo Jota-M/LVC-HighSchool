@@ -38,7 +38,7 @@ class ReservaCupoService {
    * Retorna la URL para previsualizar o descargar el PDF oficial
    */
   getReciboPDFUrl(codigo: string, preview = true): string {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.uepclavozdecristo.site';
     return `${baseUrl}/api/reserva-cupo/recibo/${codigo}/pdf?preview=${preview}`;
   }
 
