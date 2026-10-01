@@ -11,7 +11,7 @@ interface RetryableRequestConfig extends InternalAxiosRequestConfig {
 }
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || '   https://api.uepclavozdecristo.site',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api.uepclavozdecristo.site',
   // baseURL: '/api-proxy',
   withCredentials: true,
   timeout: 120000,
