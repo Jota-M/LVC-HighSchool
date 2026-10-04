@@ -226,6 +226,34 @@ export const ModalEstudianteNoEncontrado: React.FC<ModalEstudianteNoEncontradoPr
           primaryButtonIcon: <CheckIcon sx={{ fontSize: 17 }} />
         };
 
+      case 'RESERVA_ANULADA':
+        return {
+          kicker: 'Trámite Especial · Reserva Previamente Anulada',
+          icon: <WarningAmberIcon sx={{ color: '#ef4444', fontSize: 18 }} />,
+          title: 'Reserva Anulada Previamente',
+          chipLabel: 'Gestión presencial requerida',
+          chipColor: '#ef4444',
+          explanation: errorMessage || 'La reserva para este estudiante fue anulada con anterioridad a solicitud del tutor o administración.',
+          showPreinscripcion: false,
+          tipsTitle: 'Cómo recuperar o reactivar el cupo',
+          tips: [
+            {
+              num: 1,
+              color: '#ef4444',
+              title: 'Bloqueo preventivo en la web',
+              desc: 'Por seguridad institucional y control de cupos, un estudiante cuya reserva fue anulada no puede volver a registrarse desde el formulario web público.'
+            },
+            {
+              num: 2,
+              color: brand,
+              title: 'Reactivación directa en Secretaría / Dirección',
+              desc: 'Si la familia cambió de parecer y desea recuperar la plaza escolar, el personal administrativo puede reactivarla directamente desde su panel de gestión.'
+            }
+          ],
+          primaryButtonText: 'Entendido',
+          primaryButtonIcon: <CheckIcon sx={{ fontSize: 17 }} />
+        };
+
       case 'ESTUDIANTE_NO_ENCONTRADO':
       default:
         return {

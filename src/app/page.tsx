@@ -7,8 +7,8 @@ import Contact from "./components/HomePage/Contacts";
 import Footer from "./components/HomePage/Footer";
 import VerseSection from "./components/HomePage/Verse";
 import Landing from "./components/HomePage/Landing";
-import FloatingPreinscripcionButton from "./components/HomePage/FloatingPreinscripcionButton";
-import PromoModal, { usePromoModal } from "./components/HomePage/PromoModal";
+// import FloatingPreinscripcionButton from "./components/HomePage/FloatingPreinscripcionButton";
+// import PromoModal, { usePromoModal } from "./components/HomePage/PromoModal";
 
 const sectionStyle: React.CSSProperties = {
   opacity: 0,
@@ -18,7 +18,6 @@ const sectionStyle: React.CSSProperties = {
 
 function Page() {
   const sectionsRef = useRef<(HTMLDivElement | null)[]>([]);
-  const { open, handleClose } = usePromoModal();
 
   useEffect(() => {
     // Parallax en el header
@@ -75,11 +74,6 @@ function Page() {
       <div ref={setSectionRef(2)} style={sectionStyle}>
         <Contact />
       </div>
-
-      <FloatingPreinscripcionButton />
-
-
-      <PromoModal open={open} onClose={handleClose} />
 
       <Footer />
     </>

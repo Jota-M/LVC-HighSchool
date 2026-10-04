@@ -45,16 +45,22 @@ import {
   Schedule as ScheduleIcon,
   Lock as LockIcon,
   Clear as ClearIcon,
-  CancelOutlined as CancelIcon
+  CancelOutlined as CancelIcon,
+  Star as StarIcon,
+  HourglassTop as HourglassTopIcon,
+  GroupAdd as GroupAddIcon
 } from '@mui/icons-material';
 import Header from '../login/Header';
 import reservaCupoService from '@/services/reservaCupoService';
 import {
   EstudianteSeleccionadoParaReserva,
-  ReservaCupoData
+  ReservaCupoData,
+  ReservaCupoHermanoData,
+  HermanoParaReserva
 } from '@/types/reservaCupoTypes';
 import ReciboReservaCard from '@/components/reservaCupo/ReciboReservaCard';
 import ModalEstudianteNoEncontrado from '@/components/reservaCupo/ModalEstudianteNoEncontrado';
+import ModalAgregarHermano from '@/components/reservaCupo/ModalAgregarHermano';
 
 const steps = [
   { label: 'Buscar Estudiante por CI', color: '#0288d1' },
@@ -99,6 +105,10 @@ export default function ReservaCupoPage() {
   const [ciOtroHijo, setCiOtroHijo] = useState('');
   const [isBuscandoOtro, setIsBuscandoOtro] = useState(false);
 
+  // Hermanos de estudiantes regulares para nueva admisión (prioridad familiar)
+  const [hermanosSeleccionados, setHermanosSeleccionados] = useState<HermanoParaReserva[]>([]);
+  const [modalHermanoOpen, setModalHermanoOpen] = useState(false);
+
   // Datos de quien realiza la reserva
   const [tutorNombre, setTutorNombre] = useState('');
   const [tutorCi, setTutorCi] = useState('');
@@ -108,8 +118,8 @@ export default function ReservaCupoPage() {
   const [isConfirmando, setIsConfirmando] = useState(false);
   const [errorConfirmacion, setErrorConfirmacion] = useState<string | null>(null);
 
-  // Resultados de la reserva confirmada
-  const [reservasConfirmadas, setReservasConfirmadas] = useState<ReservaCupoData[]>([]);
+  // Resultados de la reserva confirmada (incluye regulares y hermanos)
+  const [reservasConfirmadas, setReservasConfirmadas] = useState<(ReservaCupoData | ReservaCupoHermanoData)[]>([]);
 
   // Determinar dinámicamente si al menos un estudiante continuará
   const algunoContinuara = estudiantesSeleccionados.some(item => item.confirma_continuidad);
@@ -348,11 +358,12 @@ export default function ReservaCupoPage() {
       const errorTipo = err.response?.data?.error_tipo;
       const errorMsg = err.response?.data?.message || 'Error al validar el estudiante. Verifique el Carnet de Identidad.';
 
-      // Abrir modal estilizado si no se encontró el estudiante o si no es regular / bachiller egresado
+      // Abrir modal estilizado si no se encontró el estudiante, no es regular, bachiller o si fue anulada
       if (
         errorTipo === 'ESTUDIANTE_NO_ENCONTRADO' ||
         errorTipo === 'NO_ES_REGULAR' ||
         errorTipo === 'BACHILLER_EGRESADO' ||
+        errorTipo === 'RESERVA_ANULADA' ||
         err.response?.status === 400 ||
         err.response?.status === 404
       ) {
@@ -380,12 +391,45 @@ export default function ReservaCupoPage() {
     );
   };
 
+  const handleSetContinuidad = (estudianteId: number, continuar: boolean) => {
+    setEstudiantesSeleccionados(prev =>
+      prev.map(item =>
+        item.estudiante.id === estudianteId
+          ? { ...item, confirma_continuidad: continuar }
+          : item
+      )
+    );
+  };
+
+  const handleMotivoNoContinuaChange = (estudianteId: number, motivo: string) => {
+    setEstudiantesSeleccionados(prev =>
+      prev.map(item =>
+        item.estudiante.id === estudianteId
+          ? { ...item, motivo_no_continua: motivo }
+          : item
+      )
+    );
+  };
+
   const handleQuitarEstudiante = (estudianteId: number) => {
     const filtrados = estudiantesSeleccionados.filter(item => item.estudiante.id !== estudianteId);
     setEstudiantesSeleccionados(filtrados);
+    // Si se quitan todos los regulares, también limpiar hermanos vinculados si no queda ninguno
     if (filtrados.length === 0) {
+      setHermanosSeleccionados([]);
       setActiveStep(0);
+    } else {
+      // Filtrar hermanos cuyo hermano regular ya no esté en la lista
+      setHermanosSeleccionados(prev => prev.filter(h => filtrados.some(e => e.estudiante.id === h.hermano_regular_id)));
     }
+  };
+
+  const handleAgregarHermano = (nuevoHermano: HermanoParaReserva) => {
+    setHermanosSeleccionados(prev => [...prev, nuevoHermano]);
+  };
+
+  const handleQuitarHermano = (index: number) => {
+    setHermanosSeleccionados(prev => prev.filter((_, idx) => idx !== index));
   };
 
   // ========================================================
@@ -396,20 +440,17 @@ export default function ReservaCupoPage() {
     if (e) e.preventDefault();
     setErrorConfirmacion(null);
 
-    // Filtrar solo los estudiantes que confirmaron continuidad
-    const estudiantesAConfirmar = estudiantesSeleccionados.filter(item => item.confirma_continuidad);
-
-    if (estudiantesAConfirmar.length === 0) {
-      setErrorConfirmacion('Debe confirmar la continuidad de al menos un estudiante para poder realizar la reserva.');
+    if (estudiantesSeleccionados.length === 0) {
+      setErrorConfirmacion('Debe tener al menos un estudiante regular agregado para realizar el registro.');
       return;
     }
 
     if (!tutorNombre.trim()) {
-      setErrorConfirmacion('Debe ingresar el nombre de la persona que realiza la reserva');
+      setErrorConfirmacion('Debe ingresar el nombre de la persona que realiza el trámite');
       return;
     }
     if (!tutorCi.trim()) {
-      setErrorConfirmacion('Debe ingresar el carnet de identidad (CI) de quien realiza la reserva');
+      setErrorConfirmacion('Debe ingresar el carnet de identidad (CI) de quien realiza el trámite');
       return;
     }
     if (!tutorTelefono.trim()) {
@@ -419,15 +460,30 @@ export default function ReservaCupoPage() {
 
     setIsConfirmando(true);
     try {
-      const periodoDestinoId = estudiantesAConfirmar[0]?.proyeccion_siguiente.periodo_id;
+      const periodoDestinoId = estudiantesSeleccionados[0]?.proyeccion_siguiente.periodo_id;
 
       const payload = {
         periodo_academico_id: periodoDestinoId,
-        estudiantes: estudiantesAConfirmar.map(item => ({
+        estudiantes: estudiantesSeleccionados.map(item => ({
           estudiante_id: item.estudiante.id,
           grado_actual_id: item.gestion_actual.grado_id || null,
           grado_destino_id: item.proyeccion_siguiente.grado_id,
-          turno_destino_id: item.turno_seleccionado_id
+          turno_destino_id: item.turno_seleccionado_id,
+          continua: item.confirma_continuidad,
+          confirma_continuidad: item.confirma_continuidad,
+          motivo_no_continua: !item.confirma_continuidad ? (item.motivo_no_continua || undefined) : undefined
+        })),
+        hermanos: hermanosSeleccionados.map(h => ({
+          hermano_regular_id: h.hermano_regular_id,
+          grado_solicitado_id: h.grado_solicitado_id,
+          turno_solicitado_id: h.turno_solicitado_id,
+          nombres: h.nombres,
+          apellido_paterno: h.apellido_paterno,
+          apellido_materno: h.apellido_materno || '',
+          ci: h.ci || '',
+          fecha_nacimiento: h.fecha_nacimiento,
+          genero: h.genero,
+          observaciones: h.observaciones || ''
         })),
         tutor_nombre: tutorNombre.trim(),
         tutor_ci: tutorCi.trim(),
@@ -437,12 +493,16 @@ export default function ReservaCupoPage() {
       };
 
       const resultado = await reservaCupoService.confirmarReserva(payload);
-      setReservasConfirmadas(resultado.reservas);
+      const todasLasReservas = [
+        ...(resultado.reservas || []),
+        ...(resultado.hermanos || [])
+      ];
+      setReservasConfirmadas(todasLasReservas);
       setActiveStep(2);
 
     } catch (err: any) {
       console.error('Error al confirmar reserva:', err);
-      const msg = err.response?.data?.message || 'Error al guardar la reserva. Por favor intenta nuevamente.';
+      const msg = err.response?.data?.message || 'Error al guardar la información. Por favor intenta nuevamente.';
       setErrorConfirmacion(msg);
     } finally {
       setIsConfirmando(false);
@@ -454,6 +514,7 @@ export default function ReservaCupoPage() {
     setCiInput('');
     setCiOtroHijo('');
     setEstudiantesSeleccionados([]);
+    setHermanosSeleccionados([]);
     setReservasConfirmadas([]);
     setTutorNombre('');
     setTutorCi('');
@@ -476,7 +537,7 @@ export default function ReservaCupoPage() {
     >
       <Header />
 
-      <Container maxWidth="md" sx={{ pt: { xs: 4, md: 6 }, }}>
+      <Container maxWidth={activeStep === 1 ? 'xl' : 'md'} sx={{ pt: { xs: 4, md: 6 }, transition: 'max-width 0.3s ease' }}>
         {/* Título Principal estilo PreInscripción */}
         <Box sx={{ textAlign: 'center', mb: 4, mt: 12 }}>
           <Chip
@@ -746,17 +807,36 @@ export default function ReservaCupoPage() {
               </Alert>
             )}
 
-            {/* LISTA DE TARJETAS POR CADA ESTUDIANTE */}
-            <Stack spacing={3} sx={{ mb: 3.5 }}>
+            {/* ESTRUCTURA RESPONSIVA: 50% INFO ESTUDIANTE / 50% INFO PADRE EN DESKTOP */}
+            <Grid container spacing={{ xs: 3, md: 4 }} alignItems="flex-start">
+              {/* ── COLUMNA IZQUIERDA: ESTUDIANTES Y HERMANOS (50% EN DESKTOP) ── */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2 }}>
+                  <SchoolIcon sx={{ color: brandPrimary }} />
+                  <Typography variant="h6" fontWeight={800} color={brandPrimary}>
+                    1. Estudiante(s) y Continuidad
+                  </Typography>
+                </Box>
+
+                {/* LISTA DE TARJETAS POR CADA ESTUDIANTE */}
+                <Stack spacing={3} sx={{ mb: 3.5 }}>
               {estudiantesSeleccionados.map((item, index) => (
                 <Card
                   key={item.estudiante.id}
                   variant="outlined"
                   sx={{
                     borderRadius: '20px',
-                    bgcolor: isDark ? 'rgba(30, 41, 59, 0.7)' : '#ffffff',
-                    border: `1.5px solid ${item.confirma_continuidad ? (isDark ? 'rgba(250, 204, 21, 0.6)' : '#0288d1') : '#cbd5e1'}`,
-                    boxShadow: item.confirma_continuidad ? (isDark ? '0 10px 25px rgba(250, 204, 21, 0.15)' : '0 10px 25px rgba(2, 136, 209, 0.12)') : 'none',
+                    bgcolor: item.confirma_continuidad
+                      ? (isDark ? 'rgba(30, 41, 59, 0.7)' : '#ffffff')
+                      : (isDark ? 'linear-gradient(180deg, rgba(239, 68, 68, 0.12) 0%, rgba(30, 41, 59, 0.85) 100%)' : 'linear-gradient(180deg, #fff5f5 0%, #ffffff 100%)'),
+                    border: `1.5px solid ${
+                      item.confirma_continuidad
+                        ? (isDark ? 'rgba(250, 204, 21, 0.6)' : '#0288d1')
+                        : (isDark ? '#ef4444' : '#f87171')
+                    }`,
+                    boxShadow: item.confirma_continuidad
+                      ? (isDark ? '0 10px 25px rgba(250, 204, 21, 0.15)' : '0 10px 25px rgba(2, 136, 209, 0.12)')
+                      : (isDark ? '0 10px 25px rgba(239, 68, 68, 0.22)' : '0 10px 25px rgba(239, 68, 68, 0.14)'),
                     transition: 'all 0.3s ease',
                     position: 'relative'
                   }}
@@ -776,15 +856,30 @@ export default function ReservaCupoPage() {
                       </Tooltip>
                     )}
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, mb: 1.5, pr: estudiantesSeleccionados.length > 1 ? 5 : 0 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Chip
+                          size="small"
+                          label={`Estudiante #${index + 1}`}
+                          sx={{ bgcolor: alpha(brandPrimary, 0.15), color: brandPrimary, fontWeight: 800 }}
+                        />
+                        <Typography variant="body2" color="text.secondary">
+                          CI: <strong style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>{item.estudiante.ci}</strong>
+                        </Typography>
+                      </Box>
+
                       <Chip
                         size="small"
-                        label={`Estudiante #${index + 1}`}
-                        sx={{ bgcolor: alpha(brandPrimary, 0.15), color: brandPrimary, fontWeight: 800 }}
+                        icon={item.confirma_continuidad ? <CheckCircleIcon sx={{ fontSize: '14px !important', color: '#fff !important' }} /> : <CancelIcon sx={{ fontSize: '14px !important', color: '#fff !important' }} />}
+                        label={item.confirma_continuidad ? 'RESERVA 2027 ACTIVA' : 'NO CONTINUARÁ'}
+                        sx={{
+                          bgcolor: item.confirma_continuidad ? '#10b981' : '#ef4444',
+                          color: '#ffffff',
+                          fontWeight: 800,
+                          fontSize: '0.7rem',
+                          height: '24px'
+                        }}
                       />
-                      <Typography variant="body2" color="text.secondary">
-                        CI: <strong style={{ color: isDark ? '#f8fafc' : '#0f172a' }}>{item.estudiante.ci}</strong>
-                      </Typography>
                     </Box>
 
                     <Typography variant="h5" fontWeight={800} sx={{ color: isDark ? '#ffffff' : '#0f172a', mb: 0.5 }}>
@@ -819,71 +914,211 @@ export default function ReservaCupoPage() {
                         />
                       </Grid>
 
-                      <Grid size={{ xs: 12, sm: 6 }}>
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          Turno Asignado:
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <Chip
-                            icon={<ScheduleIcon fontSize="small" sx={{ color: `${brandPrimary} !important` }} />}
-                            label={`Turno ${item.gestion_actual.turno_nombre}`}
-                            sx={{
-                              bgcolor: alpha(brandPrimary, 0.15),
-                              color: brandPrimary,
-                              fontWeight: 800,
-                              py: 2,
-                              px: 1,
-                              borderRadius: '12px'
-                            }}
-                          />
-                          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                            (Mantiene su turno de estudiante regular)
-                          </Typography>
-                        </Box>
-                      </Grid>
 
-                      {/* SWITCH / CONFIRMACIÓN DE CONTINUIDAD */}
+
+                      {/* SELECTOR ADAPTABLE Y ELEGANTE DE CONTINUIDAD (100% RESPONSIVE MOBILE/DESKTOP) */}
                       <Grid size={{ xs: 12 }}>
                         <Box
                           sx={{
                             mt: 1.5,
-                            p: 2,
-                            borderRadius: '14px',
-                            bgcolor: item.confirma_continuidad
-                              ? (isDark ? alpha('#10b981', 0.15) : '#f0fdf4')
-                              : (isDark ? alpha('#ef4444', 0.15) : '#fef2f2'),
-                            border: `1.5px solid ${item.confirma_continuidad ? '#10b981' : '#ef4444'}`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
-                            gap: 1.5
+                            p: { xs: 1.75, sm: 2.25 },
+                            borderRadius: '18px',
+                            bgcolor: isDark ? 'rgba(15, 23, 42, 0.75)' : '#f8fafc',
+                            border: `1.5px solid ${
+                              item.confirma_continuidad
+                                ? (isDark ? alpha('#10b981', 0.4) : '#86efac')
+                                : (isDark ? alpha('#ef4444', 0.4) : '#fca5a5')
+                            }`,
+                            transition: 'all 0.25s ease'
                           }}
                         >
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="subtitle2" fontWeight={800} color={item.confirma_continuidad ? (isDark ? '#4ade80' : '#15803d') : (isDark ? '#f87171' : '#b91c1c')}>
-                              {item.confirma_continuidad
-                                ? '✓ Confirmo que mi hijo/a CONTINUARÁ en el colegio en la Gestión 2027'
-                                : '✕ No continuará en el colegio para la Gestión 2027 (No se reservará cupo)'}
+                          {/* PREGUNTA Y SUBTÍTULO CLAROS */}
+                          <Box sx={{ mb: 1.75 }}>
+                            <Typography
+                              variant="subtitle1"
+                              sx={{
+                                fontWeight: 800,
+                                fontSize: { xs: '0.96rem', sm: '1.05rem' },
+                                color: isDark ? '#f8fafc' : '#0f172a',
+                                lineHeight: 1.3
+                              }}
+                            >
+                              ¿Su hijo/a continuará en el colegio en la Gestión 2027?
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {item.confirma_continuidad
-                                ? 'Se reservará su plaza para el grado y turno indicados.'
-                                : 'Si desmarca esta opción, no se emitirá reserva de cupo para este alumno.'}
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: isDark ? '#94a3b8' : '#64748b',
+                                mt: 0.3,
+                                fontSize: { xs: '0.82rem', sm: '0.86rem' }
+                              }}
+                            >
+                              Marque esta opción si desea reservar su plaza para la próxima gestión.
                             </Typography>
                           </Box>
 
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={item.confirma_continuidad}
-                                onChange={() => handleToggleContinuidad(item.estudiante.id)}
-                                color="success"
+                          {/* SELECTOR SEGMENTADO RESPONSIVE (Pill Bar táctil de 2 opciones) */}
+                          <Box
+                            sx={{
+                              p: '4px',
+                              borderRadius: '14px',
+                              bgcolor: isDark ? 'rgba(2, 6, 23, 0.65)' : '#e2e8f0',
+                              display: 'grid',
+                              gridTemplateColumns: '1fr 1fr',
+                              gap: '4px',
+                              position: 'relative'
+                            }}
+                          >
+                            {/* BOTÓN 1: SÍ, CONTINUARÁ */}
+                            <Button
+                              onClick={() => handleSetContinuidad(item.estudiante.id, true)}
+                              startIcon={<CheckCircleIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />}
+                              sx={{
+                                py: { xs: 1.1, sm: 1.3 },
+                                px: { xs: 1, sm: 2 },
+                                borderRadius: '11px',
+                                textTransform: 'none',
+                                fontWeight: 800,
+                                fontSize: { xs: '0.84rem', sm: '0.92rem' },
+                                color: item.confirma_continuidad
+                                  ? '#ffffff !important'
+                                  : (isDark ? '#94a3b8' : '#475569'),
+                                bgcolor: item.confirma_continuidad
+                                  ? '#10b981'
+                                  : 'transparent',
+                                backgroundImage: item.confirma_continuidad
+                                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                                  : 'none',
+                                boxShadow: item.confirma_continuidad
+                                  ? '0 3px 12px rgba(16, 185, 129, 0.4)'
+                                  : 'none',
+                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                '&:hover': {
+                                  bgcolor: item.confirma_continuidad
+                                    ? '#059669'
+                                    : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)')
+                                }
+                              }}
+                            >
+                              Sí, continuará
+                            </Button>
+
+                            {/* BOTÓN 2: NO CONTINUARÁ */}
+                            <Button
+                              onClick={() => handleSetContinuidad(item.estudiante.id, false)}
+                              startIcon={<CancelIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />}
+                              sx={{
+                                py: { xs: 1.1, sm: 1.3 },
+                                px: { xs: 1, sm: 2 },
+                                borderRadius: '11px',
+                                textTransform: 'none',
+                                fontWeight: 800,
+                                fontSize: { xs: '0.84rem', sm: '0.92rem' },
+                                color: !item.confirma_continuidad
+                                  ? '#ffffff !important'
+                                  : (isDark ? '#94a3b8' : '#475569'),
+                                bgcolor: !item.confirma_continuidad
+                                  ? '#ef4444'
+                                  : 'transparent',
+                                backgroundImage: !item.confirma_continuidad
+                                  ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                                  : 'none',
+                                boxShadow: !item.confirma_continuidad
+                                  ? '0 3px 12px rgba(239, 68, 68, 0.4)'
+                                  : 'none',
+                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                '&:hover': {
+                                  bgcolor: !item.confirma_continuidad
+                                    ? '#dc2626'
+                                    : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)')
+                                }
+                              }}
+                            >
+                              No continuará
+                            </Button>
+                          </Box>
+
+                          {/* MENSAJE EXPLICATIVO SEGÚN LA ELECCIÓN */}
+                          <Box
+                            sx={{
+                              mt: 1.5,
+                              px: 1.5,
+                              py: 0.9,
+                              borderRadius: '10px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              bgcolor: item.confirma_continuidad
+                                ? (isDark ? alpha('#10b981', 0.12) : '#f0fdf4')
+                                : (isDark ? alpha('#ef4444', 0.12) : '#fef2f2'),
+                              border: `1px solid ${
+                                item.confirma_continuidad
+                                  ? (isDark ? alpha('#10b981', 0.25) : '#bbf7d0')
+                                  : (isDark ? alpha('#ef4444', 0.25) : '#fecaca')
+                              }`
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                bgcolor: item.confirma_continuidad ? '#10b981' : '#ef4444',
+                                flexShrink: 0
+                              }}
+                            />
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontWeight: 700,
+                                fontSize: { xs: '0.78rem', sm: '0.82rem' },
+                                color: item.confirma_continuidad
+                                  ? (isDark ? '#4ade80' : '#15803d')
+                                  : (isDark ? '#f87171' : '#b91c1c')
+                              }}
+                            >
+                              {item.confirma_continuidad
+                                ? 'Se reservará y garantizará el cupo escolar para la Gestión 2027.'
+                                : 'Se liberará el cupo y se emitirá la Constancia Oficial de No Continuidad.'}
+                            </Typography>
+                          </Box>
+
+                          {/* CAMPO DE MOTIVO SI MARCA NO CONTINUARÁ */}
+                          <Collapse in={!item.confirma_continuidad} timeout={250}>
+                            <Box
+                              sx={{
+                                mt: 1.75,
+                                pt: 1.75,
+                                borderTop: `1px dashed ${isDark ? 'rgba(239,68,68,0.35)' : '#fca5a5'}`
+                              }}
+                            >
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontWeight: 700,
+                                  color: isDark ? '#fca5a5' : '#b91c1c',
+                                  display: 'block',
+                                  mb: 0.8,
+                                  fontSize: '0.82rem'
+                                }}
+                              >
+                                Motivo de no continuidad (opcional):
+                              </Typography>
+                              <TextField
+                                size="small"
+                                fullWidth
+                                placeholder="Ej: Cambio de colegio, mudanza de ciudad, motivos personales..."
+                                value={item.motivo_no_continua || ''}
+                                onChange={(e) => handleMotivoNoContinuaChange(item.estudiante.id, e.target.value)}
+                                sx={{
+                                  bgcolor: isDark ? 'rgba(15, 23, 42, 0.7)' : '#ffffff',
+                                  '& .MuiOutlinedInput-root': {
+                                    borderRadius: '10px'
+                                  }
+                                }}
                               />
-                            }
-                            label={item.confirma_continuidad ? 'Continuará' : 'No continuará'}
-                            sx={{ m: 0 }}
-                          />
+                            </Box>
+                          </Collapse>
                         </Box>
                       </Grid>
                     </Grid>
@@ -892,9 +1127,121 @@ export default function ReservaCupoPage() {
               ))}
             </Stack>
 
-            {/* BOTÓN O CAJA PARA AGREGAR OTRO HIJO */}
-            {!mostrarAgregarOtro ? (
-              <Box sx={{ mb: 4, textAlign: 'center' }}>
+            {/* LISTA DE HERMANOS NUEVOS AGREGADOS (PRIORIDAD FAMILIAR) */}
+            {hermanosSeleccionados.length > 0 && (
+              <Box sx={{ mb: 3.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                  <StarIcon sx={{ color: isDark ? '#facc15' : '#f59e0b', fontSize: 24 }} />
+                  <Typography variant="h6" fontWeight={800} sx={{ color: isDark ? '#facc15' : '#0288d1' }}>
+                    Hermanos Postulantes a Nueva Admisión ({hermanosSeleccionados.length})
+                  </Typography>
+                </Box>
+
+                <Stack spacing={2.5}>
+                  {hermanosSeleccionados.map((h, hIdx) => {
+                    const esEspera = h.es_lista_espera ?? !h.tiene_cupo_inmediato;
+                    const nombreGrado = h.grado_nombre || h.grado_solicitado_nombre || 'Grado Solicitado';
+                    const nombreTurno = h.turno_nombre || h.turno_solicitado_nombre || (h.turno_solicitado_id === 1 ? 'Mañana' : 'Tarde');
+
+                    return (
+                      <Card
+                        key={hIdx}
+                        variant="outlined"
+                        sx={{
+                          borderRadius: '18px',
+                          bgcolor: isDark ? 'rgba(30, 41, 59, 0.7)' : '#ffffff',
+                          border: `1.5px solid ${esEspera ? (isDark ? '#f59e0b' : '#fcd34d') : (isDark ? '#10b981' : '#86efac')}`,
+                          boxShadow: esEspera
+                            ? (isDark ? '0 8px 25px rgba(245, 158, 11, 0.15)' : '0 8px 25px rgba(245, 158, 11, 0.1)')
+                            : (isDark ? '0 8px 25px rgba(16, 185, 129, 0.15)' : '0 8px 25px rgba(16, 185, 129, 0.1)'),
+                          p: { xs: 2.5, sm: 3 },
+                          position: 'relative'
+                        }}
+                      >
+                        <Tooltip title="Quitar hermano de la solicitud">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleQuitarHermano(hIdx)}
+                            sx={{ position: 'absolute', top: 16, right: 16 }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1, pr: 5 }}>
+                          <Chip
+                            size="small"
+                            label={`Hermano #${hIdx + 1}`}
+                            sx={{ bgcolor: alpha('#f59e0b', 0.15), color: '#d97706', fontWeight: 800 }}
+                          />
+                          <Chip
+                            size="small"
+                            icon={esEspera ? <ScheduleIcon sx={{ fontSize: '14px !important', color: '#fff !important' }} /> : <CheckCircleIcon sx={{ fontSize: '14px !important', color: '#fff !important' }} />}
+                            label={esEspera ? `LISTA DE ESPERA · PUESTO #${h.posicion_espera || 1}` : 'CUPO DIRECTO CONFIRMADO'}
+                            sx={{
+                              bgcolor: esEspera ? '#f59e0b' : '#10b981',
+                              color: '#ffffff',
+                              fontWeight: 800,
+                              fontSize: '0.72rem'
+                            }}
+                          />
+                        </Box>
+
+                        <Typography variant="h5" fontWeight={800} sx={{ color: isDark ? '#ffffff' : '#0f172a', mb: 0.5 }}>
+                          {h.nombres} {h.apellido_paterno} {h.apellido_materno || ''}
+                        </Typography>
+
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          Hermano/a del estudiante regular: <strong>{h.hermano_regular_nombre || 'Estudiante regular'}</strong>
+                          {h.ci ? ` · CI: ${h.ci}` : ''}
+                        </Typography>
+
+                        <Divider sx={{ my: 1.5 }} />
+
+                        <Grid container spacing={2}>
+                          <Grid size={{ xs: 12, sm: 6 }}>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              Grado Solicitado:
+                            </Typography>
+                            <Chip
+                              icon={<SchoolIcon fontSize="small" sx={{ color: '#fff !important' }} />}
+                              label={nombreGrado}
+                              sx={{
+                                bgcolor: esEspera ? '#f59e0b' : '#10b981',
+                                color: '#fff',
+                                fontWeight: 800,
+                                fontSize: '0.9rem',
+                                py: 1.8,
+                                px: 1.5,
+                                mt: 0.5,
+                                borderRadius: '10px'
+                              }}
+                            />
+                          </Grid>
+                          <Grid size={{ xs: 12, sm: 6 }}>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              Turno Solicitado:
+                            </Typography>
+                            <Typography variant="body1" fontWeight={700} sx={{ mt: 0.5 }}>
+                              {nombreTurno}
+                            </Typography>
+                          </Grid>
+                        </Grid>
+                      </Card>
+                    );
+                  })}
+                </Stack>
+              </Box>
+            )}
+
+            {/* BOTONES PARA AGREGAR OTRO HIJO REGULAR O REGISTRAR HERMANO */}
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
+              sx={{ mb: 4, justifyContent: 'center', alignItems: 'stretch' }}
+            >
+              {!mostrarAgregarOtro && (
                 <Button
                   variant="outlined"
                   startIcon={<AddIcon />}
@@ -906,7 +1253,7 @@ export default function ReservaCupoPage() {
                     borderRadius: '14px',
                     textTransform: 'none',
                     fontWeight: 700,
-                    px: 3.5,
+                    px: 3,
                     py: 1.4,
                     border: `2px dashed ${brandPrimary}`,
                     color: brandPrimary,
@@ -918,10 +1265,38 @@ export default function ReservaCupoPage() {
                     }
                   }}
                 >
-                  + Agregar otro hijo o familiar (por CI)
+                  + Agregar otro hijo regular (por CI)
                 </Button>
-              </Box>
-            ) : (
+              )}
+
+              <Button
+                variant="contained"
+                startIcon={<StarIcon sx={{ color: isDark ? '#facc15' : '#f59e0b' }} />}
+                onClick={() => setModalHermanoOpen(true)}
+                sx={{
+                  borderRadius: '14px',
+                  textTransform: 'none',
+                  fontWeight: 800,
+                  px: 3,
+                  py: 1.4,
+                  bgcolor: isDark ? alpha('#f59e0b', 0.15) : '#eff6ff',
+                  border: `2px solid ${isDark ? '#f59e0b' : '#3b82f6'}`,
+                  color: isDark ? '#facc15' : '#1d4ed8',
+                  boxShadow: isDark
+                    ? '0 6px 20px rgba(245, 158, 11, 0.2)'
+                    : '0 6px 20px rgba(59, 130, 246, 0.15)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    bgcolor: isDark ? alpha('#f59e0b', 0.25) : '#dbeafe',
+                    transform: 'translateY(-2px)'
+                  }
+                }}
+              >
+                ⭐ + Registrar hermanito nuevo (Ingreso Gestión 2027)
+              </Button>
+            </Stack>
+
+            {mostrarAgregarOtro && (
               <Paper
                 elevation={0}
                 sx={{
@@ -933,7 +1308,7 @@ export default function ReservaCupoPage() {
                 }}
               >
                 <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5, color: brandPrimary }}>
-                  Ingresa el Carnet de Identidad (CI) del otro estudiante:
+                  Ingresa el Carnet de Identidad (CI) del otro estudiante regular:
                 </Typography>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                   <TextField
@@ -999,234 +1374,249 @@ export default function ReservaCupoPage() {
               </Paper>
             )}
 
-            {/* Si no hay ningún estudiante que continúe, mostrar aviso amigable y NO abrir los datos del tutor */}
+            {/* Si no continúa ningún estudiante, mostramos una alerta informativa clara de no continuidad, pero MANTENEMOS el formulario habilitado para registrar al tutor y emitir la constancia */}
             {!algunoContinuara && (
               <Box
                 sx={{
                   mt: 3,
-                  p: { xs: 2.5, sm: 3.5 },
+                  p: { xs: 2, sm: 2.5 },
                   borderRadius: '16px',
-                  bgcolor: isDark ? alpha('#ef4444', 0.12) : '#fef2f2',
-                  border: `1.5px dashed ${isDark ? '#ef4444' : '#f87171'}`,
-                  textAlign: 'center'
+                  bgcolor: isDark ? alpha('#f59e0b', 0.12) : '#fffbeb',
+                  border: `1.5px solid ${isDark ? alpha('#f59e0b', 0.4) : '#fcd34d'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2
                 }}
               >
                 <Box
                   sx={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: '50%',
-                    bgcolor: alpha('#ef4444', 0.15),
-                    color: '#ef4444',
+                    width: 44,
+                    height: 44,
+                    borderRadius: '12px',
+                    bgcolor: alpha('#f59e0b', 0.2),
+                    color: '#d97706',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    mx: 'auto',
-                    mb: 1.5
+                    flexShrink: 0
                   }}
                 >
-                  <CancelIcon sx={{ fontSize: 32 }} />
+                  <CancelIcon sx={{ fontSize: 26 }} />
                 </Box>
-                <Typography variant="h6" fontWeight={800} sx={{ color: isDark ? '#f87171' : '#b91c1c', mb: 1 }}>
-                  No se registrará reserva de cupo
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 560, mx: 'auto', mb: 3 }}>
-                  Has marcado que el estudiante <strong>no continuará</strong> en la institución para la Gestión 2027.
-                  Por ello, <strong>el apartado de datos del tutor no se habilitará</strong> y no se emitirá cupo de reserva.
-                  Si deseas apartar su cupo, activa nuevamente la opción <strong>&quot;Continuará&quot;</strong> en la tarjeta de arriba.
-                </Typography>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
-                  <Button
-                    variant="outlined"
-                    startIcon={<ArrowBackIcon />}
-                    onClick={() => setActiveStep(0)}
-                    sx={outlineBtnStyle}
-                  >
-                    Volver a Consultar otro CI
-                  </Button>
-                </Stack>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={800} sx={{ color: isDark ? '#fbbf24' : '#b45309' }}>
+                    Declaración Formal de No Continuidad para la Gestión 2027
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: isDark ? '#e2e8f0' : '#475569', display: 'block', mt: 0.25 }}>
+                    Complete los datos de la persona que realiza el trámite abajo para formalizar la no continuidad y emitir la <strong>Constancia Oficial</strong>.
+                  </Typography>
+                </Box>
               </Box>
             )}
 
-            {/* SECCIÓN: DATOS DE QUIEN REALIZA LA RESERVA (Solo se abre dinámicamente si continuará) */}
-            <Collapse in={algunoContinuara} unmountOnExit>
-              <Divider sx={{ my: 4 }} />
+              </Grid>
 
-              <form onSubmit={handleConfirmarReserva}>
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="h6" fontWeight={800} color={brandPrimary} sx={{ mb: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <FamilyIcon sx={{ color: brandPrimary }} /> Datos de la Persona que Realiza la Reserva
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Indica quién realiza el trámite en este momento (Tía, Madre, Padre, Abuelo, etc.) y su número de WhatsApp para contacto.
-                  </Typography>
+              {/* ── COLUMNA DERECHA: DATOS DE QUIEN REALIZA EL TRÁMITE (PADRE / TUTOR) (50% EN DESKTOP) ── */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: { xs: 2.5, sm: 3.5 },
+                    borderRadius: '20px',
+                    bgcolor: isDark ? 'rgba(30, 41, 59, 0.45)' : 'rgba(248, 250, 252, 0.85)',
+                    border: `1.5px solid ${isDark ? 'rgba(250, 204, 21, 0.25)' : 'rgba(1, 87, 155, 0.15)'}`,
+                    boxShadow: isDark
+                      ? '0 10px 30px rgba(0,0,0,0.3)'
+                      : '0 10px 30px rgba(1, 87, 155, 0.06)',
+                  }}
+                >
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" fontWeight={800} color={brandPrimary} sx={{ mb: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <FamilyIcon sx={{ color: brandPrimary }} /> {algunoContinuara ? '2. Datos de Quien Realiza la Reserva' : '2. Datos de Quien Declara No Continuidad'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {algunoContinuara
+                        ? 'Indica los datos del padre, madre o tutor y su número de WhatsApp para enviar la confirmación y avisos.'
+                        : 'Indica los datos del tutor o persona responsable que formaliza la constancia de no continuidad.'}
+                    </Typography>
+                  </Box>
 
-                  <Grid container spacing={2.5}>
-                    <Grid size={{ xs: 12, sm: 8 }}>
-                      <TextField
-                        fullWidth
-                        label="Nombre Completo de Quien Reserva"
-                        placeholder="Ej: Carmen Morales Pérez"
-                        value={tutorNombre}
-                        onChange={(e) => setTutorNombre(e.target.value)}
-                        required
-                        disabled={isConfirmando}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: '14px',
-                            '&.Mui-focused fieldset': {
-                              borderColor: brandPrimary,
-                              borderWidth: '2px'
-                            }
-                          },
-                          '& .MuiInputLabel-root.Mui-focused': {
-                            color: brandPrimary
-                          }
-                        }}
-                        slotProps={{
-                          input: {
-                            startAdornment: <PersonIcon sx={{ color: brandPrimary, mr: 1 }} />
-                          }
-                        }}
-                      />
-                    </Grid>
-
-                    <Grid size={{ xs: 12, sm: 4 }}>
-                      <FormControl fullWidth required>
-                        <InputLabel sx={{ '&.Mui-focused': { color: brandPrimary } }}>Parentesco</InputLabel>
-                        <Select
-                          value={tutorParentesco}
-                          label="Parentesco"
-                          onChange={(e) => setTutorParentesco(e.target.value)}
+                  <form onSubmit={handleConfirmarReserva}>
+                    <Grid container spacing={2.5}>
+                      <Grid size={{ xs: 12 }}>
+                        <TextField
+                          fullWidth
+                          label="Nombre Completo de Quien Reserva"
+                          placeholder="Ej: Carmen Morales Pérez"
+                          value={tutorNombre}
+                          onChange={(e) => setTutorNombre(e.target.value)}
+                          required
                           disabled={isConfirmando}
                           sx={{
-                            borderRadius: '14px',
-                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                              borderColor: brandPrimary,
-                              borderWidth: '2px'
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '14px',
+                              '&.Mui-focused fieldset': {
+                                borderColor: brandPrimary,
+                                borderWidth: '2px'
+                              }
+                            },
+                            '& .MuiInputLabel-root.Mui-focused': {
+                              color: brandPrimary
                             }
                           }}
-                        >
-                          {PARENTESCOS.map((p) => (
-                            <MenuItem key={p} value={p}>
-                              {p}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Carnet de Identidad (CI)"
-                        placeholder="Ej: 5423891 CB"
-                        value={tutorCi}
-                        onChange={(e) => setTutorCi(e.target.value)}
-                        required
-                        disabled={isConfirmando}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: '14px',
-                            '&.Mui-focused fieldset': {
-                              borderColor: brandPrimary,
-                              borderWidth: '2px'
+                          slotProps={{
+                            input: {
+                              startAdornment: <PersonIcon sx={{ color: brandPrimary, mr: 1 }} />
                             }
-                          },
-                          '& .MuiInputLabel-root.Mui-focused': {
-                            color: brandPrimary
-                          }
-                        }}
-                      />
-                    </Grid>
+                          }}
+                        />
+                      </Grid>
 
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Número de Celular / WhatsApp"
-                        placeholder="Ej: 70712345"
-                        value={tutorTelefono}
-                        onChange={(e) => setTutorTelefono(e.target.value)}
-                        required
-                        disabled={isConfirmando}
-                        helperText="Aquí recibirá la confirmación y avisos del colegio"
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: '14px',
-                            '&.Mui-focused fieldset': {
-                              borderColor: brandPrimary,
-                              borderWidth: '2px'
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <FormControl fullWidth required>
+                          <InputLabel sx={{ '&.Mui-focused': { color: brandPrimary } }}>Parentesco</InputLabel>
+                          <Select
+                            value={tutorParentesco}
+                            label="Parentesco"
+                            onChange={(e) => setTutorParentesco(e.target.value)}
+                            disabled={isConfirmando}
+                            sx={{
+                              borderRadius: '14px',
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                borderColor: brandPrimary,
+                                borderWidth: '2px'
+                              }
+                            }}
+                          >
+                            {PARENTESCOS.map((p) => (
+                              <MenuItem key={p} value={p}>
+                                {p}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+
+                      <Grid size={{ xs: 12, sm: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="Carnet de Identidad (CI)"
+                          placeholder="Ej: 5423891 CB"
+                          value={tutorCi}
+                          onChange={(e) => setTutorCi(e.target.value)}
+                          required
+                          disabled={isConfirmando}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '14px',
+                              '&.Mui-focused fieldset': {
+                                borderColor: brandPrimary,
+                                borderWidth: '2px'
+                              }
+                            },
+                            '& .MuiInputLabel-root.Mui-focused': {
+                              color: brandPrimary
                             }
-                          },
-                          '& .MuiInputLabel-root.Mui-focused': {
-                            color: brandPrimary
-                          }
-                        }}
-                        slotProps={{
-                          input: {
-                            startAdornment: <PhoneIcon sx={{ color: '#10b981', mr: 1 }} />
-                          }
-                        }}
-                      />
-                    </Grid>
+                          }}
+                        />
+                      </Grid>
 
-                    <Grid size={{ xs: 12 }}>
-                      <TextField
-                        fullWidth
-                        multiline
-                        rows={2}
-                        label="Observaciones (Opcional)"
-                        placeholder="Ej: Trámite realizado por la tía a cargo..."
-                        value={observaciones}
-                        onChange={(e) => setObservaciones(e.target.value)}
-                        disabled={isConfirmando}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: '14px',
-                            '&.Mui-focused fieldset': {
-                              borderColor: brandPrimary,
-                              borderWidth: '2px'
+                      <Grid size={{ xs: 12 }}>
+                        <TextField
+                          fullWidth
+                          label="Número de Celular / WhatsApp"
+                          placeholder="Ej: 70712345"
+                          value={tutorTelefono}
+                          onChange={(e) => setTutorTelefono(e.target.value)}
+                          required
+                          disabled={isConfirmando}
+                          helperText="Aquí recibirá la confirmación y avisos del colegio"
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '14px',
+                              '&.Mui-focused fieldset': {
+                                borderColor: brandPrimary,
+                                borderWidth: '2px'
+                              }
+                            },
+                            '& .MuiInputLabel-root.Mui-focused': {
+                              color: brandPrimary
                             }
-                          },
-                          '& .MuiInputLabel-root.Mui-focused': {
-                            color: brandPrimary
-                          }
-                        }}
-                      />
+                          }}
+                          slotProps={{
+                            input: {
+                              startAdornment: <PhoneIcon sx={{ color: '#10b981', mr: 1 }} />
+                            }
+                          }}
+                        />
+                      </Grid>
+
+                      <Grid size={{ xs: 12 }}>
+                        <TextField
+                          fullWidth
+                          multiline
+                          rows={2}
+                          label="Observaciones (Opcional)"
+                          placeholder="Ej: Trámite realizado por la tía a cargo..."
+                          value={observaciones}
+                          onChange={(e) => setObservaciones(e.target.value)}
+                          disabled={isConfirmando}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '14px',
+                              '&.Mui-focused fieldset': {
+                                borderColor: brandPrimary,
+                                borderWidth: '2px'
+                              }
+                            },
+                            '& .MuiInputLabel-root.Mui-focused': {
+                              color: brandPrimary
+                            }
+                          }}
+                        />
+                      </Grid>
                     </Grid>
-                  </Grid>
-                </Box>
 
-                {/* Botones de Navegación con alto contraste y estilo PreInscripción */}
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 4 }}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => setActiveStep(0)}
-                    disabled={isConfirmando}
-                    startIcon={<ArrowBackIcon />}
-                    sx={outlineBtnStyle}
-                  >
-                    Volver Atrás
-                  </Button>
+                    {/* Botones de Navegación con alto contraste y estilo PreInscripción */}
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 4 }}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => setActiveStep(0)}
+                        disabled={isConfirmando}
+                        startIcon={<ArrowBackIcon />}
+                        sx={outlineBtnStyle}
+                      >
+                        Volver Atrás
+                      </Button>
 
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    size="large"
-                    fullWidth
-                    disabled={isConfirmando}
-                    endIcon={isConfirmando ? <CircularProgress size={20} color="inherit" /> : <CheckCircleIcon />}
-                    sx={confirmBtnStyle}
-                  >
-                    {isConfirmando
-                      ? 'Guardando Reserva...'
-                      : estudiantesSeleccionados.filter(i => i.confirma_continuidad).length > 1
-                        ? `Confirmar Reserva de los ${estudiantesSeleccionados.filter(i => i.confirma_continuidad).length} Estudiantes`
-                        : 'Confirmar y Emitir Recibo Oficial'}
-                  </Button>
-                </Stack>
-              </form>
-            </Collapse>
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        size="large"
+                        fullWidth
+                        disabled={isConfirmando}
+                        endIcon={isConfirmando ? <CircularProgress size={20} color="inherit" /> : <CheckCircleIcon />}
+                        sx={confirmBtnStyle}
+                      >
+                        {isConfirmando
+                          ? 'Procesando...'
+                          : hermanosSeleccionados.length > 0
+                            ? `Confirmar Trámite (${estudiantesSeleccionados.length} Regular(es) + ${hermanosSeleccionados.length} Hermano(s))`
+                            : algunoContinuara && estudiantesSeleccionados.some(i => !i.confirma_continuidad)
+                              ? `Confirmar Trámite de los ${estudiantesSeleccionados.length} Estudiantes`
+                              : !algunoContinuara
+                                ? (estudiantesSeleccionados.length > 1
+                                  ? `Emitir Constancias de No Continuidad (${estudiantesSeleccionados.length})`
+                                  : 'Emitir Constancia de No Continuidad')
+                                : (estudiantesSeleccionados.length > 1
+                                  ? `Confirmar Reserva de los ${estudiantesSeleccionados.length} Estudiantes`
+                                  : 'Confirmar y Emitir Recibo Oficial')}
+                      </Button>
+                    </Stack>
+                  </form>
+                </Paper>
+              </Grid>
+            </Grid>
           </Paper>
         )}
 
@@ -1250,6 +1640,15 @@ export default function ReservaCupoPage() {
         errorTipo={modalErrorTipo}
         errorMessage={modalErrorMensaje}
         nombreEstudiante={modalNombreEstudiante}
+      />
+
+      {/* Modal para registrar hermanito nuevo con prioridad familiar */}
+      <ModalAgregarHermano
+        open={modalHermanoOpen}
+        onClose={() => setModalHermanoOpen(false)}
+        onAgregar={handleAgregarHermano}
+        estudiantesRegulares={estudiantesSeleccionados}
+        periodoId={estudiantesSeleccionados[0]?.proyeccion_siguiente?.periodo_id}
       />
     </Box>
   );

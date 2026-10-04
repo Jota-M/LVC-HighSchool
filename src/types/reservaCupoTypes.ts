@@ -54,7 +54,14 @@ export interface ReservaCupoData {
   tutor_parentesco: string;
   tutor_telefono: string;
   observaciones: string | null;
-  estado: 'confirmada' | 'matriculada' | 'cancelada' | 'vencida';
+  motivo_no_continua?: string | null;
+  motivo_anulacion?: string | null;
+  fecha_solicitud_anulacion?: string | null;
+  fecha_anulacion?: string | null;
+  fecha_reactivacion?: string | null;
+  anulado_por_usuario_id?: number | null;
+  reactivado_por_usuario_id?: number | null;
+  estado: 'confirmada' | 'no_continua' | 'solicitud_anulacion' | 'anulada' | 'cancelada' | 'matriculada' | 'vencida';
   fecha_reserva: string;
   fecha_reserva_formateada: string;
   fecha_reserva_corta: string;
@@ -79,6 +86,8 @@ export interface ValidarEstudianteResponse {
   data: {
     valido: boolean;
     ya_reservado: boolean;
+    estado_reserva?: string;
+    error_tipo?: string;
     mensaje?: string;
     estudiante?: EstudianteRegularInfo;
     gestion_actual?: GestionActualInfo;
@@ -94,6 +103,96 @@ export interface EstudianteSeleccionadoParaReserva {
   proyeccion_siguiente: ProyeccionSiguienteInfo;
   turno_seleccionado_id: number;
   confirma_continuidad: boolean;
+  motivo_no_continua?: string;
+}
+
+export interface HermanoParaReserva {
+  id_temp: string; // ID temporal único para la UI
+  hermano_regular_id: number;
+  hermano_regular_nombre?: string;
+  nombres: string;
+  apellido_paterno: string;
+  apellido_materno?: string;
+  ci?: string;
+  fecha_nacimiento: string;
+  genero: string;
+  grado_solicitado_id: number;
+  grado_solicitado_nombre?: string;
+  grado_nombre?: string; // Nombre amigable del grado
+  turno_solicitado_id: number;
+  turno_solicitado_nombre?: string;
+  turno_nombre?: string; // Nombre amigable del turno (Mañana/Tarde)
+  tiene_cupo_inmediato?: boolean;
+  es_lista_espera?: boolean; // Flag directo para UI
+  posicion_espera?: number;
+  observaciones?: string;
+}
+
+export interface ReservaCupoHermanoData {
+  id: number;
+  codigo_reserva: string;
+  codigo_recibo: string;
+  hermano_regular_id: number;
+  periodo_academico_id: number;
+  grado_solicitado_id: number;
+  turno_solicitado_id: number;
+  nombres: string;
+  apellido_paterno: string;
+  apellido_materno: string | null;
+  ci: string | null;
+  fecha_nacimiento: string;
+  fecha_nacimiento_formateada?: string;
+  genero: string | null;
+  tutor_nombre: string;
+  tutor_ci: string;
+  tutor_parentesco: string;
+  tutor_telefono: string;
+  estado: 'confirmada' | 'en_espera' | 'anulada';
+  posicion_espera: number;
+  motivo_reasignacion?: string | null;
+  observaciones: string | null;
+  fecha_reserva: string;
+  fecha_reserva_formateada: string;
+  fecha_reserva_corta: string;
+  nombre_completo: string;
+  periodo_nombre: string;
+  grado_solicitado_nombre: string;
+  grado_nombre?: string;
+  nivel_solicitado_nombre: string;
+  nivel_nombre?: string;
+  turno_solicitado_nombre: string;
+  turno_nombre?: string;
+  turno_hora_inicio: string;
+  turno_hora_fin: string;
+  regular_codigo: string;
+  regular_ci: string;
+  regular_nombre_completo: string;
+  regular_nombres?: string;
+  regular_apellidos?: string;
+  regular_grado_actual?: string;
+  regular_foto_url?: string | null;
+}
+
+export interface DisponibilidadHermanoResponse {
+  periodo_id: number;
+  periodo_nombre: string;
+  grado_id: number;
+  turno_id: number;
+  aforo_total: number;
+  regulares_protegidos: number;
+  hermanos_confirmados: number;
+  total_en_espera: number;
+  cupos_disponibles: number;
+  tiene_cupo_inmediato: boolean;
+  estado_asignacion: 'confirmada' | 'en_espera';
+  posicion_espera: number;
+  turno_alternativo: {
+    turno_id: number;
+    turno_nombre: string;
+    tiene_cupo_inmediato: boolean;
+    cupos_disponibles: number;
+  } | null;
+  mensaje: string;
 }
 
 export interface ConfirmarReservaPayload {
@@ -102,6 +201,21 @@ export interface ConfirmarReservaPayload {
     grado_actual_id: number | null;
     grado_destino_id: number;
     turno_destino_id: number;
+    continua?: boolean;
+    confirma_continuidad?: boolean;
+    motivo_no_continua?: string;
+  }>;
+  hermanos?: Array<{
+    hermano_regular_id: number;
+    grado_solicitado_id: number;
+    turno_solicitado_id: number;
+    nombres: string;
+    apellido_paterno: string;
+    apellido_materno?: string;
+    ci?: string;
+    fecha_nacimiento: string;
+    genero?: string;
+    observaciones?: string;
   }>;
   periodo_academico_id?: number;
   tutor_nombre: string;
@@ -116,6 +230,7 @@ export interface ConfirmarReservaResponse {
   message: string;
   data: {
     reservas: ReservaCupoData[];
-    reserva_principal: ReservaCupoData;
+    hermanos?: ReservaCupoHermanoData[];
+    reserva_principal: ReservaCupoData | ReservaCupoHermanoData;
   };
 }
