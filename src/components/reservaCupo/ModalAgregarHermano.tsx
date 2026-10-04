@@ -173,14 +173,53 @@ export default function ModalAgregarHermano({
     e.preventDefault();
     setErrorValidacion(null);
 
-    if (!nombres.trim()) {
+    const nomLimpio = nombres.replace(/<[^>]*>?/gm, '').trim();
+    const patLimpio = apellidoPaterno.replace(/<[^>]*>?/gm, '').trim();
+    const matLimpio = apellidoMaterno.replace(/<[^>]*>?/gm, '').trim();
+    const ciLimpio = ci.replace(/<[^>]*>?/gm, '').trim();
+    const obsLimpia = observaciones.replace(/<[^>]*>?/gm, '').trim();
+
+    // Detección de patrones de scripting o inyección de código
+    const PATRON_SCRIPT = /<[^>]*>|javascript:|data:\s*text\/html|vbscript:|on\w+\s*=/i;
+    if (
+      PATRON_SCRIPT.test(nombres) ||
+      PATRON_SCRIPT.test(apellidoPaterno) ||
+      PATRON_SCRIPT.test(apellidoMaterno) ||
+      PATRON_SCRIPT.test(ci) ||
+      PATRON_SCRIPT.test(observaciones)
+    ) {
+      setErrorValidacion('Por motivos de seguridad, no se permiten caracteres especiales ni secuencias de código.');
+      return;
+    }
+
+    if (!nomLimpio) {
       setErrorValidacion('Debe ingresar los nombres del hermanito');
       return;
     }
-    if (!apellidoPaterno.trim()) {
+    if (nomLimpio.length > 60 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\.\'-]+$/.test(nomLimpio)) {
+      setErrorValidacion('Los nombres solo deben contener letras (máximo 60 caracteres)');
+      return;
+    }
+
+    if (!patLimpio) {
       setErrorValidacion('Debe ingresar el apellido paterno del hermanito');
       return;
     }
+    if (patLimpio.length > 60 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\.\'-]+$/.test(patLimpio)) {
+      setErrorValidacion('El apellido paterno solo debe contener letras (máximo 60 caracteres)');
+      return;
+    }
+
+    if (matLimpio && (matLimpio.length > 60 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\.\'-]+$/.test(matLimpio))) {
+      setErrorValidacion('El apellido materno solo debe contener letras');
+      return;
+    }
+
+    if (ciLimpio && (ciLimpio.length > 20 || !/^[a-zA-Z0-9\s\-]+$/.test(ciLimpio))) {
+      setErrorValidacion('El CI solo debe contener números, letras o guiones (máximo 20 caracteres)');
+      return;
+    }
+
     if (!fechaNacimiento) {
       setErrorValidacion('Debe ingresar la fecha de nacimiento');
       return;
@@ -201,10 +240,10 @@ export default function ModalAgregarHermano({
       id_temp: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       hermano_regular_id: hermanoRegularId,
       hermano_regular_nombre: regularObj?.nombre_completo,
-      nombres: nombres.trim(),
-      apellido_paterno: apellidoPaterno.trim(),
-      apellido_materno: apellidoMaterno.trim() || undefined,
-      ci: ci.trim() || undefined,
+      nombres: nomLimpio,
+      apellido_paterno: patLimpio,
+      apellido_materno: matLimpio || undefined,
+      ci: ciLimpio || undefined,
       fecha_nacimiento: fechaNacimiento,
       genero,
       grado_solicitado_id: Number(gradoSolicitadoId),
@@ -216,7 +255,7 @@ export default function ModalAgregarHermano({
       tiene_cupo_inmediato: disponibilidad?.tiene_cupo_inmediato ?? false,
       es_lista_espera: !(disponibilidad?.tiene_cupo_inmediato ?? false),
       posicion_espera: disponibilidad?.posicion_espera ?? 0,
-      observaciones: observaciones.trim() || undefined,
+      observaciones: obsLimpia || undefined,
     };
 
     const cb = onAgregar || onAgregarHermano;
@@ -254,12 +293,16 @@ export default function ModalAgregarHermano({
       onClose={handleCerrar}
       maxWidth="md"
       fullWidth
+      scroll="paper"
       PaperProps={{
         sx: {
           borderRadius: '20px !important',
           overflow: 'hidden',
           background: bgModal,
           border: `1.5px solid ${brandBorder}`,
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
           boxShadow: isDark
             ? `0 0 0 1px rgba(250,204,21,0.06), 0 32px 64px rgba(0,0,0,0.8)`
             : `0 32px 64px rgba(0,0,0,0.18)`,
@@ -267,7 +310,7 @@ export default function ModalAgregarHermano({
       }}
     >
       {/* ── HEADER (ESTILO MODALESTUDIANTENOENCONTRADO) ── */}
-      <Box sx={{ px: 3, pt: 2.5, pb: 2, borderBottom: `1px solid ${borderField}`, background: brandDim }}>
+      <Box sx={{ px: 3, pt: 2.5, pb: 2, borderBottom: `1px solid ${borderField}`, background: brandDim, flexShrink: 0 }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.5 }}>
           <Box>
             <Typography
@@ -339,8 +382,41 @@ export default function ModalAgregarHermano({
       </Box>
 
       {/* ── BODY ── */}
-      <form onSubmit={handleSubmit}>
-        <DialogContent sx={{ px: 3, py: 2.5 }}>
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden'
+        }}
+      >
+        <DialogContent
+          sx={{
+            px: { xs: 2.5, sm: 3 },
+            py: 2.5,
+            flex: 1,
+            overflowY: 'auto',
+            // Slider / Scrollbar elegante adaptado al modo claro/oscuro
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
+              borderRadius: '8px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: isDark ? 'rgba(250, 204, 21, 0.4)' : 'rgba(2, 136, 209, 0.4)',
+              borderRadius: '8px',
+              '&:hover': {
+                background: isDark ? '#facc15' : '#0288d1',
+              },
+            },
+            scrollbarWidth: 'thin',
+            scrollbarColor: `${isDark ? 'rgba(250, 204, 21, 0.4)' : 'rgba(2, 136, 209, 0.4)'} transparent`,
+          }}
+        >
           {errorValidacion && (
             <Alert
               severity="error"
@@ -645,9 +721,15 @@ export default function ModalAgregarHermano({
                 fullWidth
                 label="Nombres *"
                 value={nombres}
-                onChange={(e) => setNombres(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\.\'-]/g, '').slice(0, 60);
+                  setNombres(val);
+                }}
                 placeholder="Ej: Mateo Lucas"
                 sx={inputStyle}
+                slotProps={{
+                  htmlInput: { maxLength: 60 }
+                }}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
@@ -655,9 +737,15 @@ export default function ModalAgregarHermano({
                 fullWidth
                 label="Apellido Paterno *"
                 value={apellidoPaterno}
-                onChange={(e) => setApellidoPaterno(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\.\'-]/g, '').slice(0, 60);
+                  setApellidoPaterno(val);
+                }}
                 placeholder="Ej: Flores"
                 sx={inputStyle}
+                slotProps={{
+                  htmlInput: { maxLength: 60 }
+                }}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
@@ -665,9 +753,15 @@ export default function ModalAgregarHermano({
                 fullWidth
                 label="Apellido Materno"
                 value={apellidoMaterno}
-                onChange={(e) => setApellidoMaterno(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s\.\'-]/g, '').slice(0, 60);
+                  setApellidoMaterno(val);
+                }}
                 placeholder="Ej: Quispe (opcional)"
                 sx={inputStyle}
+                slotProps={{
+                  htmlInput: { maxLength: 60 }
+                }}
               />
             </Grid>
 
@@ -676,10 +770,16 @@ export default function ModalAgregarHermano({
                 fullWidth
                 label="CI o Certificado"
                 value={ci}
-                onChange={(e) => setCi(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^a-zA-Z0-9\s\-]/g, '').slice(0, 20);
+                  setCi(val);
+                }}
                 placeholder="Ej: 13948291"
                 helperText="Opcional si aún no tramitó CI"
                 sx={inputStyle}
+                slotProps={{
+                  htmlInput: { maxLength: 20 }
+                }}
               />
             </Grid>
 
@@ -715,24 +815,32 @@ export default function ModalAgregarHermano({
                 fullWidth
                 label="Observaciones adicionales"
                 value={observaciones}
-                onChange={(e) => setObservaciones(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/<[^>]*>?/gm, '').slice(0, 300);
+                  setObservaciones(val);
+                }}
                 placeholder="Ej: Solicita estar en el mismo turno de su hermano, etc."
                 sx={inputStyle}
+                slotProps={{
+                  htmlInput: { maxLength: 300 }
+                }}
               />
             </Grid>
           </Grid>
         </DialogContent>
 
-        {/* ── FOOTER (ESTILO MODALESTUDIANTENOENCONTRADO) ── */}
+        {/* ── FOOTER SIEMPRE VISIBLE Y FIJO AL FONDO DEL MODAL ── */}
         <Box
           sx={{
-            px: 3,
-            pb: 3,
+            px: { xs: 2.5, sm: 3 },
+            pb: 2.5,
             pt: 2,
             display: 'flex',
             alignItems: 'center',
             gap: 1,
             borderTop: `1px solid ${borderField}`,
+            background: bgModal,
+            flexShrink: 0,
           }}
         >
           <Button

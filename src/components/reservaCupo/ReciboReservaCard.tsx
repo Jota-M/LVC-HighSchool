@@ -227,10 +227,10 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
           alignItems: 'center',
           gap: 2,
           boxShadow: `0 8px 25px ${esNoContinua || esAnulada
-              ? 'rgba(239, 68, 68, 0.15)'
-              : esSolicitudAnulacion || esEspera
-                ? 'rgba(245, 158, 11, 0.15)'
-                : 'rgba(16, 185, 129, 0.15)'
+            ? 'rgba(239, 68, 68, 0.15)'
+            : esSolicitudAnulacion || esEspera
+              ? 'rgba(245, 158, 11, 0.15)'
+              : 'rgba(16, 185, 129, 0.15)'
             }`
         }}
       >
@@ -364,10 +364,10 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
           bgcolor: isDark ? '#0f172a' : '#ffffff',
           color: isDark ? '#f8fafc' : '#1e293b',
           border: `1px solid ${esNoContinua || esAnulada
-              ? isDark ? 'rgba(239, 68, 68, 0.3)' : '#fca5a5'
-              : esEspera
-                ? isDark ? alpha(accentAmber, 0.4) : '#fcd34d'
-                : isDark ? alpha(brandPrimary, 0.3) : '#cbd5e1'
+            ? isDark ? 'rgba(239, 68, 68, 0.3)' : '#fca5a5'
+            : esEspera
+              ? isDark ? alpha(accentAmber, 0.4) : '#fcd34d'
+              : isDark ? alpha(brandPrimary, 0.3) : '#cbd5e1'
             }`,
           position: 'relative',
           overflow: 'hidden',
@@ -736,14 +736,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
                         borderRadius: '8px'
                       }}
                     />
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6 }}>
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      Turno Asignado:
-                    </Typography>
-                    <Typography variant="body1" fontWeight={700}>
-                      {turnoDestino}
-                    </Typography>
                   </Grid>
                   {reserva.observaciones && (
                     <Grid size={{ xs: 12 }}>
