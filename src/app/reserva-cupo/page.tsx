@@ -61,6 +61,8 @@ import {
 import ReciboReservaCard from '@/components/reservaCupo/ReciboReservaCard';
 import ModalEstudianteNoEncontrado from '@/components/reservaCupo/ModalEstudianteNoEncontrado';
 import ModalAgregarHermano from '@/components/reservaCupo/ModalAgregarHermano';
+import ModalHermanoConfirmadoExito from '@/components/reservaCupo/ModalHermanoConfirmadoExito';
+import ModalAgregarHermanoRegular from '@/components/reservaCupo/ModalAgregarHermanoRegular';
 
 const steps = [
   { label: 'Buscar Estudiante por CI', color: '#0288d1' },
@@ -108,6 +110,17 @@ export default function ReservaCupoPage() {
   // Hermanos de estudiantes regulares para nueva admisión (prioridad familiar)
   const [hermanosSeleccionados, setHermanosSeleccionados] = useState<HermanoParaReserva[]>([]);
   const [modalHermanoOpen, setModalHermanoOpen] = useState(false);
+
+  // Modal para agregar hermano directamente desde una reserva ya confirmada (consulta de CI)
+  const [modalHermanoDesdeReciboOpen, setModalHermanoDesdeReciboOpen] = useState(false);
+  const [modalHermanoRegularOpen, setModalHermanoRegularOpen] = useState(false);
+  const [reservaActivaParaHermano, setReservaActivaParaHermano] = useState<any>(null);
+  const [isGuardandoHermanoRecibo, setIsGuardandoHermanoRecibo] = useState(false);
+
+  // Modal de éxito tras confirmar la postulación del hermano
+  const [modalExitoHermanoOpen, setModalExitoHermanoOpen] = useState(false);
+  const [hermanoConfirmadoData, setHermanoConfirmadoData] = useState<any>(null);
+  const [reciboTabIndex, setReciboTabIndex] = useState(0);
 
   // Honeypot anti-bots (campo señuelo invisible) y control de tiempo anti-scripting
   const [hpField, setHpField] = useState('');
@@ -331,7 +344,12 @@ export default function ReservaCupoPage() {
 
       if (data.ya_reservado && data.reserva) {
         if (esPrimerEstudiante && estudiantesSeleccionados.length === 0) {
-          setReservasConfirmadas([data.reserva]);
+          const listaRegulares = (data.todas_las_reservas && data.todas_las_reservas.length > 0)
+            ? data.todas_las_reservas
+            : [data.reserva];
+          const todasLasReservas = [...listaRegulares, ...(data.hermanos || [])];
+          setReservasConfirmadas(todasLasReservas);
+          setReciboTabIndex(0);
           setActiveStep(2);
           return;
         } else {
@@ -386,6 +404,7 @@ export default function ReservaCupoPage() {
         errorTipo === 'NO_ES_REGULAR' ||
         errorTipo === 'BACHILLER_EGRESADO' ||
         errorTipo === 'RESERVA_ANULADA' ||
+        errorTipo === 'MATRICULA_INACTIVA' ||
         err.response?.status === 400 ||
         err.response?.status === 404
       ) {
@@ -454,6 +473,71 @@ export default function ReservaCupoPage() {
 
   const handleQuitarHermano = (index: number) => {
     setHermanosSeleccionados(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  // Abrir modal de postulación de hermano nuevo desde el recibo de una reserva ya confirmada
+  const handleAbrirModalHermanoDesdeRecibo = (reservaTarget: any) => {
+    setReservaActivaParaHermano(reservaTarget);
+    setModalHermanoDesdeReciboOpen(true);
+  };
+
+  // Abrir modal para añadir hermano regular (estudiante del colegio) desde el recibo
+  const handleAbrirModalHermanoRegular = (reservaTarget: any) => {
+    setReservaActivaParaHermano(reservaTarget);
+    setModalHermanoRegularOpen(true);
+  };
+
+  // Callback cuando se confirma con éxito un hermano regular
+  const handleHermanoRegularConfirmado = (nuevaReserva: any) => {
+    setReservasConfirmadas(prev => {
+      const nuevaLista = [...prev, nuevaReserva];
+      setReciboTabIndex(nuevaLista.length - 1);
+      return nuevaLista;
+    });
+    setHermanoConfirmadoData(nuevaReserva);
+    setModalExitoHermanoOpen(true);
+  };
+
+  // Guardar hermano directamente en el servidor cuando se postula desde una reserva ya confirmada
+  const handleGuardarHermanoDesdeRecibo = async (nuevoHermano: HermanoParaReserva) => {
+    if (!reservaActivaParaHermano) return;
+    setIsGuardandoHermanoRecibo(true);
+
+    try {
+      const response = await reservaCupoService.confirmarReserva({
+        periodo_academico_id: reservaActivaParaHermano.periodo_academico_id,
+        estudiantes: [],
+        hermanos: [
+          {
+            ...nuevoHermano,
+            hermano_regular_id: reservaActivaParaHermano.estudiante_id,
+          }
+        ],
+        tutor_nombre: reservaActivaParaHermano.tutor_nombre,
+        tutor_ci: reservaActivaParaHermano.tutor_ci,
+        tutor_parentesco: reservaActivaParaHermano.tutor_parentesco,
+        tutor_telefono: reservaActivaParaHermano.tutor_telefono,
+        observaciones: nuevoHermano.observaciones || `Hermano postulado con prioridad familiar vinculado a ${reservaActivaParaHermano.estudiante_nombre_completo || reservaActivaParaHermano.estudiante_nombres}`
+      });
+
+      const hermanoCreado = response?.hermanos?.[0] || response?.reserva_principal;
+      if (hermanoCreado) {
+        setReservasConfirmadas(prev => {
+          const nuevaLista = [...prev, hermanoCreado];
+          setReciboTabIndex(nuevaLista.length - 1);
+          return nuevaLista;
+        });
+        setHermanoConfirmadoData(hermanoCreado);
+        setModalExitoHermanoOpen(true);
+      }
+      setModalHermanoDesdeReciboOpen(false);
+    } catch (err: any) {
+      console.error('Error al registrar hermano desde recibo:', err);
+      const msg = err.response?.data?.message || err.message || 'Error al registrar el hermano';
+      alert(msg);
+    } finally {
+      setIsGuardandoHermanoRecibo(false);
+    }
   };
 
   // ========================================================
@@ -1762,6 +1846,10 @@ export default function ReservaCupoPage() {
           <ReciboReservaCard
             reservas={reservasConfirmadas}
             onNuevaReserva={handleReiniciar}
+            onPostularHermano={handleAbrirModalHermanoDesdeRecibo}
+            onAgregarHermanoRegular={handleAbrirModalHermanoRegular}
+            tabIndexActivo={reciboTabIndex}
+            onTabChange={setReciboTabIndex}
           />
         )}
       </Container>
@@ -1777,13 +1865,53 @@ export default function ReservaCupoPage() {
         nombreEstudiante={modalNombreEstudiante}
       />
 
-      {/* Modal para registrar hermanito nuevo con prioridad familiar */}
+      {/* Modal para registrar hermanito nuevo con prioridad familiar (en formulario inicial) */}
       <ModalAgregarHermano
         open={modalHermanoOpen}
         onClose={() => setModalHermanoOpen(false)}
         onAgregar={handleAgregarHermano}
         estudiantesRegulares={estudiantesSeleccionados}
         periodoId={estudiantesSeleccionados[0]?.proyeccion_siguiente?.periodo_id}
+      />
+
+      {/* Modal para registrar hermanito directamente cuando la reserva del regular ya está confirmada */}
+      <ModalAgregarHermano
+        open={modalHermanoDesdeReciboOpen}
+        onClose={() => setModalHermanoDesdeReciboOpen(false)}
+        onAgregar={handleGuardarHermanoDesdeRecibo}
+        estudiantesRegulares={
+          reservaActivaParaHermano
+            ? [
+                {
+                  id: reservaActivaParaHermano.estudiante_id,
+                  nombre_completo:
+                    reservaActivaParaHermano.estudiante_nombre_completo ||
+                    `${reservaActivaParaHermano.estudiante_nombres || ''} ${reservaActivaParaHermano.estudiante_apellido_paterno || ''}`.trim(),
+                  ci: reservaActivaParaHermano.estudiante_ci || 'S/N',
+                },
+              ]
+            : []
+        }
+        periodoId={reservaActivaParaHermano?.periodo_academico_id}
+      />
+
+      {/* Modal para registrar a un hermano que también es estudiante regular del colegio */}
+      <ModalAgregarHermanoRegular
+        open={modalHermanoRegularOpen}
+        onClose={() => setModalHermanoRegularOpen(false)}
+        reservaPrincipal={reservaActivaParaHermano}
+        onHermanoRegularConfirmado={handleHermanoRegularConfirmado}
+      />
+
+      {/* Modal de confirmación y éxito tras registrar al nuevo hermanito o hermano regular */}
+      <ModalHermanoConfirmadoExito
+        open={modalExitoHermanoOpen}
+        onClose={() => setModalExitoHermanoOpen(false)}
+        hermano={hermanoConfirmadoData}
+        onVerComprobante={() => {
+          setModalExitoHermanoOpen(false);
+          setReciboTabIndex(reservasConfirmadas.length - 1);
+        }}
       />
     </Box>
   );

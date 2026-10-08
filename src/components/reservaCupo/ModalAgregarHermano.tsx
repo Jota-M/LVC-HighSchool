@@ -107,7 +107,7 @@ export default function ModalAgregarHermano({
   // Cargar lista de grados
   useEffect(() => {
     if (open) {
-      if (listaRegulares.length > 0 && !hermanoRegularId) {
+      if (listaRegulares.length > 0 && (!hermanoRegularId || !listaRegulares.some((r: any) => r.id === hermanoRegularId))) {
         setHermanoRegularId(listaRegulares[0].id);
       }
       const cargarGrados = async () => {

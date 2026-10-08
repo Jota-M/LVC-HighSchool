@@ -68,7 +68,7 @@ export default function ModalInscripcion({ open, onClose, curso }: ModalInscripc
     apellido_materno: string;
     fecha_nacimiento: string;
     ci: string;
-    genero: "masculino" | "femenino" | "otro";
+    genero: "masculino" | "femenino";
     telefono: string;
     email: string;
     nombre_tutor: string;
@@ -160,7 +160,7 @@ export default function ModalInscripcion({ open, onClose, curso }: ModalInscripc
     if (!curso) return;
 
     const inscripcionData: FormInscripcionPublica = {
-      curso_vacacional_id: curso.id,
+      cursos: [curso.id],
       nombres: formData.nombres,
       apellido_paterno: formData.apellido_paterno,
       apellido_materno: formData.apellido_materno || undefined,

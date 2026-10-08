@@ -232,6 +232,7 @@ export type EstadoMatricula =
   | 'inactivo'
   | 'retirado'
   | 'trasladado'
+  | 'graduado'
   | 'anulado'
   | 'suspendido'
   | 'congelado';
@@ -241,6 +242,7 @@ export const ESTADOS_MATRICULA: Record<EstadoMatricula, { label: string; color: 
   inactivo:   { label: 'Inactivo',   color: 'error' },
   retirado:   { label: 'Retirado',   color: 'error' },
   trasladado: { label: 'Trasladado', color: 'warning' },
+  graduado:   { label: 'Graduado',   color: 'info' },
   anulado:    { label: 'Anulado',    color: 'default' },
   suspendido: { label: 'Suspendido', color: 'warning' },
   congelado:  { label: 'Congelado',  color: 'info' },

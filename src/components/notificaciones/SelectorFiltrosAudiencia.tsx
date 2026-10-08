@@ -12,15 +12,15 @@ import {
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 
-import SchoolRoundedIcon           from '@mui/icons-material/SchoolRounded';
-import ClassRoundedIcon            from '@mui/icons-material/ClassRounded';
-import GroupsRoundedIcon           from '@mui/icons-material/GroupsRounded';
-import CalendarMonthRoundedIcon    from '@mui/icons-material/CalendarMonthRounded';
-import CheckCircleRoundedIcon      from '@mui/icons-material/CheckCircleRounded';
+import SchoolRoundedIcon from '@mui/icons-material/SchoolRounded';
+import ClassRoundedIcon from '@mui/icons-material/ClassRounded';
+import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
+import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
-import FilterAltRoundedIcon        from '@mui/icons-material/FilterAltRounded';
-import InfoOutlinedIcon            from '@mui/icons-material/InfoOutlined';
-import CloseRoundedIcon            from '@mui/icons-material/CloseRounded';
+import FilterAltRoundedIcon from '@mui/icons-material/FilterAltRounded';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 
 import { useAcademicos } from '@/hooks/useAcademicos';
 import { Grado, Paralelo, NivelAcademico, PeriodoAcademico } from '@/services/academicos';
@@ -33,32 +33,32 @@ const fadeIn = keyframes`
 
 // ─── Tipos exportados ─────────────────────────────────────────────────────────
 export interface FiltrosAudiencia {
-  nivel_academico_id?:   number;
-  grado_id?:             number;
-  paralelo_id?:          number;
+  nivel_academico_id?: number;
+  grado_id?: number;
+  paralelo_id?: number;
   periodo_academico_id?: number;
   // Labels para el resumen visual
-  _nivel_nombre?:    string;
-  _grado_nombre?:    string;
+  _nivel_nombre?: string;
+  _grado_nombre?: string;
   _paralelo_nombre?: string;
-  _periodo_nombre?:  string;
+  _periodo_nombre?: string;
 }
 
 // ─── SelectVisual — usa Popover para evitar clipping ─────────────────────────
 interface SelectVisualProps<T> {
-  label:       string;
-  icon:        React.ReactNode;
-  items:       T[];
-  value:       number | undefined;
-  onSelect:    (item: T | null) => void;
-  getLabel:    (item: T) => string;
-  getId:       (item: T) => number;
+  label: string;
+  icon: React.ReactNode;
+  items: T[];
+  value: number | undefined;
+  onSelect: (item: T | null) => void;
+  getLabel: (item: T) => string;
+  getId: (item: T) => number;
   placeholder: string;
   accentColor: string;
-  isDark:      boolean;
-  disabled?:   boolean;
-  loading?:    boolean;
-  sublabel?:   (item: T) => string;
+  isDark: boolean;
+  disabled?: boolean;
+  loading?: boolean;
+  sublabel?: (item: T) => string;
 }
 
 function SelectVisual<T>({
@@ -66,10 +66,10 @@ function SelectVisual<T>({
   placeholder, accentColor, isDark, disabled, loading, sublabel,
 }: SelectVisualProps<T>) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const open     = Boolean(anchorEl);
+  const open = Boolean(anchorEl);
   const selected = items.find(i => getId(i) === value) ?? null;
 
-  const handleOpen  = (e: React.MouseEvent<HTMLElement>) => {
+  const handleOpen = (e: React.MouseEvent<HTMLElement>) => {
     if (!disabled) setAnchorEl(e.currentTarget);
   };
   const handleClose = () => setAnchorEl(null);
@@ -208,28 +208,28 @@ function SelectVisual<T>({
 
 // ─── Resumen del filtro activo ─────────────────────────────────────────────────
 const ResumenFiltro: React.FC<{
-  filtros:    FiltrosAudiencia;
-  audiencia:  string;
+  filtros: FiltrosAudiencia;
+  audiencia: string;
   accentColor: string;
-  isDark:     boolean;
+  isDark: boolean;
 }> = ({ filtros, audiencia, accentColor, isDark }) => {
   const hayFiltro = !!(
     filtros.nivel_academico_id || filtros.grado_id ||
-    filtros.paralelo_id        || filtros.periodo_academico_id
+    filtros.paralelo_id || filtros.periodo_academico_id
   );
   if (!hayFiltro) return null;
 
   const partes: string[] = [];
-  if (filtros._nivel_nombre)    partes.push(filtros._nivel_nombre);
-  if (filtros._grado_nombre)    partes.push(filtros._grado_nombre);
+  if (filtros._nivel_nombre) partes.push(filtros._nivel_nombre);
+  if (filtros._grado_nombre) partes.push(filtros._grado_nombre);
   if (filtros._paralelo_nombre) partes.push(`Paralelo "${filtros._paralelo_nombre}"`);
-  if (filtros._periodo_nombre)  partes.push(filtros._periodo_nombre);
+  if (filtros._periodo_nombre) partes.push(filtros._periodo_nombre);
 
   const audienciaLabel: Record<string, string> = {
-    todos:              'docentes, padres y estudiantes',
-    docentes:           'docentes',
-    padres:             'padres',
-    estudiantes:        'estudiantes',
+    todos: 'docentes, padres y estudiantes',
+    docentes: 'docentes',
+    padres: 'padres',
+    estudiantes: 'estudiantes',
     padres_estudiantes: 'padres y estudiantes',
   };
 
@@ -257,16 +257,16 @@ const ResumenFiltro: React.FC<{
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 interface Props {
-  value:       FiltrosAudiencia;
-  onChange:    (filtros: FiltrosAudiencia) => void;
+  value: FiltrosAudiencia;
+  onChange: (filtros: FiltrosAudiencia) => void;
   accentColor: string;
-  audiencia:   string;
+  audiencia: string;
 }
 
 export const SelectorFiltrosAudiencia: React.FC<Props> = ({
   value, onChange, accentColor, audiencia,
 }) => {
-  const theme  = useTheme();
+  const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
   const {
@@ -274,13 +274,13 @@ export const SelectorFiltrosAudiencia: React.FC<Props> = ({
     loadingNiveles, loadingGrados, loadingParalelos, loadingPeriodos,
     cargarNiveles, cargarGrados, cargarParalelos, cargarPeriodos,
   } = useAcademicos({
-    autoLoad:         false,
-    loadNiveles:      true,
-    loadGrados:       true,
-    loadParalelos:    true,
-    loadPeriodos:     true,
-    loadTurnos:       false,
-    loadMaterias:     false,
+    autoLoad: false,
+    loadNiveles: true,
+    loadGrados: true,
+    loadParalelos: true,
+    loadPeriodos: true,
+    loadTurnos: false,
+    loadMaterias: false,
     loadGradoMaterias: false,
   });
 
@@ -301,20 +301,20 @@ export const SelectorFiltrosAudiencia: React.FC<Props> = ({
     onChange({
       ...value,
       nivel_academico_id: item?.id,
-      _nivel_nombre:      item?.nombre,
-      grado_id:           undefined,
-      _grado_nombre:      undefined,
-      paralelo_id:        undefined,
-      _paralelo_nombre:   undefined,
+      _nivel_nombre: item?.nombre,
+      grado_id: undefined,
+      _grado_nombre: undefined,
+      paralelo_id: undefined,
+      _paralelo_nombre: undefined,
     });
 
   const handleGrado = (item: Grado | null) =>
     onChange({
       ...value,
-      grado_id:          item?.id,
-      _grado_nombre:     item?.nombre,
-      paralelo_id:       undefined,
-      _paralelo_nombre:  undefined,
+      grado_id: item?.id,
+      _grado_nombre: item?.nombre,
+      paralelo_id: undefined,
+      _paralelo_nombre: undefined,
     });
 
   const handleParalelo = (item: Paralelo | null) =>
@@ -323,7 +323,7 @@ export const SelectorFiltrosAudiencia: React.FC<Props> = ({
   const handlePeriodo = (item: PeriodoAcademico | null) =>
     onChange({ ...value, periodo_academico_id: item?.id, _periodo_nombre: item?.nombre });
 
-  const gradosFiltrados   = value.nivel_academico_id
+  const gradosFiltrados = value.nivel_academico_id
     ? grados.filter(g => g.nivel_academico_id === value.nivel_academico_id)
     : grados;
   const paralelosFiltrados = value.grado_id

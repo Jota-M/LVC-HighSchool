@@ -34,7 +34,7 @@ export interface ModalEstudianteNoEncontradoProps {
   onClose: () => void;
   onRetry: () => void;
   ci: string;
-  errorTipo?: 'ESTUDIANTE_NO_ENCONTRADO' | 'NO_ES_REGULAR' | 'BACHILLER_EGRESADO' | 'CI_INVALIDO_FORMATO' | 'YA_EN_LISTA' | 'YA_RESERVADO' | string;
+  errorTipo?: 'ESTUDIANTE_NO_ENCONTRADO' | 'NO_ES_REGULAR' | 'BACHILLER_EGRESADO' | 'CI_INVALIDO_FORMATO' | 'YA_EN_LISTA' | 'YA_RESERVADO' | 'MATRICULA_INACTIVA' | string;
   errorMessage?: string;
   nombreEstudiante?: string;
 }
@@ -248,6 +248,34 @@ export const ModalEstudianteNoEncontrado: React.FC<ModalEstudianteNoEncontradoPr
               color: brand,
               title: 'Reactivación directa en Secretaría / Dirección',
               desc: 'Si la familia cambió de parecer y desea recuperar la plaza escolar, el personal administrativo puede reactivarla directamente desde su panel de gestión.'
+            }
+          ],
+          primaryButtonText: 'Entendido',
+          primaryButtonIcon: <CheckIcon sx={{ fontSize: 17 }} />
+        };
+
+      case 'MATRICULA_INACTIVA':
+        return {
+          kicker: 'Estado de Matrícula · Estudiante No Activo',
+          icon: <PersonOffIcon sx={{ color: '#ef4444', fontSize: 18 }} />,
+          title: 'Matrícula No Activa',
+          chipLabel: 'Matrícula no regular',
+          chipColor: '#ef4444',
+          explanation: errorMessage || 'El estudiante no cuenta con una matrícula activa en el periodo escolar vigente.',
+          showPreinscripcion: false,
+          tipsTitle: 'Regularización requerida',
+          tips: [
+            {
+              num: 1,
+              color: '#ef4444',
+              title: 'Exclusivo para estudiantes regulares activos',
+              desc: 'La reserva de cupo web está habilitada únicamente para alumnos que cursan regularmente con matrícula activa.'
+            },
+            {
+              num: 2,
+              color: brand,
+              title: 'Atención presencial en Secretaría',
+              desc: 'Si el estudiante se encuentra retirado, inactivo o suspendido y desea reincorporarse para la siguiente gestión, debe gestionar su caso directamente en Secretaría o Dirección.'
             }
           ],
           primaryButtonText: 'Entendido',

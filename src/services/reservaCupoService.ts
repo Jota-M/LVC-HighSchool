@@ -147,16 +147,22 @@ class ReservaCupoService {
     search?: string;
     grado_destino_id?: number;
     nivel_destino_id?: number;
+    turno_destino_id?: number;
     estado?: string;
     periodo_academico_id?: number;
+    tipo_reporte?: string;
+    titulo_reporte?: string;
   }): Promise<void> {
     const query = new URLSearchParams();
     query.set('formato', formato);
     if (params?.search) query.set('search', params.search);
     if (params?.grado_destino_id) query.set('grado_destino_id', params.grado_destino_id.toString());
     if (params?.nivel_destino_id) query.set('nivel_destino_id', params.nivel_destino_id.toString());
+    if (params?.turno_destino_id) query.set('turno_destino_id', params.turno_destino_id.toString());
     if (params?.estado) query.set('estado', params.estado);
     if (params?.periodo_academico_id) query.set('periodo_academico_id', params.periodo_academico_id.toString());
+    if (params?.tipo_reporte) query.set('tipo_reporte', params.tipo_reporte);
+    if (params?.titulo_reporte) query.set('titulo_reporte', params.titulo_reporte);
 
     const response = await api.get(`/reserva-cupo/admin/exportar?${query.toString()}`, {
       responseType: 'blob'
@@ -257,6 +263,88 @@ class ReservaCupoService {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
+
+  /**
+   * Obtiene el balance general y por grado/turno de cupos asegurados para estudiantes regulares
+   */
+  async obtenerBalanceCuposAsegurados(anioDestino = 2027): Promise<BalanceCuposAseguradosData> {
+    const { data } = await api.get('/reserva-cupo/admin/cupos-asegurados', {
+      params: { anio_destino: anioDestino }
+    });
+    return data.data;
+  }
+
+  /**
+   * Obtiene el listado de estudiantes regulares con cupo asegurado (confirmados o pendientes)
+   */
+  async obtenerEstudiantesCuposAsegurados(params?: {
+    grado_destino_id?: number;
+    turno_destino_id?: number;
+    estado_confirmacion?: 'todos' | 'confirmados' | 'pendientes' | 'no_continua';
+    busqueda?: string;
+    limite?: number;
+    pagina?: number;
+  }): Promise<EstudiantesCuposAseguradosResponse> {
+    const { data } = await api.get('/reserva-cupo/admin/cupos-asegurados/estudiantes', {
+      params
+    });
+    return data.data;
+  }
+}
+
+export interface BalanceCupoGrado {
+  grado_destino_id: number;
+  grado_nombre: string;
+  nivel_nombre: string;
+  orden_grado: number;
+  total_asegurados: number;
+  total_confirmados: number;
+  total_no_continua: number;
+  total_restantes: number;
+  porcentaje_confirmado: number;
+  turnos: {
+    manana: { asegurados: number; confirmados: number; restantes: number };
+    tarde: { asegurados: number; confirmados: number; restantes: number };
+  };
+}
+
+export interface BalanceCuposAseguradosData {
+  anio_origen: number;
+  anio_destino: number;
+  totales_globales: {
+    total_asegurados: number;
+    total_confirmados: number;
+    total_no_continua: number;
+    total_restantes: number;
+    porcentaje_confirmado: number;
+  };
+  grados: BalanceCupoGrado[];
+}
+
+export interface EstudianteCupoAsegurado {
+  estudiante_id: number;
+  codigo_estudiante: string;
+  nombre_completo: string;
+  ci: string;
+  curso_actual_2026: string;
+  grado_destino_id: number;
+  grado_destino_nombre: string;
+  nivel_destino: string;
+  turno_destino_id: number;
+  turno_destino_nombre: string;
+  estado_confirmacion: 'CONFIRMADO' | 'PENDIENTE' | 'NO_CONTINUA';
+  codigo_reserva: string | null;
+  fecha_reserva: string | null;
+  tutor_nombre: string | null;
+  tutor_telefono: string | null;
+}
+
+export interface EstudiantesCuposAseguradosResponse {
+  estudiantes: EstudianteCupoAsegurado[];
+  total: number;
+  pagina: number;
+  limite: number;
+  total_paginas: number;
 }
 
 export const reservaCupoService = new ReservaCupoService();

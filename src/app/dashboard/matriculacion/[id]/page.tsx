@@ -76,7 +76,7 @@ import {
 const getEstadoColor = (estado: string): any => {
   const map: Record<string, string> = {
     activo: 'success', inactivo: 'error', retirado: 'error', trasladado: 'warning',
-    anulado: 'default', suspendido: 'warning', congelado: 'info',
+    anulado: 'default', suspendido: 'warning', congelado: 'info', graduado: 'info',
   };
   return map[estado] ?? 'default';
 };
@@ -918,7 +918,16 @@ export default function DetalleMatriculaPage() {
   const [dialogEliminar, setDialogEliminar] = useState(false);
   const [dialogSubirDoc, setDialogSubirDoc] = useState(false);
   const [dialogEliminarDoc, setDialogEliminarDoc] = useState<number | null>(null);
-  const [nuevoEstado, setNuevoEstado] = useState<EstadoMatricula>('anulado');
+  const [nuevoEstado, setNuevoEstado] = useState<EstadoMatricula>('activo');
+  const [motivoEstado, setMotivoEstado] = useState('');
+
+  const handleOpenCambiarEstado = () => {
+    const available = (Object.keys(ESTADOS_MATRICULA) as EstadoMatricula[]).filter(k => k !== matricula?.estado);
+    const defaultNext = matricula?.estado === 'retirado' ? 'activo' : (available[0] || 'activo');
+    setNuevoEstado(defaultNext);
+    setMotivoEstado('');
+    setDialogCambiarEstado(true);
+  };
 
   // Paper style reutilizable
   const paperSx = {
@@ -1057,7 +1066,7 @@ export default function DetalleMatriculaPage() {
                     variant="outlined"
                     color="warning"
                     startIcon={<AnularIcon />}
-                    onClick={() => setDialogCambiarEstado(true)}
+                    onClick={handleOpenCambiarEstado}
                     sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 600 }}
                   >
                     Estado
@@ -1383,7 +1392,7 @@ export default function DetalleMatriculaPage() {
       />
 
       {/* Cambiar estado */}
-      <Dialog open={dialogCambiarEstado} onClose={() => setDialogCambiarEstado(false)} maxWidth="sm" fullWidth
+      <Dialog open={dialogCambiarEstado} onClose={() => { setDialogCambiarEstado(false); setMotivoEstado(''); }} maxWidth="sm" fullWidth
         PaperProps={{ sx: { borderRadius: '20px' } }}>
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -1408,23 +1417,54 @@ export default function DetalleMatriculaPage() {
                   ))}
               </Select>
             </FormControl>
+
+            <TextField
+              fullWidth
+              label={
+                nuevoEstado === 'retirado'
+                  ? 'Motivo del retiro *'
+                  : matricula.estado === 'retirado' && nuevoEstado === 'activo'
+                  ? 'Motivo de reactivación'
+                  : 'Motivo / Observación (opcional)'
+              }
+              placeholder="Indica el motivo del cambio..."
+              value={motivoEstado}
+              onChange={(e) => setMotivoEstado(e.target.value)}
+              multiline
+              rows={2}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+              helperText={
+                nuevoEstado === 'retirado'
+                  ? 'El motivo del retiro es obligatorio.'
+                  : matricula.estado === 'retirado' && nuevoEstado === 'activo'
+                  ? 'El estudiante volverá al estado Activo en su paralelo asignado.'
+                  : undefined
+              }
+            />
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
-          <Button onClick={() => setDialogCambiarEstado(false)} variant="outlined"
+          <Button onClick={() => { setDialogCambiarEstado(false); setMotivoEstado(''); }} variant="outlined"
             sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600 }}>
             Cancelar
           </Button>
           <Button
             onClick={() => {
+              if (nuevoEstado === 'retirado' && !motivoEstado.trim()) return;
               cambiarEstado(
-                { estado: nuevoEstado },
-                { onSuccess: () => { setDialogCambiarEstado(false); refetch(); } }
+                { estado: nuevoEstado, motivo: motivoEstado.trim() || undefined },
+                {
+                  onSuccess: () => {
+                    setDialogCambiarEstado(false);
+                    setMotivoEstado('');
+                    refetch();
+                  }
+                }
               );
             }}
             variant="contained"
             color="warning"
-            disabled={isCambiandoEstado}
+            disabled={isCambiandoEstado || (nuevoEstado === 'retirado' && !motivoEstado.trim())}
             startIcon={isCambiandoEstado ? <CircularProgress size={16} color="inherit" /> : <EditIcon />}
             sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700 }}
           >

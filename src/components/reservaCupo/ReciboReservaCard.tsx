@@ -35,6 +35,8 @@ import {
   InfoOutlined as InfoIcon,
   Close as CloseIcon,
   Badge as BadgeIcon,
+  FamilyRestroom as FamilyRestroomIcon,
+  PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 import { ReservaCupoData, ReservaCupoHermanoData } from '@/types/reservaCupoTypes';
 import reservaCupoService from '@/services/reservaCupoService';
@@ -42,18 +44,26 @@ import reservaCupoService from '@/services/reservaCupoService';
 interface ReciboReservaCardProps {
   reservas: (ReservaCupoData | ReservaCupoHermanoData)[];
   onNuevaReserva?: () => void;
+  onPostularHermano?: (reserva: any) => void;
+  onAgregarHermanoRegular?: (reserva: any) => void;
+  tabIndexActivo?: number;
+  onTabChange?: (index: number) => void;
 }
 
 export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
   reservas,
-  onNuevaReserva
+  onNuevaReserva,
+  onPostularHermano,
+  onAgregarHermanoRegular,
+  tabIndexActivo,
+  onTabChange,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const reciboRef = useRef<HTMLDivElement>(null);
 
   const [listaReservas, setListaReservas] = useState<(ReservaCupoData | ReservaCupoHermanoData)[]>(reservas);
-  const [tabIndex, setTabIndex] = useState(0);
+  const [tabIndex, setTabIndex] = useState(tabIndexActivo ?? 0);
 
   // Estados para diálogo de solicitud de anulación
   const [openAnulacionDialog, setOpenAnulacionDialog] = useState(false);
@@ -65,7 +75,10 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
 
   useEffect(() => {
     setListaReservas(reservas);
-  }, [reservas]);
+    if (tabIndexActivo !== undefined && tabIndexActivo < reservas.length) {
+      setTabIndex(tabIndexActivo);
+    }
+  }, [reservas, tabIndexActivo]);
 
   if (!listaReservas || listaReservas.length === 0) return null;
 
@@ -302,7 +315,10 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
         >
           <Tabs
             value={tabIndex}
-            onChange={(_, val) => setTabIndex(val)}
+            onChange={(_, val) => {
+              setTabIndex(val);
+              if (onTabChange) onTabChange(val);
+            }}
             variant="scrollable"
             scrollButtons="auto"
             sx={{
@@ -938,6 +954,150 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
         </Box>
       </Paper>
 
+      {/* ── BANNER / CALL-TO-ACTION: AGREGAR HERMANO REGULAR O POSTULAR HERMANO NUEVO ── */}
+      {esConfirmada && !esHermano && (onPostularHermano || onAgregarHermanoRegular) && (
+        <Paper
+          elevation={0}
+          sx={{
+            mt: 3.5,
+            p: { xs: 2.5, sm: 3 },
+            borderRadius: '18px',
+            background: isDark
+              ? 'linear-gradient(135deg, rgba(250, 204, 21, 0.07) 0%, rgba(245, 158, 11, 0.02) 100%)'
+              : 'linear-gradient(135deg, rgba(2, 136, 209, 0.07) 0%, rgba(1, 87, 155, 0.02) 100%)',
+            border: `1.5px dashed ${alpha(brandPrimary, 0.35)}`,
+          }}
+        >
+          {/* Encabezado del Banner */}
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 1.5 }}>
+            <Box
+              sx={{
+                width: 46,
+                height: 46,
+                borderRadius: '13px',
+                bgcolor: alpha(brandPrimary, 0.14),
+                border: `1px solid ${alpha(brandPrimary, 0.3)}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: brandPrimary,
+                flexShrink: 0,
+              }}
+            >
+              <FamilyRestroomIcon sx={{ fontSize: 26 }} />
+            </Box>
+
+            <Box sx={{ flex: 1 }}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+                <Typography
+                  sx={{
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: brandPrimary,
+                  }}
+                >
+                  Beneficio Familiar · Gestión 2027
+                </Typography>
+                <Chip
+                  label="Familia LVC"
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: '0.65rem',
+                    fontWeight: 800,
+                    bgcolor: alpha(accentGreen, 0.15),
+                    color: accentGreen,
+                    border: `1px solid ${alpha(accentGreen, 0.3)}`,
+                  }}
+                />
+              </Stack>
+              <Typography variant="subtitle1" fontWeight={800} sx={{ color: 'text.primary', lineHeight: 1.3 }}>
+                ¿Deseas registrar a otro de tus hijos o hermanos?
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Explicación a todo el ancho */}
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              mb: 2.5,
+              lineHeight: 1.6,
+              fontSize: '0.88rem',
+              pl: { xs: 0, sm: '62px' },
+            }}
+          >
+            Como ya aseguraste el cupo de <strong>{estudianteNombreCompleto}</strong>, puedes registrar a su hermano/a (sea estudiante regular del colegio o hermanito nuevo con Prioridad Familiar) en este momento. <strong>No necesitas solicitar anulación</strong> ni reiniciar el proceso.
+          </Typography>
+
+          {/* Botones de Acción simétricos */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: onAgregarHermanoRegular && onPostularHermano ? '1fr 1fr' : '1fr' },
+              gap: 1.5,
+              pl: { xs: 0, sm: '62px' },
+            }}
+          >
+            {onAgregarHermanoRegular && (
+              <Button
+                variant="outlined"
+                onClick={() => onAgregarHermanoRegular(reserva)}
+                startIcon={<SchoolIcon />}
+                fullWidth
+                sx={{
+                  borderColor: alpha(brandPrimary, 0.4),
+                  color: isDark ? '#facc15' : '#01579b',
+                  fontWeight: 800,
+                  textTransform: 'none',
+                  py: 1.2,
+                  px: 2,
+                  borderRadius: '12px',
+                  bgcolor: alpha(brandPrimary, 0.04),
+                  '&:hover': {
+                    borderColor: brandPrimary,
+                    bgcolor: alpha(brandPrimary, 0.12),
+                    transform: 'translateY(-1px)',
+                  },
+                }}
+              >
+                + Hermano Regular (Colegio)
+              </Button>
+            )}
+
+            {onPostularHermano && (
+              <Button
+                variant="contained"
+                onClick={() => onPostularHermano(reserva)}
+                startIcon={<PersonAddIcon />}
+                fullWidth
+                sx={{
+                  background: brandGradient,
+                  color: `${brandTextContained} !important`,
+                  fontWeight: 800,
+                  textTransform: 'none',
+                  py: 1.2,
+                  px: 2,
+                  borderRadius: '12px',
+                  boxShadow: isDark
+                    ? '0 6px 20px rgba(250, 204, 21, 0.35)'
+                    : '0 6px 20px rgba(2, 136, 209, 0.35)',
+                  '&:hover': {
+                    background: brandGradientHover,
+                    transform: 'translateY(-1px)',
+                  },
+                }}
+              >
+                + Hermano Nuevo (Ingreso)
+              </Button>
+            )}
+          </Box>
+        </Paper>
+      )}
+
       {/* BOTONES DE ACCIÓN */}
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
@@ -1185,6 +1345,35 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
               }}
             />
           </Box>
+
+          {onPostularHermano && (
+            <Alert
+              severity="info"
+              sx={{
+                mb: 2,
+                borderRadius: '14px',
+                bgcolor: alpha(brandPrimary, 0.08),
+                border: `1px solid ${alpha(brandPrimary, 0.25)}`,
+                color: isDark ? '#facc15' : '#01579b',
+                '& .MuiAlert-icon': { color: brandPrimary },
+              }}
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => {
+                    setOpenAnulacionDialog(false);
+                    onPostularHermano(reserva);
+                  }}
+                  sx={{ fontWeight: 800, textTransform: 'none', textDecoration: 'underline' }}
+                >
+                  Postular Hermano
+                </Button>
+              }
+            >
+              <strong>¿Deseas agregar a un hermano?</strong> No es necesario anular este cupo. Puedes postularlo directamente manteniendo el cupo asegurado de {reserva.estudiante_nombres || 'tu hijo'}.
+            </Alert>
+          )}
 
           <Alert
             severity="warning"

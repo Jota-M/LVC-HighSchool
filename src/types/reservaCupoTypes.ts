@@ -93,6 +93,8 @@ export interface ValidarEstudianteResponse {
         gestion_actual?: GestionActualInfo;
         proyeccion_siguiente?: ProyeccionSiguienteInfo;
         reserva?: ReservaCupoData;
+        todas_las_reservas?: ReservaCupoData[];
+        hermanos?: ReservaCupoHermanoData[];
     };
 }
 
