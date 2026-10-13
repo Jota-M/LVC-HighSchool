@@ -40,7 +40,6 @@ import {
 } from '@mui/icons-material';
 import { ReservaCupoData, ReservaCupoHermanoData } from '@/types/reservaCupoTypes';
 import reservaCupoService from '@/services/reservaCupoService';
-
 interface ReciboReservaCardProps {
   reservas: (ReservaCupoData | ReservaCupoHermanoData)[];
   onNuevaReserva?: () => void;
@@ -49,7 +48,6 @@ interface ReciboReservaCardProps {
   tabIndexActivo?: number;
   onTabChange?: (index: number) => void;
 }
-
 export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
   reservas,
   onNuevaReserva,
@@ -61,10 +59,8 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const reciboRef = useRef<HTMLDivElement>(null);
-
   const [listaReservas, setListaReservas] = useState<(ReservaCupoData | ReservaCupoHermanoData)[]>(reservas);
   const [tabIndex, setTabIndex] = useState(tabIndexActivo ?? 0);
-
   // Estados para diálogo de solicitud de anulación
   const [openAnulacionDialog, setOpenAnulacionDialog] = useState(false);
   const [motivoAnulacion, setMotivoAnulacion] = useState('');
@@ -72,18 +68,14 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
   const [isSubmittingAnulacion, setIsSubmittingAnulacion] = useState(false);
   const [errorAnulacion, setErrorAnulacion] = useState<string | null>(null);
   const [exitoAnulacionMsg, setExitoAnulacionMsg] = useState<string | null>(null);
-
   useEffect(() => {
     setListaReservas(reservas);
     if (tabIndexActivo !== undefined && tabIndexActivo < reservas.length) {
       setTabIndex(tabIndexActivo);
     }
   }, [reservas, tabIndexActivo]);
-
   if (!listaReservas || listaReservas.length === 0) return null;
-
   const reserva: any = listaReservas[tabIndex] || listaReservas[0];
-
   const esHermano = Boolean(
     reserva.hermano_regular_id ||
     reserva.codigo_reserva?.startsWith('HER-') ||
@@ -94,17 +86,14 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
   const esSolicitudAnulacion = reserva.estado === 'solicitud_anulacion';
   const esAnulada = reserva.estado === 'anulada' || reserva.estado === 'cancelada';
   const esConfirmada = reserva.estado === 'confirmada';
-
   const estudianteNombreCompleto = reserva.estudiante_nombre_completo ||
     [reserva.nombres, reserva.apellido_paterno, reserva.apellido_materno].filter(Boolean).join(' ');
-
   const estudianteCI = reserva.estudiante_ci || reserva.ci || 'S/N';
   const gradoDestino = reserva.grado_destino_nombre || reserva.grado_solicitado_nombre || reserva.grado_nombre || 'N/A';
   const nivelDestino = reserva.nivel_destino_nombre || reserva.nivel_solicitado_nombre || reserva.nivel_nombre || 'N/A';
   const turnoDestino = reserva.turno_destino_nombre || reserva.turno_solicitado_nombre || reserva.turno_nombre || 'Mañana';
   const fechaEmision = reserva.fecha_reserva_formateada ||
     (reserva.created_at ? new Date(reserva.created_at).toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleDateString('es-BO'));
-
   // Tokens de diseño idénticos a PreInscripción
   const brandPrimary = isDark ? '#facc15' : '#0288d1';
   const brandDeep = isDark ? '#f59e0b' : '#01579b';
@@ -115,22 +104,21 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
   const brandGradientHover = isDark
     ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
     : 'linear-gradient(135deg, #014377 0%, #0277bd 100%)';
-
   const darkBlue = '#01579b';
   const goldBorder = '#f59e0b';
   const accentGreen = '#10b981';
   const accentRed = '#ef4444';
   const accentAmber = '#f59e0b';
-
   const handleDescargarPDF = () => {
     reservaCupoService.descargarPDF(reserva.codigo_reserva);
   };
-
   const handleImprimir = () => {
     const url = reservaCupoService.getReciboPDFUrl(reserva.codigo_reserva, true);
     window.open(url, '_blank');
   };
-
+  const [enviandoWhatsApp, setEnviandoWhatsApp] = useState(false);
+  const [enviandoPDFWhatsApp, setEnviandoPDFWhatsApp] = useState(false);
+  const [mensajeWhatsAppStatus, setMensajeWhatsAppStatus] = useState<string | null>(null);
   const handleWhatsApp = () => {
     const tel = (reserva.tutor_telefono || '').replace(/\D/g, '');
     const numWhatsapp = tel.startsWith('591') ? tel : `591${tel}`;
@@ -141,6 +129,7 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
         : esHermano
           ? 'Reserva de Cupo (Hermano - Prioridad Familiar)'
           : 'Reserva de Cupo';
+    const linkPdf = reservaCupoService.getReciboPDFUrl(reserva.codigo_reserva, false);
     const texto = encodeURIComponent(
       `¡Hola! Compartimos el comprobante oficial de ${tipoDoc} en la U.E.P. La Voz de Cristo:\n\n` +
       `🎓 *Estudiante / Postulante:* ${estudianteNombreCompleto}\n` +
@@ -151,18 +140,44 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
       `👤 *Registrado por:* ${reserva.tutor_nombre} (${reserva.tutor_parentesco})\n` +
       `🔖 *Nº Recibo:* ${reserva.codigo_recibo || reserva.codigo_reserva}\n` +
       `🎫 *Código:* ${reserva.codigo_reserva}\n\n` +
+      `📄 *Descargar Recibo Oficial en PDF:*\n${linkPdf}\n\n` +
       `Conserve este comprobante para sus registros personales.`
     );
     window.open(`https://api.whatsapp.com/send?phone=${numWhatsapp}&text=${texto}`, '_blank');
   };
-
+  const handleEnviarWhatsAppOficial = async () => {
+    setEnviandoWhatsApp(true);
+    setMensajeWhatsAppStatus(null);
+    try {
+      const resp = await reservaCupoService.enviarConfirmacionWhatsApp(reserva.codigo_reserva);
+      setMensajeWhatsAppStatus(resp.message || 'Mensaje de WhatsApp enviado exitosamente');
+    } catch (err: any) {
+      console.warn('Envío de WhatsApp por API devolvió error, abriendo WhatsApp Web:', err);
+      handleWhatsApp();
+      setMensajeWhatsAppStatus('Se abrió WhatsApp Web para enviar el comprobante directamente');
+    } finally {
+      setEnviandoWhatsApp(false);
+    }
+  };
+  const handleEnviarPDFWhatsApp = async () => {
+    setEnviandoPDFWhatsApp(true);
+    setMensajeWhatsAppStatus(null);
+    try {
+      const resp = await reservaCupoService.enviarPDFWhatsApp(reserva.codigo_reserva);
+      setMensajeWhatsAppStatus(resp.message || 'Comprobante PDF enviado por WhatsApp exitosamente');
+    } catch (err: any) {
+      console.warn('Error al enviar documento PDF por WhatsApp:', err);
+      setMensajeWhatsAppStatus(err.response?.data?.message || 'No se pudo enviar el PDF directo. Utilice "Abrir WhatsApp" o descargue el archivo.');
+    } finally {
+      setEnviandoPDFWhatsApp(false);
+    }
+  };
   const handleAbrirAnulacion = () => {
     setMotivoAnulacion('');
     setCiEstudianteConfirmacion('');
     setErrorAnulacion(null);
     setOpenAnulacionDialog(true);
   };
-
   const handleConfirmarSolicitudAnulacion = async () => {
     if (!ciEstudianteConfirmacion.trim()) {
       setErrorAnulacion('Debe ingresar el Carnet de Identidad (CI) del estudiante');
@@ -172,10 +187,8 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
       setErrorAnulacion('Debe ingresar el motivo de la anulación');
       return;
     }
-
     setIsSubmittingAnulacion(true);
     setErrorAnulacion(null);
-
     try {
       const res = await reservaCupoService.solicitarAnulacion({
         codigo: reserva.codigo_reserva,
@@ -183,14 +196,11 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
         estudiante_ci: ciEstudianteConfirmacion.trim(),
         ci: ciEstudianteConfirmacion.trim()
       });
-
       const updated = res.data;
-
       // Actualizar lista local
       setListaReservas(prev =>
         prev.map(r => (r.id === updated.id ? { ...r, ...updated, estado: 'solicitud_anulacion' } : r))
       );
-
       setExitoAnulacionMsg(res.message || '¡Solicitud de anulación enviada con éxito! Será revisada y procesada por Dirección / Secretaría.');
       setOpenAnulacionDialog(false);
     } catch (err: any) {
@@ -200,12 +210,10 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
       setIsSubmittingAnulacion(false);
     }
   };
-
   const qrDataText = encodeURIComponent(
     `LVC-${esNoContinua ? 'NOC' : 'RES'}:${reserva.codigo_reserva}|EST:${reserva.estudiante_ci}|ESTADO:${reserva.estado}|TUTOR:${reserva.tutor_nombre}|GESTION:${reserva.periodo_nombre}`
   );
   const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&margin=4&data=${qrDataText}`;
-
   return (
     <Box sx={{ width: '100%', maxWidth: 820, mx: 'auto', my: 2 }}>
       {/* Mensaje de éxito al enviar solicitud de anulación */}
@@ -218,7 +226,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
           {exitoAnulacionMsg}
         </Alert>
       )}
-
       {/* Alerta contextual según estado */}
       <Box
         sx={{
@@ -258,7 +265,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
         ) : (
           <CheckCircleIcon sx={{ color: accentGreen, fontSize: 40 }} />
         )}
-
         <Box sx={{ flex: 1 }}>
           <Typography
             variant="subtitle1"
@@ -300,7 +306,74 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
           </Typography>
         </Box>
       </Box>
-
+      {/* Notificación informativa sobre WhatsApp enviada */}
+      <Box
+        sx={{
+          mb: 3,
+          p: { xs: 1.5, sm: 2 },
+          borderRadius: '16px',
+          bgcolor: isDark ? 'rgba(37, 211, 102, 0.08)' : 'rgba(37, 211, 102, 0.08)',
+          border: `1.5px solid ${isDark ? 'rgba(37, 211, 102, 0.3)' : 'rgba(37, 211, 102, 0.35)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 1.5,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <WhatsAppIcon sx={{ color: '#25D366', fontSize: 32 }} />
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800} sx={{ color: isDark ? '#34d399' : '#047857' }}>
+              Confirmación Oficial por WhatsApp
+            </Typography>
+            <Typography variant="caption" sx={{ color: isDark ? '#cbd5e1' : '#475569', display: 'block' }}>
+              {mensajeWhatsAppStatus || `Se despachó el comprobante y código al número registrado: ${reserva.tutor_telefono || 'Tutor'}`}
+            </Typography>
+          </Box>
+        </Box>
+        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+          <Button
+            size="small"
+            variant="contained"
+            disabled={enviandoWhatsApp}
+            onClick={handleEnviarWhatsAppOficial}
+            sx={{
+              borderRadius: '10px',
+              textTransform: 'none',
+              fontWeight: 700,
+              fontSize: '0.8rem',
+              bgcolor: '#16a34a',
+              color: '#fff',
+              '&:hover': {
+                bgcolor: '#15803d',
+              },
+            }}
+          >
+            {enviandoWhatsApp ? 'Reenviando...' : 'Reenviar Mensaje'}
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            disabled={enviandoPDFWhatsApp}
+            onClick={handleEnviarPDFWhatsApp}
+            startIcon={<PrintIcon sx={{ fontSize: 16 }} />}
+            sx={{
+              borderRadius: '10px',
+              textTransform: 'none',
+              fontWeight: 700,
+              fontSize: '0.8rem',
+              bgcolor: isDark ? '#0284c7' : '#0369a1',
+              color: '#fff',
+              '&:hover': {
+                bgcolor: isDark ? '#0369a1' : '#075985',
+              },
+            }}
+          >
+            {enviandoPDFWhatsApp ? 'Enviando PDF...' : 'Enviar PDF a WhatsApp'}
+          </Button>
+        </Stack>
+      </Box>
       {/* Selector de pestañas si son múltiples estudiantes */}
       {listaReservas.length > 1 && (
         <Paper
@@ -342,7 +415,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
               const isWait = isHer && (r.estado === 'en_espera' || r.codigo_reserva?.startsWith('ESP-'));
               const nombreCorto = (r.estudiante_nombres || r.nombres || '').split(' ')[0] || `Alumno ${idx + 1}`;
               const gNombre = r.grado_destino_nombre || r.grado_nombre || '';
-
               return (
                 <Tab
                   key={r.id || idx}
@@ -369,7 +441,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
           </Tabs>
         </Paper>
       )}
-
       {/* DOCUMENTO RECIBO (Simulación idéntica al PDF de media hoja) */}
       <Paper
         ref={reciboRef}
@@ -410,7 +481,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
             mb: 2.5
           }}
         />
-
         {/* Header con Logo y Recibo */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 2.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -435,7 +505,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
               </Typography>
             </Box>
           </Box>
-
           {/* Caja con Código de Recibo */}
           <Box
             sx={{
@@ -475,7 +544,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
             </Typography>
           </Box>
         </Box>
-
         {/* Barra de metadatos */}
         <Box
           sx={{
@@ -525,7 +593,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
             }}
           />
         </Box>
-
         {/* 1. INFORMACIÓN DEL ESTUDIANTE O HERMANO */}
         <Box sx={{ mb: 2.5 }}>
           <Box
@@ -582,7 +649,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
             </Grid>
           </Box>
         </Box>
-
         {/* 2. DETALLE DE CUPO O DECLARACIÓN DE NO CONTINUIDAD */}
         <Box sx={{ mb: 2.5 }}>
           <Box
@@ -682,7 +748,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
                       {turnoDestino}
                     </Typography>
                   </Grid>
-
                   {/* Estado de cupo del hermano */}
                   <Grid size={{ xs: 12 }}>
                     <Box
@@ -765,7 +830,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
                   )}
                 </>
               )}
-
               {/* Si hay motivo de anulación o solicitud */}
               {(reserva.motivo_anulacion || esSolicitudAnulacion || esAnulada) && (
                 <Grid size={{ xs: 12 }}>
@@ -782,7 +846,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
             </Grid>
           </Box>
         </Box>
-
         {/* 3. DATOS DE QUIEN REALIZÓ EL TRÁMITE */}
         <Box sx={{ mb: 2.5 }}>
           <Box
@@ -842,7 +905,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
             </Grid>
           </Box>
         </Box>
-
         {/* 4. CÓDIGO QR Y NOTA OFICIAL */}
         <Box
           sx={{
@@ -889,7 +951,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
                       ? 'CONSTANCIA DE CUPO - PRIORIDAD FAMILIAR (HERMANOS)'
                       : 'CONSTANCIA OFICIAL DE RESERVA DE CUPO'}
             </Typography>
-
             {esNoContinua ? (
               <>
                 <Typography variant="caption" display="block">
@@ -953,7 +1014,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
           </Box>
         </Box>
       </Paper>
-
       {/* ── BANNER / CALL-TO-ACTION: AGREGAR HERMANO REGULAR O POSTULAR HERMANO NUEVO ── */}
       {esConfirmada && !esHermano && (onPostularHermano || onAgregarHermanoRegular) && (
         <Paper
@@ -986,7 +1046,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
             >
               <FamilyRestroomIcon sx={{ fontSize: 26 }} />
             </Box>
-
             <Box sx={{ flex: 1 }}>
               <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
                 <Typography
@@ -1018,7 +1077,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
               </Typography>
             </Box>
           </Box>
-
           {/* Explicación a todo el ancho */}
           <Typography
             variant="body2"
@@ -1032,7 +1090,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
           >
             Como ya aseguraste el cupo de <strong>{estudianteNombreCompleto}</strong>, puedes registrar a su hermano/a (sea estudiante regular del colegio o hermanito nuevo con Prioridad Familiar) en este momento. <strong>No necesitas solicitar anulación</strong> ni reiniciar el proceso.
           </Typography>
-
           {/* Botones de Acción simétricos */}
           <Box
             sx={{
@@ -1067,7 +1124,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
                 + Hermano Regular (Colegio)
               </Button>
             )}
-
             {onPostularHermano && (
               <Button
                 variant="contained"
@@ -1097,7 +1153,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
           </Box>
         </Paper>
       )}
-
       {/* BOTONES DE ACCIÓN */}
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
@@ -1129,7 +1184,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
         >
           {esNoContinua ? 'Descargar Constancia en PDF' : 'Descargar Recibo en PDF'}
         </Button>
-
         <Button
           variant="outlined"
           size="large"
@@ -1152,7 +1206,58 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
         >
           Ver / Imprimir
         </Button>
-
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={<WhatsAppIcon sx={{ color: '#ffffff' }} />}
+          onClick={handleEnviarWhatsAppOficial}
+          disabled={enviandoWhatsApp}
+          sx={{
+            background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+            color: '#ffffff !important',
+            borderRadius: '12px',
+            fontWeight: 800,
+            textTransform: 'none',
+            px: 3,
+            py: 1.4,
+            boxShadow: '0 8px 25px rgba(37, 211, 102, 0.35)',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #1ebd5a 0%, #0d6e62 100%)',
+              transform: 'translateY(-2px)'
+            }
+          }}
+        >
+          {enviandoWhatsApp ? 'Enviando...' : 'Reenviar por WhatsApp'}
+        </Button>
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={<PrintIcon sx={{ color: '#ffffff' }} />}
+          onClick={handleEnviarPDFWhatsApp}
+          disabled={enviandoPDFWhatsApp}
+          sx={{
+            background: isDark
+              ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
+              : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+            color: '#ffffff !important',
+            borderRadius: '12px',
+            fontWeight: 800,
+            textTransform: 'none',
+            px: 3,
+            py: 1.4,
+            boxShadow: '0 8px 25px rgba(2, 136, 209, 0.35)',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              background: isDark
+                ? 'linear-gradient(135deg, #0369a1 0%, #075985 100%)'
+                : 'linear-gradient(135deg, #0277bd 0%, #014377 100%)',
+              transform: 'translateY(-2px)'
+            }
+          }}
+        >
+          {enviandoPDFWhatsApp ? 'Enviando PDF...' : 'Enviar PDF a WhatsApp'}
+        </Button>
         {/* Botón para solicitar anulación cuando la reserva de estudiante regular esté confirmada */}
         {esConfirmada && !esHermano && (
           <Button
@@ -1177,7 +1282,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
             Solicitar Anulación
           </Button>
         )}
-
         {onNuevaReserva && (
           <Button
             variant="text"
@@ -1198,7 +1302,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
           </Button>
         )}
       </Stack>
-
       {/* ── DIÁLOGO PARA SOLICITAR ANULACIÓN DE RESERVA (ESTILO RESERVA-CUPO) ── */}
       <Dialog
         open={openAnulacionDialog}
@@ -1254,7 +1357,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
                 </Typography>
               </Box>
             </Box>
-
             <Box
               onClick={() => !isSubmittingAnulacion && setOpenAnulacionDialog(false)}
               sx={{
@@ -1280,7 +1382,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
               <CloseIcon sx={{ fontSize: 16 }} />
             </Box>
           </Box>
-
           {/* Barra superior de acento con gradiente */}
           <Box
             sx={{
@@ -1291,7 +1392,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
             }}
           />
         </Box>
-
         {/* ── BODY ── */}
         <DialogContent sx={{ px: 3, py: 2 }}>
           {/* Tarjeta del Estudiante seleccionado */}
@@ -1332,7 +1432,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
                 </Typography>
               </Box>
             </Box>
-
             <Chip
               label={reserva.grado_destino_nombre}
               size="small"
@@ -1345,7 +1444,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
               }}
             />
           </Box>
-
           {onPostularHermano && (
             <Alert
               severity="info"
@@ -1374,7 +1472,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
               <strong>¿Deseas agregar a un hermano?</strong> No es necesario anular este cupo. Puedes postularlo directamente manteniendo el cupo asegurado de {reserva.estudiante_nombres || 'tu hijo'}.
             </Alert>
           )}
-
           <Alert
             severity="warning"
             sx={{
@@ -1389,13 +1486,11 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
             Está solicitando la liberación formal del cupo escolar para la Gestión 2027.
             Esta solicitud pasará a revisión de Secretaría y Dirección para formalizar la baja.
           </Alert>
-
           {errorAnulacion && (
             <Alert severity="error" sx={{ mb: 2, borderRadius: '12px' }}>
               {errorAnulacion}
             </Alert>
           )}
-
           <Stack spacing={2}>
             <Box>
               <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', mb: 0.5, display: 'block' }}>
@@ -1417,7 +1512,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
                 }}
               />
             </Box>
-
             <Box>
               <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', mb: 0.5, display: 'block' }}>
                 Motivo de la Anulación *
@@ -1442,7 +1536,6 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
             </Box>
           </Stack>
         </DialogContent>
-
         {/* ── FOOTER ── */}
         <Box
           sx={{
@@ -1470,9 +1563,7 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
           >
             Cancelar
           </Button>
-
           <Box sx={{ flex: 1 }} />
-
           <Button
             variant="contained"
             onClick={handleConfirmarSolicitudAnulacion}
@@ -1500,5 +1591,4 @@ export const ReciboReservaCard: React.FC<ReciboReservaCardProps> = ({
     </Box>
   );
 };
-
 export default ReciboReservaCard;

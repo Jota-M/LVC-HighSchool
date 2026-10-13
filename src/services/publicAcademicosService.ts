@@ -16,7 +16,8 @@ export interface GradoPublico {
   nombre: string;
   codigo: string;
   nivel_academico_id: number;
-  nivel_nombre: string;
+  nivel_nombre?: string;
+  nivel_academico_nombre?: string;
   orden: number;
 }
 

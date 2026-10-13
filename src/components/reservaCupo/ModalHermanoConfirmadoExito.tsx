@@ -26,6 +26,7 @@ import {
   EventAvailable as EventAvailableIcon,
   HelpOutline as HelpOutlineIcon,
   Person as PersonIcon,
+  WhatsApp as WhatsAppIcon,
 } from '@mui/icons-material';
 import reservaCupoService from '@/services/reservaCupoService';
 
@@ -459,6 +460,25 @@ export const ModalHermanoConfirmadoExito: React.FC<ModalHermanoConfirmadoExitoPr
                   : `Inscrito y vinculado bajo el mismo núcleo familiar del tutor registrado.`}
               </Typography>
             </Box>
+          </Box>
+
+          {/* Aviso WhatsApp Oficial */}
+          <Box
+            sx={{
+              mt: 1,
+              p: 1.5,
+              borderRadius: '12px',
+              bgcolor: isDark ? 'rgba(37, 211, 102, 0.08)' : 'rgba(37, 211, 102, 0.08)',
+              border: `1px solid ${isDark ? 'rgba(37, 211, 102, 0.3)' : 'rgba(37, 211, 102, 0.35)'}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+            }}
+          >
+            <WhatsAppIcon sx={{ color: '#25D366', fontSize: 22 }} />
+            <Typography variant="caption" sx={{ color: isDark ? '#cbd5e1' : '#475569', fontSize: '0.78rem' }}>
+              Confirmación oficial enviada vía WhatsApp al tutor registrado.
+            </Typography>
           </Box>
         </Stack>
       </DialogContent>

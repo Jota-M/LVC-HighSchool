@@ -1,29 +1,16 @@
 // hooks/usePreinscripcion.ts
 'use client';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
 import type {
   PreEstudianteForm,
   PreTutorForm,
-  PreInscripcionFormData,
-  ErroresFormulario,
-  ModoRegistro,
+  PreRelacionForm,
+  PreinscripcionCreadaItem,
 } from '@/types/preinscripcionTypes';
 import { preinscripcionService } from '@/services/preinscripcionService';
 
-// =============================================
-// 🆕 NUEVO: Interfaz para datos de preinscripción
-// =============================================
-export interface PreInscripcionInfo {
-  periodo_academico_id: number | null;
-  grado_id: number | null;
-  turno_id: number | null;
-}
-
-// =============================================
-// ESTADOS INICIALES
-// =============================================
-const estadoInicialEstudiante = (): PreEstudianteForm => ({
+export const estadoInicialEstudiante = (): PreEstudianteForm => ({
   nombres: '',
   apellido_paterno: '',
   apellido_materno: '',
@@ -42,14 +29,17 @@ const estadoInicialEstudiante = (): PreEstudianteForm => ({
   tipo_discapacidad: '',
   institucion_procedencia: '',
   ultimo_grado_cursado: '',
-  grado_solicitado: '',     // ✅ Texto (ej: "PRE-K")
+  grado_solicitado: '',
   repite_grado: false,
-  turno_solicitado: '',     // ✅ Texto (ej: "TARDE")
+  turno_solicitado: '',
+  grado_id: null,
+  turno_id: null,
+  periodo_academico_id: null,
 });
 
-const estadoInicialTutor = (): PreTutorForm => ({
+export const estadoInicialTutor = (esPrincipal = true): PreTutorForm => ({
   otro_parentesco: '',
-  tipo_representante: '',
+  tipo_representante: 'Padre o Tutor',
   nombres: '',
   apellido_paterno: '',
   apellido_materno: '',
@@ -61,234 +51,272 @@ const estadoInicialTutor = (): PreTutorForm => ({
   celular: '',
   email: '',
   direccion: '',
+  zona: '',
   ocupacion: '',
   lugar_trabajo: '',
   telefono_trabajo: '',
   estado_civil: '',
   nivel_educacion: '',
   vive_con_estudiante: true,
-  es_tutor_principal: true,
-});
-
-const estadoInicialDocumentos = () => ({
-  foto_estudiante: null,
-  cedula_estudiante: null,
-  certificado_nacimiento: null,
-  libreta_notas: null,
-});
-
-// 🆕 Estado inicial para preinscripcion_info
-const estadoInicialPreInscripcionInfo = (): PreInscripcionInfo => ({
-  periodo_academico_id: null,
-  grado_id: null,
-  turno_id: null,
+  es_tutor_principal: esPrincipal,
 });
 
 export function usePreinscripcion() {
-  // =============================================
-  // ESTADOS PARA MODO MÚLTIPLE
-  // =============================================
-  const [etapa, setEtapa] = useState<'seleccion_modo' | 'formulario'>('seleccion_modo');
-  const [modo, setModo] = useState<ModoRegistro>('nuevo');
-  const [padreExistente, setPadreExistente] = useState<any>(null);
-  
-  const [estudiantes, setEstudiantes] = useState<PreEstudianteForm[]>([estadoInicialEstudiante()]);
-  const [estudianteActivo, setEstudianteActivo] = useState(0);
-  
-  const [documentosEstudiantes, setDocumentosEstudiantes] = useState<{
-    [key: number]: {
-      foto_estudiante: File | null;
-      cedula_estudiante: File | null;
-      certificado_nacimiento: File | null;
-      libreta_notas: File | null;
-    };
-  }>({
-    0: estadoInicialDocumentos(),
-  });
-
-  // 🆕 Estado para IDs de preinscripción
-  const [preinscripcionInfo, setPreinscripcionInfo] = useState<PreInscripcionInfo>(
-    estadoInicialPreInscripcionInfo()
-  );
-
-  // =============================================
-  // ESTADOS ORIGINALES
-  // =============================================
   const [activeStep, setActiveStep] = useState(0);
-  const [errors, setErrors] = useState<ErroresFormulario>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errores, setErrores] = useState<Record<string, string>>({});
+  const [mensajeError, setMensajeError] = useState<string | null>(null);
+
+  // Múltiples estudiantes y tutores
+  const [estudiantes, setEstudiantes] = useState<PreEstudianteForm[]>([estadoInicialEstudiante()]);
+  const [tutores, setTutores] = useState<PreTutorForm[]>([estadoInicialTutor(true)]);
   
-  const [representante, setRepresentante] = useState<PreTutorForm>(estadoInicialTutor());
-  const [documentosRepresentante, setDocumentosRepresentante] = useState<{
-    cedula_representante: File | null;
-  }>({ cedula_representante: null });
+  // Relaciones familiares: clave `${estudianteIndex}:${tutorIndex}`
+  // Inicialmente vinculamos el primer estudiante con el primer tutor
+  const [relaciones, setRelaciones] = useState<Record<string, boolean>>({ '0:0': true });
+  // Mapa de estudianteIndex -> tutorIndex principal (permite que un mismo tutor sea principal de 2 o más hijos)
+  const [principales, setPrincipales] = useState<Record<number, number>>({ 0: 0 });
+
+  // Resultado de preinscripciones creadas
+  const [resultadoCreadas, setResultadoCreadas] = useState<PreinscripcionCreadaItem[]>([]);
 
   // =============================================
-  // HANDLERS DE MODO
+  // GESTIÓN DE ESTUDIANTES
   // =============================================
-  const handleModoSeleccionado = (data: { modo: string; padre: any }) => {
-    setModo(data.modo as ModoRegistro);
-    setPadreExistente(data.padre);
-
-    if (data.padre) {
-      setRepresentante({
-        ...estadoInicialTutor(),
-        nombres: data.padre.nombres,
-        apellido_paterno: data.padre.apellido_paterno,
-        apellido_materno: data.padre.apellido_materno || '',
-        ci: data.padre.ci,
-        telefono: data.padre.telefono,
-        celular: data.padre.celular || '',
-        email: data.padre.email || '',
-        direccion: data.padre.direccion || '',
-        ocupacion: data.padre.ocupacion || '',
-        lugar_trabajo: data.padre.lugar_trabajo || '',
-      });
-    }
-
-    if (data.modo === 'multiple') {
-      setEstudiantes([estadoInicialEstudiante(), estadoInicialEstudiante()]);
-      setDocumentosEstudiantes({
-        0: estadoInicialDocumentos(),
-        1: estadoInicialDocumentos(),
-      });
-    }
-
-    setEtapa('formulario');
-  };
-
-  const volverSeleccionModo = () => {
-    setEtapa('seleccion_modo');
-    setActiveStep(0);
-    setEstudiantes([estadoInicialEstudiante()]);
-    setRepresentante(estadoInicialTutor());
-    setDocumentosEstudiantes({ 0: estadoInicialDocumentos() });
-    setDocumentosRepresentante({ cedula_representante: null });
-    setPreinscripcionInfo(estadoInicialPreInscripcionInfo()); // 🆕 Limpiar
-    setErrors({});
-  };
-
-  // =============================================
-  // HANDLERS DE MÚLTIPLES ESTUDIANTES
-  // =============================================
-  const agregarEstudiante = () => {
-    if (estudiantes.length >= 5) {
-      alert('Máximo 5 estudiantes por preinscripción');
+  const agregarEstudiante = useCallback(() => {
+    if (estudiantes.length >= 6) {
+      alert('Máximo 6 estudiantes por solicitud familiar');
       return;
     }
     const nuevoIndex = estudiantes.length;
-    setEstudiantes([...estudiantes, estadoInicialEstudiante()]);
-    setDocumentosEstudiantes({
-      ...documentosEstudiantes,
-      [nuevoIndex]: estadoInicialDocumentos(),
-    });
-  };
+    setEstudiantes((prev) => [...prev, estadoInicialEstudiante()]);
 
-  const eliminarEstudiante = (index: number) => {
-    if (estudiantes.length === 1) {
-      alert('Debe haber al menos un estudiante');
+    // Por defecto vincular con todos los tutores existentes
+    setRelaciones((prev) => {
+      const actualizadas = { ...prev };
+      tutores.forEach((_, tIdx) => {
+        actualizadas[`${nuevoIndex}:${tIdx}`] = true;
+      });
+      return actualizadas;
+    });
+
+    // Por defecto asignar el tutor 0 como principal del nuevo estudiante
+    setPrincipales((prev) => ({
+      ...prev,
+      [nuevoIndex]: 0,
+    }));
+  }, [estudiantes.length, tutores]);
+
+  const eliminarEstudiante = useCallback((index: number) => {
+    if (estudiantes.length <= 1) {
+      alert('Debe registrar al menos un estudiante');
       return;
     }
-    const nuevosEstudiantes = estudiantes.filter((_, i) => i !== index);
-    setEstudiantes(nuevosEstudiantes);
+    setEstudiantes((prev) => prev.filter((_, i) => i !== index));
 
-    const nuevosDocumentos = { ...documentosEstudiantes };
-    delete nuevosDocumentos[index];
-    setDocumentosEstudiantes(nuevosDocumentos);
+    // Reindexar relaciones
+    setRelaciones((prev) => {
+      const actualizadas: Record<string, boolean> = {};
+      Object.entries(prev).forEach(([key, val]) => {
+        const [eIdx, tIdx] = key.split(':').map(Number);
+        if (eIdx === index) return;
+        const newEIdx = eIdx > index ? eIdx - 1 : eIdx;
+        actualizadas[`${newEIdx}:${tIdx}`] = val;
+      });
+      return actualizadas;
+    });
 
-    if (estudianteActivo >= nuevosEstudiantes.length) {
-      setEstudianteActivo(nuevosEstudiantes.length - 1);
+    // Reindexar principales
+    setPrincipales((prev) => {
+      const next: Record<number, number> = {};
+      Object.entries(prev).forEach(([eStr, tIdx]) => {
+        const eIdx = Number(eStr);
+        if (eIdx === index) return;
+        const newEIdx = eIdx > index ? eIdx - 1 : eIdx;
+        next[newEIdx] = tIdx;
+      });
+      return next;
+    });
+  }, [estudiantes.length]);
+
+  const updateEstudiante = useCallback((index: number, field: string, value: any) => {
+    setEstudiantes((prev) => {
+      const copy = [...prev];
+      copy[index] = {
+        ...copy[index],
+        [field]: value,
+      };
+      return copy;
+    });
+    // Limpiar error del campo
+    setErrores((prev) => {
+      const copy = { ...prev };
+      delete copy[`estudiante_${index}_${field}`];
+      return copy;
+    });
+  }, []);
+
+  // =============================================
+  // GESTIÓN DE TUTORES
+  // =============================================
+  const agregarTutor = useCallback(() => {
+    if (tutores.length >= 4) {
+      alert('Máximo 4 tutores por solicitud');
+      return;
     }
-  };
+    const nuevoTutorIdx = tutores.length;
+    setTutores((prev) => [...prev, estadoInicialTutor(false)]);
+
+    // Asociar con todos los estudiantes por defecto
+    setRelaciones((prev) => {
+      const actualizadas = { ...prev };
+      estudiantes.forEach((_, eIdx) => {
+        actualizadas[`${eIdx}:${nuevoTutorIdx}`] = true;
+      });
+      return actualizadas;
+    });
+  }, [tutores.length, estudiantes]);
+
+  const eliminarTutor = useCallback((index: number) => {
+    if (tutores.length <= 1) {
+      alert('Debe haber al menos un tutor registrado');
+      return;
+    }
+    setTutores((prev) => prev.filter((_, i) => i !== index));
+
+    // Reindexar relaciones
+    setRelaciones((prev) => {
+      const actualizadas: Record<string, boolean> = {};
+      Object.entries(prev).forEach(([key, val]) => {
+        const [eIdx, tIdx] = key.split(':').map(Number);
+        if (tIdx === index) return;
+        const newTIdx = tIdx > index ? tIdx - 1 : tIdx;
+        actualizadas[`${eIdx}:${newTIdx}`] = val;
+      });
+      return actualizadas;
+    });
+
+    // Reindexar principales
+    setPrincipales((prev) => {
+      const next: Record<number, number> = {};
+      Object.entries(prev).forEach(([eStr, tIdx]) => {
+        const eIdx = Number(eStr);
+        if (tIdx === index) {
+          next[eIdx] = 0; // Reasignar al primer tutor
+        } else if (tIdx > index) {
+          next[eIdx] = tIdx - 1;
+        } else {
+          next[eIdx] = tIdx;
+        }
+      });
+      return next;
+    });
+  }, [tutores.length]);
+
+  const updateTutor = useCallback((index: number, field: string, value: any) => {
+    setTutores((prev) => {
+      const copy = [...prev];
+      copy[index] = {
+        ...copy[index],
+        [field]: value,
+      };
+      return copy;
+    });
+    // Limpiar error del campo
+    setErrores((prev) => {
+      const copy = { ...prev };
+      delete copy[`tutor_${index}_${field}`];
+      return copy;
+    });
+  }, []);
 
   // =============================================
-  // HANDLERS DE CAMBIO
+  // RELACIONES FAMILIARES
   // =============================================
-  const updateEstudiante = (field: string, value: any) => {
-    const nuevosEstudiantes = [...estudiantes];
-    nuevosEstudiantes[estudianteActivo] = {
-      ...nuevosEstudiantes[estudianteActivo],
-      [field]: value,
-    };
-    setEstudiantes(nuevosEstudiantes);
-  };
-
-  const updateRepresentante = (field: string, value: any) => {
-    setRepresentante({ ...representante, [field]: value });
-  };
-
-  const updateDocumento = (field: string, file: File | null) => {
-    if (field === 'cedula_representante') {
-      setDocumentosRepresentante({ cedula_representante: file });
-    } else {
-      setDocumentosEstudiantes({
-        ...documentosEstudiantes,
-        [estudianteActivo]: {
-          ...documentosEstudiantes[estudianteActivo],
-          [field]: file,
-        },
+  const cambiarRelacion = useCallback((key: string, seleccionada: boolean) => {
+    setRelaciones((prev) => ({
+      ...prev,
+      [key]: seleccionada,
+    }));
+    const [eIdx, tIdx] = key.split(':').map(Number);
+    if (!seleccionada && principales[eIdx] === tIdx) {
+      setPrincipales((prev) => {
+        const next = { ...prev };
+        const otroTutor = tutores.findIndex((_, otherTIdx) => otherTIdx !== tIdx && relaciones[`${eIdx}:${otherTIdx}`]);
+        if (otroTutor !== -1) {
+          next[eIdx] = otroTutor;
+        }
+        return next;
       });
     }
-  };
+  }, [principales, tutores, relaciones]);
 
-  // 🆕 Handler para actualizar preinscripcion_info
-  const updatePreinscripcionInfo = (field: keyof PreInscripcionInfo, value: number | null) => {
-    setPreinscripcionInfo(prev => ({
+  const cambiarPrincipal = useCallback((estudianteIndex: number, tutorIndex: number) => {
+    setPrincipales((prev) => ({
       ...prev,
-      [field]: value,
+      [estudianteIndex]: tutorIndex,
     }));
-  };
+  }, []);
 
   // =============================================
   // VALIDACIONES
   // =============================================
-  const validarPaso = (paso: number): boolean => {
-    const nuevosErrores: ErroresFormulario = {};
-    const estudianteActual = estudiantes[estudianteActivo];
+  const validarPaso = useCallback((paso: number): boolean => {
+    const errs: Record<string, string> = {};
+    setMensajeError(null);
 
     if (paso === 0) {
-      // Validaciones existentes
-      if (!estudianteActual.nombres) nuevosErrores.nombres = 'Campo requerido';
-      if (!estudianteActual.apellido_paterno) nuevosErrores.apellido_paterno = 'Campo requerido';
-      if (!estudianteActual.fecha_nacimiento) nuevosErrores.fecha_nacimiento = 'Campo requerido';
-      if (!estudianteActual.genero) nuevosErrores.genero = 'Campo requerido';
-      if (!estudianteActual.grado_solicitado) nuevosErrores.grado_solicitado = 'Campo requerido';
-      if (!estudianteActual.turno_solicitado) nuevosErrores.turno_solicitado = 'Campo requerido';
+      // Validar cada estudiante
+      estudiantes.forEach((est, idx) => {
+        if (!est.nombres.trim()) errs[`estudiante_${idx}_nombres`] = 'Nombres requeridos';
+        if (!est.apellido_paterno.trim()) errs[`estudiante_${idx}_apellido_paterno`] = 'Apellido paterno requerido';
+        if (!est.fecha_nacimiento) errs[`estudiante_${idx}_fecha_nacimiento`] = 'Fecha de nacimiento requerida';
+        if (!est.genero) errs[`estudiante_${idx}_genero`] = 'Seleccione género';
+        if (!est.grado_id) errs[`estudiante_${idx}_grado`] = 'Seleccione el grado a postular';
+        if (!est.turno_id) errs[`estudiante_${idx}_turno`] = 'Seleccione el turno preferido';
+        if (est.tiene_discapacidad && !est.tipo_discapacidad?.trim()) {
+          errs[`estudiante_${idx}_tipo_discapacidad`] = 'Especifique el tipo de discapacidad';
+        }
+      });
 
-      // 🆕 Validar que se hayan seleccionado los IDs
-      if (!preinscripcionInfo.periodo_academico_id) {
-        nuevosErrores.periodo_academico = 'Debe seleccionar un periodo académico';
-      }
-      if (!preinscripcionInfo.grado_id) {
-        nuevosErrores.grado = 'Debe seleccionar el ID del grado';
-      }
-      if (!preinscripcionInfo.turno_id) {
-        nuevosErrores.turno = 'Debe seleccionar el ID del turno';
+      if (Object.keys(errs).length > 0) {
+        setErrores(errs);
+        setMensajeError('Por favor complete todos los campos obligatorios de los estudiantes.');
+        return false;
       }
     }
 
-    if (paso === 1 && modo !== 'padre_existente') {
-      if (!representante.nombres) nuevosErrores.nombres_rep = 'Campo requerido';
-      if (!representante.apellido_paterno) nuevosErrores.apellido_paterno_rep = 'Campo requerido';
-      if (!representante.ci) nuevosErrores.ci_rep = 'Campo requerido';
-      if (!representante.telefono) nuevosErrores.telefono_rep = 'Campo requerido';
+    if (paso === 1) {
+      // Validar cada tutor
+      tutores.forEach((tut, idx) => {
+        if (!tut.nombres.trim()) errs[`tutor_${idx}_nombres`] = 'Nombres requeridos';
+        if (!tut.apellido_paterno.trim()) errs[`tutor_${idx}_apellido_paterno`] = 'Apellido paterno requerido';
+        if (!tut.ci.trim()) errs[`tutor_${idx}_ci`] = 'Cédula de identidad requerida';
+        if (!tut.telefono.trim() && !tut.celular.trim()) errs[`tutor_${idx}_telefono`] = 'Teléfono requerido';
+      });
+
+      // Validar que cada estudiante tenga al menos un tutor asignado
+      const relacionesActivas = Object.entries(relaciones).filter(([, marc]) => marc);
+      const algunEstudianteSinTutor = estudiantes.some((_, eIdx) =>
+        !relacionesActivas.some(([k]) => k.startsWith(`${eIdx}:`))
+      );
+
+      if (algunEstudianteSinTutor) {
+        setMensajeError('Cada estudiante debe tener al menos un tutor o responsable asignado.');
+        return false;
+      }
+
+      if (Object.keys(errs).length > 0) {
+        setErrores(errs);
+        setMensajeError('Por favor complete todos los datos requeridos de los tutores.');
+        return false;
+      }
     }
 
-    // if (paso === 2) {
-    //   const docs = documentosEstudiantes[estudianteActivo];
-    //   if (!docs.cedula_estudiante) nuevosErrores.cedula_estudiante = 'Documento requerido';
-    //   if (!docs.certificado_nacimiento) nuevosErrores.certificado_nacimiento = 'Documento requerido';
-    //   if (!docs.libreta_notas) nuevosErrores.libreta_notas = 'Documento requerido';
-
-    //   if (modo !== 'padre_existente' && !documentosRepresentante.cedula_representante) {
-    //     nuevosErrores.cedula_representante = 'Documento requerido';
-    //   }
-    // }
-
-    setErrors(nuevosErrores);
-    return Object.keys(nuevosErrores).length === 0;
-  };
+    setErrores({});
+    return true;
+  }, [estudiantes, tutores, relaciones]);
 
   // =============================================
   // NAVEGACIÓN
@@ -301,200 +329,94 @@ export function usePreinscripcion() {
   };
 
   const handleBack = () => {
-    setActiveStep((prev) => prev - 1);
+    setActiveStep((prev) => Math.max(prev - 1, 0));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // =============================================
-  // ENVÍO (✅ ACTUALIZADO CON preinscripcion_info)
+  // SUBMIT (JSON limpio a /preinscripcion/multiple)
   // =============================================
   const handleSubmit = async () => {
-  if (!validarPaso(activeStep)) return;
+    try {
+      setIsSubmitting(true);
+      setMensajeError(null);
 
-  // Validar IDs
-  if (!preinscripcionInfo.periodo_academico_id || 
-      !preinscripcionInfo.grado_id || 
-      !preinscripcionInfo.turno_id) {
-    alert('Error: Faltan datos de período académico, grado o turno.');
-    return;
-  }
+      // Mapear relaciones seleccionadas
+      const relacionesPayload: PreRelacionForm[] = Object.entries(relaciones)
+        .filter(([, marc]) => marc)
+        .map(([key]) => {
+          const [eIdx, tIdx] = key.split(':').map(Number);
+          return {
+            estudiante_index: eIdx,
+            tutor_index: tIdx,
+            parentesco: tutores[tIdx]?.parentesco || 'padre',
+            es_tutor_principal: principales[eIdx] === tIdx,
+          };
+        });
 
-  setIsSubmitting(true);
-
-  try {
-    // ✅ MODO SIMPLE: Usar FormData en lugar de preinscripcionService.crear
-    if (modo === 'nuevo' && estudiantes.length === 1) {
-      const estudianteData = {
-        ...estudiantes[0],
-        rude: estudiantes[0].rude || '',
-        fecha_nacimiento: estudiantes[0].fecha_nacimiento
-          ? estudiantes[0].fecha_nacimiento.format('YYYY-MM-DD')
-          : '',
+      // Preparar payload JSON limpio
+      const payload = {
+        periodo_academico_id: estudiantes[0]?.periodo_academico_id || undefined,
+        estudiantes: estudiantes.map((e) => ({
+          ...e,
+          fecha_nacimiento: e.fecha_nacimiento ? e.fecha_nacimiento.format('YYYY-MM-DD') : '',
+        })),
+        tutores: tutores.map((t) => ({
+          ...t,
+          direccion: t.zona ? `${t.direccion || ''}${t.direccion ? ' - ' : ''}Zona: ${t.zona}`.trim() : (t.direccion || ''),
+          fecha_nacimiento: t.fecha_nacimiento ? t.fecha_nacimiento.format('YYYY-MM-DD') : null,
+        })),
+        relaciones: relacionesPayload,
       };
 
-      const representanteData = {
-        ...representante,
-        fecha_nacimiento: representante.fecha_nacimiento
-          ? representante.fecha_nacimiento.format('YYYY-MM-DD')
-          : null,
-      };
+      const res = await preinscripcionService.crearMultiple(payload);
 
-      const docs = documentosEstudiantes[0];
-      
-      // ✅ CREAR FormData (igual que en modo múltiple)
-      const formData = new FormData();
-      
-      // Agregar datos como JSON strings
-      formData.append('estudiante', JSON.stringify(estudianteData));
-      formData.append('representante', JSON.stringify(representanteData));
-      formData.append('preinscripcion_info', JSON.stringify({
-        periodo_academico_id: preinscripcionInfo.periodo_academico_id,
-        grado_id: preinscripcionInfo.grado_id,
-        turno_id: preinscripcionInfo.turno_id,
-      }));
-      
-      // ✅ Agregar archivos del estudiante
-      if (docs.foto_estudiante) {
-        formData.append('foto_estudiante', docs.foto_estudiante);
-      }
-      if (docs.cedula_estudiante) {
-        formData.append('cedula_estudiante', docs.cedula_estudiante);
-      }
-      if (docs.certificado_nacimiento) {
-        formData.append('certificado_nacimiento', docs.certificado_nacimiento);
-      }
-      if (docs.libreta_notas) {
-        formData.append('libreta_notas', docs.libreta_notas);
-      }
-      
-      // ✅ Agregar documento del representante
-      if (documentosRepresentante.cedula_representante) {
-        formData.append('cedula_representante', documentosRepresentante.cedula_representante);
-      }
-      
-      // ✅ Enviar con api.post directamente
-      const { default: api } = await import('@/lib/api');
-      await api.post('/preinscripcion', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-    } else {
-      // ✅ Modo múltiple o padre existente (ya está correcto)
-      const formData = new FormData();
-
-      formData.append('modo', modo);
-      if (padreExistente) {
-        formData.append('padre_id', padreExistente.id.toString());
-      }
-
-      formData.append('preinscripcion_info', JSON.stringify({
-        periodo_academico_id: preinscripcionInfo.periodo_academico_id,
-        grado_id: preinscripcionInfo.grado_id,
-        turno_id: preinscripcionInfo.turno_id,
-      }));
-
-      const estudiantesData = estudiantes.map((est) => ({
-        ...est,
-        rude: est.rude || '',
-        fecha_nacimiento: est.fecha_nacimiento ? est.fecha_nacimiento.format('YYYY-MM-DD') : '',
-      }));
-      formData.append('estudiantes', JSON.stringify(estudiantesData));
-
-      if (modo !== 'padre_existente') {
-        const representanteData = {
-          ...representante,
-          fecha_nacimiento: representante.fecha_nacimiento
-            ? representante.fecha_nacimiento.format('YYYY-MM-DD')
-            : null,
-        };
-        formData.append('representante', JSON.stringify(representanteData));
-
-        if (documentosRepresentante.cedula_representante) {
-          formData.append('cedula_representante', documentosRepresentante.cedula_representante);
-        }
-      }
-
-      estudiantes.forEach((_, index) => {
-        const docs = documentosEstudiantes[index];
-        if (docs.foto_estudiante) formData.append(`foto_estudiante_${index}`, docs.foto_estudiante);
-        if (docs.cedula_estudiante) formData.append(`cedula_estudiante_${index}`, docs.cedula_estudiante);
-        if (docs.certificado_nacimiento) formData.append(`certificado_nacimiento_${index}`, docs.certificado_nacimiento);
-        if (docs.libreta_notas) formData.append(`libreta_notas_${index}`, docs.libreta_notas);
-      });
-
-      const { default: api } = await import('@/lib/api');
-      await api.post('/preinscripcion/multiple', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-    }
-
-    setIsSuccess(true);
-  } catch (error: any) {
-    console.error('Error al enviar:', error);
-    alert(error.message || 'Error al enviar la preinscripción');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-  // =============================================
-  // LIMPIAR FORMULARIO
-  // =============================================
-  const limpiarFormulario = () => {
-    if (confirm('¿Está seguro de que desea limpiar el formulario?')) {
-      setEstudiantes([estadoInicialEstudiante()]);
-      setEstudianteActivo(0);
-      setRepresentante(estadoInicialTutor());
-      setDocumentosEstudiantes({ 0: estadoInicialDocumentos() });
-      setDocumentosRepresentante({ cedula_representante: null });
-      setPreinscripcionInfo(estadoInicialPreInscripcionInfo()); // 🆕 Limpiar
-      setActiveStep(0);
-      setErrors({});
+      setResultadoCreadas(res?.data?.preinscripciones || []);
+      setIsSuccess(true);
+    } catch (error: any) {
+      console.error('❌ Error al enviar preinscripción múltiple:', error);
+      setMensajeError(error.message || 'Error al enviar la solicitud de preinscripción');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // =============================================
-  // RETURN
-  // =============================================
+  const limpiarFormulario = () => {
+    if (confirm('¿Está seguro de que desea reiniciar el formulario?')) {
+      setEstudiantes([estadoInicialEstudiante()]);
+      setTutores([estadoInicialTutor(true)]);
+      setRelaciones({ '0:0': true });
+      setPrincipales({ 0: 0 });
+      setActiveStep(0);
+      setErrores({});
+      setMensajeError(null);
+      setIsSuccess(false);
+      setResultadoCreadas([]);
+    }
+  };
+
   return {
-    // Modo
-    etapa,
-    modo,
-    padreExistente,
-    handleModoSeleccionado,
-    volverSeleccionModo,
-
-    // Múltiples estudiantes
-    estudiantes,
-    estudianteActivo,
-    setEstudianteActivo,
-    agregarEstudiante,
-    eliminarEstudiante,
-
-    // 🆕 Preinscripción info
-    preinscripcionInfo,
-    updatePreinscripcionInfo,
-
-    // Compatibilidad
-    formData: {
-      estudiante: estudiantes[estudianteActivo],
-      representante,
-      documentos: {
-        ...documentosEstudiantes[estudianteActivo],
-        cedula_representante: documentosRepresentante.cedula_representante,
-      },
-    },
-
-    // Estados
     activeStep,
-    errors,
     isSubmitting,
     isSuccess,
-
-    // Handlers
+    errores,
+    mensajeError,
+    estudiantes,
+    tutores,
+    relaciones,
+    principales,
+    principal: principales[0] !== undefined ? `0:${principales[0]}` : null,
+    resultadoCreadas,
+    setEstudiantes,
+    setTutores,
+    agregarEstudiante,
+    eliminarEstudiante,
     updateEstudiante,
-    updateRepresentante,
-    updateDocumento,
+    agregarTutor,
+    eliminarTutor,
+    updateTutor,
+    cambiarRelacion,
+    cambiarPrincipal,
     handleNext,
     handleBack,
     handleSubmit,

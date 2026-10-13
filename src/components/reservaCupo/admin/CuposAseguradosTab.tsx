@@ -538,135 +538,291 @@ export const CuposAseguradosTab: React.FC<CuposAseguradosTabProps> = ({
                         Continuidad de Estudiantes Regulares
                       </Typography>
 
-                      {/* ══ Fila de 3 Indicadores Compactos: ASEGURADOS, CONFIRMADOS, RESTANTES ══ */}
-                      <Grid container spacing={0.8} sx={{ mb: 1 }}>
-                        {/* Asegurados */}
-                        <Grid size={{ xs: 4 }}>
-                          <Box
-                            sx={{
-                              p: 0.8,
-                              borderRadius: '11px',
-                              bgcolor: isDark ? 'rgba(59, 130, 246, 0.1)' : '#eff6ff',
-                              border: `1px solid ${alpha('#3b82f6', 0.2)}`,
-                              textAlign: 'center',
-                            }}
-                          >
-                            <Typography variant="caption" sx={{ fontWeight: 800, color: '#3b82f6', display: 'block', fontSize: '0.58rem', textTransform: 'uppercase' }}>
-                              Asegurados
-                            </Typography>
-                            <Typography variant="body2" fontWeight={800} sx={{ color: isDark ? '#93c5fd' : '#1d4ed8', my: 0.1, fontSize: '0.95rem' }}>
-                              {item.total_asegurados}
-                            </Typography>
-                            <Typography variant="caption" sx={{ fontSize: '0.56rem', color: 'text.secondary' }}>
-                              100%
-                            </Typography>
-                          </Box>
-                        </Grid>
+                      {/* ══ CARDS DESTACADAS DE TURNOS (MAÑANA / TARDE) ══ */}
+                      {(() => {
+                        const pctManana = item.turnos.manana.asegurados > 0
+                          ? Math.round((item.turnos.manana.confirmados / item.turnos.manana.asegurados) * 100)
+                          : 0;
+                        const pctTarde = item.turnos.tarde.asegurados > 0
+                          ? Math.round((item.turnos.tarde.confirmados / item.turnos.tarde.asegurados) * 100)
+                          : 0;
+                        const mostrarManana = filtroTurno === 'todos' || filtroTurno === 'manana';
+                        const mostrarTarde = filtroTurno === 'todos' || filtroTurno === 'tarde';
 
-                        {/* Confirmados */}
-                        <Grid size={{ xs: 4 }}>
-                          <Box
-                            sx={{
-                              p: 0.8,
-                              borderRadius: '11px',
-                              bgcolor: isDark ? 'rgba(16, 185, 129, 0.1)' : '#ecfdf5',
-                              border: `1px solid ${alpha('#10b981', 0.2)}`,
-                              textAlign: 'center',
-                            }}
-                          >
-                            <Typography variant="caption" sx={{ fontWeight: 800, color: '#10b981', display: 'block', fontSize: '0.58rem', textTransform: 'uppercase' }}>
-                              Confirmados
-                            </Typography>
-                            <Typography variant="body2" fontWeight={800} sx={{ color: isDark ? '#6ee7b7' : '#047857', my: 0.1, fontSize: '0.95rem' }}>
-                              {item.total_confirmados}
-                            </Typography>
-                            <Typography variant="caption" sx={{ fontSize: '0.56rem', color: '#10b981', fontWeight: 700 }}>
-                              {porcentaje}%
-                            </Typography>
-                          </Box>
-                        </Grid>
+                        return (
+                          <>
+                            {(mostrarManana || mostrarTarde) && (
+                              <Grid container spacing={1} sx={{ mb: 1.2 }}>
+                                {mostrarManana && (
+                                  <Grid size={{ xs: filtroTurno === 'manana' ? 12 : 6 }}>
+                                    <Box
+                                      sx={{
+                                        p: 1,
+                                        borderRadius: '12px',
+                                        bgcolor: isDark ? 'rgba(245, 158, 11, 0.08)' : '#fffbeb',
+                                        border: `1px solid ${alpha('#f59e0b', isDark ? 0.25 : 0.35)}`,
+                                        textAlign: 'center',
+                                        transition: 'all 0.2s ease',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'space-between',
+                                        minHeight: 82,
+                                        '&:hover': {
+                                          borderColor: '#f59e0b',
+                                          boxShadow: `0 3px 10px ${alpha('#f59e0b', 0.15)}`,
+                                        },
+                                      }}
+                                    >
+                                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.3 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                                          <Typography sx={{ fontSize: '0.72rem', lineHeight: 1 }}>☀️</Typography>
+                                          <Typography
+                                            variant="caption"
+                                            sx={{
+                                              fontWeight: 800,
+                                              color: isDark ? '#fbbf24' : '#b45309',
+                                              fontSize: '0.62rem',
+                                              textTransform: 'uppercase',
+                                              letterSpacing: '0.3px',
+                                            }}
+                                          >
+                                            Mañana
+                                          </Typography>
+                                        </Box>
+                                        <Typography
+                                          variant="caption"
+                                          sx={{
+                                            fontWeight: 800,
+                                            fontSize: '0.6rem',
+                                            color: pctManana >= 70 ? '#10b981' : pctManana >= 40 ? '#f59e0b' : isDark ? '#fbbf24' : '#b45309',
+                                          }}
+                                        >
+                                          {pctManana}%
+                                        </Typography>
+                                      </Box>
 
-                        {/* Restantes */}
-                        <Grid size={{ xs: 4 }}>
-                          <Box
-                            sx={{
-                              p: 0.8,
-                              borderRadius: '11px',
-                              bgcolor: isDark ? 'rgba(245, 158, 11, 0.1)' : '#fffbeb',
-                              border: `1px solid ${alpha('#f59e0b', 0.2)}`,
-                              textAlign: 'center',
-                            }}
-                          >
-                            <Typography variant="caption" sx={{ fontWeight: 800, color: '#f59e0b', display: 'block', fontSize: '0.58rem', textTransform: 'uppercase' }}>
-                              Restantes
-                            </Typography>
-                            <Typography variant="body2" fontWeight={800} sx={{ color: isDark ? '#fcd34d' : '#b45309', my: 0.1, fontSize: '0.95rem' }}>
-                              {item.total_restantes}
-                            </Typography>
-                            <Typography variant="caption" sx={{ fontSize: '0.56rem', color: '#f59e0b', fontWeight: 700 }}>
-                              Pend.
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      </Grid>
+                                      <Box sx={{ my: 0.2 }}>
+                                        <Typography
+                                          variant="body2"
+                                          fontWeight={900}
+                                          sx={{
+                                            color: isDark ? '#fff' : '#1e293b',
+                                            fontSize: '0.92rem',
+                                            lineHeight: 1.1,
+                                          }}
+                                        >
+                                          <span style={{ color: '#10b981' }}>{item.turnos.manana.confirmados}</span>
+                                          <span style={{ fontSize: '0.7rem', fontWeight: 600, opacity: 0.5, margin: '0 2px' }}>/</span>
+                                          <span style={{ fontSize: '0.8rem' }}>{item.turnos.manana.asegurados}</span>
+                                        </Typography>
+                                        <Typography
+                                          variant="caption"
+                                          sx={{
+                                            display: 'block',
+                                            fontSize: '0.58rem',
+                                            fontWeight: 700,
+                                            color: item.turnos.manana.restantes > 0 ? '#f59e0b' : '#10b981',
+                                            mt: 0.1,
+                                          }}
+                                        >
+                                          {item.turnos.manana.restantes > 0 ? `${item.turnos.manana.restantes} pend.` : 'Completo'}
+                                        </Typography>
+                                      </Box>
 
-                      {/* Barra de Progreso Compacta */}
-                      <Box sx={{ mb: 1 }}>
-                        <LinearProgress
-                          variant="determinate"
-                          value={porcentaje}
-                          sx={{
-                            height: 5,
-                            borderRadius: 3,
-                            bgcolor: isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0',
-                            '& .MuiLinearProgress-bar': {
-                              borderRadius: 3,
-                              bgcolor: porcentaje >= 70 ? '#10b981' : porcentaje >= 40 ? '#f59e0b' : '#3b82f6',
-                            },
-                          }}
-                        />
-                      </Box>
+                                      <LinearProgress
+                                        variant="determinate"
+                                        value={pctManana}
+                                        sx={{
+                                          height: 3,
+                                          borderRadius: 2,
+                                          bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                                          '& .MuiLinearProgress-bar': {
+                                            borderRadius: 2,
+                                            bgcolor: pctManana >= 70 ? '#10b981' : pctManana >= 40 ? '#f59e0b' : '#3b82f6',
+                                          },
+                                        }}
+                                      />
+                                    </Box>
+                                  </Grid>
+                                )}
 
-                      {/* ══ DESGLOSE POR TURNOS COMPACTO ══ */}
-                      {(filtroTurno === 'todos' || filtroTurno === 'manana' || filtroTurno === 'tarde') && (
-                        <Box
-                          sx={{
-                            px: 1,
-                            py: 0.7,
-                            borderRadius: '10px',
-                            bgcolor: isDark ? alpha('#fff', 0.02) : '#f8fafc',
-                            border: `1px solid ${isDark ? alpha('#fff', 0.06) : '#e2e8f0'}`,
-                            mb: 1.2,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 0.3,
-                            fontSize: '0.66rem',
-                          }}
-                        >
-                          {(filtroTurno === 'todos' || filtroTurno === 'manana') && (
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Typography variant="caption" sx={{ fontWeight: 700, fontSize: '0.64rem', color: 'text.secondary' }}>
-                                ☀️ Mañana
-                              </Typography>
-                              <Typography variant="caption" sx={{ fontWeight: 800, fontSize: '0.64rem', color: 'text.primary' }}>
-                                <strong style={{ color: '#10b981' }}>{item.turnos.manana.confirmados}</strong>/{item.turnos.manana.asegurados}
-                                <span style={{ color: '#f59e0b', marginLeft: 4 }}>({item.turnos.manana.restantes} rest)</span>
-                              </Typography>
+                                {mostrarTarde && (
+                                  <Grid size={{ xs: filtroTurno === 'tarde' ? 12 : 6 }}>
+                                    <Box
+                                      sx={{
+                                        p: 1,
+                                        borderRadius: '12px',
+                                        bgcolor: isDark ? 'rgba(99, 102, 241, 0.08)' : '#f5f3ff',
+                                        border: `1px solid ${alpha('#6366f1', isDark ? 0.25 : 0.35)}`,
+                                        textAlign: 'center',
+                                        transition: 'all 0.2s ease',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'space-between',
+                                        minHeight: 82,
+                                        '&:hover': {
+                                          borderColor: '#6366f1',
+                                          boxShadow: `0 3px 10px ${alpha('#6366f1', 0.15)}`,
+                                        },
+                                      }}
+                                    >
+                                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.3 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                                          <Typography sx={{ fontSize: '0.72rem', lineHeight: 1 }}>🌅</Typography>
+                                          <Typography
+                                            variant="caption"
+                                            sx={{
+                                              fontWeight: 800,
+                                              color: isDark ? '#a5b4fc' : '#4338ca',
+                                              fontSize: '0.62rem',
+                                              textTransform: 'uppercase',
+                                              letterSpacing: '0.3px',
+                                            }}
+                                          >
+                                            Tarde
+                                          </Typography>
+                                        </Box>
+                                        <Typography
+                                          variant="caption"
+                                          sx={{
+                                            fontWeight: 800,
+                                            fontSize: '0.6rem',
+                                            color: pctTarde >= 70 ? '#10b981' : pctTarde >= 40 ? '#f59e0b' : isDark ? '#a5b4fc' : '#4338ca',
+                                          }}
+                                        >
+                                          {pctTarde}%
+                                        </Typography>
+                                      </Box>
+
+                                      <Box sx={{ my: 0.2 }}>
+                                        <Typography
+                                          variant="body2"
+                                          fontWeight={900}
+                                          sx={{
+                                            color: isDark ? '#fff' : '#1e293b',
+                                            fontSize: '0.92rem',
+                                            lineHeight: 1.1,
+                                          }}
+                                        >
+                                          <span style={{ color: '#10b981' }}>{item.turnos.tarde.confirmados}</span>
+                                          <span style={{ fontSize: '0.7rem', fontWeight: 600, opacity: 0.5, margin: '0 2px' }}>/</span>
+                                          <span style={{ fontSize: '0.8rem' }}>{item.turnos.tarde.asegurados}</span>
+                                        </Typography>
+                                        <Typography
+                                          variant="caption"
+                                          sx={{
+                                            display: 'block',
+                                            fontSize: '0.58rem',
+                                            fontWeight: 700,
+                                            color: item.turnos.tarde.restantes > 0 ? '#6366f1' : '#10b981',
+                                            mt: 0.1,
+                                          }}
+                                        >
+                                          {item.turnos.tarde.restantes > 0 ? `${item.turnos.tarde.restantes} pend.` : 'Completo'}
+                                        </Typography>
+                                      </Box>
+
+                                      <LinearProgress
+                                        variant="determinate"
+                                        value={pctTarde}
+                                        sx={{
+                                          height: 3,
+                                          borderRadius: 2,
+                                          bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                                          '& .MuiLinearProgress-bar': {
+                                            borderRadius: 2,
+                                            bgcolor: pctTarde >= 70 ? '#10b981' : pctTarde >= 40 ? '#f59e0b' : '#6366f1',
+                                          },
+                                        }}
+                                      />
+                                    </Box>
+                                  </Grid>
+                                )}
+                              </Grid>
+                            )}
+
+                            {/* Barra de Progreso General del Grado */}
+                            <Box sx={{ mb: 1.2 }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.3 }}>
+                                <Typography variant="caption" sx={{ fontSize: '0.62rem', color: 'text.secondary', fontWeight: 600 }}>
+                                  Progreso Total Curso
+                                </Typography>
+                                <Typography variant="caption" sx={{ fontSize: '0.62rem', fontWeight: 800, color: porcentaje >= 70 ? '#10b981' : porcentaje >= 40 ? '#f59e0b' : '#3b82f6' }}>
+                                  {porcentaje}%
+                                </Typography>
+                              </Box>
+                              <LinearProgress
+                                variant="determinate"
+                                value={porcentaje}
+                                sx={{
+                                  height: 4.5,
+                                  borderRadius: 3,
+                                  bgcolor: isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0',
+                                  '& .MuiLinearProgress-bar': {
+                                    borderRadius: 3,
+                                    bgcolor: porcentaje >= 70 ? '#10b981' : porcentaje >= 40 ? '#f59e0b' : '#3b82f6',
+                                  },
+                                }}
+                              />
                             </Box>
-                          )}
-                          {(filtroTurno === 'todos' || filtroTurno === 'tarde') && (
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Typography variant="caption" sx={{ fontWeight: 700, fontSize: '0.64rem', color: 'text.secondary' }}>
-                                🌅 Tarde
-                              </Typography>
-                              <Typography variant="caption" sx={{ fontWeight: 800, fontSize: '0.64rem', color: 'text.primary' }}>
-                                <strong style={{ color: '#10b981' }}>{item.turnos.tarde.confirmados}</strong>/{item.turnos.tarde.asegurados}
-                                <span style={{ color: '#f59e0b', marginLeft: 4 }}>({item.turnos.tarde.restantes} rest)</span>
-                              </Typography>
+
+                            {/* ══ ASEGURADOS Y CONFIRMADOS EN FORMATO TEXTO NORMAL ══ */}
+                            <Box
+                              sx={{
+                                px: 1.1,
+                                py: 0.7,
+                                borderRadius: '10px',
+                                bgcolor: isDark ? alpha('#fff', 0.02) : '#f8fafc',
+                                border: `1px solid ${isDark ? alpha('#fff', 0.06) : '#e2e8f0'}`,
+                                mb: 1.2,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 0.3,
+                                fontSize: '0.66rem',
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.64rem', color: 'text.secondary' }}>
+                                  Asegurados Proyectados
+                                </Typography>
+                                <Typography variant="caption" sx={{ fontWeight: 800, fontSize: '0.66rem', color: '#3b82f6' }}>
+                                  {item.total_asegurados} cupos
+                                </Typography>
+                              </Box>
+
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.64rem', color: 'text.secondary' }}>
+                                  Confirmados con Reserva
+                                </Typography>
+                                <Typography variant="caption" sx={{ fontWeight: 800, fontSize: '0.66rem', color: 'text.primary' }}>
+                                  <strong style={{ color: '#10b981' }}>{item.total_confirmados}</strong>
+                                  <span style={{ opacity: 0.7, marginLeft: 3 }}>({porcentaje}%)</span>
+                                </Typography>
+                              </Box>
+
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.64rem', color: 'text.secondary' }}>
+                                  Restantes Pendientes
+                                </Typography>
+                                <Typography variant="caption" sx={{ fontWeight: 800, fontSize: '0.66rem', color: '#f59e0b' }}>
+                                  {item.total_restantes} rest.
+                                </Typography>
+                              </Box>
+
+                              {item.total_no_continua > 0 && (
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.64rem', color: 'text.secondary' }}>
+                                    No Continuarán
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ fontWeight: 800, fontSize: '0.66rem', color: '#ef4444' }}>
+                                    {item.total_no_continua} vacantes
+                                  </Typography>
+                                </Box>
+                              )}
                             </Box>
-                          )}
-                        </Box>
-                      )}
+                          </>
+                        );
+                      })()}
 
                       {/* ══ ACCIONES AL PIE DE LA TARJETA ══ */}
                       <Box sx={{ display: 'flex', gap: 1, mt: 'auto', pt: 1, borderTop: `1px solid ${alpha(isDark ? '#fff' : '#000', 0.06)}` }}>

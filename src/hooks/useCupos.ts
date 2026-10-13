@@ -70,9 +70,9 @@ export const useCupos = () => {
   // =============================================
   // OBTENER CUPOS
   // =============================================
-  const fetchCupos = useCallback(async () => {
+  const fetchCupos = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
 
       const params: any = {};
@@ -88,7 +88,7 @@ export const useCupos = () => {
       setError(err.response?.data?.message || 'Error al cargar cupos');
       console.error('❌ Error al cargar cupos:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters]);
 
@@ -186,6 +186,21 @@ export const useCupos = () => {
   }, []);
 
   // =============================================
+  // SINCRONIZAR CUPOS (dinámico con paralelos y reservas)
+  // =============================================
+  const sincronizarCupos = useCallback(async (periodo_academico_id?: number) => {
+    try {
+      const response = await api.post('/cupos/sincronizar', {
+        periodo_academico_id,
+      });
+      await fetchCupos(true);
+      return response.data;
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Error al sincronizar cupos');
+    }
+  }, [fetchCupos]);
+
+  // =============================================
   // CARGAR AL MONTAR
   // =============================================
   useEffect(() => {
@@ -206,5 +221,6 @@ export const useCupos = () => {
     getCupoById,
     verificarDisponibilidad,
     getResumenPorPeriodo,
+    sincronizarCupos,
   };
 };

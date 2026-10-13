@@ -94,6 +94,7 @@ export default function PreinscripcionesPage() {
     setConCupoFilter,
     fetchPreinscripciones,
     deletePreinscripcion,
+    promoverEspera,
     exportToExcel,
     exportToPDF,
   } = usePreinscripciones();
@@ -108,6 +109,16 @@ export default function PreinscripcionesPage() {
       showSnackbar('Preinscripción eliminada correctamente');
     } catch (err) {
       showSnackbar(err instanceof Error ? err.message : 'Error al eliminar', 'error');
+    }
+  };
+
+  const handlePromover = async (id: number) => {
+    if (!window.confirm('¿Deseas promover a este postulante de la Lista de Espera a cupo directo? Se le asignará una vacante disponible.')) return;
+    try {
+      await promoverEspera(id);
+      showSnackbar('Postulante promovido exitosamente con vacante asignada');
+    } catch (err: any) {
+      showSnackbar(err.message || 'Error al promover de lista de espera', 'error');
     }
   };
 
@@ -145,6 +156,14 @@ export default function PreinscripcionesPage() {
       color: '#9c27b0',
       icon: <HourglassEmptyIcon />,
       trend: '-8%',
+    },
+    {
+      title: 'En Lista de Espera',
+      value: stats.en_espera || 0,
+      subtitle: `${stats.en_espera || 0} postulantes en cola`,
+      color: '#f59e0b',
+      icon: <HourglassEmptyIcon />,
+      trend: 'Cola de espera',
     },
     {
       title: 'Aprobadas',
@@ -349,6 +368,7 @@ export default function PreinscripcionesPage() {
                       preinscripcion={p}
                       onRevisar={(id) => router.push(`/dashboard/preinscripciones/detalle/${id}`)}
                       onEliminar={handleDelete}
+                      onPromover={handlePromover}
                     />
                   </Grid>
                 ))}

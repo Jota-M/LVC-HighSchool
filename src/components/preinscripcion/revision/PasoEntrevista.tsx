@@ -1,20 +1,19 @@
 // components/preinscripcion/revision/PasoEntrevista.tsx
 'use client';
+
 import React, { useState } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
+  Paper,
   Typography,
-  LinearProgress,
   Chip,
   TextField,
   Button,
-  Divider,
   Grid,
   Avatar,
   Alert,
   AlertTitle,
+  Stack,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -25,12 +24,13 @@ import dayjs, { Dayjs } from 'dayjs';
 import 'dayjs/locale/es';
 import EventIcon from '@mui/icons-material/Event';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import PersonIcon from '@mui/icons-material/Person';
+import PhoneIcon from '@mui/icons-material/Phone';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { PreInscripcionDetalle } from '@/types/preinscripcionTypes';
 
 dayjs.locale('es');
@@ -50,6 +50,8 @@ export default function PasoEntrevista({
 }: PasoEntrevistaProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const accent = isDark ? '#facc15' : '#0288d1';
+  const accentDark = isDark ? '#f59e0b' : '#01579b';
 
   const [fechaEntrevista, setFechaEntrevista] = useState<Dayjs | null>(null);
   const [modalidad, setModalidad] = useState<'presencial' | 'virtual'>('presencial');
@@ -58,11 +60,11 @@ export default function PasoEntrevista({
   const [observaciones, setObservaciones] = useState('');
 
   const nombreCompleto = `${preinscripcion.estudiante.nombres} ${preinscripcion.estudiante.apellido_paterno} ${preinscripcion.estudiante.apellido_materno || ''}`.trim();
-  const iniciales = `${preinscripcion.estudiante.nombres[0]}${preinscripcion.estudiante.apellido_paterno[0]}`;
+  const iniciales = `${preinscripcion.estudiante.nombres?.[0] || '?'}${preinscripcion.estudiante.apellido_paterno?.[0] || '?'}`.toUpperCase();
 
   const handleAgendarEntrevista = async () => {
     if (!fechaEntrevista) {
-      alert('Debes seleccionar una fecha y hora');
+      alert('Debes seleccionar una fecha y hora para la entrevista');
       return;
     }
 
@@ -86,285 +88,224 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
     `.trim();
 
     await cambiarEstado('entrevista_completada', notasCompletas);
-    setActiveStep(3);
+    setActiveStep(2);
   };
 
-  // Estilos dinámicos
   const cardStyle = {
-    borderRadius: 4,
-    border: '1px solid',
-    borderColor: isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08),
-    boxShadow: isDark
-      ? '0 8px 32px rgba(0,0,0,0.4)'
-      : '0 8px 24px rgba(0,0,0,0.08)',
+    borderRadius: '24px',
+    border: `1px solid ${alpha(accent, 0.28)}`,
+    overflow: 'hidden',
     background: isDark
-      ? 'linear-gradient(135deg, rgba(30,41,59,0.8) 0%, rgba(15,23,42,0.9) 100%)'
+      ? 'linear-gradient(180deg, #0e1726 0%, #0b1320 100%)'
       : '#ffffff',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    '&:hover': {
-      transform: 'translateY(-2px)',
-      boxShadow: isDark
-        ? '0 12px 40px rgba(0,0,0,0.5)'
-        : '0 12px 32px rgba(0,0,0,0.12)',
-    },
-  };
-
-  const headerIconStyle = {
-    width: 56,
-    height: 56,
-    borderRadius: 3,
-    background: isDark
-      ? 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)'
-      : 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
     boxShadow: isDark
-      ? '0 4px 20px rgba(244, 114, 182, 0.4)'
-      : '0 4px 15px rgba(236, 72, 153, 0.3)',
-    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-    '@keyframes pulse': {
-      '0%, 100%': { opacity: 1 },
-      '50%': { opacity: 0.8 },
+      ? '0 10px 30px rgba(0, 0, 0, 0.4)'
+      : '0 4px 20px rgba(0, 0, 0, 0.05)',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    mb: 3,
+    '&:hover': {
+      borderColor: accent,
+      boxShadow: isDark
+        ? `0 14px 40px ${alpha(accent, 0.25)}, 0 0 20px ${alpha(accent, 0.15)}`
+        : `0 14px 30px ${alpha(accent, 0.2)}`,
+      transform: 'translateY(-3px)',
     },
   };
 
   const isAgendada = preinscripcion.estado === 'entrevista_programada';
+  const isCompletada = preinscripcion.estado === 'entrevista_completada';
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
-      {/* Header del paso */}
-      <Card sx={cardStyle}>
-        <CardContent sx={{ p: 3 }}>
+      {/* HEADER DEL PASO */}
+      <Paper elevation={0} sx={cardStyle}>
+        <Box sx={{ p: { xs: 2.5, sm: 3.5 } }}>
           <Box
             display="flex"
             justifyContent="space-between"
             alignItems="flex-start"
-            mb={2}
             flexWrap="wrap"
             gap={2}
           >
             <Box display="flex" alignItems="center" gap={2}>
-              <Box sx={headerIconStyle}>
-                <EventIcon sx={{ color: '#fff', fontSize: 28 }} />
+              <Box
+                sx={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: '50%',
+                  background: isDark
+                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: isDark ? '#000' : '#fff',
+                  boxShadow: isDark
+                    ? '0 4px 16px rgba(250,204,21,0.35)'
+                    : '0 4px 16px rgba(2,136,209,0.35)',
+                }}
+              >
+                <CalendarMonthIcon sx={{ fontSize: 28 }} />
               </Box>
+
               <Box>
-                <Typography
-                  variant="h5"
-                  sx={{
-                    fontWeight: 700,
-                    mb: 0.5,
-                    background: isDark
-                      ? 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)'
-                      : 'linear-gradient(135deg, #db2777 0%, #9f1239 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  Entrevista con Directora
+                <Typography variant="h5" fontWeight={700} color="text.primary">
+                  Paso 2: Entrevista de Admisión
                 </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{ color: isDark ? alpha('#fff', 0.7) : 'text.secondary' }}
-                >
-                  Agendar y realizar entrevista de admisión
+                <Typography variant="body2" color="text.secondary">
+                  Coordina o registra la reunión evaluativa con la dirección
                 </Typography>
               </Box>
             </Box>
 
             <Chip
-              icon={<AccessTimeIcon />}
-              label={isAgendada ? 'Entrevista agendada' : 'Pendiente de agendar'}
+              icon={<AccessTimeIcon sx={{ fontSize: 16 }} />}
+              label={
+                isCompletada
+                  ? 'Entrevista Realizada'
+                  : isAgendada
+                  ? 'Entrevista Agendada'
+                  : 'Pendiente de Agendar'
+              }
               sx={{
-                bgcolor: isAgendada
-                  ? isDark
-                    ? alpha('#10b981', 0.2)
-                    : alpha('#10b981', 0.1)
-                  : isDark
-                  ? alpha('#f59e0b', 0.2)
-                  : alpha('#f59e0b', 0.1),
-                color: isAgendada
-                  ? isDark
-                    ? '#6ee7b7'
-                    : '#059669'
-                  : isDark
-                  ? '#fbbf24'
-                  : '#d97706',
+                borderRadius: '10px',
                 fontWeight: 600,
-                border: '1px solid',
-                borderColor: isAgendada
-                  ? isDark
-                    ? '#6ee7b7'
-                    : '#10b981'
-                  : isDark
-                  ? '#fbbf24'
+                bgcolor: isCompletada
+                  ? alpha('#10b981', 0.15)
+                  : isAgendada
+                  ? alpha(accent, 0.15)
+                  : alpha('#f59e0b', 0.15),
+                color: isCompletada
+                  ? '#10b981'
+                  : isAgendada
+                  ? accent
                   : '#f59e0b',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  bgcolor: isAgendada
-                    ? isDark
-                      ? alpha('#10b981', 0.3)
-                      : alpha('#10b981', 0.15)
-                    : isDark
-                    ? alpha('#f59e0b', 0.3)
-                    : alpha('#f59e0b', 0.15),
-                  transform: 'scale(1.05)',
-                },
+                border: `1px solid ${
+                  isCompletada
+                    ? alpha('#10b981', 0.3)
+                    : isAgendada
+                    ? alpha(accent, 0.35)
+                    : alpha('#f59e0b', 0.3)
+                }`,
               }}
             />
           </Box>
+        </Box>
+      </Paper>
 
-          <LinearProgress
-            variant="determinate"
-            value={75}
-            sx={{
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08),
-              '& .MuiLinearProgress-bar': {
+      {/* CANDIDATO A ENTREVISTAR */}
+      <Paper elevation={0} sx={cardStyle}>
+        <Box sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+            <Box
+              sx={{
+                width: 5,
+                height: 22,
+                borderRadius: 1,
                 background: isDark
-                  ? 'linear-gradient(90deg, #f472b6 0%, #ec4899 100%)'
-                  : 'linear-gradient(90deg, #ec4899 0%, #be185d 100%)',
-                borderRadius: 4,
-                transition: 'all 0.5s ease',
-              },
-            }}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Información del Estudiante */}
-      <Card sx={{ ...cardStyle, mb: 3, mt: 3 }}>
-        <CardContent sx={{ p: 3 }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 700,
-              mb: 3,
-              color: isDark ? '#fff' : 'text.primary',
-            }}
-          >
-            Candidato a Entrevistar
-          </Typography>
+                  ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                  : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+              }}
+            />
+            <Typography variant="h6" fontWeight={700} color="text.primary">
+              Candidato a Entrevistar
+            </Typography>
+          </Box>
 
           <Box display="flex" alignItems="center" gap={3} flexWrap="wrap">
             <Avatar
+              src={preinscripcion.estudiante.foto_url || undefined}
               sx={{
-                width: 80,
-                height: 80,
-                background: isDark
-                  ? 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)'
-                  : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                fontSize: '2rem',
+                width: 72,
+                height: 72,
+                borderRadius: '18px',
+                bgcolor: alpha(accent, 0.2),
+                color: accent,
+                fontSize: '1.8rem',
                 fontWeight: 700,
-                boxShadow: isDark
-                  ? '0 4px 20px rgba(96, 165, 250, 0.4)'
-                  : '0 4px 20px rgba(59, 130, 246, 0.3)',
-                animation: 'scaleIn 0.5s ease both',
-                '@keyframes scaleIn': {
-                  from: {
-                    opacity: 0,
-                    transform: 'scale(0.5)',
-                  },
-                  to: {
-                    opacity: 1,
-                    transform: 'scale(1)',
-                  },
-                },
+                border: `2px solid ${alpha(accent, 0.4)}`,
               }}
             >
               {iniciales}
             </Avatar>
-            <Box flex={1}>
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 700,
-                  color: isDark ? '#fff' : 'text.primary',
-                }}
-              >
+
+            <Box flex={1} sx={{ minWidth: 200 }}>
+              <Typography variant="h6" fontWeight={700} color="text.primary">
                 {nombreCompleto}
               </Typography>
-              <Typography
-                variant="body2"
-                sx={{
-                  color: isDark ? alpha('#fff', 0.7) : 'text.secondary',
-                  mb: 1,
-                }}
-              >
-                Grado solicitado: {preinscripcion.estudiante.grado_solicitado}
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                Postula a: {preinscripcion.grado_nombre || preinscripcion.estudiante.grado_solicitado} • Turno {preinscripcion.turno_nombre || preinscripcion.estudiante.turno_solicitado || 'Mañana'}
               </Typography>
-              <Box display="flex" gap={2} flexWrap="wrap">
+
+              <Stack direction="row" spacing={1.5} flexWrap="wrap" gap={1}>
                 <Chip
                   icon={<PersonIcon sx={{ fontSize: 16 }} />}
-                  label={preinscripcion.tutor.nombres}
+                  label={`Tutor: ${preinscripcion.tutor.nombres} ${preinscripcion.tutor.apellido_paterno}`}
                   size="small"
                   sx={{
-                    borderColor: isDark ? alpha('#ec4899', 0.5) : '#ec4899',
-                    color: isDark ? '#f9a8d4' : '#be185d',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      bgcolor: isDark ? alpha('#ec4899', 0.15) : alpha('#ec4899', 0.1),
-                      transform: 'scale(1.05)',
-                    },
+                    borderRadius: '8px',
+                    bgcolor: alpha(accent, 0.08),
+                    color: accent,
+                    border: `1px solid ${alpha(accent, 0.25)}`,
+                    fontWeight: 600,
                   }}
-                  variant="outlined"
                 />
                 <Chip
-                  label={`📞 ${preinscripcion.tutor.telefono}`}
+                  icon={<PhoneIcon sx={{ fontSize: 16 }} />}
+                  label={`Tel: ${preinscripcion.tutor.telefono || 'Sin teléfono'}`}
                   size="small"
                   sx={{
-                    borderColor: isDark ? alpha('#ec4899', 0.5) : '#ec4899',
-                    color: isDark ? '#f9a8d4' : '#be185d',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      bgcolor: isDark ? alpha('#ec4899', 0.15) : alpha('#ec4899', 0.1),
-                      transform: 'scale(1.05)',
-                    },
+                    borderRadius: '8px',
+                    bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.04),
+                    fontWeight: 600,
                   }}
-                  variant="outlined"
                 />
-              </Box>
+              </Stack>
             </Box>
           </Box>
-        </CardContent>
-      </Card>
+        </Box>
+      </Paper>
 
-      {/* Agendar Entrevista */}
-      <Card sx={{ ...cardStyle, mb: 3 }}>
-        <CardContent sx={{ p: 3 }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 700,
-              mb: 3,
-              color: isDark ? '#fff' : 'text.primary',
-            }}
-          >
-            Agendar Entrevista
-          </Typography>
+      {/* FORMULARIO PARA AGENDAR ENTREVISTA */}
+      <Paper elevation={0} sx={cardStyle}>
+        <Box sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+            <Box
+              sx={{
+                width: 5,
+                height: 22,
+                borderRadius: 1,
+                background: isDark
+                  ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                  : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+              }}
+            />
+            <Typography variant="h6" fontWeight={700} color="text.primary">
+              Programación de la Cita
+            </Typography>
+          </Box>
 
           <Grid container spacing={3}>
             {/* Fecha y Hora */}
             <Grid size={{ xs: 12, md: 6 }}>
+              <Typography variant="caption" fontWeight={700} color={accent} sx={{ display: 'block', mb: 1, textTransform: 'uppercase' }}>
+                Fecha y Hora de la Entrevista
+              </Typography>
               <DateTimePicker
-                label="Fecha y Hora de la Entrevista"
                 value={fechaEntrevista}
                 onChange={setFechaEntrevista}
                 minDateTime={dayjs()}
                 slotProps={{
                   textField: {
                     fullWidth: true,
+                    placeholder: 'Selecciona fecha y hora...',
                     sx: {
                       '& .MuiOutlinedInput-root': {
-                        borderRadius: 3,
-                        bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.02),
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          bgcolor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.04),
-                        },
-                        '&.Mui-focused': {
-                          bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#ec4899', 0.05),
+                        borderRadius: '14px',
+                        bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+                        '&.Mui-focused fieldset': {
+                          borderColor: accent,
+                          borderWidth: 2,
                         },
                       },
                     },
@@ -375,15 +316,8 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
 
             {/* Modalidad */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  mb: 1,
-                  fontWeight: 600,
-                  color: isDark ? alpha('#f472b6', 0.8) : '#be185d',
-                }}
-              >
-                Modalidad de Entrevista
+              <Typography variant="caption" fontWeight={700} color={accent} sx={{ display: 'block', mb: 1, textTransform: 'uppercase' }}>
+                Modalidad de la Entrevista
               </Typography>
               <Box display="flex" gap={2}>
                 <Button
@@ -392,32 +326,22 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
                   onClick={() => setModalidad('presencial')}
                   fullWidth
                   sx={{
-                    borderRadius: 3,
+                    borderRadius: '12px',
                     textTransform: 'none',
                     py: 1.5,
                     fontWeight: 600,
                     ...(modalidad === 'presencial'
                       ? {
                           background: isDark
-                            ? 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)'
-                            : 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
-                          boxShadow: isDark
-                            ? '0 4px 15px rgba(244, 114, 182, 0.4)'
-                            : '0 4px 15px rgba(236, 72, 153, 0.3)',
-                          '&:hover': {
-                            background: isDark
-                              ? 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)'
-                              : 'linear-gradient(135deg, #be185d 0%, #9f1239 100%)',
-                          },
+                            ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                            : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                          color: isDark ? '#000' : '#fff',
+                          boxShadow: `0 4px 14px ${alpha(accent, 0.3)}`,
                         }
                       : {
-                          borderWidth: 2,
-                          borderColor: isDark ? alpha('#ec4899', 0.5) : '#ec4899',
-                          color: isDark ? '#f9a8d4' : '#be185d',
-                          '&:hover': {
-                            borderWidth: 2,
-                            bgcolor: isDark ? alpha('#ec4899', 0.15) : alpha('#ec4899', 0.1),
-                          },
+                          borderColor: alpha(accent, 0.4),
+                          color: accent,
+                          bgcolor: alpha(accent, 0.04),
                         }),
                   }}
                 >
@@ -429,58 +353,45 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
                   onClick={() => setModalidad('virtual')}
                   fullWidth
                   sx={{
-                    borderRadius: 3,
+                    borderRadius: '12px',
                     textTransform: 'none',
                     py: 1.5,
                     fontWeight: 600,
                     ...(modalidad === 'virtual'
                       ? {
                           background: isDark
-                            ? 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)'
-                            : 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
-                          boxShadow: isDark
-                            ? '0 4px 15px rgba(244, 114, 182, 0.4)'
-                            : '0 4px 15px rgba(236, 72, 153, 0.3)',
-                          '&:hover': {
-                            background: isDark
-                              ? 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)'
-                              : 'linear-gradient(135deg, #be185d 0%, #9f1239 100%)',
-                          },
+                            ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                            : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                          color: isDark ? '#000' : '#fff',
+                          boxShadow: `0 4px 14px ${alpha(accent, 0.3)}`,
                         }
                       : {
-                          borderWidth: 2,
-                          borderColor: isDark ? alpha('#ec4899', 0.5) : '#ec4899',
-                          color: isDark ? '#f9a8d4' : '#be185d',
-                          '&:hover': {
-                            borderWidth: 2,
-                            bgcolor: isDark ? alpha('#ec4899', 0.15) : alpha('#ec4899', 0.1),
-                          },
+                          borderColor: alpha(accent, 0.4),
+                          color: accent,
+                          bgcolor: alpha(accent, 0.04),
                         }),
                   }}
                 >
-                  Virtual
+                  Virtual (Meet/Zoom)
                 </Button>
               </Box>
             </Grid>
 
-            {/* Lugar o Enlace según modalidad */}
+            {/* Lugar o Enlace */}
             <Grid size={{ xs: 12 }}>
               {modalidad === 'presencial' ? (
                 <TextField
                   fullWidth
-                  label="Lugar de la Entrevista"
+                  label="Lugar o Dirección de la Entrevista"
                   value={lugar}
                   onChange={(e) => setLugar(e.target.value)}
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      borderRadius: 3,
-                      bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.02),
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        bgcolor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.04),
-                      },
-                      '&.Mui-focused': {
-                        bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#ec4899', 0.05),
+                      borderRadius: '14px',
+                      bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+                      '&.Mui-focused fieldset': {
+                        borderColor: accent,
+                        borderWidth: 2,
                       },
                     },
                   }}
@@ -488,20 +399,17 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
               ) : (
                 <TextField
                   fullWidth
-                  label="Enlace de Video Llamada (Zoom, Meet, etc.)"
+                  label="Enlace de la Videollamada (Google Meet / Zoom)"
+                  placeholder="https://meet.google.com/..."
                   value={enlaceVirtual}
                   onChange={(e) => setEnlaceVirtual(e.target.value)}
-                  placeholder="https://zoom.us/j/..."
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      borderRadius: 3,
-                      bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.02),
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        bgcolor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.04),
-                      },
-                      '&.Mui-focused': {
-                        bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#ec4899', 0.05),
+                      borderRadius: '14px',
+                      bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+                      '&.Mui-focused fieldset': {
+                        borderColor: accent,
+                        borderWidth: 2,
                       },
                     },
                   }}
@@ -514,92 +422,77 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
               <TextField
                 fullWidth
                 multiline
-                rows={4}
-                label="Observaciones o Instrucciones"
+                rows={3}
+                label="Notas y Observaciones de la Entrevista"
+                placeholder="Indica recomendaciones para los padres o notas post-entrevista..."
                 value={observaciones}
                 onChange={(e) => setObservaciones(e.target.value)}
-                placeholder="Documentos a traer, temas a tratar, etc."
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 3,
-                    bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.02),
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      bgcolor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.04),
-                    },
-                    '&.Mui-focused': {
-                      bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#ec4899', 0.05),
+                    borderRadius: '14px',
+                    bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+                    '&.Mui-focused fieldset': {
+                      borderColor: accent,
+                      borderWidth: 2,
                     },
                   },
                 }}
               />
             </Grid>
           </Grid>
-        </CardContent>
-      </Card>
 
-      {/* Notificación automática */}
-      <Alert
-        severity="info"
-        icon={<CalendarTodayIcon />}
-        sx={{
-          borderRadius: 3,
-          mb: 3,
-          bgcolor: isDark ? alpha('#3b82f6', 0.15) : alpha('#3b82f6', 0.1),
-          border: '1px solid',
-          borderColor: isDark ? alpha('#60a5fa', 0.3) : alpha('#3b82f6', 0.2),
-          '& .MuiAlert-icon': {
-            color: isDark ? '#60a5fa' : '#3b82f6',
-          },
-        }}
-      >
-        <AlertTitle sx={{ fontWeight: 600, color: isDark ? '#fff' : undefined }}>
-          Notificación Automática
-        </AlertTitle>
-        <Typography
-          variant="body2"
-          sx={{ color: isDark ? alpha('#fff', 0.8) : 'text.secondary' }}
-        >
-          Al agendar la entrevista, se enviará automáticamente un correo y SMS a{' '}
-          <strong>{preinscripcion.tutor.nombres}</strong> con los detalles de la cita.
-        </Typography>
-      </Alert>
+          <Alert
+            severity="info"
+            sx={{
+              mt: 3,
+              borderRadius: '14px',
+              bgcolor: alpha(accent, 0.08),
+              border: `1px solid ${alpha(accent, 0.25)}`,
+              color: 'text.primary',
+              '& .MuiAlert-icon': {
+                color: accent,
+              },
+            }}
+          >
+            <AlertTitle sx={{ fontWeight: 700 }}>Aviso de Comunicación</AlertTitle>
+            Al agendar la cita, se notificará al tutor <strong>{preinscripcion.tutor.nombres}</strong> con los detalles del encuentro.
+          </Alert>
 
-      {/* Acciones */}
-      <Card sx={cardStyle}>
-        <CardContent sx={{ p: 3 }}>
+          {/* Botones de acción */}
           <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            flexWrap="wrap"
-            gap={2}
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 2,
+              mt: 3,
+            }}
           >
             <Button
               variant="outlined"
               startIcon={<ArrowBackIcon />}
-              onClick={() => setActiveStep(1)}
+              onClick={() => setActiveStep(0)}
               sx={{
-                borderRadius: 3,
+                borderRadius: '12px',
                 textTransform: 'none',
-                borderWidth: 2,
-                borderColor: isDark ? alpha('#6b7280', 0.5) : '#9ca3af',
-                color: isDark ? '#d1d5db' : '#6b7280',
                 fontWeight: 600,
-                px: 3,
-                transition: 'all 0.3s ease',
+                px: 2.5,
+                py: 1.2,
+                borderColor: alpha(accent, 0.5),
+                color: accent,
+                backgroundColor: alpha(accent, 0.05),
                 '&:hover': {
-                  borderWidth: 2,
-                  borderColor: isDark ? '#d1d5db' : '#6b7280',
-                  bgcolor: isDark ? alpha('#6b7280', 0.15) : alpha('#9ca3af', 0.1),
-                  transform: 'translateX(-4px)',
+                  borderColor: accent,
+                  backgroundColor: alpha(accent, 0.12),
+                  transform: 'translateX(-2px)',
                 },
               }}
             >
-              Volver
+              Volver a Datos Personales
             </Button>
 
-            <Box display="flex" gap={2} flexWrap="wrap">
+            <Stack direction="row" spacing={1.5} flexWrap="wrap" gap={1}>
               {isAgendada && (
                 <Button
                   variant="contained"
@@ -607,33 +500,22 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
                   onClick={handleMarcarRealizada}
                   disabled={saving}
                   sx={{
-                    borderRadius: 3,
+                    borderRadius: '12px',
                     textTransform: 'none',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     px: 3,
-                    background: isDark
-                      ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                      : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                    boxShadow: isDark
-                      ? '0 4px 15px rgba(16, 185, 129, 0.4)'
-                      : '0 4px 15px rgba(16, 185, 129, 0.3)',
-                    transition: 'all 0.3s ease',
+                    py: 1.2,
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#fff',
+                    boxShadow: '0 6px 20px rgba(16, 185, 129, 0.35)',
                     '&:hover': {
-                      background: isDark
-                        ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
-                        : 'linear-gradient(135deg, #047857 0%, #065f46 100%)',
                       transform: 'translateY(-2px)',
-                      boxShadow: isDark
-                        ? '0 8px 25px rgba(16, 185, 129, 0.5)'
-                        : '0 8px 25px rgba(16, 185, 129, 0.4)',
+                      boxShadow: '0 8px 24px rgba(16, 185, 129, 0.5)',
                     },
-                    '&:disabled': {
-                      background: alpha('#999', 0.3),
-                      color: alpha('#fff', 0.5),
-                    },
+                    transition: 'all 0.25s ease',
                   }}
                 >
-                  {saving ? 'Guardando...' : 'Marcar como Realizada'}
+                  {saving ? 'Guardando...' : 'Marcar Entrevista Realizada'}
                 </Button>
               )}
 
@@ -643,38 +525,33 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
                 onClick={handleAgendarEntrevista}
                 disabled={!fechaEntrevista || saving}
                 sx={{
-                  borderRadius: 3,
+                  borderRadius: '12px',
                   textTransform: 'none',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   px: 3,
+                  py: 1.2,
                   background: isDark
-                    ? 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)'
-                    : 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
+                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                  color: isDark ? '#000' : '#fff',
                   boxShadow: isDark
-                    ? '0 4px 15px rgba(244, 114, 182, 0.4)'
-                    : '0 4px 15px rgba(236, 72, 153, 0.3)',
-                  transition: 'all 0.3s ease',
+                    ? '0 6px 20px rgba(250,204,21,0.3)'
+                    : '0 6px 20px rgba(2,136,209,0.3)',
                   '&:hover': {
-                    background: isDark
-                      ? 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)'
-                      : 'linear-gradient(135deg, #be185d 0%, #9f1239 100%)',
                     transform: 'translateY(-2px)',
                     boxShadow: isDark
-                      ? '0 8px 25px rgba(244, 114, 182, 0.5)'
-                      : '0 8px 25px rgba(236, 72, 153, 0.4)',
+                      ? '0 8px 24px rgba(250,204,21,0.45)'
+                      : '0 8px 24px rgba(2,136,209,0.45)',
                   },
-                  '&:disabled': {
-                    background: alpha('#999', 0.3),
-                    color: alpha('#fff', 0.5),
-                  },
+                  transition: 'all 0.25s ease',
                 }}
               >
                 {saving ? 'Agendando...' : 'Agendar Entrevista'}
               </Button>
-            </Box>
+            </Stack>
           </Box>
-        </CardContent>
-      </Card>
+        </Box>
+      </Paper>
     </LocalizationProvider>
   );
 }

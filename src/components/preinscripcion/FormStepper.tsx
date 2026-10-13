@@ -21,7 +21,6 @@ import { keyframes } from '@mui/system';
 const steps = [
   { label: 'Estudiante', icon: PersonIcon, color: '#3b82f6' },
   { label: 'Padres', icon: PeopleIcon, color: '#10b981' },
-  { label: 'Documentos', icon: DescriptionIcon, color: '#f59e0b' },
   { label: 'Confirmación', icon: CheckCircleIcon, color: '#ef4444' },
 ];
 

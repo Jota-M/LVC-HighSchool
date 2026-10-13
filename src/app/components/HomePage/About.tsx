@@ -12,7 +12,7 @@ function About() {
 
   return (
     <div
-    id="Nosotros"
+      id="Nosotros"
       style={{
         backgroundColor: isDarkMode ? "#010c17" : "#fff",
         color: isDarkMode ? "#fff" : "#000",
@@ -73,8 +73,8 @@ function About() {
               </span>
             </h1>
             <p style={{ fontSize: "1.1rem", lineHeight: 1.6, color: isDarkMode ? "#ccc" : "#555" }}>
-              Formamos estudiantes íntegros a través de una educación Cristocéntrica con excelencia académica fundamentada en principios bíblicos. 
-              Nuestro compromiso es desarrollar el potencial de cada niño y joven, preparándolos para ser líderes transformadores 
+              Formamos estudiantes íntegros a través de una educación Cristocéntrica con excelencia académica fundamentada en principios bíblicos.
+              Nuestro compromiso es desarrollar el potencial de cada niño y joven, preparándolos para ser líderes transformadores
               en la sociedad con un corazón conforme a Cristo.
             </p>
           </div>
@@ -89,7 +89,7 @@ function About() {
             }}
           >
             <img
-              src="/image.jpg"
+              src="/Image.jpg"
               alt="Estudiantes"
               style={{
                 width: "100%",
@@ -295,14 +295,14 @@ function InfoCard({ title, text, isDark, delay = 0 }: InfoCardProps) {
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateY(-10px) scale(1.02)";
-        e.currentTarget.style.boxShadow = isDark 
-          ? "0 16px 40px rgba(1, 87, 155, 0.5)" 
+        e.currentTarget.style.boxShadow = isDark
+          ? "0 16px 40px rgba(1, 87, 155, 0.5)"
           : "0 16px 40px rgba(1, 87, 155, 0.3)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "translateY(0) scale(1)";
-        e.currentTarget.style.boxShadow = isDark 
-          ? "0 8px 24px rgba(0,0,0,0.4)" 
+        e.currentTarget.style.boxShadow = isDark
+          ? "0 8px 24px rgba(0,0,0,0.4)"
           : "0 8px 24px rgba(0,0,0,0.1)";
       }}
     >

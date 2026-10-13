@@ -1,6 +1,7 @@
-// app/preinscripcion/page.tsx
+// app/PreInscripcion/registro/page.tsx
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Container,
@@ -16,72 +17,65 @@ import {
   DialogActions,
   IconButton,
   Chip,
+  Alert,
 } from '@mui/material';
 import '@fontsource/roboto';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import 'dayjs/locale/es';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
+import SendIcon from '@mui/icons-material/Send';
 import CloseIcon from '@mui/icons-material/Close';
 
-// Componentes personalizados
-import ModoRegistroSelector from '@/components/preinscripcion/ModoRegistroSelector';
+// Componentes del flujo
 import FormStepper from '@/components/preinscripcion/FormStepper';
 import EstudianteStep from '@/components/preinscripcion/EstudianteStep';
 import PadresStep from '@/components/preinscripcion/PadresStep';
-import DocumentosStep from '@/components/preinscripcion/DocumentosStep';
 import ConfirmacionStep from '@/components/preinscripcion/ConfirmacionStep';
 import Header from '../../login/Header';
 
 // Hook
 import { usePreinscripcion } from '@/hooks/usePreinscripcion';
 
-const steps = ['Estudiante', 'Padres', 'Documentos', 'Confirmación'];
+const TOTAL_PASOS = 3;
 
-export default function PreinscripcionPage() {
+export default function PreinscripcionRegistroPage() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const accent = isDark ? '#facc15' : '#0288d1';
+  const router = useRouter();
 
-  const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   const {
-    // Estados de modo
-    etapa,
-    modo,
-    padreExistente,
-    handleModoSeleccionado,
-    volverSeleccionModo,
-
-    // Múltiples estudiantes
+    activeStep,
+    isSubmitting,
+    isSuccess,
+    errores,
+    mensajeError,
     estudiantes,
-    estudianteActivo,
-    setEstudianteActivo,
+    tutores,
+    relaciones,
+    principales,
+    principal,
+    resultadoCreadas,
     agregarEstudiante,
     eliminarEstudiante,
-
-    // 🆕 Preinscripción info
-    preinscripcionInfo,
-    updatePreinscripcionInfo,
-
-    // Estados originales
-    formData,
-    activeStep,
-    errors,
     updateEstudiante,
-    updateRepresentante,
-    updateDocumento,
+    agregarTutor,
+    eliminarTutor,
+    updateTutor,
+    cambiarRelacion,
+    cambiarPrincipal,
     handleNext,
     handleBack,
     handleSubmit,
     limpiarFormulario,
-    isSubmitting,
-    isSuccess,
   } = usePreinscripcion();
 
-  // Mostrar modal de éxito
+  // Abrir diálogo de éxito al completar
   React.useEffect(() => {
     if (isSuccess) {
       setShowSuccessDialog(true);
@@ -90,96 +84,12 @@ export default function PreinscripcionPage() {
 
   const handleCloseSuccess = () => {
     setShowSuccessDialog(false);
-    window.location.reload();
+    router.push('/PreInscripcion/estado');
   };
 
-  // =============================================
-  // RENDERIZADO DE PASOS
-  // =============================================
-  const renderStep = () => {
-    switch (activeStep) {
-      case 0:
-        return (
-          <EstudianteStep
-            data={formData.estudiante}
-            errors={errors}
-            onChange={updateEstudiante}
-            preinscripcionInfo={preinscripcionInfo} // 🆕
-            onPreinscripcionInfoChange={updatePreinscripcionInfo} // 🆕
-          />
-        );
-      case 1:
-        return modo === 'padre_existente' ? (
-          <Box
-            sx={{
-              p: 4,
-              textAlign: 'center',
-              backgroundColor: isDark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.05)',
-              borderRadius: '16px',
-              border: '2px solid #10b981',
-            }}
-          >
-            <CheckCircleIcon sx={{ fontSize: 60, color: '#10b981', mb: 2 }} />
-            <Typography variant="h6" fontWeight={700} mb={2}>
-              ✅ Usando datos del padre existente
-            </Typography>
-            <Typography variant="body1" color="text.secondary" mb={2}>
-              <strong>Nombre:</strong> {padreExistente?.nombres} {padreExistente?.apellido_paterno}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              <strong>CI:</strong> {padreExistente?.ci} | <strong>Teléfono:</strong> {padreExistente?.telefono}
-            </Typography>
-            {padreExistente?.hijos && padreExistente.hijos.length > 0 && (
-              <Box mt={2}>
-                <Typography variant="body2" fontWeight={600} mb={1}>
-                  Hijos ya matriculados:
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
-                  {padreExistente.hijos.map((hijo: any) => (
-                    <Chip
-                      key={`${hijo.id}-${hijo.grado_actual}`}
-                      label={`${hijo.nombres} ${hijo.apellido_paterno} (${hijo.grado_actual})`}
-                      size="small"
-                      color="success"
-                    />
-                  ))}
-                </Box>
-              </Box>
-            )}
-          </Box>
-        ) : (
-          <PadresStep
-            data={formData.representante}
-            errors={errors}
-            onChange={updateRepresentante}
-          />
-        );
-      case 2:
-        return (
-          <DocumentosStep
-            documentos={formData.documentos}
-            errors={errors}
-            onChange={updateDocumento}
-            modoRegistro={modo}
-          />
-        );
-      case 3:
-        return (
-          <ConfirmacionStep
-            estudiante={formData.estudiante}
-            representante={formData.representante}
-            documentos={formData.documentos}
-          />
-        );
-      default:
-        return null;
-    }
-  };
-
-  const isLastStep = activeStep === steps.length - 1;
+  const isLastStep = activeStep === TOTAL_PASOS - 1;
   const isFirstStep = activeStep === 0;
 
-  // Estilos
   const buttonStyle = {
     borderRadius: '12px',
     textTransform: 'none',
@@ -193,258 +103,300 @@ export default function PreinscripcionPage() {
   };
 
   const paperStyle = {
-    p: { xs: 3, md: 5 },
+    p: { xs: 2.5, md: 5 },
     borderRadius: '24px',
-    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.7)' : 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.95)',
     backdropFilter: 'blur(20px)',
     border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(1, 87, 155, 0.1)',
     boxShadow: isDark
       ? '0 20px 60px rgba(0, 0, 0, 0.5)'
-      : '0 20px 60px rgba(1, 87, 155, 0.15)',
+      : '0 20px 60px rgba(1, 87, 155, 0.12)',
   };
 
-  // =============================================
-  // SI ESTÁ EN SELECCIÓN DE MODO
-  // =============================================
-  if (etapa === 'seleccion_modo') {
-    return (
-      <>
+  const renderStep = () => {
+    switch (activeStep) {
+      case 0:
+        return (
+          <EstudianteStep
+            estudiantes={estudiantes}
+            errors={errores}
+            onChange={updateEstudiante}
+            onAddEstudiante={agregarEstudiante}
+            onRemoveEstudiante={eliminarEstudiante}
+          />
+        );
+      case 1:
+        return (
+          <PadresStep
+            tutores={tutores}
+            estudiantes={estudiantes}
+            relaciones={relaciones}
+            principales={principales}
+            principal={principal}
+            errors={errores}
+            onChange={updateTutor}
+            onAddTutor={agregarTutor}
+            onRemoveTutor={eliminarTutor}
+            onRelacionChange={cambiarRelacion}
+            onPrincipalChange={cambiarPrincipal}
+          />
+        );
+      case 2:
+        return (
+          <ConfirmacionStep
+            estudiantes={estudiantes}
+            tutores={tutores}
+            relaciones={relaciones}
+            principales={principales}
+            principal={principal}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <>
       <Header />
-      <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
         <Box
           sx={{
             minHeight: '100vh',
             background: isDark
-              ? 'linear-gradient(135deg, #090B26, #000000)'
-              : 'linear-gradient(135deg, #fdfcfb, #B9BED4)',
-            py: 10,
+              ? 'linear-gradient(135deg, #090B26 0%, #000000 100%)'
+              : 'linear-gradient(135deg, #fdfcfb 0%, #B9BED4 100%)',
+            py: { xs: 4, md: 8 },
           }}
         >
-          <ModoRegistroSelector onModoSeleccionado={handleModoSeleccionado} />
-        </Box>
-      </LocalizationProvider>
-      </>
-    );
-  }
+          <Container maxWidth="lg">
+            {/* Título de la página */}
+            <Box sx={{ textAlign: 'center', mb: 5 }}>
+              <Typography
+                variant="h3"
+                fontWeight={800}
+                sx={{
+                  background: isDark
+                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  mb: 1.5,
+                  fontSize: { xs: '1.8rem', md: '2.5rem' },
+                }}
+              >
+                Formulario de Preinscripción Escolar
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Registra a tus hijos y a los tutores responsables de forma rápida y sencilla.
+              </Typography>
+            </Box>
 
-  // =============================================
-  // FORMULARIO PRINCIPAL
-  // =============================================
-  return (
-    <>
-      <Header />
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          background: isDark
-            ? 'linear-gradient(135deg, #090B26, #000000)'
-            : 'linear-gradient(135deg, #fdfcfb, #B9BED4)',
-          py: 15,
-        }}
-      >
-        <Container maxWidth="lg">
-          <Fade in timeout={500}>
-            <Box>
-              {/* Header */}
-              <Box sx={{ mb: 4, textAlign: 'center' }}>
-                <Typography
-                  variant="h3"
+            {/* Stepper visual */}
+            <Paper elevation={0} sx={{ ...paperStyle, mb: 4, p: { xs: 2.5, md: 4 } }}>
+              <FormStepper activeStep={activeStep} />
+            </Paper>
+
+            {/* Alerta de error si existe */}
+            {mensajeError && (
+              <Alert severity="error" sx={{ mb: 3, borderRadius: '14px' }}>
+                {mensajeError}
+              </Alert>
+            )}
+
+            {/* Contenido del paso actual */}
+            <Paper elevation={0} sx={paperStyle}>
+              <Fade in key={activeStep} timeout={400}>
+                <Box>{renderStep()}</Box>
+              </Fade>
+
+              {/* Botones de navegación */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mt: 5,
+                  pt: 3,
+                  borderTop: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+                  flexWrap: 'wrap',
+                  gap: 2,
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  startIcon={<ArrowBackIcon />}
+                  onClick={handleBack}
+                  disabled={isFirstStep || isSubmitting}
                   sx={{
-                    fontSize: { xs: '1.5rem', md: '2.5rem' },
-                    fontFamily: 'Roboto',
-                    fontWeight: 700,
-                    background: isDark
-                      ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                      : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    mb: 1,
+                    ...buttonStyle,
+                    borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                    color: isDark ? '#fff' : '#000',
                   }}
                 >
-                  Inscripción de Estudiantes
-                </Typography>
-                <Typography variant="body1" color="text.secondary" fontSize={{xs:"1rem", md:"1.2rem" }}>
-                  {modo === 'nuevo' && 'Modo: Nuevo Padre/Tutor'}
-                  {modo === 'padre_existente' && 'Modo: Padre Existente'}
-                  {modo === 'multiple' && 'Modo: Varios Estudiantes'}
-                </Typography>
-                <Button
-                  variant='outlined'
-                  color='secondary'
-                  size="large"
-                  startIcon={<ArrowBackIcon />}
-                  onClick={volverSeleccionModo}
-                  sx={{ mt: 1 }}
-                >
-                  Cambiar modo
+                  Anterior
                 </Button>
-              </Box>
 
-              {/* Stepper */}
-              <FormStepper activeStep={activeStep} />
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="text"
+                    color="inherit"
+                    onClick={limpiarFormulario}
+                    disabled={isSubmitting}
+                    sx={{ textTransform: 'none', borderRadius: '12px' }}
+                  >
+                    Reiniciar
+                  </Button>
 
-              {/* Selector de estudiante (solo en modo múltiple) */}
-              {modo === 'multiple' && activeStep < 3 && (
-                <Box sx={{ mb: 3, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-                  {estudiantes.map((_, index) => (
-                    <Box key={index} sx={{ position: 'relative' }}>
-                      <Button
-                        variant={estudianteActivo === index ? 'contained' : 'outlined'}
-                        onClick={() => setEstudianteActivo(index)}
-                        sx={{
-                          ...buttonStyle,
-                          background: estudianteActivo === index
-                            ? isDark
-                              ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                              : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)'
-                            : 'transparent',
-                          ...(estudianteActivo === index && {
-                            color: isDark ? '#000' : '#fff',
-                          }),
-                        }}
-                      >
-                        Estudiante {index + 1}
-                      </Button>
-                      {estudiantes.length > 1 && (
-                        <IconButton
-                          size="small"
-                          color="error"
-                          sx={{
-                            position: 'absolute',
-                            top: -8,
-                            right: -8,
-                            bgcolor: '#ef4444',
-                            color: '#fff',
-                            '&:hover': { bgcolor: '#dc2626' },
-                          }}
-                          onClick={() => eliminarEstudiante(index)}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  ))}
-                  {estudiantes.length < 5 && (
+                  {isLastStep ? (
                     <Button
-                      variant="outlined"
-                      startIcon={<AddIcon />}
-                      onClick={agregarEstudiante}
-                      sx={buttonStyle}
+                      variant="contained"
+                      endIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+                      onClick={handleSubmit}
+                      disabled={isSubmitting}
+                      sx={{
+                        ...buttonStyle,
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: '#fff',
+                        boxShadow: '0 8px 25px rgba(16, 185, 129, 0.4)',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                        },
+                      }}
                     >
-                      Agregar estudiante
+                      {isSubmitting ? 'Enviando Solicitud...' : 'Enviar Preinscripción'}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      endIcon={<ArrowForwardIcon />}
+                      onClick={handleNext}
+                      sx={{
+                        ...buttonStyle,
+                        background: isDark
+                          ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                          : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                        color: isDark ? '#000' : '#fff',
+                        boxShadow: isDark
+                          ? '0 8px 25px rgba(250, 204, 21, 0.3)'
+                          : '0 8px 25px rgba(2, 136, 209, 0.3)',
+                      }}
+                    >
+                      Siguiente
                     </Button>
                   )}
                 </Box>
-              )}
-
-              {/* Content */}
-              <Paper elevation={0} sx={{ ...paperStyle, mb: 4 }}>
-                {renderStep()}
-              </Paper>
-
-              {/* Navigation */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<ArrowBackIcon />}
-                    onClick={handleBack}
-                    disabled={isFirstStep || isSubmitting}
-                    sx={{
-                      ...buttonStyle,
-                      borderColor: isDark ? 'rgba(250, 204, 21, 0.5)' : 'rgba(2, 136, 209, 0.5)',
-                      color: isDark ? '#facc15' : '#0288d1',
-                    }}
-                  >
-                    Atrás
-                  </Button>
-
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    startIcon={<DeleteIcon />}
-                    onClick={limpiarFormulario}
-                    disabled={isSubmitting}
-                    sx={{
-                      ...buttonStyle,
-                      borderColor: '#ef4444',
-                      color: '#ef4444',
-                    }}
-                  >
-                    Limpiar
-                  </Button>
-                </Box>
-
-                {isLastStep ? (
-                  <Button
-                    variant="contained"
-                    startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <CheckCircleIcon />}
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                    sx={{
-                      ...buttonStyle,
-                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                      color: '#fff',
-                    }}
-                  >
-                    {isSubmitting ? 'Enviando...' : 'Enviar Preinscripción'}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="contained"
-                    endIcon={<ArrowForwardIcon />}
-                    onClick={handleNext}
-                    sx={{
-                      ...buttonStyle,
-                      background: isDark
-                        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                      color: isDark ? '#000' : '#fff',
-                    }}
-                  >
-                    Siguiente
-                  </Button>
-                )}
               </Box>
-            </Box>
-          </Fade>
-        </Container>
+            </Paper>
+          </Container>
+        </Box>
 
-        {/* Success Dialog */}
-        <Dialog open={showSuccessDialog} onClose={handleCloseSuccess} maxWidth="sm" fullWidth>
+        {/* DIÁLOGO MODAL DE ÉXITO */}
+        <Dialog
+          open={showSuccessDialog}
+          onClose={handleCloseSuccess}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: '24px',
+              p: 2,
+              background: isDark
+                ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
+                : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+            },
+          }}
+        >
           <DialogTitle sx={{ textAlign: 'center', pt: 4 }}>
-            <CheckCircleIcon sx={{ fontSize: 80, color: '#10b981', mb: 2 }} />
-            <Typography variant="h4" fontWeight={700}>
-              ¡Inscripción Enviada!
+            <CheckCircleIcon sx={{ fontSize: 72, color: '#10b981', mb: 2 }} />
+            <Typography variant="h4" fontWeight={800} color="text.primary">
+              ¡Preinscripción Registrada!
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mt={1}>
+              Se han generado los comprobantes de postulación para tu familia.
             </Typography>
           </DialogTitle>
-          <DialogContent sx={{ textAlign: 'center', pb: 2 }}>
-            <Typography variant="body1" color="text.secondary">
-              Su solicitud ha sido recibida exitosamente. En breve nos pondremos en contacto con usted para
-              continuar con el proceso de admisión.
+
+          <DialogContent>
+            <Box
+              sx={{
+                p: 3,
+                my: 2,
+                borderRadius: '16px',
+                backgroundColor: isDark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.06)',
+                border: '2px dashed #10b981',
+              }}
+            >
+              <Typography variant="subtitle2" fontWeight={700} color="#10b981" mb={1.5}>
+                Códigos de Preinscripción Asignados:
+              </Typography>
+
+              {resultadoCreadas.length > 0 ? (
+                resultadoCreadas.map((item, idx) => (
+                  <Box
+                    key={idx}
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      py: 1,
+                      borderBottom: idx < resultadoCreadas.length - 1 ? '1px solid rgba(16,185,129,0.2)' : 'none',
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight={600}>
+                      {item.estudiante_nombres}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {item.estado === 'en_espera' && (
+                        <Chip
+                          size="small"
+                          label={`Espera #${item.posicion_espera || 1}`}
+                          sx={{
+                            bgcolor: isDark ? 'rgba(245, 158, 11, 0.25)' : 'rgba(245, 158, 11, 0.15)',
+                            color: isDark ? '#fbbf24' : '#b45309',
+                            fontWeight: 800,
+                            fontSize: '0.72rem',
+                          }}
+                        />
+                      )}
+                      <Chip
+                        label={item.codigo_inscripcion}
+                        color={item.estado === 'en_espera' ? 'warning' : 'success'}
+                        sx={{ fontWeight: 800, letterSpacing: '0.5px' }}
+                      />
+                    </Box>
+                  </Box>
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Tu solicitud ha ingresado correctamente al sistema.
+                </Typography>
+              )}
+            </Box>
+
+            <Typography variant="caption" color="text.secondary" display="block" textAlign="center">
+              Guarda tus códigos para consultar el estado de aprobación de los cupos en nuestro portal.
             </Typography>
           </DialogContent>
-          <DialogActions sx={{ justifyContent: 'center', pb: 4 }}>
+
+          <DialogActions sx={{ pb: 3, px: 3, justifyContent: 'center' }}>
             <Button
               variant="contained"
               onClick={handleCloseSuccess}
               sx={{
+                borderRadius: '12px',
+                px: 5,
+                py: 1.5,
+                fontWeight: 700,
                 background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: '#fff',
-                px: 4,
-                py: 1.5,
-                borderRadius: '12px',
-                textTransform: 'none',
-                fontWeight: 600,
               }}
             >
-              Entendido
+              Consultar Estado de Preinscripción
             </Button>
           </DialogActions>
         </Dialog>
-      </Box>
-    </LocalizationProvider>
+      </LocalizationProvider>
     </>
   );
 }

@@ -7,41 +7,54 @@ import {
   TextField,
   MenuItem,
   Typography,
-  ToggleButton,
-  ToggleButtonGroup,
+  Button,
+  IconButton,
+  Chip,
+  Tooltip,
   useTheme,
+  FormControlLabel,
+  Checkbox,
+  Radio,
+  Paper,
+  Divider,
+  Alert,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import PeopleIcon from '@mui/icons-material/People';
-import { PreTutorForm, ErroresFormulario } from '@/types/preinscripcionTypes';
+import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
+import PhoneIcon from '@mui/icons-material/Phone';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import StarIcon from '@mui/icons-material/Star';
+
+import { PreTutorForm, PreEstudianteForm } from '@/types/preinscripcionTypes';
 
 interface PadresStepProps {
-  data: PreTutorForm;
-  errors: ErroresFormulario;
-  onChange: (field: string, value: any) => void;
+  tutores: PreTutorForm[];
+  estudiantes: PreEstudianteForm[];
+  relaciones: Record<string, boolean>;
+  principales?: Record<number, number>;
+  principal?: string | null;
+  errors: Record<string, string>;
+  onChange: (index: number, field: string, value: any) => void;
+  onAddTutor: () => void;
+  onRemoveTutor: (index: number) => void;
+  onRelacionChange: (key: string, value: boolean) => void;
+  onPrincipalChange: (estudianteIndex: number, tutorIndex: number) => void;
 }
 
 const GENEROS = [
   { value: 'masculino', label: 'Masculino' },
   { value: 'femenino', label: 'Femenino' },
-  { value: 'otro', label: 'Otro' },
-];
-
-const TIPOS_REPRESENTANTE = [
-  { value: 'Ambos Padres', label: 'Ambos Padres' },
-  { value: 'Padre', label: 'Solo Padre' },
-  { value: 'Madre', label: 'Solo Madre' },
-  { value: 'Tutor Legal', label: 'Tutor Legal' },
 ];
 
 const PARENTESCOS = [
   { value: 'padre', label: 'Padre' },
   { value: 'madre', label: 'Madre' },
-  { value: 'tutor', label: 'Tutor' },
-  { value: 'abuelo', label: 'Abuelo' },
-  { value: 'abuela', label: 'Abuela' },
-  { value: 'tio', label: 'Tío' },
-  { value: 'tia', label: 'Tía' },
+  { value: 'tutor_legal', label: 'Tutor Legal / Apoderado' },
+  { value: 'abuelo', label: 'Abuelo/a' },
+  { value: 'tio', label: 'Tío/a' },
+  { value: 'hermano_mayor', label: 'Hermano/a Mayor' },
   { value: 'otro', label: 'Otro' },
 ];
 
@@ -53,346 +66,474 @@ const ESTADOS_CIVILES = [
   { value: 'union_libre', label: 'Unión Libre' },
 ];
 
-const NIVELES_EDUCACION = [
-  { value: 'primaria', label: 'Primaria' },
-  { value: 'secundaria', label: 'Secundaria' },
-  { value: 'tecnico', label: 'Técnico' },
-  { value: 'universitario', label: 'Universitario' },
-  { value: 'postgrado', label: 'Postgrado' },
-  { value: 'ninguno', label: 'Ninguno' },
-];
-
-export default function PadresStep({ data, errors, onChange }: PadresStepProps) {
+export default function PadresStep({
+  tutores,
+  estudiantes,
+  relaciones,
+  principales = {},
+  principal,
+  errors,
+  onChange,
+  onAddTutor,
+  onRemoveTutor,
+  onRelacionChange,
+  onPrincipalChange,
+}: PadresStepProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const accent = isDark ? '#facc15' : '#0288d1';
 
-  // Validaciones en tiempo real
-  const handleNameInput = (field: string, value: string) => {
-    const namePattern = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/;
-    if (namePattern.test(value) || value === '') {
-      onChange(field, value);
-    }
+  const cardStyle = {
+    p: { xs: 2.5, md: 4 },
+    mb: 4,
+    borderRadius: '20px',
+    border: '2px solid',
+    borderColor: isDark ? 'rgba(16, 185, 129, 0.3)' : 'rgba(16, 185, 129, 0.25)',
+    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.65)' : 'rgba(255, 255, 255, 0.95)',
+    boxShadow: isDark
+      ? '0 10px 30px rgba(0, 0, 0, 0.4)'
+      : '0 10px 30px rgba(16, 185, 129, 0.08)',
+    position: 'relative' as const,
   };
 
-  const handlePhoneInput = (field: string, value: string) => {
-    const phonePattern = /^[0-9\s\-\(\)\+]*$/;
-    if (phonePattern.test(value) || value === '') {
-      onChange(field, value);
-    }
-  };
-
-  const handleEmailInput = (field: string, value: string) => {
-    onChange(field, value.toLowerCase().trim());
-  };
-
-  const handleCIInput = (field: string, value: string) => {
-    const ciPattern = /^[0-9A-Za-z]*$/;
-    if ((ciPattern.test(value) && value.length <= 12) || value === '') {
-      onChange(field, value.toUpperCase());
-    }
+  const titleStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1.5,
+    mb: 2.5,
+    fontWeight: 700,
+    fontSize: '1.2rem',
+    color: '#10b981',
   };
 
   const fieldStyle = {
-    width: '100%',
-    '& .MuiInputLabel-root': {
-      color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
-      fontWeight: 500,
-      fontSize: '0.95rem',
-      '&.Mui-focused': {
-        color: isDark ? '#facc15' : '#0288d1',
-      },
-    },
     '& .MuiInputBase-root': {
       borderRadius: '12px',
-      transition: '0.2s ease',
-      border: '1px solid transparent',
-      '&:hover': {
-        borderColor: isDark ? '#facc15' : '#0288d1',
-      },
-      '&.Mui-focused': {
-        borderColor: isDark ? '#facc15' : '#0288d1',
-        boxShadow: `0 0 0 2px ${isDark ? 'rgba(250, 204, 21, 0.3)' : 'rgba(2, 136, 209, 0.25)'}`,
-      },
-    },
-    '& .MuiInputBase-input': {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.95)',
       color: isDark ? '#fff' : '#000',
     },
+    '& .MuiInputLabel-root': {
+      color: isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.65)',
+      fontWeight: 500,
+      '&.Mui-focused': {
+        color: '#10b981',
+      },
+    },
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(16, 185, 129, 0.25)',
+      borderWidth: '1.5px',
+    },
+    '&:hover .MuiOutlinedInput-notchedOutline': {
+      borderColor: '#10b981',
+    },
+    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+      borderColor: '#10b981',
+      borderWidth: '2px',
+    },
   };
 
-  const sectionTitleStyle = {
-    mb: 3,
-    fontSize: { xs: '1.3rem', md: '1.5rem' },
-    fontWeight: 700,
-    background: isDark
-      ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-      : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 2,
-  };
+  const nombreEstudiante = (e: PreEstudianteForm, idx: number) =>
+    e.nombres || e.apellido_paterno
+      ? `${e.nombres} ${e.apellido_paterno}`.trim()
+      : `Postulante #${idx + 1}`;
 
-  const mostrarCampoOtroParentesco = data.parentesco === 'otro';
+  const nombreTutor = (t: PreTutorForm, idx: number) =>
+    t.nombres || t.apellido_paterno
+      ? `${t.nombres} ${t.apellido_paterno}`.trim()
+      : `Tutor #${idx + 1}`;
 
   return (
-    <Box sx={{ gap: 4, display: 'flex', flexDirection: 'column' }}>
-      <Box sx={sectionTitleStyle}>
-        <PeopleIcon sx={{ fontSize: 32, color: isDark ? '#facc15' : '#0288d1' }} />
-        Información del Tutor/Representante
-      </Box>
+    <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
+      {/* Lista de Tutores apilados hacia abajo directamente */}
+      {tutores.map((tutor, index) => {
+        const tituloTutor = nombreTutor(tutor, index);
 
-      {/* Datos personales */}
-      <Grid container spacing={3}>
-        <Grid size={{xs:12, md:4}}>
-          <TextField
-            fullWidth
-            label="Nombres *"
-            value={data.nombres}
-            onChange={(e) => handleNameInput('nombres', e.target.value)}
-            error={!!errors.nombres_rep}
-            helperText={errors.nombres_rep}
-            sx={fieldStyle}
-          />
-        </Grid>
-        <Grid size={{xs:12, md:4}}>
-          <TextField
-            fullWidth
-            label="Apellido Paterno *"
-            value={data.apellido_paterno}
-            onChange={(e) => handleNameInput('apellido_paterno', e.target.value)}
-            error={!!errors.apellido_paterno_rep}
-            helperText={errors.apellido_paterno_rep}
-            sx={fieldStyle}
-          />
-        </Grid>
-        <Grid size={{xs:12, md:4}}>
-          <TextField
-            fullWidth
-            label="Apellido Materno"
-            value={data.apellido_materno}
-            onChange={(e) => handleNameInput('apellido_materno', e.target.value)}
-            sx={fieldStyle}
-          />
-        </Grid>
-        <Grid size={{xs:12, md:4}}>
-          <TextField
-            fullWidth
-            label="Cédula de Identidad *"
-            value={data.ci}
-            onChange={(e) => handleCIInput('ci', e.target.value)}
-            error={!!errors.ci_rep}
-            helperText={errors.ci_rep}
-            inputProps={{ maxLength: 12 }}
-            sx={fieldStyle}
-          />
-        </Grid>
-        <Grid size={{xs:12, md:4}}>
-          <DatePicker
-            format="DD/MM/YYYY"
-            label="Fecha de Nacimiento"
-            value={data.fecha_nacimiento}
-            onChange={(date) => onChange('fecha_nacimiento', date)}
-            slotProps={{ textField: { fullWidth: true } }}
-            sx={fieldStyle}
-          />
-        </Grid>
-        <Grid size={{xs:12, md:4}}>
-          <TextField
-            select
-            fullWidth
-            label="Género"
-            value={data.genero}
-            onChange={(e) => onChange('genero', e.target.value)}
-            sx={fieldStyle}
-          >
-            {GENEROS.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Grid>
-        <Grid size={{xs:12, md: mostrarCampoOtroParentesco ? 6 : 12}}>
-          <TextField
-            select
-            fullWidth
-            label="Parentesco *"
-            value={data.parentesco}
-            onChange={(e) => onChange('parentesco', e.target.value)}
-            sx={fieldStyle}
-          >
-            {PARENTESCOS.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Grid>
-        
-        {mostrarCampoOtroParentesco && (
-          <Grid size={{xs:12, md:6}}>
-            <TextField
-              fullWidth
-              label="Especificar Parentesco *"
-              value={data.otro_parentesco || ''}
-              onChange={(e) => handleNameInput('otro_parentesco', e.target.value)}
-              placeholder="Ej: Hermano, Primo, etc."
-              sx={fieldStyle}
-            />
-          </Grid>
-        )}
-      </Grid>
+        return (
+          <Paper key={index} elevation={0} sx={cardStyle}>
+            {/* Cabecera del Tutor con chip y botón eliminar */}
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 3,
+                pb: 1.5,
+                borderBottom: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Chip
+                  label={`Tutor #${index + 1}`}
+                  sx={{
+                    fontWeight: 700,
+                    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.15)',
+                    color: '#10b981',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                  }}
+                />
+                <Typography variant="h6" fontWeight={700} color="text.primary">
+                  {tituloTutor} {tutor.parentesco ? `(${tutor.parentesco})` : ''}
+                </Typography>
+              </Box>
 
-      {/* Información laboral */}
-      <Typography sx={{ fontWeight: 600, fontSize: '1.1rem', mt: 2 }}>
-        Información Laboral
-      </Typography>
+              {tutores.length > 1 && (
+                <Tooltip title="Eliminar este tutor">
+                  <IconButton
+                    onClick={() => onRemoveTutor(index)}
+                    sx={{
+                      color: '#ef4444',
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                      },
+                    }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Box>
 
-      <Grid container spacing={3}>
-        <Grid size={{xs:12, md:6}}>
-          <TextField
-            fullWidth
-            label="Ocupación / Profesión"
-            value={data.ocupacion}
-            onChange={(e) => onChange('ocupacion', e.target.value)}
-            sx={fieldStyle}
-          />
-        </Grid>
-        <Grid size={{xs:12, md:6}}>
-          <TextField
-            fullWidth
-            label="Lugar de Trabajo"
-            value={data.lugar_trabajo}
-            onChange={(e) => onChange('lugar_trabajo', e.target.value)}
-            sx={fieldStyle}
-          />
-        </Grid>
-        <Grid size={{xs:12, md:6}}>
-          <TextField
-            fullWidth
-            label="Teléfono de Trabajo"
-            value={data.telefono_trabajo}
-            onChange={(e) => handlePhoneInput('telefono_trabajo', e.target.value)}
-            inputProps={{ maxLength: 20 }}
-            sx={fieldStyle}
-          />
-        </Grid>
-        <Grid size={{xs:12, md:6}}>
-          <TextField
-            select
-            fullWidth
-            label="Estado Civil"
-            value={data.estado_civil}
-            onChange={(e) => onChange('estado_civil', e.target.value)}
-            sx={fieldStyle}
-          >
-            {ESTADOS_CIVILES.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Grid>
-        <Grid size={{xs:12, md:6}}>
-          <TextField
-            select
-            fullWidth
-            label="Nivel de Educación"
-            value={data.nivel_educacion}
-            onChange={(e) => onChange('nivel_educacion', e.target.value)}
-            sx={fieldStyle}
-          >
-            {NIVELES_EDUCACION.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Grid>
-      </Grid>
+            {/* Sub-sección 1: Datos Personales */}
+            <Box sx={titleStyle}>
+              <PeopleIcon sx={{ fontSize: 26 }} />
+              Datos Personales del Padre / Madre / Tutor
+            </Box>
 
-      <Grid size={{xs:12}}>
-        <Typography sx={{ mb: 2, fontWeight: 600 }}>
-          ¿Vive con el estudiante?
-        </Typography>
-        <ToggleButtonGroup
-          color="primary"
-          value={data.vive_con_estudiante ? 'SI' : 'NO'}
-          exclusive
-          onChange={(e, newValue) => {
-            if (newValue !== null) {
-              onChange('vive_con_estudiante', newValue === 'SI');
-            }
-          }}
-          fullWidth
+            <Grid container spacing={2.5} sx={{ mb: 4 }}>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  label="Nombres *"
+                  value={tutor.nombres}
+                  onChange={(e) => onChange(index, 'nombres', e.target.value)}
+                  error={!!errors[`tutor_${index}_nombres`]}
+                  helperText={errors[`tutor_${index}_nombres`]}
+                  sx={fieldStyle}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  label="Apellido Paterno *"
+                  value={tutor.apellido_paterno}
+                  onChange={(e) => onChange(index, 'apellido_paterno', e.target.value)}
+                  error={!!errors[`tutor_${index}_apellido_paterno`]}
+                  helperText={errors[`tutor_${index}_apellido_paterno`]}
+                  sx={fieldStyle}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  label="Apellido Materno"
+                  value={tutor.apellido_materno}
+                  onChange={(e) => onChange(index, 'apellido_materno', e.target.value)}
+                  sx={fieldStyle}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  label="Cédula de Identidad (CI) *"
+                  value={tutor.ci}
+                  onChange={(e) => onChange(index, 'ci', e.target.value)}
+                  error={!!errors[`tutor_${index}_ci`]}
+                  helperText={errors[`tutor_${index}_ci`]}
+                  sx={fieldStyle}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Parentesco *"
+                  value={tutor.parentesco}
+                  onChange={(e) => onChange(index, 'parentesco', e.target.value)}
+                  error={!!errors[`tutor_${index}_parentesco`]}
+                  helperText={errors[`tutor_${index}_parentesco`]}
+                  sx={fieldStyle}
+                >
+                  {PARENTESCOS.map((op) => (
+                    <MenuItem key={op.value} value={op.value}>
+                      {op.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Género *"
+                  value={tutor.genero}
+                  onChange={(e) => onChange(index, 'genero', e.target.value)}
+                  error={!!errors[`tutor_${index}_genero`]}
+                  helperText={errors[`tutor_${index}_genero`]}
+                  sx={fieldStyle}
+                >
+                  {GENEROS.map((op) => (
+                    <MenuItem key={op.value} value={op.value}>
+                      {op.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <DatePicker
+                  label="Fecha de Nacimiento"
+                  format="DD/MM/YYYY"
+                  value={tutor.fecha_nacimiento}
+                  onChange={(val) => onChange(index, 'fecha_nacimiento', val)}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      sx: fieldStyle,
+                    },
+                  }}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Estado Civil"
+                  value={tutor.estado_civil}
+                  onChange={(e) => onChange(index, 'estado_civil', e.target.value)}
+                  sx={fieldStyle}
+                >
+                  {ESTADOS_CIVILES.map((op) => (
+                    <MenuItem key={op.value} value={op.value}>
+                      {op.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  label="Ocupación / Profesión"
+                  value={tutor.ocupacion}
+                  onChange={(e) => onChange(index, 'ocupacion', e.target.value)}
+                  sx={fieldStyle}
+                />
+              </Grid>
+            </Grid>
+
+            <Divider sx={{ my: 3, opacity: 0.15 }} />
+
+            {/* Sub-sección 2: Contacto y Dirección */}
+            <Box sx={titleStyle}>
+              <PhoneIcon sx={{ fontSize: 26 }} />
+              Contacto y Domicilio
+            </Box>
+
+            <Grid container spacing={2.5}>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <TextField
+                  fullWidth
+                  label="Teléfono / Celular de Contacto *"
+                  value={tutor.telefono}
+                  onChange={(e) => onChange(index, 'telefono', e.target.value)}
+                  error={!!errors[`tutor_${index}_telefono`]}
+                  helperText={errors[`tutor_${index}_telefono`]}
+                  sx={fieldStyle}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 6 }}>
+                <TextField
+                  fullWidth
+                  label="Correo Electrónico"
+                  value={tutor.email}
+                  onChange={(e) => onChange(index, 'email', e.target.value)}
+                  sx={fieldStyle}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 8 }}>
+                <TextField
+                  fullWidth
+                  label="Dirección de Domicilio"
+                  value={tutor.direccion}
+                  onChange={(e) => onChange(index, 'direccion', e.target.value)}
+                  sx={fieldStyle}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <TextField
+                  fullWidth
+                  label="Zona / Barrio"
+                  value={tutor.zona || ''}
+                  onChange={(e) => onChange(index, 'zona', e.target.value)}
+                  sx={fieldStyle}
+                />
+              </Grid>
+            </Grid>
+          </Paper>
+        );
+      })}
+
+      {/* Botón para agregar otro padre/tutor directamente abajo */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+        <Button
+          variant="outlined"
+          size="large"
+          startIcon={<AddIcon />}
+          onClick={onAddTutor}
           sx={{
-            '& .MuiToggleButton-root': {
-              py: 1.5,
-              fontSize: '1rem',
-              fontWeight: 600,
-              borderRadius: '12px',
-              textTransform: 'none',
-              '&.Mui-selected': {
-                backgroundColor: isDark ? '#facc15' : '#0288d1',
-                color: isDark ? '#000' : '#fff',
-              },
+            borderRadius: '14px',
+            textTransform: 'none',
+            fontWeight: 700,
+            fontSize: '1rem',
+            px: 4,
+            py: 1.8,
+            borderColor: '#10b981',
+            color: '#10b981',
+            backgroundColor: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.05)',
+            borderWidth: '2px',
+            '&:hover': {
+              borderColor: '#10b981',
+              borderWidth: '2px',
+              backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+              transform: 'translateY(-2px)',
             },
+            transition: 'all 0.25s ease',
           }}
         >
-          <ToggleButton value="NO">No</ToggleButton>
-          <ToggleButton value="SI">Sí</ToggleButton>
-        </ToggleButtonGroup>
-      </Grid>
+          + Agregar Otro Padre / Tutor
+        </Button>
+      </Box>
 
-      {/* Información de contacto */}
-      <Typography sx={{ fontWeight: 600, fontSize: '1.1rem', mt: 2 }}>
-        Información de Contacto
-      </Typography>
+      {/* SECCIÓN FINAL: ASIGNACIÓN Y SELECCIÓN DEL PADRE PRINCIPAL */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 2.5, md: 4 },
+          borderRadius: '20px',
+          border: '2px solid',
+          borderColor: isDark ? 'rgba(250, 204, 21, 0.35)' : 'rgba(2, 136, 209, 0.35)',
+          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.95)',
+          boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(1, 87, 155, 0.1)',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+          <FamilyRestroomIcon sx={{ fontSize: 30, color: accent }} />
+          <Typography variant="h6" fontWeight={700} color="text.primary">
+            Relaciones Familiares y Tutor Principal
+          </Typography>
+        </Box>
+        <Typography variant="body2" color="text.secondary" mb={3}>
+          Marca qué tutor es responsable de cada postulante y selecciona con el botón circular (Radio) al <strong>Tutor Principal</strong> para las comunicaciones oficiales del colegio.
+        </Typography>
 
-      <Grid container spacing={3}>
-        <Grid size={{xs:12, md:4}}>
-          <TextField
-            fullWidth
-            label="Teléfono *"
-            value={data.telefono}
-            onChange={(e) => handlePhoneInput('telefono', e.target.value)}
-            error={!!errors.telefono_rep}
-            helperText={errors.telefono_rep}
-            inputProps={{ maxLength: 20 }}
-            sx={fieldStyle}
-          />
-        </Grid>
-        <Grid size={{xs:12, md:4}}>
-          <TextField
-            fullWidth
-            label="Celular"
-            value={data.celular}
-            onChange={(e) => handlePhoneInput('celular', e.target.value)}
-            inputProps={{ maxLength: 20 }}
-            sx={fieldStyle}
-          />
-        </Grid>
-        <Grid size={{xs:12, md:4}}>
-          <TextField
-            fullWidth
-            label="Correo Electrónico"
-            value={data.email}
-            onChange={(e) => handleEmailInput('email', e.target.value)}
-            type="email"
-            sx={fieldStyle}
-          />
-        </Grid>
-        <Grid size={{xs:12}}>
-          <TextField
-            fullWidth
-            label="Dirección"
-            value={data.direccion}
-            onChange={(e) => onChange('direccion', e.target.value)}
-            sx={fieldStyle}
-          />
-        </Grid>
-      </Grid>
+        {estudiantes.map((estudiante, eIdx) => (
+          <Box
+            key={eIdx}
+            sx={{
+              p: 2.5,
+              mb: 2.5,
+              borderRadius: '16px',
+              border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+              backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
+            }}
+          >
+            <Typography variant="subtitle1" fontWeight={700} color={accent} mb={1.5}>
+              👤 {nombreEstudiante(estudiante, eIdx)}
+            </Typography>
+
+            <Grid container spacing={2}>
+              {tutores.map((tutor, tIdx) => {
+                const key = `${eIdx}:${tIdx}`;
+                const asignado = Boolean(relaciones[key]);
+                const esPrincipal = principales[eIdx] !== undefined ? principales[eIdx] === tIdx : principal === key;
+
+                return (
+                  <Grid size={{ xs: 12, sm: 6 }} key={key}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: '12px',
+                        border: `1.5px solid ${esPrincipal
+                            ? '#10b981'
+                            : asignado
+                              ? (isDark ? 'rgba(250, 204, 21, 0.5)' : 'rgba(2, 136, 209, 0.5)')
+                              : isDark
+                                ? 'rgba(255,255,255,0.1)'
+                                : 'rgba(0,0,0,0.1)'
+                          }`,
+                        backgroundColor: esPrincipal
+                          ? (isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.08)')
+                          : asignado
+                            ? (isDark ? 'rgba(250, 204, 21, 0.06)' : 'rgba(2, 136, 209, 0.05)')
+                            : 'transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={asignado}
+                            onChange={(e) => onRelacionChange(key, e.target.checked)}
+                            sx={{ color: accent, '&.Mui-checked': { color: accent } }}
+                          />
+                        }
+                        label={
+                          <Typography variant="body2" fontWeight={600} color="text.primary">
+                            {nombreTutor(tutor, tIdx)} {tutor.parentesco ? `(${tutor.parentesco})` : ''}
+                          </Typography>
+                        }
+                      />
+
+                      {asignado && (
+                        <FormControlLabel
+                          control={
+                            <Radio
+                              name={`tutor-principal-estudiante-${eIdx}`}
+                              checked={esPrincipal}
+                              onChange={() => onPrincipalChange(eIdx, tIdx)}
+                              size="small"
+                              sx={{
+                                color: '#10b981',
+                                '&.Mui-checked': { color: '#10b981' },
+                              }}
+                            />
+                          }
+                          label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              {esPrincipal && <StarIcon sx={{ fontSize: 16, color: '#10b981' }} />}
+                              <Typography
+                                variant="caption"
+                                fontWeight={700}
+                                color={esPrincipal ? '#10b981' : 'text.secondary'}
+                              >
+                                {esPrincipal ? 'Principal' : 'Hacer Principal'}
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      )}
+                    </Box>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </Box>
+        ))}
+      </Paper>
     </Box>
   );
 }

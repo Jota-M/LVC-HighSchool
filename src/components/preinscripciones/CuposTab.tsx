@@ -27,6 +27,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import EventSeatIcon from '@mui/icons-material/EventSeat';
 import PeopleIcon from '@mui/icons-material/People';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import SyncIcon from '@mui/icons-material/Sync';
 
 import { useCupos } from '@/hooks/useCupos';
 import { CupoFormDialog } from '@/components/cupos/CupoFormDialog';
@@ -52,11 +53,27 @@ export const CuposTab: React.FC<CuposTabProps> = ({ onSnackbar }) => {
     setFilters,
     fetchCupos,
     deleteCupo,
+    sincronizarCupos,
   } = useCupos();
 
   const [openForm, setOpenForm] = useState(false);
   const [openDetalle, setOpenDetalle] = useState(false);
   const [selectedCupo, setSelectedCupo] = useState<any>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSync = async () => {
+    try {
+      setSyncing(true);
+      const res = await sincronizarCupos(
+        filters.periodo_academico_id ? Number(filters.periodo_academico_id) : undefined
+      );
+      onSnackbar(res?.message || 'Cupos sincronizados exitosamente con paralelos y reservas', 'success');
+    } catch (err: any) {
+      onSnackbar(err.message || 'Error al sincronizar cupos', 'error');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleCreate = () => {
     setSelectedCupo(null);
@@ -163,10 +180,10 @@ export const CuposTab: React.FC<CuposTabProps> = ({ onSnackbar }) => {
           </Typography>
         </Box>
 
-        <Stack direction="row" spacing={1.5}>
+        <Stack direction="row" spacing={1.5} flexWrap="wrap" gap={1}>
           <Tooltip title="Actualizar">
             <IconButton
-              onClick={fetchCupos}
+              onClick={() => fetchCupos()}
               sx={{
                 borderRadius: '12px',
                 border: `1px solid ${alpha(accent, 0.3)}`,
@@ -178,6 +195,32 @@ export const CuposTab: React.FC<CuposTabProps> = ({ onSnackbar }) => {
               <RefreshIcon />
             </IconButton>
           </Tooltip>
+
+          <Button
+            variant="outlined"
+            startIcon={syncing ? <CircularProgress size={18} color="inherit" /> : <SyncIcon />}
+            onClick={handleSync}
+            disabled={syncing}
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 2.5,
+              py: 1.5,
+              borderColor: alpha(accent, 0.5),
+              color: accent,
+              backgroundColor: alpha(accent, 0.05),
+              '&:hover': {
+                borderColor: accent,
+                backgroundColor: alpha(accent, 0.12),
+                transform: 'translateY(-2px)',
+              },
+              transition: 'all 0.3s ease',
+            }}
+          >
+            {syncing ? 'Sincronizando...' : 'Sincronizar con Aforo y Reservas'}
+          </Button>
+
           <Button
             variant="contained"
             startIcon={<AddIcon />}

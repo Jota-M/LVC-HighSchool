@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import SearchIcon from '@mui/icons-material/Search';
-import { PreinscripcionFilters } from '../../types/preinscripcioonTypes';
+import { PreinscripcionFilters } from '@/types/preinscripcionTypes';
 import api from '@/lib/api';
 
 const ESTADOS_DISPONIBLES = [
@@ -28,6 +28,7 @@ const ESTADOS_DISPONIBLES = [
   { value: 'aprobada', label: 'Aprobada' },
   { value: 'rechazada', label: 'Rechazada' },
   { value: 'convertida', label: 'Convertida' },
+  { value: 'en_espera', label: '📋 En Lista de Espera' },
 ];
 
 const CUPO_DISPONIBLES = [

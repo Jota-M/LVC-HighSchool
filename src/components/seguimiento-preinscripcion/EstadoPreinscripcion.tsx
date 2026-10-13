@@ -25,6 +25,7 @@ export const EstadoPreinscripcion: React.FC<EstadoPreinscripcionProps> = ({
 
   const getPasoActivo = (estado: EstadoPreInscripcion): number => {
     const mapeo: Record<EstadoPreInscripcion, number> = {
+      'en_espera': 0,
       'iniciada': 0,
       'datos_completos': 1,
       'documentos_pendientes': 1,
@@ -113,6 +114,15 @@ export const EstadoPreinscripcion: React.FC<EstadoPreinscripcionProps> = ({
           </Step>
         ))}
       </Stepper>
+
+      {preinscripcion.estado === 'en_espera' && (
+        <Alert severity="warning" sx={{ mt: 3, borderRadius: 2 }}>
+          <AlertTitle fontWeight={700}>
+            En Lista de Espera — Posición #{preinscripcion.posicion_espera || 1}
+          </AlertTitle>
+          Tu solicitud fue registrada con éxito. Debido a que no hay cupos inmediatos en este grado/turno, te encuentras en lista de espera. Te contactaremos cuando se libere una vacante.
+        </Alert>
+      )}
 
       {preinscripcion.observaciones && (
         <Alert severity="info" icon={<PendingIcon />} sx={{ mt: 3, borderRadius: 2 }}>

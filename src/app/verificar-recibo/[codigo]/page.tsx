@@ -2,18 +2,18 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle, 
-  Download, 
-  FileText, 
-  Calendar, 
-  User, 
-  GraduationCap, 
-  CreditCard, 
-  ShieldCheck, 
-  Building2, 
+import {
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Download,
+  FileText,
+  Calendar,
+  User,
+  GraduationCap,
+  CreditCard,
+  ShieldCheck,
+  Building2,
   Receipt,
   ExternalLink,
   Printer,
@@ -67,7 +67,7 @@ export default function VerificarReciboPage() {
   const [data, setData] = useState<ReciboData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.uepclavozdecristo.site';
 
   useEffect(() => {
     if (!codigo) return;
@@ -167,26 +167,23 @@ export default function VerificarReciboPage() {
         ) : data ? (
           <div className="space-y-6">
             {/* Banner de Estado */}
-            <div className={`rounded-2xl p-6 sm:p-8 shadow-sm border flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left ${
-              data.anulado 
-                ? 'bg-amber-50/70 border-amber-300 text-amber-900' 
-                : 'bg-emerald-50/70 border-emerald-300 text-emerald-950'
-            }`}>
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
-                data.anulado 
-                  ? 'bg-amber-500 text-white' 
-                  : 'bg-emerald-600 text-white'
+            <div className={`rounded-2xl p-6 sm:p-8 shadow-sm border flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left ${data.anulado
+              ? 'bg-amber-50/70 border-amber-300 text-amber-900'
+              : 'bg-emerald-50/70 border-emerald-300 text-emerald-950'
               }`}>
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${data.anulado
+                ? 'bg-amber-500 text-white'
+                : 'bg-emerald-600 text-white'
+                }`}>
                 {data.anulado ? <AlertTriangle className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
               </div>
               <div className="flex-1">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-1.5 ${
-                      data.anulado 
-                        ? 'bg-amber-200 text-amber-900' 
-                        : 'bg-emerald-200 text-emerald-900'
-                    }`}>
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-1.5 ${data.anulado
+                      ? 'bg-amber-200 text-amber-900'
+                      : 'bg-emerald-200 text-emerald-900'
+                      }`}>
                       {data.anulado ? 'RECIBO ANULADO' : 'PAGO VÁLIDO Y REGISTRADO'}
                     </span>
                     <h2 className="text-xl sm:text-2xl font-black text-slate-900">

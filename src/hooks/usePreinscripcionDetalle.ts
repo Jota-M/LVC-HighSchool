@@ -30,15 +30,17 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
   const determinarPasoSegunEstado = (estado: EstadoPreInscripcion): number => {
     const estadoLower = estado?.toLowerCase();
     const mapeo: Record<string, number> = {
+      'en_espera': 0,
       'datos_completos': 0,
-      'documentos_pendientes': 0,
       'en_revision': 0,
-      'documentos_aprobados': 1,
-      'entrevista_pendiente': 2,
-      'entrevista_programada': 2,
-      'entrevista_completada': 3,
-      'aprobada': 3,
-      'rechazada': 3,
+      'documentos_aprobados': 0,
+      'documentos_pendientes': 0,
+      'iniciada': 0,
+      'entrevista_pendiente': 1,
+      'entrevista_programada': 1,
+      'entrevista_completada': 2,
+      'aprobada': 2,
+      'rechazada': 2,
     };
     return mapeo[estadoLower] || 0;
   };
@@ -113,7 +115,7 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
   }, [preinscripcion]);
 
   useEffect(() => {
-    if (preinscripcion && activeStep === 3) {
+    if (preinscripcion && activeStep === 2) {
       verificarCuposDisponibles();
     }
   }, [preinscripcion, activeStep, verificarCuposDisponibles]);
@@ -140,44 +142,13 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
   }, [preinscripcion, fetchPreinscripcion]);
 
   // =============================================
-  // APROBAR DOCUMENTOS
-  // =============================================
-  const aprobarDocumentos = useCallback(async () => {
-    setSaving(true);
-    try {
-      await cambiarEstado('documentos_aprobados', notasDocumentos);
-      setActiveStep(1);
-    } catch (err: any) {
-      alert(err.message || 'Error al aprobar documentos');
-    } finally {
-      setSaving(false);
-    }
-  }, [notasDocumentos, cambiarEstado]);
-
-  // =============================================
-  // SOLICITAR CORRECCIÓN DE DOCUMENTOS
-  // =============================================
-  const solicitarDocumentos = useCallback(async (observaciones: string) => {
-    setSaving(true);
-    try {
-      await cambiarEstado('documentos_pendientes', observaciones);
-      alert('✅ Se ha solicitado corrección de documentos. Se notificará al padre de familia.');
-      await fetchPreinscripcion();
-    } catch (err: any) {
-      alert(err.message || 'Error al solicitar documentos');
-    } finally {
-      setSaving(false);
-    }
-  }, [cambiarEstado, fetchPreinscripcion]);
-
-  // =============================================
   // APROBAR DATOS PERSONALES
   // =============================================
   const aprobarDatos = useCallback(async () => {
     setSaving(true);
     try {
       await cambiarEstado('entrevista_pendiente', notasVerificacionDatos);
-      setActiveStep(2);
+      setActiveStep(1);
     } catch (err: any) {
       alert(err.message || 'Error al aprobar datos');
     } finally {
@@ -189,17 +160,12 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
   // RECHAZAR PREINSCRIPCIÓN
   // =============================================
   const rechazar = useCallback(async (motivo: string) => {
-    if (!confirm('¿Está seguro de rechazar esta preinscripción? Esto liberará el cupo asignado.')) {
-      return;
-    }
-
     setSaving(true);
     try {
       await cambiarEstado('rechazada', motivo);
-      alert('❌ Preinscripción rechazada. Se ha liberado el cupo y notificado al padre.');
       router.push('/dashboard/preinscripciones');
     } catch (err: any) {
-      alert(err.message || 'Error al rechazar');
+      throw err;
     } finally {
       setSaving(false);
     }
@@ -210,38 +176,39 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
   // =============================================
   const confirmarDecision = useCallback(async () => {
     if (!decisionFinal) {
-      alert('⚠️ Debe seleccionar una decisión final');
-      return;
+      throw new Error('Debe seleccionar una decisión final');
     }
 
     if (decisionFinal === 'aprobada' && !preinscripcion?.tiene_cupo_asignado && cuposDisponibles.length === 0) {
-      alert('⚠️ No hay cupos disponibles. No se puede aprobar sin un cupo asignado.');
-      return;
-    }
-
-    if (!confirm(`¿Confirmar decisión: ${decisionFinal.toUpperCase()}?`)) {
-      return;
+      throw new Error('No hay cupos disponibles. No se puede aprobar sin un cupo asignado.');
     }
 
     setSaving(true);
     try {
       await cambiarEstado(decisionFinal, notasDecisionFinal);
-      
-      if (decisionFinal === 'aprobada') {
-        alert('✅ Preinscripción APROBADA. Cupo asignado correctamente. Se ha notificado al padre.');
-      } else if (decisionFinal === 'rechazada') {
-        alert('❌ Preinscripción RECHAZADA. Cupo liberado. Se ha notificado al padre.');
-      } else {
-        alert('📋 Se ha solicitado información adicional.');
-      }
-      
       router.push('/dashboard/preinscripciones');
     } catch (err: any) {
-      alert(err.message || 'Error al confirmar decisión');
+      throw err;
     } finally {
       setSaving(false);
     }
   }, [decisionFinal, preinscripcion, cuposDisponibles, notasDecisionFinal, cambiarEstado, router]);
+
+  // =============================================
+  // PROMOVER DE LISTA DE ESPERA
+  // =============================================
+  const promoverEspera = useCallback(async (motivo?: string) => {
+    if (!preinscripcion) return;
+    setSaving(true);
+    try {
+      await preinscripcionService.promoverDeListaEspera(preinscripcion.id, motivo);
+      await fetchPreinscripcion();
+    } catch (err: any) {
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [preinscripcion, fetchPreinscripcion]);
 
   return {
     preinscripcion,
@@ -252,8 +219,6 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
     setActiveStep,
     
     // Notas
-    notasDocumentos,
-    setNotasDocumentos,
     notasVerificacionDatos,
     setNotasVerificacionDatos,
     notasDecisionFinal,
@@ -271,12 +236,11 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
     verificarCuposDisponibles,
     
     // Acciones
-    aprobarDocumentos,
-    solicitarDocumentos,
     aprobarDatos,
     cambiarEstado,
     rechazar,
     confirmarDecision,
+    promoverEspera,
     fetchPreinscripcion,
   };
 };

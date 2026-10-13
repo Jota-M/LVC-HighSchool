@@ -1,5 +1,6 @@
 // components/preinscripcion/revision/ModalVisorDocumento.tsx
 'use client';
+
 import React from 'react';
 import {
   Dialog,
@@ -9,9 +10,14 @@ import {
   Box,
   Button,
   Typography,
+  IconButton,
+  Stack,
+  useTheme,
+  alpha,
 } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
 import DownloadIcon from '@mui/icons-material/Download';
+import CloseIcon from '@mui/icons-material/Close';
 
 interface ModalVisorDocumentoProps {
   open: boolean;
@@ -28,6 +34,10 @@ export default function ModalVisorDocumento({
   onClose,
   documento,
 }: ModalVisorDocumentoProps) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const accent = isDark ? '#facc15' : '#0288d1';
+
   if (!documento) return null;
 
   const isImage = documento.url?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
@@ -41,28 +51,73 @@ export default function ModalVisorDocumento({
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 3,
+          borderRadius: '20px',
+          border: `1px solid ${alpha(accent, 0.25)}`,
+          backgroundImage: 'none',
+          overflow: 'hidden',
           minHeight: '80vh',
         },
       }}
     >
-      <DialogTitle
-        sx={{
-          borderBottom: 1,
-          borderColor: 'divider',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-        }}
-      >
-        <DescriptionIcon color="primary" />
-        <Box flex={1}>
-          <Typography variant="h6" fontWeight={700}>
-            {documento.nombre}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {documento.archivo}
-          </Typography>
+      {/* Título con el gradiente de Cupos */}
+      <DialogTitle sx={{ p: 0 }}>
+        <Box
+          sx={{
+            px: 3,
+            py: 2.2,
+            background: isDark
+              ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+              : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Box
+              sx={{
+                width: 42,
+                height: 42,
+                borderRadius: '12px',
+                bgcolor: isDark ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: isDark ? '#000' : '#fff',
+              }}
+            >
+              <DescriptionIcon />
+            </Box>
+            <Box>
+              <Typography
+                variant="subtitle1"
+                fontWeight={700}
+                sx={{ color: isDark ? '#000' : '#fff', lineHeight: 1.2 }}
+              >
+                {documento.nombre}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{ color: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.85)' }}
+              >
+                {documento.archivo}
+              </Typography>
+            </Box>
+          </Stack>
+
+          <IconButton
+            onClick={onClose}
+            size="small"
+            sx={{
+              color: isDark ? '#000' : '#fff',
+              bgcolor: isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)',
+              '&:hover': {
+                bgcolor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.35)',
+              },
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
         </Box>
       </DialogTitle>
 
@@ -73,7 +128,7 @@ export default function ModalVisorDocumento({
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          bgcolor: 'grey.100',
+          bgcolor: isDark ? alpha(theme.palette.background.default, 0.95) : 'grey.100',
         }}
       >
         {documento.url ? (
@@ -85,9 +140,10 @@ export default function ModalVisorDocumento({
               justifyContent: 'center',
               alignItems: 'center',
               overflow: 'auto',
-              bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
-              borderRadius: 2,
+              bgcolor: isDark ? alpha('#000', 0.4) : '#ffffff',
+              borderRadius: '14px',
+              border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+              p: 2,
             }}
           >
             {isImage ? (
@@ -95,71 +151,101 @@ export default function ModalVisorDocumento({
                 src={documento.url}
                 alt={documento.nombre}
                 style={{
-                  maxWidth: '90%',
-                  maxHeight: '90%',
+                  maxWidth: '100%',
+                  maxHeight: '100%',
                   objectFit: 'contain',
-                  borderRadius: '8px',
+                  borderRadius: 8,
                 }}
               />
             ) : isPDF ? (
               <iframe
-                src={documento.url}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  border: 'none',
-                  borderRadius: '8px',
-                }}
-                title="Vista previa del documento"
+                src={`${documento.url}#view=FitH`}
+                width="100%"
+                height="100%"
+                style={{ border: 'none', borderRadius: 8 }}
+                title={documento.nombre}
               />
             ) : (
               <Box textAlign="center" p={4}>
-                <DescriptionIcon
-                  sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }}
-                />
-                <Typography
-                  variant="h6"
-                  color="text.secondary"
-                  gutterBottom
-                >
-                  Vista previa no disponible
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  mb={3}
-                >
-                  Este tipo de archivo no se puede previsualizar
+                <DescriptionIcon sx={{ fontSize: 64, color: accent, mb: 2 }} />
+                <Typography variant="body1" fontWeight={600} mb={1}>
+                  Archivo no visualizable directamente
                 </Typography>
                 <Button
-                  startIcon={<DownloadIcon />}
-                  onClick={() => window.open(documento.url, '_blank')}
                   variant="contained"
+                  startIcon={<DownloadIcon />}
+                  component="a"
+                  href={documento.url}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{
+                    borderRadius: '12px',
+                    background: isDark
+                      ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                      : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                    color: isDark ? '#000' : '#fff',
+                    fontWeight: 700,
+                  }}
                 >
-                  Descargar archivo
+                  Descargar Archivo
                 </Button>
               </Box>
             )}
           </Box>
         ) : (
-          <Typography color="text.secondary">
-            No hay URL disponible
-          </Typography>
+          <Box textAlign="center" p={4}>
+            <Typography variant="body1" color="text.secondary">
+              No hay archivo cargado para este requisito
+            </Typography>
+          </Box>
         )}
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+      <DialogActions
+        sx={{
+          p: 2.5,
+          borderTop: `1px solid ${alpha(theme.palette.divider, 0.4)}`,
+          justifyContent: 'space-between',
+        }}
+      >
         <Button
-          startIcon={<DownloadIcon />}
-          onClick={() => window.open(documento.url, '_blank')}
-          variant="outlined"
-          disabled={!documento.url}
+          onClick={onClose}
+          sx={{
+            borderRadius: '10px',
+            color: 'text.secondary',
+            fontWeight: 600,
+          }}
         >
-          Descargar
-        </Button>
-        <Button onClick={onClose} variant="contained">
           Cerrar
         </Button>
+
+        {documento.url && (
+          <Button
+            variant="contained"
+            startIcon={<DownloadIcon />}
+            component="a"
+            href={documento.url}
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 3,
+              background: isDark
+                ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+              color: isDark ? '#000' : '#fff',
+              boxShadow: isDark
+                ? '0 4px 14px rgba(250,204,21,0.3)'
+                : '0 4px 14px rgba(2,136,209,0.3)',
+            }}
+          >
+            Descargar Documento
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

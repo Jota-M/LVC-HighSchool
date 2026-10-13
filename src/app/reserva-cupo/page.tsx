@@ -48,7 +48,8 @@ import {
   CancelOutlined as CancelIcon,
   Star as StarIcon,
   HourglassTop as HourglassTopIcon,
-  GroupAdd as GroupAddIcon
+  GroupAdd as GroupAddIcon,
+  WhatsApp as WhatsAppIcon
 } from '@mui/icons-material';
 import Header from '../login/Header';
 import reservaCupoService from '@/services/reservaCupoService';
@@ -1796,8 +1797,32 @@ export default function ReservaCupoPage() {
                       </Grid>
                     </Grid>
 
+                    {/* Notificación informativa sobre confirmación WhatsApp oficial (idéntico a PreInscripciones) */}
+                    <Box
+                      sx={{
+                        mt: 2.5,
+                        p: 2,
+                        borderRadius: '14px',
+                        bgcolor: isDark ? 'rgba(37, 211, 102, 0.08)' : 'rgba(37, 211, 102, 0.08)',
+                        border: `1.5px solid ${isDark ? 'rgba(37, 211, 102, 0.3)' : 'rgba(37, 211, 102, 0.35)'}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                      }}
+                    >
+                      <WhatsAppIcon sx={{ color: '#25D366', fontSize: 28 }} />
+                      <Box>
+                        <Typography variant="body2" fontWeight={700} sx={{ color: isDark ? '#34d399' : '#047857' }}>
+                          Confirmación Inmediata por WhatsApp Oficial
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: isDark ? '#cbd5e1' : '#475569', display: 'block', mt: 0.25 }}>
+                          Al confirmar el registro, se enviará automáticamente un mensaje oficial de confirmación con el código y recibo al número de WhatsApp del tutor.
+                        </Typography>
+                      </Box>
+                    </Box>
+
                     {/* Botones de Navegación con alto contraste y estilo PreInscripción */}
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 4 }}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 3.5 }}>
                       <Button
                         variant="outlined"
                         onClick={() => setActiveStep(0)}

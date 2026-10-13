@@ -1,13 +1,13 @@
 // src/hooks/usePreinscripciones.ts
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import preinscripcionService from '../services/preinscripcionnService';
+import preinscripcionService from '@/services/preinscripcionService';
 import { 
   Preinscripcion, 
   PreinscripcionStats, 
   PreinscripcionFilters,
   EstadoPreinscripcion 
-} from '../types/preinscripcioonTypes';
+} from '@/types/preinscripcionTypes';
 
 interface UsePreinscripcionesReturn {
   preinscripciones: Preinscripcion[];
@@ -26,6 +26,7 @@ interface UsePreinscripcionesReturn {
   fetchPreinscripciones: () => Promise<void>;
   deletePreinscripcion: (id: number) => Promise<void>;
   changeEstado: (id: number, estado: EstadoPreinscripcion, observaciones?: string) => Promise<void>;
+  promoverEspera: (id: number, motivo?: string) => Promise<void>;
   exportToExcel: () => Promise<void>;
   exportToPDF: () => Promise<void>; // 🆕
 }
@@ -67,6 +68,10 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
       p.estado?.toLowerCase() === 'convertida'
     ).length;
     
+    const en_espera = preinscripciones.filter(p =>
+      p.estado?.toLowerCase() === 'en_espera'
+    ).length;
+
     // 🆕 Stats de cupos
     const con_cupo_asignado = preinscripciones.filter(p => 
       p.tiene_cupo_asignado === true
@@ -80,6 +85,7 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
       aprobadas,
       rechazadas,
       convertidas,
+      en_espera,
       con_cupo_asignado,
       sin_cupo_asignado,
     };
@@ -91,30 +97,31 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
   const filteredPreinscripciones = useMemo(() => {
     return preinscripciones.filter(p => {
       // Búsqueda por texto
-      const matchSearch = filters.searchTerm === '' || 
-        p.estudiante_nombre?.toLowerCase().includes(filters.searchTerm.toLowerCase()) || 
-        p.estudiante_ci?.includes(filters.searchTerm) ||
-        p.codigo_inscripcion?.toLowerCase().includes(filters.searchTerm.toLowerCase());
+      const searchTerm = (filters.searchTerm || '').toLowerCase();
+      const matchSearch = !searchTerm || 
+        (p.estudiante_nombre?.toLowerCase() || '').includes(searchTerm) || 
+        (p.estudiante_ci || '').includes(searchTerm) ||
+        (p.codigo_inscripcion?.toLowerCase() || '').includes(searchTerm);
       
       // Filtro por estado
-      const matchEstado = filters.estadoFilter === 'todos' || 
+      const matchEstado = !filters.estadoFilter || filters.estadoFilter === 'todos' || 
         p.estado?.toLowerCase() === filters.estadoFilter.toLowerCase();
       
       // Filtro por grado
-      const matchGrado = filters.gradoFilter === 'todos' || 
+      const matchGrado = !filters.gradoFilter || filters.gradoFilter === 'todos' || 
         p.grado_solicitado === filters.gradoFilter ||
         p.grado_nombre === filters.gradoFilter;
       
       // 🆕 Filtro por turno
-      const matchTurno = filters.turnoFilter === 'todos' ||
+      const matchTurno = !filters.turnoFilter || filters.turnoFilter === 'todos' ||
         p.turno_nombre === filters.turnoFilter;
       
       // 🆕 Filtro por periodo
-      const matchPeriodo = filters.periodoFilter === 'todos' ||
+      const matchPeriodo = !filters.periodoFilter || filters.periodoFilter === 'todos' ||
         p.periodo_nombre === filters.periodoFilter;
       
       // 🆕 Filtro por cupo
-      const matchCupo = filters.conCupoFilter === 'todos' ||
+      const matchCupo = !filters.conCupoFilter || filters.conCupoFilter === 'todos' ||
         (filters.conCupoFilter === 'con_cupo' && p.tiene_cupo_asignado) ||
         (filters.conCupoFilter === 'sin_cupo' && !p.tiene_cupo_asignado);
       
@@ -169,6 +176,19 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
       await fetchPreinscripciones();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al cambiar estado';
+      throw new Error(message);
+    }
+  }, [fetchPreinscripciones]);
+
+  // =============================================
+  // PROMOVER DE LISTA DE ESPERA
+  // =============================================
+  const promoverEspera = useCallback(async (id: number, motivo?: string) => {
+    try {
+      await preinscripcionService.promoverDeListaEspera(id, motivo);
+      await fetchPreinscripciones();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al promover de lista de espera';
       throw new Error(message);
     }
   }, [fetchPreinscripciones]);
@@ -283,6 +303,7 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
     fetchPreinscripciones,
     deletePreinscripcion,
     changeEstado,
+    promoverEspera,
     exportToExcel,
     exportToPDF,
   };

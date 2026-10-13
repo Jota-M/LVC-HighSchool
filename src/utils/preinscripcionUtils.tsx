@@ -1,7 +1,7 @@
 // src/app/dashboard/preinscripciones/utils/preinscripcion.utils.tsx
 
 import React from 'react';
-import { EstadoConfig, EstadoPreinscripcion, GradoSolicitado } from '../types/preinscripcioonTypes';
+import { EstadoConfig, EstadoPreinscripcion, GradoSolicitado } from '@/types/preinscripcionTypes';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -60,6 +60,12 @@ export const getEstadoConfig = (estado?: EstadoPreinscripcion): EstadoConfig => 
       color: '#7b1fa2', 
       bgcolor: '#e1bee7', 
       icon: <SchoolIcon /> 
+    },
+    'en_espera': { 
+      label: 'En Lista de Espera', 
+      color: '#d97706', 
+      bgcolor: '#fef3c7', 
+      icon: <HourglassEmptyIcon /> 
     },
   };
   

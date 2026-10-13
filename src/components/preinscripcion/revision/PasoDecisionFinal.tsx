@@ -1,37 +1,45 @@
 // components/preinscripcion/revision/PasoDecisionFinal.tsx
 'use client';
+
 import React from 'react';
 import {
   Box,
-  Card,
-  CardContent,
+  Paper,
   Typography,
   LinearProgress,
   Chip,
   TextField,
   Button,
-  Divider,
   Grid,
-  Paper,
   Avatar,
   Alert,
   AlertTitle,
+  CircularProgress,
+  Stack,
   useTheme,
   alpha,
-  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Divider,
 } from '@mui/material';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 import CloseIcon from '@mui/icons-material/Close';
 import PendingIcon from '@mui/icons-material/Pending';
 import SendIcon from '@mui/icons-material/Send';
 import DownloadIcon from '@mui/icons-material/Download';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
-import EventBusyIcon from '@mui/icons-material/EventBusy';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import EventSeatIcon from '@mui/icons-material/EventSeat';
+import SchoolIcon from '@mui/icons-material/School';
 import { PreInscripcionDetalle, EstadoPreInscripcion } from '@/types/preinscripcionTypes';
 
 interface PasoDecisionFinalProps {
@@ -43,14 +51,11 @@ interface PasoDecisionFinalProps {
   confirmarDecision: () => Promise<void>;
   setActiveStep: (step: number) => void;
   saving: boolean;
-  
-  // 🆕 Props de cupos
   cuposDisponibles: any[];
   cupoSeleccionado: number | null;
   setCupoSeleccionado: (id: number | null) => void;
   verificandoCupo: boolean;
 }
-
 
 export default function PasoDecisionFinal({
   preinscripcion,
@@ -68,9 +73,35 @@ export default function PasoDecisionFinal({
 }: PasoDecisionFinalProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const accent = isDark ? '#facc15' : '#0288d1';
+  const accentDark = isDark ? '#f59e0b' : '#01579b';
+
+  // Estado para el modal de confirmación
+  const [openModalConfirmacion, setOpenModalConfirmacion] = React.useState(false);
+  const [errorModal, setErrorModal] = React.useState<string | null>(null);
+
+  const handleAbrirModal = () => {
+    setErrorModal(null);
+    setOpenModalConfirmacion(true);
+  };
+
+  const handleCerrarModal = () => {
+    if (saving) return;
+    setOpenModalConfirmacion(false);
+    setErrorModal(null);
+  };
+
+  const handleEjecutarDecision = async () => {
+    try {
+      setErrorModal(null);
+      await confirmarDecision();
+    } catch (err: any) {
+      setErrorModal(err.message || 'Error al confirmar la decisión final');
+    }
+  };
 
   const nombreCompleto = `${preinscripcion.estudiante.nombres} ${preinscripcion.estudiante.apellido_paterno} ${preinscripcion.estudiante.apellido_materno || ''}`.trim();
-  const iniciales = `${preinscripcion.estudiante.nombres[0]}${preinscripcion.estudiante.apellido_paterno[0]}`;
+  const iniciales = `${preinscripcion.estudiante.nombres?.[0] || '?'}${preinscripcion.estudiante.apellido_paterno?.[0] || '?'}`.toUpperCase();
 
   const calcularEdad = (fechaNacimiento?: string) => {
     if (!fechaNacimiento) return 'No especificada';
@@ -85,610 +116,384 @@ export default function PasoDecisionFinal({
   };
 
   const getGradoLabel = (grado?: string | null) => {
-    const grados: Record<string, string> = {
-      PRE_KINDER: 'Pre-Kinder',
-      KINDER: 'Kinder',
-      PRIMERO_PRIMARIA: '1ro Primaria',
-      PRIMERO_SECUNDARIA: '1ro Secundaria',
-    };
-    return grados[grado || ''] || grado || 'No especificado';
+    if (!grado) return 'No especificado';
+    return grado.replace(/_/g, ' ');
   };
 
   const decisiones = [
     {
       key: 'aprobada' as EstadoPreInscripcion,
-      color: isDark ? '#10b981' : '#059669',
-      lightColor: isDark ? alpha('#10b981', 0.2) : alpha('#10b981', 0.1),
-      gradient: isDark
-        ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-        : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-      title: 'Aceptar Estudiante',
-      desc: 'Aprobar la admisión del estudiante al curso solicitado',
-      icon: <CheckCircleIcon sx={{ fontSize: 28 }} />,
+      color: '#10b981',
+      lightColor: alpha('#10b981', 0.12),
+      title: 'Aceptar y Admitir Estudiante',
+      desc: 'Aprobar la admisión formal del estudiante para la gestión escolar solicitada.',
+      icon: <CheckCircleIcon sx={{ fontSize: 26 }} />,
     },
     {
       key: 'rechazada' as EstadoPreInscripcion,
-      color: isDark ? '#ef4444' : '#dc2626',
-      lightColor: isDark ? alpha('#ef4444', 0.2) : alpha('#ef4444', 0.1),
-      gradient: isDark
-        ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-        : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-      title: 'Rechazar Estudiante',
-      desc: 'Denegar la admisión del estudiante',
-      icon: <CloseIcon sx={{ fontSize: 28 }} />,
+      color: '#ef4444',
+      lightColor: alpha('#ef4444', 0.12),
+      title: 'Denegar / Rechazar Admisión',
+      desc: 'Rechazar la solicitud de preinscripción (se notificará el motivo al tutor).',
+      icon: <CloseIcon sx={{ fontSize: 26 }} />,
     },
     {
       key: 'documentos_pendientes' as EstadoPreInscripcion,
-      color: isDark ? '#f59e0b' : '#d97706',
-      lightColor: isDark ? alpha('#f59e0b', 0.2) : alpha('#f59e0b', 0.1),
-      gradient: isDark
-        ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-        : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+      color: '#f59e0b',
+      lightColor: alpha('#f59e0b', 0.12),
       title: 'Solicitar Información Adicional',
-      desc: 'Requerir documentos o datos adicionales antes de decidir',
-      icon: <PendingIcon sx={{ fontSize: 28 }} />,
+      desc: 'Requerir documentación complementaria o aclaración previa a la decisión final.',
+      icon: <PendingIcon sx={{ fontSize: 26 }} />,
     },
   ];
 
-  // Estilos dinámicos
   const cardStyle = {
-    borderRadius: 4,
-    border: '1px solid',
-    borderColor: isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08),
-    boxShadow: isDark
-      ? '0 8px 32px rgba(0,0,0,0.4)'
-      : '0 8px 24px rgba(0,0,0,0.08)',
+    borderRadius: '24px',
+    border: `1px solid ${alpha(accent, 0.28)}`,
+    overflow: 'hidden',
     background: isDark
-      ? 'linear-gradient(135deg, rgba(30,41,59,0.8) 0%, rgba(15,23,42,0.9) 100%)'
+      ? 'linear-gradient(180deg, #0e1726 0%, #0b1320 100%)'
       : '#ffffff',
+    boxShadow: isDark
+      ? '0 10px 30px rgba(0, 0, 0, 0.4)'
+      : '0 4px 20px rgba(0, 0, 0, 0.05)',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    mb: 3,
     '&:hover': {
-      transform: 'translateY(-2px)',
+      borderColor: accent,
       boxShadow: isDark
-        ? '0 12px 40px rgba(0,0,0,0.5)'
-        : '0 12px 32px rgba(0,0,0,0.12)',
+        ? `0 14px 40px ${alpha(accent, 0.25)}, 0 0 20px ${alpha(accent, 0.15)}`
+        : `0 14px 30px ${alpha(accent, 0.2)}`,
+      transform: 'translateY(-3px)',
     },
   };
 
-  const headerIconStyle = {
-    width: 56,
-    height: 56,
-    borderRadius: 3,
-    background: isDark
-      ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
-      : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: isDark
-      ? '0 4px 20px rgba(251, 191, 36, 0.4)'
-      : '0 4px 15px rgba(245, 158, 11, 0.3)',
-    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-    '@keyframes pulse': {
-      '0%, 100%': { opacity: 1 },
-      '50%': { opacity: 0.8 },
-    },
-  };
   const cupoInfo = cuposDisponibles[0];
   const tieneCupoAsignado = preinscripcion.tiene_cupo_asignado;
 
   return (
     <>
-      {/* Header del paso */}
-      <Card sx={cardStyle}>
-        <CardContent sx={{ p: 3 }}>
+      {/* HEADER DEL PASO */}
+      <Paper elevation={0} sx={cardStyle}>
+        <Box sx={{ p: { xs: 2.5, sm: 3.5 } }}>
           <Box
             display="flex"
             justifyContent="space-between"
             alignItems="flex-start"
-            mb={2}
             flexWrap="wrap"
             gap={2}
           >
             <Box display="flex" alignItems="center" gap={2}>
-              <Box sx={headerIconStyle}>
-                <TaskAltIcon sx={{ color: '#fff', fontSize: 28 }} />
+              <Box
+                sx={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: '50%',
+                  background: isDark
+                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: isDark ? '#000' : '#fff',
+                  boxShadow: isDark
+                    ? '0 4px 16px rgba(250,204,21,0.35)'
+                    : '0 4px 16px rgba(2,136,209,0.35)',
+                }}
+              >
+                <TaskAltIcon sx={{ fontSize: 28 }} />
               </Box>
+
               <Box>
-                <Typography
-                  variant="h5"
-                  sx={{
-                    fontWeight: 700,
-                    mb: 0.5,
-                    background: isDark
-                      ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
-                      : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  Decisión Final
+                <Typography variant="h5" fontWeight={700} color="text.primary">
+                  Paso 3: Decisión Final y Asignación de Cupo
                 </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{ color: isDark ? alpha('#fff', 0.7) : 'text.secondary' }}
-                >
-                  Resolución final del proceso de admisión
+                <Typography variant="body2" color="text.secondary">
+                  Resolución del expediente de admisión y notificación a los padres
                 </Typography>
               </Box>
             </Box>
 
             <Chip
-              icon={<AccessTimeIcon />}
-              label="Última etapa"
+              icon={<AccessTimeIcon sx={{ fontSize: 16 }} />}
+              label="Etapa Resolutiva"
               sx={{
-                bgcolor: isDark ? alpha('#f59e0b', 0.2) : alpha('#f59e0b', 0.1),
-                color: isDark ? '#fbbf24' : '#d97706',
+                borderRadius: '10px',
                 fontWeight: 600,
-                border: '1px solid',
-                borderColor: isDark ? '#fbbf24' : '#f59e0b',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  bgcolor: isDark ? alpha('#f59e0b', 0.3) : alpha('#f59e0b', 0.15),
-                  transform: 'scale(1.05)',
-                },
+                bgcolor: alpha(accent, 0.12),
+                color: accent,
+                border: `1px solid ${alpha(accent, 0.3)}`,
               }}
             />
           </Box>
+        </Box>
+      </Paper>
 
-          <LinearProgress
-            variant="determinate"
-            value={100}
-            sx={{
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08),
-              '& .MuiLinearProgress-bar': {
+      {/* RESUMEN DEL PROCESO PREVIO */}
+      <Paper elevation={0} sx={cardStyle}>
+        <Box sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+            <Box
+              sx={{
+                width: 5,
+                height: 22,
+                borderRadius: 1,
                 background: isDark
-                  ? 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)'
-                  : 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)',
-                borderRadius: 4,
-                transition: 'all 0.5s ease',
-              },
-            }}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Resumen de Evaluación */}
-      <Card sx={{ ...cardStyle, mb: 3, mt: 3 }}>
-        <CardContent sx={{ p: 3 }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 700,
-              mb: 3,
-              color: isDark ? '#fff' : 'text.primary',
-            }}
-          >
-            Resumen de Evaluación
-          </Typography>
+                  ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                  : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+              }}
+            />
+            <Typography variant="h6" fontWeight={700} color="text.primary">
+              Resumen de Fases Evaluadas
+            </Typography>
+          </Box>
 
           <Grid container spacing={2}>
             {[
               {
-                icon: CheckCircleIcon,
-                title: 'Documentos',
-                status: 'Verificados',
-                isComplete: true,
-                delay: 0,
-              },
-              {
-                icon: CheckCircleIcon,
-                title: 'Datos Personales',
+                title: 'Datos Personales y Tutores',
+                desc: 'Información del estudiante y tutores legales',
                 status: 'Confirmados',
-                isComplete: true,
-                delay: 0.1,
+                color: '#10b981',
               },
               {
-                icon: PendingIcon,
-                title: 'Decisión Final',
-                status: 'Pendiente',
-                isComplete: false,
-                delay: 0.2,
+                title: 'Entrevista de Admisión',
+                desc: 'Evaluación y reunión directiva',
+                status: preinscripcion.estado.includes('entrevista') ? 'Realizada / Coordinada' : 'Completada',
+                color: '#10b981',
               },
-            ].map((item, index) => (
-              <Grid size={{xs:12, md:4}} key={index}>
-                <Paper
-                  elevation={0}
+            ].map((fase, idx) => (
+              <Grid size={{ xs: 12, md: 6 }} key={idx}>
+                <Box
                   sx={{
-                    p: 3,
-                    borderRadius: 3,
-                    bgcolor: item.isComplete
-                      ? isDark
-                        ? alpha('#10b981', 0.15)
-                        : alpha('#10b981', 0.1)
-                      : isDark
-                      ? alpha('#fff', 0.05)
-                      : alpha('#000', 0.02),
-                    border: '2px solid',
-                    borderColor: item.isComplete
-                      ? isDark
-                        ? alpha('#10b981', 0.3)
-                        : '#10b981'
-                      : isDark
-                      ? alpha('#fff', 0.1)
-                      : alpha('#000', 0.08),
-                    textAlign: 'center',
-                    transition: 'all 0.3s ease',
-                    animation: `fadeInUp 0.5s ease ${item.delay}s both`,
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: item.isComplete
-                        ? isDark
-                          ? '0 8px 20px rgba(16, 185, 129, 0.3)'
-                          : '0 8px 20px rgba(16, 185, 129, 0.2)'
-                        : isDark
-                        ? '0 8px 20px rgba(245, 158, 11, 0.3)'
-                        : '0 8px 20px rgba(245, 158, 11, 0.2)',
-                    },
-                    '@keyframes fadeInUp': {
-                      from: {
-                        opacity: 0,
-                        transform: 'translateY(20px)',
-                      },
-                      to: {
-                        opacity: 1,
-                        transform: 'translateY(0)',
-                      },
-                    },
+                    p: 2,
+                    borderRadius: '14px',
+                    bgcolor: isDark ? alpha('#fff', 0.03) : alpha(accent, 0.03),
+                    border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha(accent, 0.15)}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
                   }}
                 >
-                  <item.icon
+                  <Box
                     sx={{
-                      fontSize: 40,
-                      color: item.isComplete
-                        ? isDark
-                          ? '#6ee7b7'
-                          : '#059669'
-                        : isDark
-                        ? '#fbbf24'
-                        : '#d97706',
-                      mb: 1,
+                      width: 38,
+                      height: 38,
+                      borderRadius: '10px',
+                      bgcolor: alpha(fase.color, 0.15),
+                      color: fase.color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <CheckCircleIcon fontSize="small" />
+                  </Box>
+                  <Box flex={1}>
+                    <Typography variant="subtitle2" fontWeight={700} color="text.primary">
+                      {fase.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {fase.desc}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    label={fase.status}
+                    size="small"
+                    sx={{
+                      height: 22,
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      bgcolor: alpha(fase.color, 0.15),
+                      color: fase.color,
                     }}
                   />
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 700,
-                      color: item.isComplete
-                        ? isDark
-                          ? '#6ee7b7'
-                          : '#059669'
-                        : isDark
-                        ? '#fbbf24'
-                        : '#d97706',
-                    }}
-                  >
-                    {item.title}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: isDark ? alpha('#fff', 0.7) : 'text.secondary' }}
-                  >
-                    {item.status}
-                  </Typography>
-                </Paper>
+                </Box>
               </Grid>
             ))}
           </Grid>
-        </CardContent>
-      </Card>
+        </Box>
+      </Paper>
 
-      {/* 🆕 SECCIÓN DE CUPO (mostrar solo si decide aprobar) */}
+      {/* GESTIÓN DE CUPO (MOSTRAR SI DECIDE APROBAR) */}
       {decisionFinal === 'aprobada' && (
-        <Card sx={{ ...cardStyle, mb: 3 }}>
-          <CardContent sx={{ p: 3 }}>
-            <Box display="flex" alignItems="center" gap={2} mb={3}>
-              <EventAvailableIcon
+        <Paper elevation={0} sx={cardStyle}>
+          <Box sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+              <Box
                 sx={{
-                  fontSize: 28,
-                  color: isDark ? '#6ee7b7' : '#10b981',
+                  width: 5,
+                  height: 22,
+                  borderRadius: 1,
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 }}
               />
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 700,
-                  color: isDark ? '#fff' : 'text.primary',
-                }}
-              >
-                Asignación de Cupo
+              <Typography variant="h6" fontWeight={700} color="text.primary">
+                Asignación de Vacante / Cupo
               </Typography>
             </Box>
 
             {verificandoCupo ? (
-              <Box textAlign="center" py={3}>
-                <CircularProgress size={40} />
+              <Box textAlign="center" py={4}>
+                <CircularProgress size={38} sx={{ color: accent }} />
                 <Typography variant="body2" color="text.secondary" mt={2}>
-                  Verificando disponibilidad de cupos...
+                  Verificando aforo y cupos en tiempo real...
                 </Typography>
               </Box>
             ) : tieneCupoAsignado ? (
-              <Alert 
-                severity="success" 
-                sx={{ 
-                  borderRadius: 2,
-                  bgcolor: isDark ? alpha('#10b981', 0.15) : alpha('#10b981', 0.1),
-                  border: '2px solid',
-                  borderColor: isDark ? alpha('#10b981', 0.3) : '#10b981',
+              <Alert
+                severity="success"
+                icon={<EventAvailableIcon />}
+                sx={{
+                  borderRadius: '14px',
+                  bgcolor: alpha('#10b981', 0.1),
+                  border: `1.5px solid ${alpha('#10b981', 0.35)}`,
                 }}
               >
-                <AlertTitle sx={{ fontWeight: 600 }}>
-                  ✅ Cupo Ya Asignado
+                <AlertTitle sx={{ fontWeight: 700, color: '#10b981' }}>
+                  Cupo Previamente Asignado
                 </AlertTitle>
-                <Typography variant="body2">
-                  Esta preinscripción ya tiene un cupo asignado desde su creación.
+                <Typography variant="body2" color="text.primary" mb={1.5}>
+                  Este postulante ya cuenta con una vacante reservada en el sistema.
                 </Typography>
-                {cupoInfo && (
-                  <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    <Chip 
-                      label={`Grado: ${cupoInfo.grado_nombre}`} 
-                      size="small"
-                      sx={{ bgcolor: alpha('#10b981', 0.2), color: isDark ? '#6ee7b7' : '#065f46' }}
-                    />
-                    <Chip 
-                      label={`Turno: ${cupoInfo.turno_nombre}`} 
-                      size="small"
-                      sx={{ bgcolor: alpha('#10b981', 0.2), color: isDark ? '#6ee7b7' : '#065f46' }}
-                    />
-                    <Chip 
-                      label={`Disponibles: ${cupoInfo.cupos_disponibles}/${cupoInfo.cupos_totales}`} 
-                      size="small"
-                      sx={{ bgcolor: alpha('#10b981', 0.2), color: isDark ? '#6ee7b7' : '#065f46' }}
-                    />
-                  </Box>
-                )}
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  <Chip
+                    label={`Grado: ${preinscripcion.grado_nombre || 'Registrado'}`}
+                    size="small"
+                    sx={{ bgcolor: alpha('#10b981', 0.2), color: '#10b981', fontWeight: 700 }}
+                  />
+                  <Chip
+                    label={`Turno: ${preinscripcion.turno_nombre || 'Mañana'}`}
+                    size="small"
+                    sx={{ bgcolor: alpha('#10b981', 0.2), color: '#10b981', fontWeight: 700 }}
+                  />
+                  <Chip
+                    label={`Periodo: ${preinscripcion.periodo_nombre || 'Gestión Vigente'}`}
+                    size="small"
+                    sx={{ bgcolor: alpha('#10b981', 0.2), color: '#10b981', fontWeight: 700 }}
+                  />
+                </Stack>
               </Alert>
-            ) : cuposDisponibles.length > 0 && cupoInfo ? (
+            ) : cupoInfo ? (
               <>
-                <Alert 
-                  severity="info" 
-                  sx={{ 
-                    mb: 2,
-                    borderRadius: 2,
-                    bgcolor: isDark ? alpha('#3b82f6', 0.15) : alpha('#3b82f6', 0.1),
+                <Alert
+                  severity="info"
+                  sx={{
+                    mb: 2.5,
+                    borderRadius: '14px',
+                    bgcolor: alpha(accent, 0.08),
+                    border: `1px solid ${alpha(accent, 0.25)}`,
+                    color: 'text.primary',
                   }}
                 >
-                  <AlertTitle sx={{ fontWeight: 600 }}>
-                    Cupo Disponible
+                  <AlertTitle sx={{ fontWeight: 700, color: accent }}>
+                    Cupo Disponible para Asignación
                   </AlertTitle>
-                  <Typography variant="body2">
-                    Se ha encontrado un cupo disponible que se asignará automáticamente al aprobar.
-                  </Typography>
+                  Al confirmar la aprobación, el sistema descontará 1 vacante de la configuración oficial.
                 </Alert>
 
+                {/* Tarjeta de Cupo con estilo CuposTab */}
                 <Paper
                   elevation={0}
                   sx={{
-                    p: 3,
-                    borderRadius: 3,
-                    bgcolor: isDark ? alpha('#10b981', 0.1) : alpha('#10b981', 0.05),
-                    border: '2px solid',
-                    borderColor: isDark ? alpha('#10b981', 0.3) : '#10b981',
+                    p: 2.5,
+                    borderRadius: '16px',
+                    bgcolor: isDark ? alpha('#fff', 0.03) : alpha(accent, 0.03),
+                    border: `1.5px solid ${alpha(accent, 0.3)}`,
                   }}
                 >
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                        Grado
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid size={{ xs: 12, sm: 4 }}>
+                      <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                        GRADO Y TURNO
                       </Typography>
-                      <Typography variant="h6" sx={{ fontWeight: 700, color: isDark ? '#6ee7b7' : '#065f46' }}>
+                      <Typography variant="subtitle1" fontWeight={700} color="text.primary">
                         {cupoInfo.grado_nombre}
                       </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                        Turno
-                      </Typography>
-                      <Typography variant="h6" sx={{ fontWeight: 700, color: isDark ? '#6ee7b7' : '#065f46' }}>
-                        {cupoInfo.turno_nombre}
+                      <Typography variant="caption" color={accent} fontWeight={600}>
+                        Turno: {cupoInfo.turno_nombre} ({cupoInfo.periodo_nombre})
                       </Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                        Periodo
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                        {cupoInfo.periodo_nombre}
-                      </Typography>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                        Disponibilidad
-                      </Typography>
-                      <Box display="flex" alignItems="center" gap={1} mt={0.5}>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={(cupoInfo.cupos_ocupados / cupoInfo.cupos_totales) * 100}
-                          sx={{ 
-                            flex: 1, 
-                            height: 8, 
-                            borderRadius: 2,
-                            bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#000', 0.1),
-                            '& .MuiLinearProgress-bar': {
-                              bgcolor: isDark ? '#6ee7b7' : '#10b981',
-                            }
-                          }}
-                        />
-                        <Typography variant="body2" fontWeight={600}>
-                          {cupoInfo.cupos_disponibles}/{cupoInfo.cupos_totales}
+
+                    <Grid size={{ xs: 12, sm: 8 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                          OCUPACIÓN DEL CUPO
+                        </Typography>
+                        <Typography variant="caption" fontWeight={700} color="#10b981">
+                          {cupoInfo.cupos_disponibles} disponibles de {cupoInfo.cupos_totales}
                         </Typography>
                       </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={((cupoInfo.cupos_ocupados || 0) / (cupoInfo.cupos_totales || 1)) * 100}
+                        sx={{
+                          height: 8,
+                          borderRadius: 4,
+                          bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08),
+                          '& .MuiLinearProgress-bar': {
+                            bgcolor: '#10b981',
+                            borderRadius: 4,
+                          },
+                        }}
+                      />
                     </Grid>
                   </Grid>
                 </Paper>
               </>
             ) : (
-              <Alert 
-                severity="warning" 
+              <Alert
+                severity="warning"
                 icon={<WarningAmberIcon />}
-                sx={{ 
-                  borderRadius: 2,
-                  bgcolor: isDark ? alpha('#f59e0b', 0.15) : alpha('#f59e0b', 0.1),
-                  border: '2px solid',
-                  borderColor: isDark ? alpha('#f59e0b', 0.3) : '#f59e0b',
+                sx={{
+                  borderRadius: '14px',
+                  bgcolor: alpha('#f59e0b', 0.1),
+                  border: `1.5px solid ${alpha('#f59e0b', 0.35)}`,
                 }}
               >
-                <AlertTitle sx={{ fontWeight: 600 }}>
-                  ⚠️ No Hay Cupos Disponibles
-                </AlertTitle>
-                <Typography variant="body2" mb={2}>
-                  No se encontraron cupos disponibles para este grado y turno. 
-                  No podrás aprobar la preinscripción sin un cupo asignado.
-                </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => window.open('/dashboard/cupos', '_blank')}
-                  startIcon={<EventAvailableIcon />}
-                  sx={{
-                    borderColor: isDark ? '#fbbf24' : '#f59e0b',
-                    color: isDark ? '#fbbf24' : '#d97706',
-                    '&:hover': {
-                      bgcolor: isDark ? alpha('#f59e0b', 0.1) : alpha('#f59e0b', 0.05),
-                      borderColor: isDark ? '#fbbf24' : '#d97706',
-                    }
-                  }}
-                >
-                  Gestionar Cupos
-                </Button>
+                <AlertTitle sx={{ fontWeight: 700 }}>No hay cupos disponibles</AlertTitle>
+                No se encontró disponibilidad activa para este curso. Puedes verificar la configuración de cupos en el módulo de Cupos.
+                <Box mt={1.5}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => window.open('/dashboard/cupos', '_blank')}
+                    sx={{
+                      borderRadius: '10px',
+                      borderColor: alpha('#f59e0b', 0.6),
+                      color: '#f59e0b',
+                    }}
+                  >
+                    Ver Gestión de Cupos
+                  </Button>
+                </Box>
               </Alert>
             )}
-          </CardContent>
-        </Card>
+          </Box>
+        </Paper>
       )}
 
-      {/* Información del Estudiante */}
-      <Card sx={{ ...cardStyle, mb: 3 }}>
-        <CardContent sx={{ p: 3 }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 700,
-              mb: 3,
-              color: isDark ? '#fff' : 'text.primary',
-            }}
-          >
-            Información del Estudiante
-          </Typography>
-
-          <Box display="flex" alignItems="center" gap={3} mb={3} flexWrap="wrap">
-            <Avatar
+      {/* SELECCIÓN DE DECISIÓN FINAL */}
+      <Paper elevation={0} sx={cardStyle}>
+        <Box sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+            <Box
               sx={{
-                width: 80,
-                height: 80,
+                width: 5,
+                height: 22,
+                borderRadius: 1,
                 background: isDark
-                  ? 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)'
-                  : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                fontSize: '2rem',
-                fontWeight: 700,
-                boxShadow: isDark
-                  ? '0 4px 20px rgba(96, 165, 250, 0.4)'
-                  : '0 4px 20px rgba(59, 130, 246, 0.3)',
-                animation: 'scaleIn 0.5s ease both',
-                '@keyframes scaleIn': {
-                  from: {
-                    opacity: 0,
-                    transform: 'scale(0.5)',
-                  },
-                  to: {
-                    opacity: 1,
-                    transform: 'scale(1)',
-                  },
-                },
+                  ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                  : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
               }}
-            >
-              {iniciales}
-            </Avatar>
-            <Box flex={1}>
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 700,
-                  color: isDark ? '#fff' : 'text.primary',
-                }}
-              >
-                {nombreCompleto}
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{ color: isDark ? alpha('#fff', 0.7) : 'text.secondary' }}
-              >
-                Solicitante de admisión • {calcularEdad(preinscripcion.estudiante.fecha_nacimiento)}
-              </Typography>
-            </Box>
+            />
+            <Typography variant="h6" fontWeight={700} color="text.primary">
+              Resolución de Admisión
+            </Typography>
           </Box>
 
-          <Grid container spacing={2}>
-            {[
-              {
-                label: 'Curso Anterior',
-                value: preinscripcion.estudiante.ultimo_grado_cursado || 'No especificado',
-              },
-              {
-                label: 'Curso Solicitado',
-                value: getGradoLabel(preinscripcion.estudiante.grado_solicitado),
-              },
-            ].map((item, idx) => (
-              <Grid size={{xs:12, sm:6}} key={idx}>
-                <Box
-                  sx={{
-                    p: 2,
-                    borderRadius: 2,
-                    bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.02),
-                    border: '1px solid',
-                    borderColor: isDark ? alpha('#fff', 0.1) : alpha('#000', 0.08),
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      bgcolor: isDark ? alpha('#fff', 0.08) : alpha('#f59e0b', 0.05),
-                      borderColor: isDark ? alpha('#fbbf24', 0.3) : alpha('#f59e0b', 0.2),
-                    },
-                  }}
-                >
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: isDark ? alpha('#fbbf24', 0.8) : '#d97706',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                      fontSize: '0.7rem',
-                    }}
-                  >
-                    {item.label}
-                  </Typography>
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      fontWeight: 600,
-                      color: isDark ? '#fff' : 'text.primary',
-                    }}
-                  >
-                    {item.value}
-                  </Typography>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </CardContent>
-      </Card>
-
-      {/* Decisión de Admisión */}
-      <Card sx={{ ...cardStyle, mb: 3 }}>
-        <CardContent sx={{ p: 3 }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 700,
-              mb: 3,
-              color: isDark ? '#fff' : 'text.primary',
-            }}
-          >
-            Decisión de Admisión
-          </Typography>
-
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
-            {decisiones.map(({ key, color, lightColor, gradient, title, desc, icon }, index) => {
+          <Stack spacing={2} sx={{ mb: 3 }}>
+            {decisiones.map(({ key, color, lightColor, title, desc, icon }) => {
               const isSelected = decisionFinal === key;
 
               return (
@@ -697,284 +502,429 @@ export default function PasoDecisionFinal({
                   elevation={0}
                   onClick={() => setDecisionFinal(key)}
                   sx={{
-                    p: 3,
-                    borderRadius: 3,
-                    backgroundColor: isSelected
+                    p: 2.5,
+                    borderRadius: '16px',
+                    bgcolor: isSelected
                       ? lightColor
                       : isDark
-                      ? alpha('#fff', 0.03)
+                      ? alpha('#fff', 0.02)
                       : alpha('#000', 0.02),
                     border: `2px solid ${
                       isSelected
                         ? color
                         : isDark
-                        ? alpha('#fff', 0.1)
-                        : 'transparent'
+                        ? alpha('#fff', 0.08)
+                        : alpha('#000', 0.08)
                     }`,
                     cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    animation: `slideIn 0.5s ease ${index * 0.1}s both`,
+                    transition: 'all 0.25s ease',
                     '&:hover': {
-                      transform: 'translateX(8px)',
                       borderColor: color,
-                      boxShadow: isDark
-                        ? `0 4px 20px ${alpha(color, 0.3)}`
-                        : `0 4px 20px ${alpha(color, 0.2)}`,
-                    },
-                    '@keyframes slideIn': {
-                      from: {
-                        opacity: 0,
-                        transform: 'translateX(-20px)',
-                      },
-                      to: {
-                        opacity: 1,
-                        transform: 'translateX(0)',
-                      },
+                      transform: 'translateX(4px)',
+                      boxShadow: `0 4px 18px ${alpha(color, 0.2)}`,
                     },
                   }}
                 >
                   <Box display="flex" alignItems="center" gap={2}>
                     <Box
                       sx={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: '50%',
-                        background: gradient,
+                        width: 44,
+                        height: 44,
+                        borderRadius: '12px',
+                        bgcolor: alpha(color, 0.15),
+                        color: color,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: '#fff',
-                        boxShadow: isDark
-                          ? `0 4px 15px ${alpha(color, 0.4)}`
-                          : `0 4px 15px ${alpha(color, 0.3)}`,
-                        transition: 'all 0.3s ease',
-                        ...(isSelected && {
-                          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        }),
                       }}
                     >
                       {icon}
                     </Box>
+
                     <Box flex={1}>
-                      <Typography
-                        variant="h6"
-                        sx={{
-                          fontWeight: 700,
-                          color: isSelected
-                            ? color
-                            : isDark
-                            ? '#fff'
-                            : 'text.primary',
-                        }}
-                      >
+                      <Typography variant="subtitle1" fontWeight={700} color={isSelected ? color : 'text.primary'}>
                         {title}
                       </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ color: isDark ? alpha('#fff', 0.7) : 'text.secondary' }}
-                      >
+                      <Typography variant="body2" color="text.secondary">
                         {desc}
                       </Typography>
                     </Box>
+
+                    <Chip
+                      label={isSelected ? 'Seleccionado' : 'Elegir'}
+                      size="small"
+                      sx={{
+                        borderRadius: '8px',
+                        fontWeight: 700,
+                        bgcolor: isSelected ? color : 'transparent',
+                        color: isSelected ? '#fff' : 'text.secondary',
+                        border: `1px solid ${isSelected ? color : alpha(theme.palette.divider, 0.8)}`,
+                      }}
+                    />
                   </Box>
                 </Paper>
               );
             })}
-          </Box>
+          </Stack>
+
+          <Typography variant="subtitle2" fontWeight={700} color="text.primary" sx={{ mb: 1.5 }}>
+            Justificación o Notas de la Decisión:
+          </Typography>
 
           <TextField
             fullWidth
             multiline
-            rows={4}
-            placeholder="Justificación de la decisión o comentarios adicionales..."
+            rows={3}
+            placeholder="Escribe la justificación institucional o resolución final..."
             value={notasDecisionFinal}
             onChange={(e) => setNotasDecisionFinal(e.target.value)}
             sx={{
+              mb: 3,
               '& .MuiOutlinedInput-root': {
-                borderRadius: 3,
-                bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.02),
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  bgcolor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.04),
-                },
-                '&.Mui-focused': {
-                  bgcolor: isDark ? alpha('#fff', 0.1) : alpha('#f59e0b', 0.05),
+                borderRadius: '14px',
+                bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+                '&.Mui-focused fieldset': {
+                  borderColor: accent,
+                  borderWidth: 2,
                 },
               },
             }}
           />
-        </CardContent>
-      </Card>
 
-      {/* Notificaciones Automáticas */}
-      <Card sx={{ ...cardStyle, mb: 3 }}>
-        <CardContent sx={{ p: 3 }}>
-          <Box display="flex" alignItems="center" gap={2} mb={2}>
-            <NotificationsActiveIcon
-              sx={{
-                fontSize: 24,
-                color: isDark ? '#60a5fa' : '#3b82f6',
-              }}
-            />
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 700,
-                color: isDark ? '#fff' : 'text.primary',
-              }}
-            >
-              Notificaciones Automáticas
-            </Typography>
-          </Box>
-
-          <Alert
-            severity="info"
+          {/* Notificaciones Automáticas */}
+          <Paper
+            elevation={0}
             sx={{
-              borderRadius: 2,
-              bgcolor: isDark ? alpha('#3b82f6', 0.15) : alpha('#3b82f6', 0.1),
-              border: '1px solid',
-              borderColor: isDark ? alpha('#60a5fa', 0.3) : alpha('#3b82f6', 0.2),
-              '& .MuiAlert-icon': {
-                color: isDark ? '#60a5fa' : '#3b82f6',
-              },
+              p: 2.5,
+              borderRadius: '16px',
+              bgcolor: isDark ? alpha('#fff', 0.02) : alpha(accent, 0.03),
+              border: `1px solid ${alpha(accent, 0.15)}`,
+              mb: 3,
             }}
           >
-            <AlertTitle sx={{ fontWeight: 600, color: isDark ? '#fff' : undefined }}>
-              Se enviarán las siguientes notificaciones:
-            </AlertTitle>
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
-              {[
-                `Email a ${preinscripcion.tutor.email || 'el representante'} con la decisión final`,
-                `SMS de confirmación al número ${preinscripcion.tutor.telefono || 'registrado'}`,
-                'Actualización en el portal del estudiante',
-                'Registro en el sistema de admisiones',
-              ].map((text, idx) => (
-                <Typography
-                  key={idx}
-                  variant="body2"
-                  sx={{
-                    color: isDark ? alpha('#fff', 0.8) : 'text.secondary',
-                    animation: `fadeIn 0.5s ease ${idx * 0.1}s both`,
-                    '@keyframes fadeIn': {
-                      from: { opacity: 0 },
-                      to: { opacity: 1 },
-                    },
-                  }}
-                >
-                  • {text}
-                </Typography>
-              ))}
+            <Box display="flex" alignItems="center" gap={1.5} mb={1.5}>
+              <WhatsAppIcon sx={{ color: '#25D366', fontSize: 24 }} />
+              <Typography variant="subtitle2" fontWeight={700} color="text.primary">
+                Canales de Notificación
+              </Typography>
             </Box>
-          </Alert>
-        </CardContent>
-      </Card>
 
-      {/* Acciones */}
-      <Card sx={cardStyle}>
-        <CardContent sx={{ p: 3 }}>
+            <Typography variant="body2" color="text.secondary">
+              Al confirmar, el sistema registrará la resolución y notificará a los tutores registrados
+              vía WhatsApp oficial y panel de consulta.
+            </Typography>
+          </Paper>
+
+          {/* Botones de Acción */}
           <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            flexWrap="wrap"
-            gap={2}
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 2,
+            }}
           >
             <Button
               variant="outlined"
               startIcon={<ArrowBackIcon />}
               onClick={() => setActiveStep(1)}
               sx={{
-                borderRadius: 2,
-                borderWidth: 2,
-                borderColor: isDark ? alpha('#6b7280', 0.5) : '#9ca3af',
-                color: isDark ? '#d1d5db' : '#6b7280',
+                borderRadius: '12px',
+                textTransform: 'none',
                 fontWeight: 600,
-                px: 3,
-                transition: 'all 0.3s ease',
+                px: 2.5,
+                py: 1.2,
+                borderColor: alpha(accent, 0.5),
+                color: accent,
+                backgroundColor: alpha(accent, 0.05),
                 '&:hover': {
-                  borderWidth: 2,
-                  borderColor: isDark ? '#d1d5db' : '#6b7280',
-                  bgcolor: isDark ? alpha('#6b7280', 0.15) : alpha('#9ca3af', 0.1),
-                  transform: 'translateX(-4px)',
+                  borderColor: accent,
+                  backgroundColor: alpha(accent, 0.12),
+                  transform: 'translateX(-2px)',
                 },
               }}
             >
-              Volver
+              Volver a Entrevista
             </Button>
 
-            <Box display="flex" gap={2} flexWrap="wrap">
-              <Button
-                variant="outlined"
-                startIcon={<DownloadIcon />}
-                sx={{
-                  borderRadius: 2,
-                  borderWidth: 2,
-                  borderColor: isDark ? alpha('#06b6d4', 0.5) : '#06b6d4',
-                  color: isDark ? '#22d3ee' : '#0891b2',
-                  fontWeight: 600,
-                  px: 3,
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    borderWidth: 2,
-                    borderColor: isDark ? '#22d3ee' : '#0891b2',
-                    bgcolor: isDark ? alpha('#06b6d4', 0.15) : alpha('#06b6d4', 0.1),
-                    transform: 'translateY(-2px)',
-                    boxShadow: isDark
-                      ? '0 8px 20px rgba(6, 182, 212, 0.3)'
-                      : '0 8px 20px rgba(6, 182, 212, 0.2)',
-                  },
-                }}
-              >
-                Descargar Reporte
-              </Button>
+            <Button
+              variant="contained"
+              startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SendIcon />}
+              disabled={!decisionFinal || saving}
+              onClick={handleAbrirModal}
+              sx={{
+                borderRadius: '12px',
+                textTransform: 'none',
+                fontWeight: 700,
+                px: 3.5,
+                py: 1.3,
+                background: decisionFinal
+                  ? isDark
+                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)'
+                  : alpha(theme.palette.divider, 0.5),
+                color: isDark ? '#000' : '#fff',
+                boxShadow: decisionFinal
+                  ? isDark
+                    ? '0 6px 20px rgba(250,204,21,0.35)'
+                    : '0 6px 20px rgba(2,136,209,0.35)'
+                  : 'none',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: isDark
+                    ? '0 8px 24px rgba(250,204,21,0.5)'
+                    : '0 8px 24px rgba(2,136,209,0.5)',
+                },
+                transition: 'all 0.25s ease',
+              }}
+            >
+              {saving ? 'Procesando...' : 'Confirmar Resolución Final'}
+            </Button>
+          </Box>
+        </Box>
+      </Paper>
 
-              <Button
-                variant="contained"
-                startIcon={<SendIcon />}
-                disabled={!decisionFinal || saving}
-                onClick={confirmarDecision}
-                sx={{
-                  borderRadius: 2,
-                  background: decisionFinal
-                    ? isDark
-                      ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
-                      : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                    : undefined,
-                  color: '#fff',
-                  fontWeight: 600,
-                  px: 3,
-                  boxShadow: decisionFinal
-                    ? isDark
-                      ? '0 4px 15px rgba(251, 191, 36, 0.4)'
-                      : '0 4px 15px rgba(245, 158, 11, 0.3)'
-                    : undefined,
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    background: decisionFinal
-                      ? isDark
-                        ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                        : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)'
-                      : undefined,
-                    transform: decisionFinal ? 'translateY(-2px)' : undefined,
-                    boxShadow: decisionFinal
-                      ? isDark
-                        ? '0 8px 25px rgba(251, 191, 36, 0.5)'
-                        : '0 8px 25px rgba(245, 158, 11, 0.4)'
-                      : undefined,
-                  },
-                  '&:disabled': {
-                    background: alpha('#999', 0.3),
-                    color: alpha('#fff', 0.5),
-                  },
-                }}
-              >
-                {saving ? 'Enviando...' : 'Confirmar y Enviar Notificación'}
-              </Button>
+      {/* MODAL ELEGANTE DE CONFIRMACIÓN DE RESOLUCIÓN */}
+      <Dialog
+        open={openModalConfirmacion}
+        onClose={handleCerrarModal}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '24px',
+            p: 1,
+            background: isDark
+              ? 'linear-gradient(145deg, #0e1726 0%, #0b1320 100%)'
+              : 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+            border: `1px solid ${alpha(accent, 0.25)}`,
+            boxShadow: isDark
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.7)'
+              : '0 25px 50px -12px rgba(2, 136, 209, 0.2)',
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
+          <Box display="flex" alignItems="center" gap={1.5}>
+            <Box
+              sx={{
+                width: 44,
+                height: 44,
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor:
+                  decisionFinal === 'aprobada'
+                    ? 'rgba(16, 185, 129, 0.15)'
+                    : decisionFinal === 'rechazada'
+                    ? 'rgba(239, 68, 68, 0.15)'
+                    : 'rgba(2, 136, 209, 0.15)',
+                color:
+                  decisionFinal === 'aprobada'
+                    ? '#10b981'
+                    : decisionFinal === 'rechazada'
+                    ? '#ef4444'
+                    : accent,
+              }}
+            >
+              {decisionFinal === 'aprobada' ? (
+                <CheckCircleIcon sx={{ fontSize: 26 }} />
+              ) : decisionFinal === 'rechazada' ? (
+                <CancelIcon sx={{ fontSize: 26 }} />
+              ) : (
+                <PendingIcon sx={{ fontSize: 26 }} />
+              )}
+            </Box>
+            <Box>
+              <Typography variant="h6" fontWeight={800} color="text.primary">
+                Confirmar Resolución Final
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Verifica los detalles antes de registrar la decisión
+              </Typography>
             </Box>
           </Box>
-        </CardContent>
-      </Card>
+          <IconButton onClick={handleCerrarModal} disabled={saving} size="small">
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 1.5 }}>
+          {errorModal && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: '12px' }}>
+              {errorModal}
+            </Alert>
+          )}
+
+          {/* Tarjeta de Resumen de la Resolución */}
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2.5,
+              borderRadius: '16px',
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(2, 136, 209, 0.03)',
+              borderColor: alpha(accent, 0.2),
+              mb: 2.5,
+            }}
+          >
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="caption" fontWeight={700} color="text.secondary" textTransform="uppercase">
+                Resolución a Aplicar:
+              </Typography>
+              <Chip
+                label={
+                  decisionFinal === 'aprobada'
+                    ? 'APROBADA'
+                    : decisionFinal === 'rechazada'
+                    ? 'RECHAZADA'
+                    : decisionFinal
+                    ? decisionFinal.toUpperCase()
+                    : ''
+                }
+                sx={{
+                  fontWeight: 800,
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.5px',
+                  backgroundColor:
+                    decisionFinal === 'aprobada'
+                      ? 'rgba(16, 185, 129, 0.18)'
+                      : decisionFinal === 'rechazada'
+                      ? 'rgba(239, 68, 68, 0.18)'
+                      : 'rgba(2, 136, 209, 0.18)',
+                  color:
+                    decisionFinal === 'aprobada'
+                      ? '#10b981'
+                      : decisionFinal === 'rechazada'
+                      ? '#ef4444'
+                      : accent,
+                  border: `1px solid ${
+                    decisionFinal === 'aprobada'
+                      ? 'rgba(16, 185, 129, 0.4)'
+                      : decisionFinal === 'rechazada'
+                      ? 'rgba(239, 68, 68, 0.4)'
+                      : alpha(accent, 0.4)
+                  }`,
+                }}
+              />
+            </Box>
+
+            <Stack spacing={1.5}>
+              <Box display="flex" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  Estudiante:
+                </Typography>
+                <Typography variant="body2" fontWeight={700} color="text.primary">
+                  {preinscripcion.estudiante.nombres} {preinscripcion.estudiante.apellido_paterno}
+                </Typography>
+              </Box>
+
+              <Box display="flex" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  Código:
+                </Typography>
+                <Typography variant="body2" fontWeight={700} color={accent}>
+                  {preinscripcion.codigo_inscripcion}
+                </Typography>
+              </Box>
+
+              <Box display="flex" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  Grado y Turno:
+                </Typography>
+                <Typography variant="body2" fontWeight={600} color="text.primary">
+                  {preinscripcion.grado_nombre || 'Grado'} — Turno {preinscripcion.turno_nombre || 'Turno'}
+                </Typography>
+              </Box>
+
+              <Box display="flex" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  Tutor Responsable:
+                </Typography>
+                <Typography variant="body2" fontWeight={600} color="text.primary">
+                  {preinscripcion.tutor?.nombres} {preinscripcion.tutor?.apellido_paterno}
+                </Typography>
+              </Box>
+
+              {notasDecisionFinal && (
+                <Box pt={1} borderTop={`1px dashed ${alpha(theme.palette.divider, 0.5)}`}>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Observaciones registradas:
+                  </Typography>
+                  <Typography variant="body2" fontWeight={500} color="text.primary" sx={{ fontStyle: 'italic' }}>
+                    "{notasDecisionFinal}"
+                  </Typography>
+                </Box>
+              )}
+            </Stack>
+          </Paper>
+
+          {/* Notificación informativa sobre WhatsApp */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              p: 1.5,
+              borderRadius: '12px',
+              backgroundColor: 'rgba(37, 211, 102, 0.08)',
+              border: '1px solid rgba(37, 211, 102, 0.25)',
+            }}
+          >
+            <WhatsAppIcon sx={{ color: '#25D366', fontSize: 24 }} />
+            <Typography variant="caption" fontWeight={600} color="text.secondary">
+              Se enviará automáticamente un mensaje oficial de confirmación vía WhatsApp a los tutores registrados.
+            </Typography>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, gap: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={handleCerrarModal}
+            disabled={saving}
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 2.5,
+            }}
+          >
+            Volver y Revisar
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={handleEjecutarDecision}
+            disabled={saving}
+            startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SendIcon />}
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+              fontWeight: 700,
+              px: 3,
+              backgroundColor:
+                decisionFinal === 'aprobada'
+                  ? '#10b981'
+                  : decisionFinal === 'rechazada'
+                  ? '#ef4444'
+                  : accent,
+              color: '#fff',
+              '&:hover': {
+                backgroundColor:
+                  decisionFinal === 'aprobada'
+                    ? '#059669'
+                    : decisionFinal === 'rechazada'
+                    ? '#dc2626'
+                    : accentDark,
+              },
+            }}
+          >
+            {saving ? 'Confirmando...' : 'Sí, Confirmar Resolución'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

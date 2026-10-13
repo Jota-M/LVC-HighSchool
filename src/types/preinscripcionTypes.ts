@@ -1,5 +1,6 @@
 // types/preinscripcionTypes.ts
 import { Dayjs } from 'dayjs';
+import type React from 'react';
 
 // =============================================
 // 🆕 INTERFACES PARA CUPOS
@@ -23,6 +24,14 @@ export interface CupoPreinscripcion {
   turno_nombre?: string;
   nivel_academico_nombre?: string;
   porcentaje_ocupacion?: number;
+  total_en_espera?: number;
+  posicion_espera?: number;
+  turno_alternativo?: {
+    turno_id: number;
+    turno_nombre: string;
+    cupos_disponibles: number;
+  } | null;
+  mensaje?: string;
 }
 
 export interface VerificarDisponibilidadResponse {
@@ -78,7 +87,10 @@ export interface PreInscripcion {
   tutor_telefono?: string;
   grado_nombre?: string;
   turno_nombre?: string;
+  periodo_nombre?: string;
   cupos_disponibles?: number;
+  posicion_espera?: number;
+  es_lista_espera?: boolean;
 }
 
 export type EstadoPreInscripcion = 
@@ -94,7 +106,8 @@ export type EstadoPreInscripcion =
   | 'rechazada'
   | 'convertida'
   | 'expirada'
-  | 'cancelada';
+  | 'cancelada'
+  | 'en_espera';
 
 export interface PreEstudiante {
   id: number;
@@ -114,6 +127,7 @@ export interface PreEstudiante {
   email: string | null;
   foto_url: string | null;
   contacto_emergencia: string | null;
+  telefono_emergencia?: string | null;
   tiene_discapacidad: boolean;
   tipo_discapacidad: string | null;
   institucion_procedencia: string | null;
@@ -211,6 +225,9 @@ export interface PreEstudianteForm {
   grado_solicitado: string; // ✅ Texto legible (ej: "PRE-K")
   repite_grado: boolean;
   turno_solicitado: string; // ✅ Texto legible (ej: "MAÑANA")
+  grado_id?: number | null;
+  turno_id?: number | null;
+  periodo_academico_id?: number | null;
 }
 
 export interface PreTutorForm {
@@ -227,6 +244,7 @@ export interface PreTutorForm {
   celular: string;
   email: string;
   direccion: string;
+  zona?: string;
   ocupacion: string;
   lugar_trabajo: string;
   telefono_trabajo: string;
@@ -234,6 +252,13 @@ export interface PreTutorForm {
   nivel_educacion: string;
   vive_con_estudiante: boolean;
   es_tutor_principal: boolean;
+}
+
+export interface PreRelacionForm {
+  estudiante_index: number;
+  tutor_index: number;
+  parentesco?: string;
+  es_tutor_principal?: boolean;
 }
 
 export interface PreInscripcionFormData {
@@ -255,6 +280,17 @@ export interface PreInscripcionFormData {
 // =============================================
 
 export type ModoRegistro = 'nuevo' | 'padre_existente' | 'multiple';
+
+export interface PreinscripcionCreadaItem {
+  id: number;
+  codigo_inscripcion: string;
+  estado: string;
+  estudiante_nombres: string;
+  grado_id?: number;
+  turno_id?: number;
+  posicion_espera?: number;
+  tiene_cupo_asignado?: boolean;
+}
 
 export interface BuscarPadreRequest {
   ci: string;
@@ -488,6 +524,8 @@ export interface PreInscripcionDetalle {
   periodo_nombre?: string;
   cupos_totales?: number;
   cupos_disponibles?: number;
+  posicion_espera?: number;
+  es_lista_espera?: boolean;
   estudiante: PreEstudiante;
   tutor: PreTutor;
   documentos: PreDocumento[];
@@ -508,11 +546,22 @@ export interface PreInscripcionesResponse {
 }
 
 export interface PreInscripcionFilters {
-  estado?: EstadoPreInscripcion;
+  searchTerm?: string;
+  estadoFilter?: string;
+  gradoFilter?: string;
+  turnoFilter?: string;
+  periodoFilter?: string;
+  conCupoFilter?: string;
+  estado?: EstadoPreInscripcion | string;
+  grado?: string;
+  turno?: string;
+  periodo?: string;
   page?: number;
   limit?: number;
   search?: string;
 }
+
+export type PreinscripcionFilters = PreInscripcionFilters;
 
 export interface CambiarEstadoRequest {
   estado: EstadoPreInscripcion;
@@ -584,6 +633,7 @@ export const ESTADOS_PREINSCRIPCION: Record<EstadoPreInscripcion, { label: strin
   convertida: { label: 'Convertida', color: '#8bc34a' },
   expirada: { label: 'Expirada', color: '#9e9e9e' },
   cancelada: { label: 'Cancelada', color: '#607d8b' },
+  en_espera: { label: 'En Lista de Espera', color: '#f59e0b' },
 };
 
 export const GENEROS = [
@@ -619,3 +669,58 @@ export const TURNOS_SOLICITADOS = [
   { value: 'MAÑANA', label: 'Mañana' },
   { value: 'TARDE', label: 'Tarde' },
 ];
+
+// =============================================
+// ALIASES Y TIPOS UNIFICADOS COMPATIBLES
+// =============================================
+
+export type EstadoPreinscripcion = EstadoPreInscripcion;
+export type Preinscripcion = PreInscripcion;
+
+export type GradoSolicitado = 
+  | 'PRE-KINDER'
+  | 'KINDER'
+  | 'PRIMERO_PRIMARIA'
+  | 'SEGUNDO_PRIMARIA'
+  | 'TERCERO_PRIMARIA'
+  | 'CUARTO_PRIMARIA'
+  | 'QUINTO_PRIMARIA'
+  | 'SEXTO_PRIMARIA'
+  | 'PRIMERO_SECUNDARIA'
+  | 'SEGUNDO_SECUNDARIA'
+  | 'TERCERO_SECUNDARIA'
+  | 'CUARTO_SECUNDARIA'
+  | 'QUINTO_SECUNDARIA'
+  | 'SEXTO_SECUNDARIA';
+
+export interface PreinscripcionStats {
+  total: number;
+  pendientes: number;
+  aprobadas: number;
+  rechazadas: number;
+  convertidas: number;
+  en_espera?: number;
+  con_cupo_asignado: number;
+  sin_cupo_asignado: number;
+  por_periodo?: {
+    periodo_nombre: string;
+    total: number;
+    con_cupo: number;
+  }[];
+}
+
+export interface EstadoConfig {
+  label: string;
+  color: string;
+  bgcolor: string;
+  icon: React.ReactElement;
+  descripcion?: string;
+}
+
+export interface ExportarRequest {
+  estado?: string;
+  grado?: string;
+  turno?: string;
+  periodo?: string;
+  formato: 'excel' | 'pdf';
+}

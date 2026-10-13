@@ -132,7 +132,7 @@ export default function CuposPage() {
           <Stack direction="row" spacing={1.5}>
             <Tooltip title="Actualizar">
               <IconButton 
-                onClick={fetchCupos}
+                onClick={() => fetchCupos()}
                 sx={{ 
                   bgcolor: 'success.main',
                   color: '#fff',

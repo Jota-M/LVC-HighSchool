@@ -36,13 +36,14 @@ import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import { Preinscripcion } from '../../types/preinscripcioonTypes';
+import { Preinscripcion } from '@/types/preinscripcionTypes';
 import { useRouter } from 'next/navigation';
 
 interface PreinscripcionCardProps {
   preinscripcion: Preinscripcion;
   onRevisar: (id: number) => void;
   onEliminar: (id: number) => void;
+  onPromover?: (id: number) => void;
 }
 
 const getEstadoConfig = (estado: string) => {
@@ -55,6 +56,7 @@ const getEstadoConfig = (estado: string) => {
     aprobada: { label: 'Aprobada', color: '#4caf50' },
     rechazada: { label: 'Rechazada', color: '#f44336' },
     convertida: { label: 'Convertida', color: '#8bc34a' },
+    en_espera: { label: 'En Lista de Espera', color: '#f59e0b' },
   };
   return configs[estado?.toLowerCase()] || configs.iniciada;
 };
@@ -86,12 +88,14 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
   preinscripcion,
   onRevisar,
   onEliminar,
+  onPromover,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const router = useRouter();
   const config = getEstadoConfig(preinscripcion.estado);
-  const iniciales = getIniciales(preinscripcion.estudiante_nombre);
+  const iniciales = getIniciales(preinscripcion.estudiante_nombre || '');
+  const esEnEspera = preinscripcion.estado === 'en_espera';
   const puedeConvertir =
     preinscripcion.estado === 'aprobada' && preinscripcion.tiene_cupo_asignado;
 
@@ -149,7 +153,11 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
           preinscripcion.estado !== 'rechazada' && (
             <Chip
               icon={<EventBusyIcon sx={{ fontSize: 14 }} />}
-              label="Sin cupo"
+              label={
+                esEnEspera
+                  ? `Espera #${preinscripcion.posicion_espera || 1}`
+                  : 'Sin cupo'
+              }
               size="small"
               sx={{
                 position: 'absolute',
@@ -263,7 +271,7 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <SchoolIcon sx={{ fontSize: 16, color: config.color }} />
               <Typography variant="caption" noWrap>
-                {preinscripcion.grado_nombre || getGradoLabel(preinscripcion.grado_solicitado)}
+                {preinscripcion.grado_nombre || getGradoLabel(preinscripcion.grado_solicitado || '')}
               </Typography>
             </Box>
 
@@ -294,7 +302,57 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
 
         {/* Botones de acción */}
         <CardActions sx={{ px: 3, pb: 3, pt: 0, gap: 1 }}>
-          {puedeConvertir ? (
+          {esEnEspera ? (
+            <>
+              {onPromover && (
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={<EventAvailableIcon />}
+                  onClick={() => onPromover(preinscripcion.id)}
+                  sx={{
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    color: '#fff',
+                    boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #d97706, #b45309)',
+                      transform: 'scale(1.02)',
+                    },
+                  }}
+                >
+                  Promover
+                </Button>
+              )}
+              <Tooltip title="Ver detalles">
+                <IconButton
+                  onClick={() => onRevisar(preinscripcion.id)}
+                  sx={{
+                    border: `2px solid ${alpha(config.color, 0.4)}`,
+                    color: config.color,
+                    '&:hover': { bgcolor: config.color, color: '#fff' },
+                  }}
+                >
+                  <VisibilityIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Eliminar">
+                <IconButton
+                  color="error"
+                  onClick={() => onEliminar(preinscripcion.id)}
+                  sx={{
+                    border: '2px solid',
+                    borderColor: alpha('#ef4444', 0.4),
+                    '&:hover': { bgcolor: '#ef4444', color: '#fff' },
+                  }}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            </>
+          ) : puedeConvertir ? (
             <>
               <Button
                 fullWidth
@@ -404,6 +462,22 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
             </MenuItem>,
             <Divider key="div-convertir" sx={{ my: 0.5 }} />,
           ]}
+
+          {esEnEspera && onPromover && (
+            <MenuItem
+              onClick={() => {
+                handleMenuClose();
+                onPromover(preinscripcion.id);
+              }}
+            >
+              <ListItemIcon>
+                <EventAvailableIcon fontSize="small" sx={{ color: '#f59e0b' }} />
+              </ListItemIcon>
+              <ListItemText sx={{ color: '#d97706', fontWeight: 700 }}>
+                Promover de lista de espera
+              </ListItemText>
+            </MenuItem>
+          )}
 
           <MenuItem onClick={handleMenuClose}>
             <ListItemIcon>

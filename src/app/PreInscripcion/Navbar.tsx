@@ -130,7 +130,16 @@ function Navbar() {
         <ul className="flex flex-col items-center gap-6 mt-10 text-lg font-medium text-black dark:text-white">
           <li className="animate-fadeInUp">
             <a
-              href="/Preinscripcion"
+              href="/reserva-cupo"
+              onClick={() => setShowMobileMenu(false)}
+              className="transition-all duration-300 text-emerald-600 font-semibold hover:text-emerald-500 hover:scale-110"
+            >
+              Reserva de Cupo
+            </a>
+          </li>
+          <li className="animate-fadeInUp">
+            <a
+              href="/PreInscripcion/estado"
               onClick={() => setShowMobileMenu(false)}
               className="transition-all duration-300 hover:text-blue-700 hover:scale-110"
             >

@@ -290,6 +290,30 @@ class ReservaCupoService {
     });
     return data.data;
   }
+
+  /**
+   * Envía confirmación oficial por WhatsApp al tutor de una reserva (texto con link)
+   */
+  async enviarConfirmacionWhatsApp(codigo: string, telefono?: string): Promise<{ success: boolean; message: string }> {
+    const { data } = await api.post(`/reserva-cupo/notificar-whatsapp/${codigo}`, { telefono });
+    return data;
+  }
+
+  /**
+   * Envía el comprobante oficial como documento PDF adjunto vía WhatsApp
+   */
+  async enviarPDFWhatsApp(codigo: string, telefono?: string): Promise<{ success: boolean; message: string }> {
+    const { data } = await api.post(`/reserva-cupo/notificar-whatsapp/${codigo}/documento`, { telefono });
+    return data;
+  }
+
+  /**
+   * Envía WhatsApp desde el panel administrativo
+   */
+  async enviarWhatsAppAdmin(id: number, payload?: { tipo?: 'regular' | 'hermano'; telefono?: string }): Promise<{ success: boolean; message: string }> {
+    const { data } = await api.post(`/reserva-cupo/admin/${id}/enviar-whatsapp`, payload);
+    return data;
+  }
 }
 
 export interface BalanceCupoGrado {
