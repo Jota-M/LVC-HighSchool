@@ -9,6 +9,7 @@ import type {
   PreinscripcionCreadaItem,
 } from '@/types/preinscripcionTypes';
 import { preinscripcionService } from '@/services/preinscripcionService';
+import { is1raSeccionOGradoRestringido } from '@/components/preinscripcion/EstudianteStep';
 
 export const estadoInicialEstudiante = (): PreEstudianteForm => ({
   nombres: '',
@@ -273,7 +274,15 @@ export function usePreinscripcion() {
         if (!est.apellido_paterno.trim()) errs[`estudiante_${idx}_apellido_paterno`] = 'Apellido paterno requerido';
         if (!est.fecha_nacimiento) errs[`estudiante_${idx}_fecha_nacimiento`] = 'Fecha de nacimiento requerida';
         if (!est.genero) errs[`estudiante_${idx}_genero`] = 'Seleccione género';
-        if (!est.grado_id) errs[`estudiante_${idx}_grado`] = 'Seleccione el grado a postular';
+        if (!est.grado_id) {
+          errs[`estudiante_${idx}_grado`] = 'Seleccione el grado a postular';
+        } else if (
+          est.grado_solicitado &&
+          is1raSeccionOGradoRestringido({ nombre: est.grado_solicitado })
+        ) {
+          errs[`estudiante_${idx}_grado`] =
+            'Las admisiones para 1ra Sección se realizarán directamente al inicio de gestión';
+        }
         if (!est.turno_id) errs[`estudiante_${idx}_turno`] = 'Seleccione el turno preferido';
         if (est.tiene_discapacidad && !est.tipo_discapacidad?.trim()) {
           errs[`estudiante_${idx}_tipo_discapacidad`] = 'Especifique el tipo de discapacidad';

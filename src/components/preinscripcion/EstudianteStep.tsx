@@ -28,6 +28,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import AccessibleIcon from '@mui/icons-material/Accessible';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 import { PreEstudianteForm } from '@/types/preinscripcionTypes';
 import publicAcademicosService, {
@@ -36,6 +37,63 @@ import publicAcademicosService, {
   TurnoPublico,
 } from '@/services/publicAcademicosService';
 import api from '@/lib/api';
+
+/**
+ * Detecta si un grado corresponde a 1ra Sección (o PreKinder según la base de datos).
+ * Soporta tanto "PreKinder", "Pre-kinder", "1ra seccion", "1ra Sección", como "Educación Inicial" orden 1.
+ */
+export const is1raSeccionOGradoRestringido = (g: {
+  nombre?: string;
+  nivel_nombre?: string;
+  nivel_academico_nombre?: string;
+  orden?: number;
+}): boolean => {
+  const nombre = (g.nombre || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+  const nivel = ((g.nivel_nombre || g.nivel_academico_nombre) || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  // 1. Variantes de Prekinder (base de datos de prueba / alternativa)
+  if (
+    nombre.includes('prekinder') ||
+    nombre.includes('pre-kinder') ||
+    nombre.includes('pre kinder')
+  ) {
+    return true;
+  }
+
+  // 2. Variantes de 1ra sección (base de datos oficial)
+  if (
+    nombre.includes('1ra seccion') ||
+    nombre.includes('1ra. seccion') ||
+    nombre.includes('primera seccion') ||
+    nombre.includes('1ra secc') ||
+    nombre === '1ra' ||
+    nombre === 'primera'
+  ) {
+    return true;
+  }
+
+  // 3. Nivel Inicial con orden 1 o 1ra
+  if (
+    nivel.includes('inicial') &&
+    (nombre.includes('1ra') ||
+      nombre.includes('primer') ||
+      g.orden === 1) &&
+    !nombre.includes('2da') &&
+    !nombre.includes('segund') &&
+    !nombre.includes('kinder') // evitar marcar Kinder (2da sección)
+  ) {
+    return true;
+  }
+
+  return false;
+};
 
 interface EstudianteStepProps {
   estudiantes: PreEstudianteForm[];
@@ -107,14 +165,19 @@ export default function EstudianteStep({
           setGrados(listaGrados);
           setTurnos(listaTurnos);
 
-          // Inicializar periodo en estudiantes si no está seteado
-          if (periodo?.id) {
-            estudiantes.forEach((est, idx) => {
-              if (!est.periodo_academico_id) {
-                onChange(idx, 'periodo_academico_id', periodo.id);
+          // Inicializar periodo y asegurar que ningún estudiante tenga seleccionada 1ra Sección
+          estudiantes.forEach((est, idx) => {
+            if (periodo?.id && !est.periodo_academico_id) {
+              onChange(idx, 'periodo_academico_id', periodo.id);
+            }
+            if (est.grado_id) {
+              const gradoSel = listaGrados.find((g: any) => g.id === est.grado_id);
+              if (gradoSel && is1raSeccionOGradoRestringido(gradoSel)) {
+                onChange(idx, 'grado_id', null);
+                onChange(idx, 'grado_solicitado', '');
               }
-            });
-          }
+            }
+          });
         }
       } catch (err) {
         console.error('Error al cargar datos académicos públicos:', err);
@@ -525,6 +588,36 @@ export default function EstudianteStep({
               Grado y Turno al que Postula
             </Box>
 
+            {/* Aviso informativo de 1ra Sección */}
+            <Alert
+              severity="info"
+              icon={<InfoOutlinedIcon sx={{ fontSize: 24, mt: 0.2 }} />}
+              sx={{
+                mb: 3,
+                borderRadius: '14px',
+                backgroundColor: isDark ? 'rgba(2, 136, 209, 0.15)' : 'rgba(2, 136, 209, 0.08)',
+                border: isDark ? '1px solid rgba(2, 136, 209, 0.35)' : '1px solid rgba(2, 136, 209, 0.25)',
+                color: isDark ? '#e0f2fe' : '#0c4a6e',
+                '& .MuiAlert-icon': {
+                  color: isDark ? '#38bdf8' : '#0288d1',
+                },
+                '& .MuiAlert-message': {
+                  width: '100%',
+                },
+              }}
+            >
+              <Typography
+                variant="subtitle2"
+                fontWeight={700}
+                sx={{ mb: 0.5, color: isDark ? '#38bdf8' : '#0288d1', fontSize: '0.95rem' }}
+              >
+                Aviso sobre inscripciones a 1ra Sección (Educación Inicial)
+              </Typography>
+              <Typography variant="body2" sx={{ lineHeight: 1.55, opacity: 0.95 }}>
+                La opción de registro para <strong>1ra Sección</strong> no se encuentra habilitada en este formulario en línea. Las admisiones para este grado se realizarán directamente en la institución al <strong>inicio de gestión</strong>, debido a que se está a la espera de la disposición y normativa oficial del <strong>Ministerio de Educación</strong> respecto a la edad reglamentaria de aceptación de los niños.
+              </Typography>
+            </Alert>
+
             <Grid container spacing={2.5}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
@@ -547,11 +640,13 @@ export default function EstudianteStep({
                   helperText={errors[`estudiante_${index}_grado`]}
                   sx={fieldStyle}
                 >
-                  {grados.map((g) => (
-                    <MenuItem key={g.id} value={g.id}>
-                      {g.nombre} ({g.nivel_nombre || g.nivel_academico_nombre || 'Regular'})
-                    </MenuItem>
-                  ))}
+                  {grados
+                    .filter((g) => !is1raSeccionOGradoRestringido(g))
+                    .map((g) => (
+                      <MenuItem key={g.id} value={g.id}>
+                        {g.nombre} ({g.nivel_nombre || g.nivel_academico_nombre || 'Regular'})
+                      </MenuItem>
+                    ))}
                 </TextField>
               </Grid>
 

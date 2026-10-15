@@ -47,10 +47,6 @@ const PARENTESCOS = [
   { value: 'padre', label: 'Padre' },
   { value: 'madre', label: 'Madre' },
   { value: 'tutor_legal', label: 'Tutor Legal / Apoderado' },
-  { value: 'abuelo', label: 'Abuelo/a' },
-  { value: 'tio', label: 'Tío/a' },
-  { value: 'hermano_mayor', label: 'Hermano/a Mayor' },
-  { value: 'otro', label: 'Otro' },
 ];
 
 const ESTADOS_CIVILES = [
@@ -431,12 +427,12 @@ export default function PadresStep({
                         p: 2,
                         borderRadius: '12px',
                         border: `1.5px solid ${esPrincipal
-                            ? '#10b981'
-                            : asignado
-                              ? (isDark ? 'rgba(250, 204, 21, 0.5)' : 'rgba(2, 136, 209, 0.5)')
-                              : isDark
-                                ? 'rgba(255,255,255,0.1)'
-                                : 'rgba(0,0,0,0.1)'
+                          ? '#10b981'
+                          : asignado
+                            ? (isDark ? 'rgba(250, 204, 21, 0.5)' : 'rgba(2, 136, 209, 0.5)')
+                            : isDark
+                              ? 'rgba(255,255,255,0.1)'
+                              : 'rgba(0,0,0,0.1)'
                           }`,
                         backgroundColor: esPrincipal
                           ? (isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.08)')
