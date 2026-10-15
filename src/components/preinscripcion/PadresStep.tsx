@@ -43,11 +43,6 @@ interface PadresStepProps {
   onPrincipalChange: (estudianteIndex: number, tutorIndex: number) => void;
 }
 
-const GENEROS = [
-  { value: 'masculino', label: 'Masculino' },
-  { value: 'femenino', label: 'Femenino' },
-];
-
 const PARENTESCOS = [
   { value: 'padre', label: 'Padre' },
   { value: 'madre', label: 'Madre' },
@@ -248,7 +243,7 @@ export default function PadresStep({
                 />
               </Grid>
 
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <TextField
                   fullWidth
                   select
@@ -267,26 +262,7 @@ export default function PadresStep({
                 </TextField>
               </Grid>
 
-              <Grid size={{ xs: 12, md: 4 }}>
-                <TextField
-                  fullWidth
-                  select
-                  label="Género *"
-                  value={tutor.genero}
-                  onChange={(e) => onChange(index, 'genero', e.target.value)}
-                  error={!!errors[`tutor_${index}_genero`]}
-                  helperText={errors[`tutor_${index}_genero`]}
-                  sx={fieldStyle}
-                >
-                  {GENEROS.map((op) => (
-                    <MenuItem key={op.value} value={op.value}>
-                      {op.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <DatePicker
                   label="Fecha de Nacimiento"
                   format="DD/MM/YYYY"
@@ -301,7 +277,7 @@ export default function PadresStep({
                 />
               </Grid>
 
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <TextField
                   fullWidth
                   select
@@ -318,7 +294,7 @@ export default function PadresStep({
                 </TextField>
               </Grid>
 
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <TextField
                   fullWidth
                   label="Ocupación / Profesión"
@@ -338,7 +314,7 @@ export default function PadresStep({
             </Box>
 
             <Grid container spacing={2.5}>
-              <Grid size={{ xs: 12, md: 6 }}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   label="Teléfono / Celular de Contacto *"
@@ -346,16 +322,6 @@ export default function PadresStep({
                   onChange={(e) => onChange(index, 'telefono', e.target.value)}
                   error={!!errors[`tutor_${index}_telefono`]}
                   helperText={errors[`tutor_${index}_telefono`]}
-                  sx={fieldStyle}
-                />
-              </Grid>
-
-              <Grid size={{ xs: 12, md: 6 }}>
-                <TextField
-                  fullWidth
-                  label="Correo Electrónico"
-                  value={tutor.email}
-                  onChange={(e) => onChange(index, 'email', e.target.value)}
                   sx={fieldStyle}
                 />
               </Grid>

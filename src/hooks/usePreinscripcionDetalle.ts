@@ -125,7 +125,8 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
   // =============================================
   const cambiarEstado = useCallback(async (
     nuevoEstado: EstadoPreInscripcion,
-    observaciones?: string
+    observaciones?: string,
+    notificarWhatsapp: boolean = true
   ) => {
     if (!preinscripcion) return;
 
@@ -133,11 +134,27 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
       await preinscripcionService.cambiarEstado(preinscripcion.id, {
         estado: nuevoEstado,
         observaciones,
+        notificarWhatsapp,
       });
       
       await fetchPreinscripcion();
     } catch (err: any) {
       throw new Error(err.message || 'Error al cambiar estado');
+    }
+  }, [preinscripcion, fetchPreinscripcion]);
+
+  // =============================================
+  // REENVIAR NOTIFICACIÓN WHATSAPP
+  // =============================================
+  const reenviarWhatsApp = useCallback(async (observaciones?: string) => {
+    if (!preinscripcion) return;
+
+    try {
+      const res = await preinscripcionService.reenviarWhatsApp(preinscripcion.id, observaciones);
+      await fetchPreinscripcion();
+      return res;
+    } catch (err: any) {
+      throw new Error(err.message || 'Error al reenviar mensaje de WhatsApp');
     }
   }, [preinscripcion, fetchPreinscripcion]);
 
@@ -238,6 +255,7 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
     // Acciones
     aprobarDatos,
     cambiarEstado,
+    reenviarWhatsApp,
     rechazar,
     confirmarDecision,
     promoverEspera,

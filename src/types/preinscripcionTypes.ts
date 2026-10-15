@@ -566,6 +566,7 @@ export type PreinscripcionFilters = PreInscripcionFilters;
 export interface CambiarEstadoRequest {
   estado: EstadoPreInscripcion;
   observaciones?: string;
+  notificarWhatsapp?: boolean;
 }
 
 export interface ConvertirEstudianteRequest {

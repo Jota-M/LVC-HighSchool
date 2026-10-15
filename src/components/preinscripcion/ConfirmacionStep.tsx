@@ -93,7 +93,7 @@ export default function ConfirmacionStep({
                     sx={{ backgroundColor: isDark ? 'rgba(250, 204, 21, 0.2)' : 'rgba(2, 136, 209, 0.15)', color: accent, fontWeight: 700 }}
                   />
                   <Typography variant="body2" fontWeight={700} color={accent}>
-                    {estudiante.grado_solicitado || 'Sin grado'} - {estudiante.turno_solicitado || 'Sin turno'}
+                    {estudiante.grado_solicitado || 'Sin grado'} - {estudiante.turno_solicitado || (estudiante as any).turno_preferido || 'Sin turno'}
                   </Typography>
                 </Box>
 
@@ -111,11 +111,6 @@ export default function ConfirmacionStep({
                   </Grid>
 
                   <Grid size={{ xs: 6 }}>
-                    <Typography {...labelStyle}>RUDE</Typography>
-                    <Typography {...valueStyle}>{estudiante.rude || 'No proporcionado'}</Typography>
-                  </Grid>
-
-                  <Grid size={{ xs: 6 }}>
                     <Typography {...labelStyle}>Fecha de Nacimiento</Typography>
                     <Typography {...valueStyle}>
                       {estudiante.fecha_nacimiento ? estudiante.fecha_nacimiento.format('DD/MM/YYYY') : 'No registrada'}
@@ -127,9 +122,9 @@ export default function ConfirmacionStep({
                     <Typography {...valueStyle}>{estudiante.genero || 'No indicado'}</Typography>
                   </Grid>
 
-                  <Grid size={{ xs: 12 }}>
-                    <Typography {...labelStyle}>Colegio de Procedencia</Typography>
-                    <Typography {...valueStyle}>{estudiante.institucion_procedencia || 'No indicado'}</Typography>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography {...labelStyle}>Lugar de Nacimiento</Typography>
+                    <Typography {...valueStyle}>{estudiante.lugar_nacimiento || 'No indicado'}</Typography>
                   </Grid>
 
                   <Grid size={{ xs: 12 }}>
@@ -201,10 +196,6 @@ export default function ConfirmacionStep({
                     <Typography {...valueStyle}>{tutor.telefono || tutor.celular || 'Sin teléfono'}</Typography>
                   </Grid>
 
-                  <Grid size={{ xs: 6 }}>
-                    <Typography {...labelStyle}>Correo</Typography>
-                    <Typography {...valueStyle}>{tutor.email || 'No proporcionado'}</Typography>
-                  </Grid>
 
                   <Grid size={{ xs: 6 }}>
                     <Typography {...labelStyle}>Ocupación</Typography>

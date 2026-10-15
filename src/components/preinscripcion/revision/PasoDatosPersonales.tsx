@@ -229,7 +229,7 @@ export default function PasoDatosPersonales({
               },
               {
                 label: 'Teléfono / Contacto',
-                value: preinscripcion.estudiante.telefono || preinscripcion.estudiante.email || 'Sin contacto directo',
+                value: preinscripcion.estudiante.telefono || 'Sin contacto directo',
               },
             ].map((item, idx) => (
               <Grid size={{ xs: 12, sm: 6 }} key={idx}>
@@ -405,7 +405,7 @@ export default function PasoDatosPersonales({
                     {[
                       { label: 'Cédula de Identidad', value: tutor.ci || 'No especificada' },
                       { label: 'Teléfono / Móvil', value: tutor.telefono || tutor.celular || 'No especificado' },
-                      { label: 'Correo Electrónico', value: tutor.email || 'No especificado' },
+                      ...(tutor.email ? [{ label: 'Correo Electrónico', value: tutor.email }] : []),
                       { label: 'Ocupación / Profesión', value: tutor.ocupacion || 'No especificada' },
                       { label: 'Lugar de Trabajo', value: tutor.lugar_trabajo || 'No especificado' },
                       { label: 'Dirección Domicilio', value: tutor.direccion || 'Misma del estudiante' },

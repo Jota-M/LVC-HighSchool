@@ -167,7 +167,9 @@ export default function EstudianteStep({
             libres: disponibles,
             posicion_espera: tieneCupo ? 0 : posicionEspera,
             turno_alternativo: turnoAlt,
-            mensaje: cupo?.mensaje || (tieneCupo ? `¡Vacantes disponibles! ${disponibles} vacante(s)` : `Cupos agotados. Lista de Espera puesto #${posicionEspera}`),
+            mensaje: tieneCupo
+              ? '¡Vacantes disponibles!'
+              : `Cupos agotados. Lista de Espera puesto #${posicionEspera}`,
           },
         }));
       } catch (err: any) {
@@ -194,6 +196,7 @@ export default function EstudianteStep({
     gradoId?: number | null
   ) => {
     onChange(index, 'turno_id', nuevoTurnoId);
+    onChange(index, 'turno_solicitado', nuevoTurnoNombre);
     onChange(index, 'turno_preferido', nuevoTurnoNombre);
     const pid = estudiantes[index]?.periodo_academico_id || periodoActivo?.id || null;
     const gId = gradoId || estudiantes[index]?.grado_id;
@@ -254,7 +257,7 @@ export default function EstudianteStep({
   return (
     <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
       {/* Banner de Período Académico Activo */}
-      {loadingAcademicos ? (
+      {/* {loadingAcademicos ? (
         <Box display="flex" alignItems="center" gap={2} p={1}>
           <CircularProgress size={20} sx={{ color: accent }} />
           <Typography variant="body2" color="text.secondary">
@@ -275,7 +278,7 @@ export default function EstudianteStep({
           Postulaciones abiertas para el período escolar:{' '}
           <strong>{periodoActivo.nombre}</strong> {periodoActivo.codigo ? `(${periodoActivo.codigo})` : ''}
         </Alert>
-      ) : null}
+      ) : null} */}
 
       {/* Lista de Postulantes apilados hacia abajo */}
       {estudiantes.map((estudiante, index) => {
@@ -372,7 +375,7 @@ export default function EstudianteStep({
                 />
               </Grid>
 
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   fullWidth
                   label="Cédula de Identidad (CI)"
@@ -382,17 +385,7 @@ export default function EstudianteStep({
                 />
               </Grid>
 
-              <Grid size={{ xs: 12, md: 4 }}>
-                <TextField
-                  fullWidth
-                  label="Código RUDE (si lo tiene)"
-                  value={estudiante.rude}
-                  onChange={(e) => onChange(index, 'rude', e.target.value)}
-                  sx={fieldStyle}
-                />
-              </Grid>
-
-              <Grid size={{ xs: 12, md: 4 }}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <DatePicker
                   label="Fecha de Nacimiento *"
                   value={estudiante.fecha_nacimiento}
@@ -471,7 +464,7 @@ export default function EstudianteStep({
                 <TextField
                   fullWidth
                   label="Ciudad"
-                  placeholder="Ej. La Paz, El Alto, Cochabamba"
+                  placeholder="Ej. Potosí"
                   value={estudiante.ciudad || ''}
                   onChange={(e) => onChange(index, 'ciudad', e.target.value)}
                   sx={fieldStyle}
@@ -574,7 +567,10 @@ export default function EstudianteStep({
                     const pid = estudiante.periodo_academico_id || periodoActivo?.id || null;
                     onChange(index, 'turno_id', tId);
                     if (pid) onChange(index, 'periodo_academico_id', pid);
-                    if (turnoObj) onChange(index, 'turno_preferido', turnoObj.nombre);
+                    if (turnoObj) {
+                      onChange(index, 'turno_solicitado', turnoObj.nombre);
+                      onChange(index, 'turno_preferido', turnoObj.nombre);
+                    }
                     if (estudiante.grado_id) {
                       verificarCuposEstudiante(index, estudiante.grado_id, tId, pid);
                     }
@@ -585,7 +581,7 @@ export default function EstudianteStep({
                 >
                   {turnos.map((t) => (
                     <MenuItem key={t.id} value={t.id}>
-                      {t.nombre} ({t.hora_inicio?.substring(0, 5)} - {t.hora_fin?.substring(0, 5)})
+                      {t.nombre}
                     </MenuItem>
                   ))}
                 </TextField>
@@ -613,7 +609,7 @@ export default function EstudianteStep({
                   fontWeight: 600,
                 }}
               >
-                ¡Vacantes disponibles! {cupo.libres} vacante(s) disponible(s) para {estudiante.grado_solicitado || 'el curso seleccionado'}
+                ¡Vacantes disponibles! Hay cupo disponible para {estudiante.grado_solicitado || 'el curso seleccionado'}
               </Alert>
             ) : cupo?.disponible === false ? (
               <Box
@@ -692,8 +688,7 @@ export default function EstudianteStep({
                     }}
                   >
                     <Typography variant="caption" sx={{ color: isDark ? '#fde68a' : '#92400e', fontWeight: 600, fontSize: '0.82rem' }}>
-                      💡 El Turno <strong>{cupo.turno_alternativo.turno_nombre}</strong> cuenta con{' '}
-                      <strong>{cupo.turno_alternativo.cupos_disponibles}</strong> vacante(s) directa(s).
+                      💡 El Turno <strong>{cupo.turno_alternativo.turno_nombre}</strong> cuenta con vacantes directas disponibles.
                     </Typography>
 
                     <Button

@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { Paper, Tabs, Tab, Box, useTheme } from '@mui/material';
+import React, { useState } from 'react';
+import { Paper, Tabs, Tab, Box, useTheme, Typography } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import PeopleIcon from '@mui/icons-material/People';
 import DescriptionIcon from '@mui/icons-material/Description';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 import { PreInscripcionDetalle } from '@/types/preinscripcionTypes';
 import { DatosEstudianteEditable } from './DatosEstudianteEditable';
 import { DatosTutorEditable } from './DatosTutorEditable';
@@ -27,45 +28,78 @@ export const TabsEdicion: React.FC<TabsEdicionProps> = ({
   const isDark = theme.palette.mode === 'dark';
   const [tabActual, setTabActual] = useState(0);
 
+  const paperStyle = {
+    borderRadius: '24px',
+    backgroundColor: isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(20px)',
+    border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(1, 87, 155, 0.12)',
+    boxShadow: isDark
+      ? '0 20px 60px rgba(0, 0, 0, 0.5)'
+      : '0 20px 60px rgba(1, 87, 155, 0.1)',
+    overflow: 'hidden',
+  };
+
   return (
-    <Paper
-      elevation={8}
-      sx={{
-        borderRadius: 4,
-        overflow: 'hidden',
-        border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(1, 87, 155, 0.1)',
-      }}
-    >
+    <Paper elevation={0} sx={paperStyle}>
+      <Box sx={{ p: { xs: 2.5, md: 3 }, pb: 1, borderBottom: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <EditNoteIcon sx={{ color: isDark ? '#facc15' : '#01579b', fontSize: 26 }} />
+          <Typography
+            variant="h6"
+            sx={{
+              fontFamily: "'Montserrat', sans-serif",
+              fontWeight: 800,
+              color: isDark ? '#ffffff' : '#0f172a',
+            }}
+          >
+            Actualización y Subsanación de Información
+          </Typography>
+        </Box>
+        <Typography
+          variant="caption"
+          sx={{
+            fontFamily: "'Montserrat', sans-serif",
+            color: isDark ? 'rgba(255,255,255,0.6)' : '#64748b',
+            display: 'block',
+            mt: 0.5,
+          }}
+        >
+          Puedes modificar datos del estudiante, tutor o volver a subir documentos observados
+        </Typography>
+      </Box>
+
       <Tabs
         value={tabActual}
         onChange={(_, newValue) => setTabActual(newValue)}
         variant="fullWidth"
         sx={{
           borderBottom: 1,
-          borderColor: 'divider',
-          bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(2, 136, 209, 0.02)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+          bgcolor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(2, 136, 209, 0.03)',
           '& .MuiTab-root': {
-            fontWeight: 600,
-            fontSize: '1rem',
+            fontFamily: "'Montserrat', sans-serif",
+            fontWeight: 700,
+            fontSize: { xs: '0.8rem', sm: '0.95rem' },
             py: 2,
             textTransform: 'none',
             color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(1, 87, 155, 0.6)',
             '&.Mui-selected': {
-              color: isDark ? '#facc15' : '#0288d1',
+              color: isDark ? '#facc15' : '#01579b',
             },
           },
           '& .MuiTabs-indicator': {
-            backgroundColor: isDark ? '#facc15' : '#0288d1',
+            backgroundColor: isDark ? '#facc15' : '#01579b',
             height: 3,
+            borderRadius: '3px 3px 0 0',
           },
         }}
       >
-        <Tab icon={<PersonIcon />} label="Datos del Estudiante" iconPosition="start" />
-        <Tab icon={<PeopleIcon />} label="Datos del Tutor" iconPosition="start" />
-        <Tab icon={<DescriptionIcon />} label="Documentos" iconPosition="start" />
+        <Tab icon={<PersonIcon sx={{ fontSize: 20 }} />} label="Estudiante" iconPosition="start" />
+        <Tab icon={<PeopleIcon sx={{ fontSize: 20 }} />} label="Tutor Responsable" iconPosition="start" />
+        <Tab icon={<DescriptionIcon sx={{ fontSize: 20 }} />} label="Documentos" iconPosition="start" />
       </Tabs>
 
-      <Box sx={{ p: 4 }}>
+      <Box sx={{ p: { xs: 2.5, md: 4 } }}>
         {tabActual === 0 && (
           <DatosEstudianteEditable
             estudiante={preinscripcion.estudiante}

@@ -169,7 +169,7 @@ export const DatosTutorEditable: React.FC<DatosTutorEditableProps> = ({
           </TextField>
         </Grid>
 
-        <Grid size={{xs:12, md:4}}>
+        <Grid size={{xs:12, md:6}}>
           <TextField
             fullWidth
             label="Teléfono *"
@@ -179,22 +179,12 @@ export const DatosTutorEditable: React.FC<DatosTutorEditableProps> = ({
             sx={fieldStyle}
           />
         </Grid>
-        <Grid size={{xs:12, md:4}}>
+        <Grid size={{xs:12, md:6}}>
           <TextField
             fullWidth
             label="Celular"
             value={datos.celular}
             onChange={(e) => handleChange('celular', e.target.value)}
-            sx={fieldStyle}
-          />
-        </Grid>
-        <Grid size={{xs:12, md:4}}>
-          <TextField
-            fullWidth
-            label="Email"
-            type="email"
-            value={datos.email}
-            onChange={(e) => handleChange('email', e.target.value)}
             sx={fieldStyle}
           />
         </Grid>

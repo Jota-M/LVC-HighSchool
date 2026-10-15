@@ -652,6 +652,7 @@ export default function RevisionLayout({ id }: RevisionLayoutProps) {
               preinscripcion={preinscripcion}
               setActiveStep={hookData.setActiveStep}
               cambiarEstado={hookData.cambiarEstado}
+              reenviarWhatsApp={hookData.reenviarWhatsApp}
               saving={hookData.saving}
             />
           )}

@@ -31,6 +31,9 @@ import PersonIcon from '@mui/icons-material/Person';
 import PhoneIcon from '@mui/icons-material/Phone';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import NotificationsOffIcon from '@mui/icons-material/NotificationsOff';
 import { PreInscripcionDetalle } from '@/types/preinscripcionTypes';
 
 dayjs.locale('es');
@@ -38,7 +41,8 @@ dayjs.locale('es');
 interface PasoEntrevistaProps {
   preinscripcion: PreInscripcionDetalle;
   setActiveStep: (step: number) => void;
-  cambiarEstado: (estado: any, observaciones?: string) => Promise<void>;
+  cambiarEstado: (estado: any, observaciones?: string, notificarWhatsapp?: boolean) => Promise<void>;
+  reenviarWhatsApp?: (observaciones?: string) => Promise<any>;
   saving: boolean;
 }
 
@@ -46,6 +50,7 @@ export default function PasoEntrevista({
   preinscripcion,
   setActiveStep,
   cambiarEstado,
+  reenviarWhatsApp,
   saving,
 }: PasoEntrevistaProps) {
   const theme = useTheme();
@@ -58,25 +63,82 @@ export default function PasoEntrevista({
   const [lugar, setLugar] = useState('Dirección del Colegio - Oficina Principal');
   const [enlaceVirtual, setEnlaceVirtual] = useState('');
   const [observaciones, setObservaciones] = useState('');
+  const [reenviandoWA, setReenviandoWA] = useState(false);
+  const [feedback, setFeedback] = useState<{ tipo: 'success' | 'error' | 'info'; texto: string } | null>(null);
 
   const nombreCompleto = `${preinscripcion.estudiante.nombres} ${preinscripcion.estudiante.apellido_paterno} ${preinscripcion.estudiante.apellido_materno || ''}`.trim();
   const iniciales = `${preinscripcion.estudiante.nombres?.[0] || '?'}${preinscripcion.estudiante.apellido_paterno?.[0] || '?'}`.toUpperCase();
 
-  const handleAgendarEntrevista = async () => {
+  const handleAgendarEntrevista = async (notificarWhatsapp: boolean = true) => {
     if (!fechaEntrevista) {
       alert('Debes seleccionar una fecha y hora para la entrevista');
       return;
     }
 
+    const fechaTexto = fechaEntrevista.format('DD/MM/YYYY');
+    const horaTexto = fechaEntrevista.format('HH:mm');
+
     const notasEntrevista = `
-Entrevista agendada:
-- Fecha: ${fechaEntrevista.format('DD/MM/YYYY HH:mm')}
-- Modalidad: ${modalidad === 'presencial' ? 'Presencial' : 'Virtual'}
-- ${modalidad === 'presencial' ? `Lugar: ${lugar}` : `Enlace: ${enlaceVirtual}`}
-${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
+Entrevista agendada${isAgendada ? ' (Reprogramación)' : ''}:
+- 📅 Fecha y Hora: *${fechaTexto}* a horas *${horaTexto}*
+- 📌 Modalidad: ${modalidad === 'presencial' ? 'Presencial' : 'Virtual'}
+- 📍 ${modalidad === 'presencial' ? `Lugar: ${lugar}` : `Enlace: ${enlaceVirtual}`}
+- 👥 Asistencia Requerida: Es indispensable la presencia del *Padre y/o Madre o Tutor* junto con el *hijo o los hijos postulantes*.
+${observaciones ? `\n- 📝 Observaciones: ${observaciones}` : ''}
     `.trim();
 
-    await cambiarEstado('entrevista_programada', notasEntrevista);
+    try {
+      setFeedback(null);
+      await cambiarEstado('entrevista_programada', notasEntrevista, notificarWhatsapp);
+      setFeedback({
+        tipo: 'success',
+        texto: notificarWhatsapp
+          ? isAgendada
+            ? 'Entrevista reprogramada y notificación enviada por WhatsApp al tutor.'
+            : 'Entrevista agendada y notificación enviada por WhatsApp al tutor.'
+          : 'Estado de entrevista guardado exitosamente (sin enviar mensaje por WhatsApp).',
+      });
+    } catch (err: any) {
+      setFeedback({
+        tipo: 'error',
+        texto: err.message || 'Error al guardar la entrevista',
+      });
+    }
+  };
+
+  const handleReenviarWhatsApp = async () => {
+    if (!reenviarWhatsApp) return;
+    try {
+      setReenviandoWA(true);
+      setFeedback(null);
+
+      const fechaTexto = fechaEntrevista ? fechaEntrevista.format('DD/MM/YYYY') : '';
+      const horaTexto = fechaEntrevista ? fechaEntrevista.format('HH:mm') : '';
+
+      const notasActuales = fechaEntrevista
+        ? `
+Entrevista agendada (Reprogramación):
+- 📅 Fecha y Hora: *${fechaTexto}* a horas *${horaTexto}*
+- 📌 Modalidad: ${modalidad === 'presencial' ? 'Presencial' : 'Virtual'}
+- 📍 ${modalidad === 'presencial' ? `Lugar: ${lugar}` : `Enlace: ${enlaceVirtual}`}
+- 👥 Asistencia Requerida: Es indispensable la presencia del *Padre y/o Madre o Tutor* junto con el *hijo o los hijos postulantes*.
+${observaciones ? `\n- 📝 Observaciones: ${observaciones}` : ''}
+        `.trim()
+        : preinscripcion.observaciones;
+
+      await reenviarWhatsApp(notasActuales || undefined);
+      setFeedback({
+        tipo: 'success',
+        texto: 'Notificación oficial de WhatsApp reenviada exitosamente al tutor.',
+      });
+    } catch (err: any) {
+      setFeedback({
+        tipo: 'error',
+        texto: err.message || 'Error al reenviar mensaje de WhatsApp',
+      });
+    } finally {
+      setReenviandoWA(false);
+    }
   };
 
   const handleMarcarRealizada = async () => {
@@ -87,7 +149,7 @@ Entrevista completada:
 ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
     `.trim();
 
-    await cambiarEstado('entrevista_completada', notasCompletas);
+    await cambiarEstado('entrevista_completada', notasCompletas, false);
     setActiveStep(2);
   };
 
@@ -281,9 +343,30 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
               }}
             />
             <Typography variant="h6" fontWeight={700} color="text.primary">
-              Programación de la Cita
+              {isAgendada ? 'Reprogramación o Ajuste de Cita' : 'Programación de la Cita'}
             </Typography>
           </Box>
+
+          {isAgendada && preinscripcion.observaciones && (
+            <Alert
+              severity="success"
+              icon={<TaskAltIcon sx={{ color: '#10b981' }} />}
+              sx={{
+                mb: 3,
+                borderRadius: '16px',
+                bgcolor: alpha('#10b981', 0.08),
+                border: `1px solid ${alpha('#10b981', 0.3)}`,
+                color: 'text.primary',
+              }}
+            >
+              <AlertTitle sx={{ fontWeight: 700, color: '#10b981' }}>
+                Entrevista Registrada Actualmente
+              </AlertTitle>
+              <Typography variant="body2" sx={{ whiteSpace: 'pre-line', fontSize: '0.85rem' }}>
+                {preinscripcion.observaciones}
+              </Typography>
+            </Alert>
+          )}
 
           <Grid container spacing={3}>
             {/* Fecha y Hora */}
@@ -380,22 +463,46 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
             {/* Lugar o Enlace */}
             <Grid size={{ xs: 12 }}>
               {modalidad === 'presencial' ? (
-                <TextField
-                  fullWidth
-                  label="Lugar o Dirección de la Entrevista"
-                  value={lugar}
-                  onChange={(e) => setLugar(e.target.value)}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '14px',
-                      bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
-                      '&.Mui-focused fieldset': {
-                        borderColor: accent,
-                        borderWidth: 2,
+                <Box>
+                  <TextField
+                    fullWidth
+                    label="Lugar o Dirección de la Entrevista"
+                    value={lugar}
+                    onChange={(e) => setLugar(e.target.value)}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '14px',
+                        bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+                        '&.Mui-focused fieldset': {
+                          borderColor: accent,
+                          borderWidth: 2,
+                        },
                       },
-                    },
-                  }}
-                />
+                    }}
+                  />
+                  <Box display="flex" alignItems="center" gap={1} mt={1} flexWrap="wrap">
+                    <Chip
+                      icon={<LocationOnIcon sx={{ fontSize: 16 }} />}
+                      deleteIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                      onDelete={() => window.open('https://maps.app.goo.gl/dWapCMNPguGBMUTv9', '_blank')}
+                      label="Ubicación Google Maps adjunta"
+                      size="small"
+                      clickable
+                      onClick={() => window.open('https://maps.app.goo.gl/dWapCMNPguGBMUTv9', '_blank')}
+                      sx={{
+                        borderRadius: '8px',
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        bgcolor: alpha(accent, 0.12),
+                        color: accent,
+                        border: `1px solid ${alpha(accent, 0.3)}`,
+                      }}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      Se enviará el enlace de Google Maps automáticamente por WhatsApp al padre/tutor.
+                    </Typography>
+                  </Box>
+                </Box>
               ) : (
                 <TextField
                   fullWidth
@@ -441,10 +548,24 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
             </Grid>
           </Grid>
 
+          {feedback && (
+            <Alert
+              severity={feedback.tipo}
+              onClose={() => setFeedback(null)}
+              sx={{
+                mt: 3,
+                borderRadius: '14px',
+                fontWeight: 600,
+              }}
+            >
+              {feedback.texto}
+            </Alert>
+          )}
+
           <Alert
             severity="info"
             sx={{
-              mt: 3,
+              mt: feedback ? 2 : 3,
               borderRadius: '14px',
               bgcolor: alpha(accent, 0.08),
               border: `1px solid ${alpha(accent, 0.25)}`,
@@ -454,8 +575,8 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
               },
             }}
           >
-            <AlertTitle sx={{ fontWeight: 700 }}>Aviso de Comunicación</AlertTitle>
-            Al agendar la cita, se notificará al tutor <strong>{preinscripcion.tutor.nombres}</strong> con los detalles del encuentro.
+            <AlertTitle sx={{ fontWeight: 700 }}>Control de Notificaciones WhatsApp</AlertTitle>
+            Puedes elegir si deseas únicamente actualizar el estado interno en el sistema o también notificar automáticamente al tutor <strong>{preinscripcion.tutor.nombres}</strong> vía WhatsApp con la <strong>fecha y hora destacada</strong>, asistencia obligatoria de <strong>padre/madre/tutor e hijo(s)</strong> y la ubicación en Google Maps.
           </Alert>
 
           {/* Botones de acción */}
@@ -493,60 +614,108 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
             </Button>
 
             <Stack direction="row" spacing={1.5} flexWrap="wrap" gap={1}>
+              {/* Opción 1: Solo cambiar estado en el sistema SIN enviar WhatsApp */}
+              <Button
+                variant="outlined"
+                startIcon={<NotificationsOffIcon />}
+                onClick={() => handleAgendarEntrevista(false)}
+                disabled={!fechaEntrevista || saving || reenviandoWA}
+                sx={{
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 2.5,
+                  py: 1.2,
+                  borderColor: alpha(isDark ? '#fff' : '#000', 0.22),
+                  color: isDark ? '#e2e8f0' : '#475569',
+                  bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.03),
+                  '&:hover': {
+                    bgcolor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06),
+                    borderColor: alpha(isDark ? '#fff' : '#000', 0.4),
+                  },
+                }}
+              >
+                {saving ? 'Guardando...' : 'Solo Cambiar Estado (Sin WA)'}
+              </Button>
+
+              {/* Opción 2: Reenviar mensaje de WhatsApp (Cita ya agendada o reprogramada) */}
+              {isAgendada && reenviarWhatsApp && (
+                <Button
+                  variant="outlined"
+                  startIcon={<WhatsAppIcon sx={{ color: '#25D366' }} />}
+                  onClick={handleReenviarWhatsApp}
+                  disabled={saving || reenviandoWA}
+                  sx={{
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    px: 2.5,
+                    py: 1.2,
+                    borderColor: alpha('#25D366', 0.6),
+                    color: isDark ? '#4ade80' : '#15803d',
+                    bgcolor: alpha('#25D366', 0.08),
+                    '&:hover': {
+                      bgcolor: alpha('#25D366', 0.18),
+                      borderColor: '#25D366',
+                    },
+                  }}
+                >
+                  {reenviandoWA ? 'Reenviando...' : 'Reenviar Notificación WA'}
+                </Button>
+              )}
+
+              {/* Opción 3: Marcar Realizada */}
               {isAgendada && (
                 <Button
                   variant="contained"
                   startIcon={<TaskAltIcon />}
                   onClick={handleMarcarRealizada}
-                  disabled={saving}
+                  disabled={saving || reenviandoWA}
                   sx={{
                     borderRadius: '12px',
                     textTransform: 'none',
                     fontWeight: 700,
-                    px: 3,
+                    px: 2.5,
                     py: 1.2,
                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     color: '#fff',
-                    boxShadow: '0 6px 20px rgba(16, 185, 129, 0.35)',
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
                     '&:hover': {
                       transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 24px rgba(16, 185, 129, 0.5)',
+                      boxShadow: '0 6px 20px rgba(16, 185, 129, 0.5)',
                     },
-                    transition: 'all 0.25s ease',
                   }}
                 >
-                  {saving ? 'Guardando...' : 'Marcar Entrevista Realizada'}
+                  Marcar Realizada
                 </Button>
               )}
 
+              {/* Opción Principal: Agendar / Reprogramar Y Enviar WhatsApp */}
               <Button
                 variant="contained"
-                startIcon={<EventIcon />}
-                onClick={handleAgendarEntrevista}
-                disabled={!fechaEntrevista || saving}
+                startIcon={<WhatsAppIcon />}
+                onClick={() => handleAgendarEntrevista(true)}
+                disabled={!fechaEntrevista || saving || reenviandoWA}
                 sx={{
                   borderRadius: '12px',
                   textTransform: 'none',
                   fontWeight: 700,
                   px: 3,
                   py: 1.2,
-                  background: isDark
-                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                  color: isDark ? '#000' : '#fff',
-                  boxShadow: isDark
-                    ? '0 6px 20px rgba(250,204,21,0.3)'
-                    : '0 6px 20px rgba(2,136,209,0.3)',
+                  background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                  color: '#fff',
+                  boxShadow: '0 6px 20px rgba(37, 211, 102, 0.35)',
                   '&:hover': {
                     transform: 'translateY(-2px)',
-                    boxShadow: isDark
-                      ? '0 8px 24px rgba(250,204,21,0.45)'
-                      : '0 8px 24px rgba(2,136,209,0.45)',
+                    boxShadow: '0 8px 24px rgba(37, 211, 102, 0.5)',
                   },
-                  transition: 'all 0.25s ease',
                 }}
               >
-                {saving ? 'Agendando...' : 'Agendar Entrevista'}
+                {saving
+                  ? 'Procesando...'
+                  : isAgendada
+                  ? 'Reprogramar y Enviar WA'
+                  : 'Agendar y Enviar WhatsApp'}
               </Button>
             </Stack>
           </Box>

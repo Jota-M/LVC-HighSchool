@@ -166,7 +166,7 @@ export default function PreinscripcionRegistroPage() {
             background: isDark
               ? 'linear-gradient(135deg, #090B26 0%, #000000 100%)'
               : 'linear-gradient(135deg, #fdfcfb 0%, #B9BED4 100%)',
-            py: { xs: 4, md: 8 },
+            py: { xs: 17, md: 15 },
           }}
         >
           <Container maxWidth="lg">
@@ -185,7 +185,7 @@ export default function PreinscripcionRegistroPage() {
                   fontSize: { xs: '1.8rem', md: '2.5rem' },
                 }}
               >
-                Formulario de Preinscripción Escolar
+                Formulario de Solicitud de Ingreso Escolar
               </Typography>
               <Typography variant="body1" color="text.secondary">
                 Registra a tus hijos y a los tutores responsables de forma rápida y sencilla.

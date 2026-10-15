@@ -1,161 +1,103 @@
 "use client";
 import React, { useState, useEffect, useContext } from "react";
-import MenuIcon from "@mui/icons-material/Menu";
-import CloseIcon from "@mui/icons-material/Close";
-import { Button, IconButton, Typography, Box, useTheme } from "@mui/material";
+import { IconButton, Typography, Box, useTheme, Button } from "@mui/material";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
-import { ColorModeContext } from "../dashboard/theme"; 
+import SearchIcon from "@mui/icons-material/Search";
+import HomeIcon from "@mui/icons-material/Home";
+import { ColorModeContext } from "../dashboard/theme";
 
 function Navbar() {
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-
   const theme = useTheme();
   const colorMode = useContext(ColorModeContext);
+  const isDark = theme.palette.mode === "dark";
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
+    const handleScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-    const handleLogoClick = () => {
+  const handleLogoClick = () => {
     if (window.location.pathname === "/") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
       window.location.href = "/";
     }
   };
+
   return (
     <div
-      className={`fixed top-0 left-0 w-full z-50 transition duration-500 ${
-        scrolled
-        ? "bg-white/70 dark:bg-gray-900/70 backdrop-blur-md shadow-md"
-        : "dark:bg-transparent"
-
-      }`}
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${scrolled
+        ? isDark
+          ? "bg-gray-900/95 backdrop-blur-xl shadow-2xl shadow-blue-500/10 border-b border-blue-500/20"
+          : "bg-white/95 backdrop-blur-xl shadow-lg shadow-blue-900/5 border-b border-blue-100"
+        : "bg-transparent"
+        }`}
     >
-      <div className="container mx-auto flex justify-between items-center py-4 px-6 md:px-20 lg:px-32">
-        {/* Logo + Nombre */}
-        <div className="flex items-center gap-3">
+      <div className="container mx-auto flex justify-between items-center py-5 px-6 md:px-20 lg:px-32">
+        {/* Logo (tamaño w-20 igual que la página principal) + Nombre */}
+        <div
+          className="flex items-center gap-4 cursor-pointer select-none group"
+          onClick={handleLogoClick}
+        >
           <img
             src="/logo.png"
             alt="Logo"
-            className="w-14 cursor-pointer hover:scale-110 transition-transform"
-            onClick={handleLogoClick}
+            className="w-16 md:w-20 cursor-pointer hover:scale-105 transition-transform duration-300 drop-shadow-md"
           />
           <Box>
             <Typography
-                variant="subtitle1"
-                sx={{
-                    fontSize: { xs: "0.9rem", md: "1rem" },
-                    fontWeight: "bold",
-                    lineHeight: 1.4,
-                    color: scrolled
-                    ? "#ffffff"
-                    : theme.palette.mode === "dark"
-                    ? "white"
-                    : "#01579b",
-                }}
-                >
-                Unidad Educativa Particular La Voz de Cristo
-                </Typography>
-                <Typography
-                variant="body2"
-                sx={{
-                    fontSize: "0.9rem",
-                    color: scrolled
-                    ? "#e0e0e0"
-                    : theme.palette.text.secondary,
-                }}
-                >
-                Admisiones 2026
+              variant="subtitle1"
+              sx={{
+                fontFamily: "'Montserrat', sans-serif",
+                fontSize: { xs: "0.95rem", md: "1.15rem" },
+                fontWeight: 800,
+                lineHeight: 1.3,
+                color: isDark ? "#ffffff" : "#01579b",
+                letterSpacing: "0.01em",
+              }}
+            >
+              Unidad Educativa Particular La Voz de Cristo
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                fontFamily: "'Montserrat', sans-serif",
+                fontSize: { xs: "0.8rem", md: "0.9rem" },
+                fontWeight: 700,
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+                color: isDark ? "#facc15" : "#0288d1",
+              }}
+            >
+              Admisiones 2026
             </Typography>
           </Box>
         </div>
 
-        {/* Desktop Actions */}
-        <div className="hidden md:flex items-center gap-4">
-          {/* Botón Reserva de Cupo (Regulares) */}
-          <button className="relative bg-emerald-700 px-5 py-2 rounded-lg text-white shadow-lg overflow-hidden hover:bg-emerald-600 transition-transform transform hover:scale-105 active:scale-95 text-sm font-semibold">
-            <a href="/reserva-cupo">Reserva de Cupo</a>
-          </button>
-
-          {/* Botón Admisiones */}
-          <button className="relative bg-blue-700 px-5 py-2 rounded-lg text-white shadow-lg overflow-hidden hover:bg-blue-600 transition-transform transform hover:scale-105 active:scale-95 text-sm font-semibold">
-            <a href="/PreInscripcion/estado">Estado Pre-inscripción</a>
-          </button>
-
-          {/* Toggle Dark/Light */}
-          <IconButton onClick={colorMode.toggleColorMode}>
-            {theme.palette.mode === "dark" ? (
-              <DarkModeOutlinedIcon />
-            ) : (
-              <LightModeOutlinedIcon />
-            )}
+        {/* Acciones derecha: Estado + Toggle Theme */}
+        <div className="flex items-center gap-3">
+          {/* Toggle Dark/Light Mode */}
+          <IconButton
+            onClick={colorMode.toggleColorMode}
+            sx={{
+              color: isDark ? "#facc15" : "#01579b",
+              bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(1, 87, 155, 0.08)",
+              border: "1px solid",
+              borderColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(1, 87, 155, 0.15)",
+              p: 1.1,
+              "&:hover": {
+                bgcolor: isDark ? "rgba(255,255,255,0.15)" : "rgba(1, 87, 155, 0.15)",
+                transform: "rotate(180deg)",
+              },
+              transition: "all 0.4s ease",
+            }}
+          >
+            {isDark ? <DarkModeOutlinedIcon sx={{ fontSize: 20 }} /> : <LightModeOutlinedIcon sx={{ fontSize: 20 }} />}
           </IconButton>
         </div>
-
-        {/* Icono Mobile */}
-        <div className="md:hidden cursor-pointer transition-transform duration-300 hover:scale-110">
-          <MenuIcon
-            onClick={() => setShowMobileMenu(true)}
-            sx={{ width: 32, height: 32 }}
-          />
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      <div
-        className={`md:hidden fixed top-0 right-0 h-screen w-full bg-white/90 dark:bg-gray-900/95 backdrop-blur-xl transition-transform duration-500 ease-in-out ${
-          showMobileMenu ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex justify-end p-4">
-          <CloseIcon
-            onClick={() => setShowMobileMenu(false)}
-            sx={{
-              width: 32,
-              height: 32,
-              transition: "transform 0.3s",
-              cursor: "pointer",
-              "&:hover": {
-                transform: "rotate(90deg)",
-              },
-            }}
-          />
-        </div>
-
-        <ul className="flex flex-col items-center gap-6 mt-10 text-lg font-medium text-black dark:text-white">
-          <li className="animate-fadeInUp">
-            <a
-              href="/reserva-cupo"
-              onClick={() => setShowMobileMenu(false)}
-              className="transition-all duration-300 text-emerald-600 font-semibold hover:text-emerald-500 hover:scale-110"
-            >
-              Reserva de Cupo
-            </a>
-          </li>
-          <li className="animate-fadeInUp">
-            <a
-              href="/PreInscripcion/estado"
-              onClick={() => setShowMobileMenu(false)}
-              className="transition-all duration-300 hover:text-blue-700 hover:scale-110"
-            >
-              Estado Pre-inscripción
-            </a>
-          </li>
-          <li className="animate-fadeInUp">
-            <a
-              href="#SobreNosotros"
-              onClick={() => setShowMobileMenu(false)}
-              className="transition-all duration-300 hover:text-blue-700 hover:scale-110"
-            >
-              Nosotros
-            </a>
-          </li>
-        </ul>
       </div>
     </div>
   );

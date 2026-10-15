@@ -304,6 +304,22 @@ export const preinscripcionService = {
   },
 
   /**
+   * Reenviar notificación de WhatsApp (ADMIN)
+   */
+  async reenviarWhatsApp(id: number, observaciones?: string): Promise<any> {
+    try {
+      const response = await api.post(`/preinscripcion/${id}/reenviar-whatsapp`, {
+        observaciones,
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || 'Error al reenviar mensaje de WhatsApp'
+      );
+    }
+  },
+
+  /**
    * Promover estudiante de Lista de Espera a Cupo Directo (ADMIN)
    */
   async promoverDeListaEspera(id: number, motivo?: string): Promise<any> {

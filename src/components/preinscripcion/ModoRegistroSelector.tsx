@@ -334,14 +334,16 @@ export default function ModoRegistroSelector({ onModoSeleccionado }: ModoRegistr
                             {padreEncontrado.telefono}
                           </Typography>
                         </Box>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">
-                            Email
-                          </Typography>
-                          <Typography variant="body2" fontWeight={600}>
-                            {padreEncontrado.email || 'No registrado'}
-                          </Typography>
-                        </Box>
+                        {padreEncontrado.email && (
+                          <Box>
+                            <Typography variant="caption" color="text.secondary">
+                              Email
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600}>
+                              {padreEncontrado.email}
+                            </Typography>
+                          </Box>
+                        )}
                       </Box>
 
                       {padreEncontrado.hijos && padreEncontrado.hijos.length > 0 && (
