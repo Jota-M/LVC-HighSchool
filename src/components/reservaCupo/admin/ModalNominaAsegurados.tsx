@@ -1,8 +1,10 @@
 // src/components/reservaCupo/admin/ModalNominaAsegurados.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogActions,
   Box,
   Typography,
   Grid,
@@ -29,6 +31,7 @@ import {
   Card,
   CardContent,
   Fade,
+  CircularProgress,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -45,6 +48,8 @@ import {
   GridView as GridViewIcon,
   TableRows as TableRowsIcon,
   Person as PersonIcon,
+  Send as SendIcon,
+  EditNote as EditNoteIcon,
 } from '@mui/icons-material';
 import { BalanceCupoGrado, EstudianteCupoAsegurado } from '@/services/reservaCupoService';
 
@@ -57,11 +62,14 @@ interface ModalNominaAseguradosProps {
   filtroEstado: 'todos' | 'confirmados' | 'pendientes' | 'no_continua';
   filtroTurno: number | '';
   search: string;
+  enviandoWhatsAppId?: number | null;
+  enviandoWhatsAppMasivo?: boolean;
   onClose: () => void;
   onFiltroEstadoChange: (val: 'todos' | 'confirmados' | 'pendientes' | 'no_continua') => void;
   onFiltroTurnoChange: (val: number | '') => void;
   onSearchChange: (val: string) => void;
-  onEnviarWhatsApp: (est: EstudianteCupoAsegurado) => void;
+  onEnviarWhatsApp: (est: EstudianteCupoAsegurado, mensajePersonalizado?: string) => Promise<void> | void;
+  onEnviarWhatsAppMasivo?: (estudiantes: EstudianteCupoAsegurado[]) => Promise<void> | void;
 }
 
 export const ModalNominaAsegurados: React.FC<ModalNominaAseguradosProps> = ({
@@ -73,15 +81,88 @@ export const ModalNominaAsegurados: React.FC<ModalNominaAseguradosProps> = ({
   filtroEstado,
   filtroTurno,
   search,
+  enviandoWhatsAppId = null,
+  enviandoWhatsAppMasivo = false,
   onClose,
   onFiltroEstadoChange,
   onFiltroTurnoChange,
   onSearchChange,
   onEnviarWhatsApp,
+  onEnviarWhatsAppMasivo,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+
+  // Estados para diálogo de envío de WhatsApp
+  const [estudianteParaWhatsApp, setEstudianteParaWhatsApp] = useState<EstudianteCupoAsegurado | null>(null);
+  const [modalMasivoOpen, setModalMasivoOpen] = useState(false);
+  const [mensajePersonalizado, setMensajePersonalizado] = useState('');
+  const [modoEdicionMensaje, setModoEdicionMensaje] = useState(false);
+
+  // Búsqueda interna para respuesta inmediata (0ms) y debounce hacia el backend
+  const [internalSearch, setInternalSearch] = useState(search || '');
+
+  useEffect(() => {
+    setInternalSearch(search || '');
+  }, [search]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (internalSearch !== search) {
+        onSearchChange(internalSearch);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [internalSearch, search, onSearchChange]);
+
+  // Filtrado instantáneo en memoria sobre los estudiantes cargados
+  const estudiantesFiltrados = useMemo(() => {
+    if (!internalSearch || !internalSearch.trim()) return estudiantes;
+    const terms = internalSearch.toLowerCase().trim().split(/\s+/);
+    return estudiantes.filter((est) => {
+      const targetText = [
+        est.nombre_completo,
+        est.ci,
+        est.codigo_estudiante,
+        est.tutor_nombre,
+        est.tutor_telefono,
+        est.codigo_reserva,
+        est.curso_actual_2026,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return terms.every((t) => targetText.includes(t));
+    });
+  }, [estudiantes, internalSearch]);
+
+  // Lista de pendientes con número de contacto registrado
+  const pendientesConTel = estudiantesFiltrados.filter(
+    (e) => e.estado_confirmacion === 'PENDIENTE' && Boolean(e.tutor_telefono)
+  );
+
+  const handleAbrirModalWhatsAppIndividual = (est: EstudianteCupoAsegurado) => {
+    setEstudianteParaWhatsApp(est);
+    setModoEdicionMensaje(false);
+    const textoMsg = `📢 *Recordatorio Oficial de Cupo Asegurado*\n🏫 *Unidad Educativa Particular La Voz de Cristo*\n\nEstimado(a) ${est.tutor_nombre || 'Tutor(a)'},\nLe recordamos cordialmente que su hijo(a) *${est.nombre_completo}* (CI: ${est.ci}) cuenta con su *CUPO ASEGURADO* para la Gestión 2027 en el curso *${est.grado_destino_nombre}* (${est.turno_destino_nombre}).\n\nActualmente su confirmación se encuentra *PENDIENTE*.\n\n⚠️ *Aviso Importante:*\nPara la correcta planificación escolar y asignación de vacantes, le solicitamos ingresar a la brevedad para:\n  ✅ *Validar y confirmar* su cupo definitivo para la Gestión 2027, o\n  ❌ *Anular / registrar constancia de no continuidad* en caso de no continuar en la institución, liberando la vacante.\n\n🔗 *Portal de Reserva de Cupo:*\nhttps://uepclavozdecristo.site/reserva-cupo\n\n📌 _Solo necesitará el número de carnet de identidad (CI) del estudiante._\n\nSaludos cordiales.`;
+    setMensajePersonalizado(textoMsg);
+  };
+
+  const handleConfirmarEnvioIndividual = async () => {
+    if (!estudianteParaWhatsApp) return;
+    const est = estudianteParaWhatsApp;
+    setEstudianteParaWhatsApp(null);
+    await onEnviarWhatsApp(est, modoEdicionMensaje ? mensajePersonalizado : undefined);
+  };
+
+  const handleConfirmarEnvioMasivo = async () => {
+    setModalMasivoOpen(false);
+    if (onEnviarWhatsAppMasivo && pendientesConTel.length > 0) {
+      await onEnviarWhatsAppMasivo(pendientesConTel);
+    }
+  };
 
   // ── tokens idénticos a NuevoHorarioModal ────────────────────────────────────
   const brand = isDark ? '#facc15' : '#0288d1';
@@ -201,57 +282,110 @@ export const ModalNominaAsegurados: React.FC<ModalNominaAseguradosProps> = ({
           </Box>
         </Box>
 
-        {/* Chips de Resumen de Balance del Grado */}
+        {/* Chips de Resumen de Balance del Grado y Acción Masiva */}
         {grado && (
-          <Box sx={{ display: 'flex', gap: 0.8, flexWrap: 'wrap', mt: 1 }}>
-            <Chip
-              size="small"
-              label={`Asegurados: ${grado.total_asegurados}`}
-              sx={{
-                fontWeight: 800,
-                fontSize: '0.72rem',
-                bgcolor: alpha('#3b82f6', 0.12),
-                color: '#3b82f6',
-                border: '1px solid rgba(59,130,246,0.25)',
-                borderRadius: '8px',
-              }}
-            />
-            <Chip
-              size="small"
-              label={`Confirmados: ${grado.total_confirmados} (${grado.porcentaje_confirmado}%)`}
-              sx={{
-                fontWeight: 800,
-                fontSize: '0.72rem',
-                bgcolor: alpha('#10b981', 0.12),
-                color: '#10b981',
-                border: '1px solid rgba(16,185,129,0.25)',
-                borderRadius: '8px',
-              }}
-            />
-            <Chip
-              size="small"
-              label={`Pendientes: ${grado.total_restantes}`}
-              sx={{
-                fontWeight: 800,
-                fontSize: '0.72rem',
-                bgcolor: alpha('#f59e0b', 0.12),
-                color: '#f59e0b',
-                border: '1px solid rgba(245,158,11,0.25)',
-                borderRadius: '8px',
-              }}
-            />
-            <Chip
-              size="small"
-              label={`No Continuarán: ${grado.total_no_continua}`}
-              sx={{
-                fontWeight: 800,
-                fontSize: '0.72rem',
-                bgcolor: alpha('#ef4444', 0.12),
-                color: '#ef4444',
-                border: '1px solid rgba(239,68,68,0.25)',
-                borderRadius: '8px',
-              }}
-            />
+          <Box sx={{ display: 'flex', gap: 0.8, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+            <Box sx={{ display: 'flex', gap: 0.8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Chip
+                size="small"
+                label={`Asegurados: ${grado.total_asegurados}`}
+                sx={{
+                  fontWeight: 800,
+                  fontSize: '0.72rem',
+                  bgcolor: alpha('#3b82f6', 0.12),
+                  color: '#3b82f6',
+                  border: '1px solid rgba(59,130,246,0.25)',
+                  borderRadius: '8px',
+                }}
+              />
+              <Chip
+                size="small"
+                label={`Confirmados: ${grado.total_confirmados} (${grado.porcentaje_confirmado}%)`}
+                sx={{
+                  fontWeight: 800,
+                  fontSize: '0.72rem',
+                  bgcolor: alpha('#10b981', 0.12),
+                  color: '#10b981',
+                  border: '1px solid rgba(16,185,129,0.25)',
+                  borderRadius: '8px',
+                }}
+              />
+              <Chip
+                size="small"
+                label={`Pendientes: ${grado.total_restantes}`}
+                sx={{
+                  fontWeight: 800,
+                  fontSize: '0.72rem',
+                  bgcolor: alpha('#f59e0b', 0.12),
+                  color: '#f59e0b',
+                  border: '1px solid rgba(245,158,11,0.25)',
+                  borderRadius: '8px',
+                }}
+              />
+              <Chip
+                size="small"
+                label={`No Continuarán: ${grado.total_no_continua}`}
+                sx={{
+                  fontWeight: 800,
+                  fontSize: '0.72rem',
+                  bgcolor: alpha('#ef4444', 0.12),
+                  color: '#ef4444',
+                  border: '1px solid rgba(239,68,68,0.25)',
+                  borderRadius: '8px',
+                }}
+              />
+              {internalSearch.trim() && (
+                <Chip
+                  size="small"
+                  label={`Filtrados: ${estudiantesFiltrados.length}`}
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: '0.72rem',
+                    bgcolor: alpha(brand, 0.15),
+                    color: brand,
+                    border: `1px solid ${alpha(brand, 0.3)}`,
+                    borderRadius: '8px',
+                  }}
+                />
+              )}
+            </Box>
+
+            {/* Acción Masiva WhatsApp si hay pendientes con teléfono */}
+            {pendientesConTel.length > 0 && onEnviarWhatsAppMasivo && (
+              <Button
+                size="small"
+                variant="contained"
+                color="success"
+                disabled={enviandoWhatsAppMasivo}
+                startIcon={
+                  enviandoWhatsAppMasivo ? (
+                    <CircularProgress size={13} color="inherit" />
+                  ) : (
+                    <WhatsAppIcon sx={{ fontSize: 16 }} />
+                  )
+                }
+                onClick={() => setModalMasivoOpen(true)}
+                sx={{
+                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '0.73rem',
+                  textTransform: 'none',
+                  py: 0.35,
+                  px: 1.4,
+                  bgcolor: '#10b981',
+                  color: '#fff',
+                  boxShadow: '0 2px 8px rgba(16,185,129,0.3)',
+                  '&:hover': {
+                    bgcolor: '#059669',
+                    boxShadow: '0 4px 12px rgba(16,185,129,0.4)',
+                  },
+                }}
+              >
+                {enviandoWhatsAppMasivo
+                  ? 'Encolando recordatorios...'
+                  : `Recordar a pendientes (${pendientesConTel.length})`}
+              </Button>
+            )}
           </Box>
         )}
       </Box>
@@ -275,30 +409,38 @@ export const ModalNominaAsegurados: React.FC<ModalNominaAseguradosProps> = ({
                 fullWidth
                 size="small"
                 placeholder="Buscar por estudiante, CI o tutor..."
-                value={search}
-                onChange={(e) => onSearchChange(e.target.value)}
+                value={internalSearch}
+                onChange={(e) => setInternalSearch(e.target.value)}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
                       <SearchIcon fontSize="small" sx={{ color: brand }} />
                     </InputAdornment>
                   ),
-                  endAdornment: search ? (
+                  endAdornment: (
                     <InputAdornment position="end">
-                      <Box
-                        onClick={() => onSearchChange('')}
-                        sx={{
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          color: 'text.secondary',
-                          '&:hover': { color: brand },
-                        }}
-                      >
-                        <ClearIcon fontSize="small" />
-                      </Box>
+                      {loading && estudiantes.length > 0 ? (
+                        <CircularProgress size={15} sx={{ color: brand, mr: 0.5 }} />
+                      ) : null}
+                      {internalSearch ? (
+                        <Box
+                          onClick={() => {
+                            setInternalSearch('');
+                            onSearchChange('');
+                          }}
+                          sx={{
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            color: 'text.secondary',
+                            '&:hover': { color: brand },
+                          }}
+                        >
+                          <ClearIcon fontSize="small" />
+                        </Box>
+                      ) : null}
                     </InputAdornment>
-                  ) : null,
+                  ),
                 }}
                 sx={fieldSx}
               />
@@ -406,7 +548,7 @@ export const ModalNominaAsegurados: React.FC<ModalNominaAseguradosProps> = ({
         </Box>
 
         {/* ── RENDERIZADO: CARDS O TABLA ── */}
-        {loading ? (
+        {loading && estudiantes.length === 0 ? (
           <Grid container spacing={2}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <Grid key={i} size={{ xs: 12, sm: 6, md: 4 }}>
@@ -414,7 +556,7 @@ export const ModalNominaAsegurados: React.FC<ModalNominaAseguradosProps> = ({
               </Grid>
             ))}
           </Grid>
-        ) : estudiantes.length === 0 ? (
+        ) : estudiantesFiltrados.length === 0 ? (
           <Paper
             elevation={0}
             sx={{
@@ -427,16 +569,40 @@ export const ModalNominaAsegurados: React.FC<ModalNominaAseguradosProps> = ({
           >
             <PersonIcon sx={{ fontSize: 44, color: 'text.secondary', opacity: 0.4, mb: 1 }} />
             <Typography variant="body1" fontWeight={700} color="text.secondary">
-              No se encontraron estudiantes para los filtros seleccionados
+              {internalSearch.trim()
+                ? `No se encontraron coincidencias para "${internalSearch}"`
+                : 'No se encontraron estudiantes para los filtros seleccionados'}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Prueba cambiando el turno o el término de búsqueda.
+              {internalSearch.trim()
+                ? 'Verifica el término o intenta buscar por carnet de identidad (CI) o nombre del tutor.'
+                : 'Prueba cambiando el turno o el estado de confirmación.'}
             </Typography>
+            {internalSearch.trim() && (
+              <Box sx={{ mt: 1.5 }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => {
+                    setInternalSearch('');
+                    onSearchChange('');
+                  }}
+                  sx={{
+                    borderRadius: '8px',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                  }}
+                >
+                  Limpiar búsqueda
+                </Button>
+              </Box>
+            )}
           </Paper>
         ) : viewMode === 'cards' ? (
           /* ─── VISTA CARDS (Estilo con fondo suave y acento semántico) ─── */
           <Grid container spacing={2}>
-            {estudiantes.map((est) => {
+            {estudiantesFiltrados.map((est) => {
               const esConfirmado = est.estado_confirmacion === 'CONFIRMADO';
               const esPendiente = est.estado_confirmacion === 'PENDIENTE';
               const esNoContinua = est.estado_confirmacion === 'NO_CONTINUA';
@@ -605,8 +771,15 @@ export const ModalNominaAsegurados: React.FC<ModalNominaAseguradosProps> = ({
                               size="small"
                               variant="outlined"
                               color="success"
-                              startIcon={<WhatsAppIcon sx={{ fontSize: 15 }} />}
-                              onClick={() => onEnviarWhatsApp(est)}
+                              disabled={enviandoWhatsAppId === est.estudiante_id}
+                              startIcon={
+                                enviandoWhatsAppId === est.estudiante_id ? (
+                                  <CircularProgress size={14} color="inherit" />
+                                ) : (
+                                  <WhatsAppIcon sx={{ fontSize: 15 }} />
+                                )
+                              }
+                              onClick={() => handleAbrirModalWhatsAppIndividual(est)}
                               sx={{
                                 borderRadius: '9px',
                                 fontWeight: 700,
@@ -620,8 +793,17 @@ export const ModalNominaAsegurados: React.FC<ModalNominaAseguradosProps> = ({
                                 },
                               }}
                             >
-                              Recordar por WhatsApp
+                              {enviandoWhatsAppId === est.estudiante_id
+                                ? 'Enviando vía Evolution...'
+                                : 'Recordar por WhatsApp'}
                             </Button>
+                          ) : esPendiente && !est.tutor_telefono ? (
+                            <Typography
+                              variant="caption"
+                              sx={{ color: 'text.disabled', fontSize: '0.68rem', display: 'block', textAlign: 'center', py: 0.4 }}
+                            >
+                              Sin teléfono para WhatsApp
+                            </Typography>
                           ) : esConfirmado ? (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, py: 0.3 }}>
                               <CheckCircleIcon sx={{ fontSize: 16, color: '#10b981' }} />
@@ -667,7 +849,7 @@ export const ModalNominaAsegurados: React.FC<ModalNominaAseguradosProps> = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {estudiantes.map((est, idx) => {
+                {estudiantesFiltrados.map((est, idx) => {
                   const esConfirmado = est.estado_confirmacion === 'CONFIRMADO';
                   const esPendiente = est.estado_confirmacion === 'PENDIENTE';
                   const statusColor = esConfirmado ? '#10b981' : esPendiente ? '#f59e0b' : '#ef4444';
@@ -768,29 +950,44 @@ export const ModalNominaAsegurados: React.FC<ModalNominaAseguradosProps> = ({
 
                       <TableCell align="center">
                         {esPendiente && est.tutor_telefono ? (
-                          <Tooltip title="Enviar recordatorio formal por WhatsApp">
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              color="success"
-                              startIcon={<WhatsAppIcon sx={{ fontSize: 14 }} />}
-                              onClick={() => onEnviarWhatsApp(est)}
-                              sx={{
-                                borderRadius: '8px',
-                                fontWeight: 700,
-                                fontSize: '0.7rem',
-                                textTransform: 'none',
-                                py: 0.25,
-                                px: 1,
-                                borderColor: alpha('#10b981', 0.5),
-                              }}
-                            >
-                              Recordar
-                            </Button>
+                          <Tooltip title="Enviar recordatorio directo por WhatsApp (Evolution API)">
+                            <span>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="success"
+                                disabled={enviandoWhatsAppId === est.estudiante_id}
+                                startIcon={
+                                  enviandoWhatsAppId === est.estudiante_id ? (
+                                    <CircularProgress size={12} color="inherit" />
+                                  ) : (
+                                    <WhatsAppIcon sx={{ fontSize: 14 }} />
+                                  )
+                                }
+                                onClick={() => handleAbrirModalWhatsAppIndividual(est)}
+                                sx={{
+                                  borderRadius: '8px',
+                                  fontWeight: 700,
+                                  fontSize: '0.7rem',
+                                  textTransform: 'none',
+                                  py: 0.25,
+                                  px: 1,
+                                  borderColor: alpha('#10b981', 0.5),
+                                }}
+                              >
+                                {enviandoWhatsAppId === est.estudiante_id ? 'Enviando...' : 'Recordar'}
+                              </Button>
+                            </span>
                           </Tooltip>
+                        ) : esPendiente && !est.tutor_telefono ? (
+                          <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.68rem' }}>
+                            Sin teléfono
+                          </Typography>
                         ) : esConfirmado ? (
                           <Tooltip title="Cupo regular confirmado">
-                            <CheckCircleIcon sx={{ fontSize: 18, color: '#10b981', verticalAlign: 'middle' }} />
+                            <span>
+                              <CheckCircleIcon sx={{ fontSize: 18, color: '#10b981', verticalAlign: 'middle' }} />
+                            </span>
                           </Tooltip>
                         ) : (
                           <Typography variant="caption" color="text.disabled">
@@ -843,6 +1040,256 @@ export const ModalNominaAsegurados: React.FC<ModalNominaAseguradosProps> = ({
           Cerrar Nómina
         </Button>
       </Box>
+
+      {/* ── DIÁLOGO INDIVIDUAL: RECORDATORIO POR WHATSAPP (EVOLUTION API) ── */}
+      <Dialog
+        open={Boolean(estudianteParaWhatsApp)}
+        onClose={() => setEstudianteParaWhatsApp(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            background: bgModal,
+            border: `1.5px solid ${brandBorder}`,
+            boxShadow: isDark
+              ? '0 20px 40px rgba(0,0,0,0.8)'
+              : '0 20px 40px rgba(0,0,0,0.2)',
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.2, pb: 1, borderBottom: `1px solid ${borderField}` }}>
+          <Box
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: '9px',
+              bgcolor: alpha('#10b981', 0.15),
+              color: '#10b981',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <WhatsAppIcon sx={{ fontSize: 22 }} />
+          </Box>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={800}>
+              Recordar Cupo Asegurado por WhatsApp
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Envío directo mediante API de Evolution Go (Sin WhatsApp Web)
+            </Typography>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 2, pb: 1.5 }}>
+          {estudianteParaWhatsApp && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 0.5 }}>
+              {/* Resumen del destinatario */}
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: '12px',
+                  background: bgField,
+                  border: `1px solid ${borderField}`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0.5,
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                    TUTOR DESTINATARIO:
+                  </Typography>
+                  <Chip
+                    size="small"
+                    icon={<WhatsAppIcon sx={{ fontSize: '13px !important' }} />}
+                    label={estudianteParaWhatsApp.tutor_telefono}
+                    sx={{
+                      bgcolor: alpha('#10b981', 0.15),
+                      color: '#10b981',
+                      fontWeight: 800,
+                      fontSize: '0.72rem',
+                    }}
+                  />
+                </Box>
+                <Typography variant="body2" fontWeight={800}>
+                  {estudianteParaWhatsApp.tutor_nombre || 'Tutor no registrado'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Estudiante: <strong>{estudianteParaWhatsApp.nombre_completo}</strong> (CI: {estudianteParaWhatsApp.ci})
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Curso Proyectado: <strong>{estudianteParaWhatsApp.grado_destino_nombre}</strong> ({estudianteParaWhatsApp.turno_destino_nombre})
+                </Typography>
+              </Box>
+
+              {/* Botón para alternar edición de mensaje */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="caption" fontWeight={700} color="text.secondary">
+                  MENSAJE OFICIAL (EVOLUTION API):
+                </Typography>
+                <Button
+                  size="small"
+                  variant="text"
+                  startIcon={<EditNoteIcon sx={{ fontSize: 16 }} />}
+                  onClick={() => setModoEdicionMensaje(!modoEdicionMensaje)}
+                  sx={{ textTransform: 'none', fontSize: '0.72rem', fontWeight: 700 }}
+                >
+                  {modoEdicionMensaje ? 'Usar texto automático' : 'Editar mensaje'}
+                </Button>
+              </Box>
+
+              {modoEdicionMensaje ? (
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={6}
+                  maxRows={10}
+                  value={mensajePersonalizado}
+                  onChange={(e) => setMensajePersonalizado(e.target.value)}
+                  placeholder="Escriba el mensaje para WhatsApp..."
+                  sx={fieldSx}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    p: 1.8,
+                    borderRadius: '12px',
+                    bgcolor: isDark ? 'rgba(16, 185, 129, 0.08)' : '#f0fdf4',
+                    border: '1px solid rgba(16, 185, 129, 0.25)',
+                    fontFamily: 'monospace',
+                    fontSize: '0.78rem',
+                    whiteSpace: 'pre-wrap',
+                    color: isDark ? '#e2e8f0' : '#1e293b',
+                    maxHeight: '220px',
+                    overflowY: 'auto',
+                  }}
+                >
+                  {mensajePersonalizado}
+                </Box>
+              )}
+
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5, fontStyle: 'italic' }}>
+                ℹ️ El mensaje será despachado de forma directa por el servicio institucional de WhatsApp con protección anti-baneo.
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 2, pt: 1, borderTop: `1px solid ${borderField}` }}>
+          <Button
+            onClick={() => setEstudianteParaWhatsApp(null)}
+            sx={{ textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<SendIcon sx={{ fontSize: 16 }} />}
+            onClick={handleConfirmarEnvioIndividual}
+            sx={{
+              borderRadius: '10px',
+              fontWeight: 700,
+              textTransform: 'none',
+              px: 2.5,
+              bgcolor: '#10b981',
+              '&:hover': { bgcolor: '#059669' },
+            }}
+          >
+            Enviar por WhatsApp Directo
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── DIÁLOGO MASIVO: RECORDATORIO A PENDIENTES (EVOLUTION API) ── */}
+      <Dialog
+        open={modalMasivoOpen}
+        onClose={() => setModalMasivoOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            background: bgModal,
+            border: `1.5px solid ${brandBorder}`,
+            boxShadow: isDark
+              ? '0 20px 40px rgba(0,0,0,0.8)'
+              : '0 20px 40px rgba(0,0,0,0.2)',
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.2, pb: 1, borderBottom: `1px solid ${borderField}` }}>
+          <Box
+            sx={{
+              width: 36,
+              height: 36,
+              borderRadius: '9px',
+              bgcolor: alpha('#10b981', 0.15),
+              color: '#10b981',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <WhatsAppIcon sx={{ fontSize: 22 }} />
+          </Box>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={800}>
+              Recordatorio Masivo
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Evolution API (Cola Segura)
+            </Typography>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 2, pb: 1 }}>
+          <Typography variant="body2" sx={{ mb: 1.5 }}>
+            ¿Estás seguro de enviar recordatorios directos por WhatsApp a los{' '}
+            <strong>{pendientesConTel.length} estudiantes pendientes</strong> de este grado con número registrado?
+          </Typography>
+
+          <Box
+            sx={{
+              p: 1.5,
+              borderRadius: '10px',
+              bgcolor: alpha('#10b981', 0.08),
+              border: '1px solid rgba(16, 185, 129, 0.25)',
+            }}
+          >
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.4 }}>
+              🛡️ <strong>Envío Seguro Anti-Baneo:</strong> Los mensajes se despacharán de forma secuencial en cola con simulación de tipeo humano y cadencia de espera de 3 a 6 segundos para proteger la línea institucional.
+            </Typography>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 2.5, pb: 2, pt: 1, borderTop: `1px solid ${borderField}` }}>
+          <Button
+            onClick={() => setModalMasivoOpen(false)}
+            sx={{ textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<SendIcon sx={{ fontSize: 16 }} />}
+            onClick={handleConfirmarEnvioMasivo}
+            sx={{
+              borderRadius: '9px',
+              fontWeight: 700,
+              textTransform: 'none',
+              bgcolor: '#10b981',
+              '&:hover': { bgcolor: '#059669' },
+            }}
+          >
+            Confirmar y Encolar ({pendientesConTel.length})
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };

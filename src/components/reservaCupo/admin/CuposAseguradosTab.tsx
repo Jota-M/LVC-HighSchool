@@ -22,6 +22,7 @@ import {
   Fade,
   LinearProgress,
   Tooltip,
+  CircularProgress,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -38,24 +39,31 @@ import {
   Assessment as AssessmentIcon,
   School as SchoolIcon,
   ChevronRight as ChevronRightIcon,
+  WhatsApp as WhatsAppIcon,
 } from '@mui/icons-material';
-import { BalanceCuposAseguradosData, BalanceCupoGrado } from '@/services/reservaCupoService';
+import { BalanceCuposAseguradosData, BalanceCupoGrado, EstadoCampanaWhatsApp } from '@/services/reservaCupoService';
 import { getNivelColor, usePalette } from './common';
 
 interface CuposAseguradosTabProps {
   balanceAsegurados: BalanceCuposAseguradosData | null;
   loadingBalance: boolean;
+  estadoCampana?: EstadoCampanaWhatsApp | null;
   onRefresh: () => void;
   onAbrirDetalleGrado: (grado: BalanceCupoGrado) => void;
   onEmitirReporte: (gradoId: number) => void;
+  onAbrirCampanaWhatsApp?: () => void;
+  onDetenerCampana?: () => void;
 }
 
 export const CuposAseguradosTab: React.FC<CuposAseguradosTabProps> = ({
   balanceAsegurados,
   loadingBalance,
+  estadoCampana = null,
   onRefresh,
   onAbrirDetalleGrado,
   onEmitirReporte,
+  onAbrirCampanaWhatsApp,
+  onDetenerCampana,
 }) => {
   const { theme, isDark, gold: accentColor, gradBg } = usePalette();
 
@@ -137,30 +145,157 @@ export const CuposAseguradosTab: React.FC<CuposAseguradosTabProps> = ({
           </Box>
         </Box>
 
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<RefreshIcon />}
-          onClick={onRefresh}
-          disabled={loadingBalance}
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Botón de Campaña Masiva Anti-Baneo WhatsApp */}
+          {onAbrirCampanaWhatsApp && (
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<WhatsAppIcon sx={{ fontSize: 18 }} />}
+              onClick={onAbrirCampanaWhatsApp}
+              sx={{
+                borderRadius: '12px',
+                fontWeight: 800,
+                textTransform: 'none',
+                px: 2.2,
+                py: 0.85,
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#fff',
+                boxShadow: '0 4px 14px rgba(16,185,129,0.3)',
+                flexShrink: 0,
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                  boxShadow: '0 6px 18px rgba(16,185,129,0.4)',
+                },
+              }}
+            >
+              {estadoCampana?.activo ? 'Ver Progreso WhatsApp (Activo)' : 'Campaña WhatsApp Masiva (Anti-Baneo)'}
+            </Button>
+          )}
+
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<RefreshIcon />}
+            onClick={onRefresh}
+            disabled={loadingBalance}
+            sx={{
+              borderRadius: '12px',
+              fontWeight: 700,
+              textTransform: 'none',
+              px: 2.2,
+              py: 0.85,
+              borderColor: alpha(accentColor, 0.4),
+              color: accentColor,
+              flexShrink: 0,
+              '&:hover': {
+                borderColor: accentColor,
+                bgcolor: alpha(accentColor, 0.1),
+              },
+            }}
+          >
+            {loadingBalance ? 'Actualizando...' : 'Actualizar Balance'}
+          </Button>
+        </Box>
+      </Box>
+
+      {/* ══ BANNER FLOTANTE DE CAMPAÑA MASIVA EN CURSO (COLA ANTI-BANEO) ══ */}
+      {estadoCampana?.activo && (
+        <Paper
+          elevation={0}
           sx={{
-            borderRadius: '12px',
-            fontWeight: 700,
-            textTransform: 'none',
-            px: 2.2,
-            py: 0.85,
-            borderColor: alpha(accentColor, 0.4),
-            color: accentColor,
-            flexShrink: 0,
-            '&:hover': {
-              borderColor: accentColor,
-              bgcolor: alpha(accentColor, 0.1),
-            },
+            p: 2,
+            mb: 2.8,
+            borderRadius: '16px',
+            bgcolor: isDark ? 'rgba(16,185,129,0.08)' : '#f0fdf4',
+            border: '1.5px solid #10b981',
+            boxShadow: '0 4px 20px rgba(16,185,129,0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2,
+            flexWrap: { xs: 'wrap', md: 'nowrap' },
           }}
         >
-          {loadingBalance ? 'Actualizando...' : 'Actualizar Balance'}
-        </Button>
-      </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.8, flex: 1, minWidth: 260 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: '10px',
+                bgcolor: alpha('#10b981', 0.15),
+                color: '#10b981',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <CircularProgress size={22} sx={{ color: '#10b981' }} />
+            </Box>
+
+            <Box sx={{ flex: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <Typography variant="subtitle2" fontWeight={800} sx={{ color: '#10b981' }}>
+                  Campaña WhatsApp en Curso: {estadoCampana.porcentaje}% completado
+                </Typography>
+                <Chip
+                  size="small"
+                  label={`Pausa segura: ${estadoCampana.delay_min_seg}s - ${estadoCampana.delay_max_seg}s`}
+                  sx={{
+                    bgcolor: alpha('#10b981', 0.15),
+                    color: '#10b981',
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    height: 20,
+                  }}
+                />
+              </Box>
+
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2 }}>
+                Entregados: <strong>{estadoCampana.enviados}</strong> de <strong>{estadoCampana.total}</strong> · En cola segura: <strong>{estadoCampana.en_cola}</strong> · Enviando a: <em>{estadoCampana.estudiante_actual || 'Pausando entre envíos...'}</em>
+              </Typography>
+
+              <LinearProgress
+                variant="determinate"
+                value={estadoCampana.porcentaje}
+                sx={{
+                  mt: 0.8,
+                  height: 6,
+                  borderRadius: 3,
+                  bgcolor: alpha('#10b981', 0.2),
+                  '& .MuiLinearProgress-bar': { bgcolor: '#10b981', borderRadius: 3 },
+                }}
+              />
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
+            {onAbrirCampanaWhatsApp && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="success"
+                onClick={onAbrirCampanaWhatsApp}
+                sx={{ borderRadius: '10px', fontWeight: 700, textTransform: 'none', px: 1.8 }}
+              >
+                Ver Detalles
+              </Button>
+            )}
+            {onDetenerCampana && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="error"
+                onClick={onDetenerCampana}
+                sx={{ borderRadius: '10px', fontWeight: 700, textTransform: 'none', px: 1.8 }}
+              >
+                Detener
+              </Button>
+            )}
+          </Box>
+        </Paper>
+      )}
 
       {/* ══ 4 KPIS CLAVE GLOBALES (Estilo StatCards Oficiales Compactos) ══ */}
       <Grid container spacing={2} sx={{ mb: 2.5 }}>

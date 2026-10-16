@@ -338,6 +338,81 @@ class ReservaCupoService {
     const { data } = await api.post(`/reserva-cupo/admin/${id}/enviar-whatsapp`, payload);
     return data;
   }
+
+  /**
+   * Envía recordatorio oficial directo por WhatsApp vía Evolution API a un tutor
+   */
+  async enviarRecordatorioContinuidadWhatsApp(payload: {
+    estudiante_id: number;
+    tutor_telefono?: string;
+    tutor_nombre?: string;
+    nombre_completo?: string;
+    ci?: string;
+    grado_destino_nombre?: string;
+    turno_destino_nombre?: string;
+    mensaje_personalizado?: string;
+    anio_destino?: number;
+  }): Promise<{ success: boolean; message: string }> {
+    const { data } = await api.post('/reserva-cupo/admin/recordatorio-continuidad/whatsapp', payload);
+    return data;
+  }
+
+  /**
+   * Envía recordatorios masivos por WhatsApp vía Evolution API
+   */
+  async enviarRecordatorioContinuidadMasivoWhatsApp(payload: {
+    estudiantes: EstudianteCupoAsegurado[];
+    anio_destino?: number;
+  }): Promise<{ success: boolean; message: string; total_encolados?: number }> {
+    const { data } = await api.post('/reserva-cupo/admin/recordatorio-continuidad/whatsapp-masivo', payload);
+    return data;
+  }
+
+  /**
+   * Inicia campaña masiva anti-baneo con cola secuencial, pausas humanas y spintax
+   */
+  async iniciarCampanaWhatsApp(payload: {
+    grado_destino_id?: number | 'todos';
+    delay_min_seg?: number;
+    delay_max_seg?: number;
+    anio_destino?: number;
+  }): Promise<{ success: boolean; message: string; id_campana?: string; total_programados?: number }> {
+    const { data } = await api.post('/reserva-cupo/admin/recordatorio-continuidad/campana-iniciar', payload);
+    return data;
+  }
+
+  /**
+   * Consulta el estado en tiempo real de la campaña masiva en curso
+   */
+  async obtenerEstadoCampanaWhatsApp(): Promise<EstadoCampanaWhatsApp> {
+    const { data } = await api.get('/reserva-cupo/admin/recordatorio-continuidad/campana-estado');
+    return data.data;
+  }
+
+  /**
+   * Detiene la campaña de envíos masivos en curso
+   */
+  async detenerCampanaWhatsApp(): Promise<{ success: boolean; message: string }> {
+    const { data } = await api.post('/reserva-cupo/admin/recordatorio-continuidad/campana-detener');
+    return data;
+  }
+}
+
+export interface EstadoCampanaWhatsApp {
+  activo: boolean;
+  detenerSolicitado: boolean;
+  id_campana: string | null;
+  total: number;
+  enviados: number;
+  fallidos: number;
+  en_cola: number;
+  porcentaje: number;
+  estudiante_actual: string | null;
+  iniciado_at: string | null;
+  finalizado_at: string | null;
+  ultimo_envio_at: string | null;
+  delay_min_seg: number;
+  delay_max_seg: number;
 }
 
 export interface BalanceCupoGrado {
@@ -360,6 +435,13 @@ export interface BalanceCuposAseguradosData {
   anio_origen: number;
   anio_destino: number;
   totales_globales: {
+    total_asegurados: number;
+    total_confirmados: number;
+    total_no_continua: number;
+    total_restantes: number;
+    porcentaje_confirmado: number;
+  };
+  resumen?: {
     total_asegurados: number;
     total_confirmados: number;
     total_no_continua: number;

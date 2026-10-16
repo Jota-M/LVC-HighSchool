@@ -42,6 +42,7 @@ import reservaCupoService, {
   BalanceCuposAseguradosData,
   BalanceCupoGrado,
   EstudianteCupoAsegurado,
+  EstadoCampanaWhatsApp,
 } from '@/services/reservaCupoService';
 import { ReservaCupoData, ReservaCupoHermanoData } from '@/types/reservaCupoTypes';
 import { gestionAcademicaService } from '@/services/estudiantesService';
@@ -65,6 +66,7 @@ import { ModalAnulacionAdmin } from '@/components/reservaCupo/admin/ModalAnulaci
 import { ModalReactivacionAdmin } from '@/components/reservaCupo/admin/ModalReactivacionAdmin';
 import { ModalNominaAsegurados } from '@/components/reservaCupo/admin/ModalNominaAsegurados';
 import { ModalEliminarHermanoAdmin } from '@/components/reservaCupo/admin/ModalEliminarHermanoAdmin';
+import { ModalCampanaWhatsAppAdmin } from '@/components/reservaCupo/admin/ModalCampanaWhatsAppAdmin';
 import CuposAseguradosTab from '@/components/reservaCupo/admin/CuposAseguradosTab';
 
 export default function ReservaCuposDashboardPage() {
@@ -136,6 +138,11 @@ export default function ReservaCuposDashboardPage() {
   const [listaEstudiantesBalance, setListaEstudiantesBalance] = useState<EstudianteCupoAsegurado[]>([]);
   const [loadingEstudiantesBalance, setLoadingEstudiantesBalance] = useState(false);
   const [totalEstudiantesBalance, setTotalEstudiantesBalance] = useState(0);
+  const [enviandoWhatsAppId, setEnviandoWhatsAppId] = useState<number | null>(null);
+  const [enviandoWhatsAppMasivo, setEnviandoWhatsAppMasivo] = useState(false);
+  const [modalCampanaWhatsAppOpen, setModalCampanaWhatsAppOpen] = useState(false);
+  const [estadoCampanaWhatsApp, setEstadoCampanaWhatsApp] = useState<EstadoCampanaWhatsApp | null>(null);
+  const [isProcesandoCampana, setIsProcesandoCampana] = useState(false);
 
   // Modales de acciones administrativas (Anulación y Reactivación)
   const [modalAnulacionOpen, setModalAnulacionOpen] = useState(false);
@@ -328,16 +335,128 @@ export default function ReservaCuposDashboardPage() {
     toast('Selecciona el turno y descarga la nómina oficial en PDF o Excel', { icon: 'ℹ️' });
   };
 
-  const handleEnviarRecordatorioWhatsApp = (estudiante: EstudianteCupoAsegurado) => {
+  const handleEnviarRecordatorioWhatsApp = async (estudiante: EstudianteCupoAsegurado, mensajePersonalizado?: string) => {
     if (!estudiante.tutor_telefono) {
-      toast.error('No hay número de teléfono registrado para este tutor');
+      toast.error('No hay número de teléfono o celular registrado para este tutor');
       return;
     }
-    const cleanPhone = estudiante.tutor_telefono.replace(/\D/g, '');
-    const telefonoFinal = cleanPhone.startsWith('591') ? cleanPhone : `591${cleanPhone}`;
-    const textoMensaje = `Estimado(a) ${estudiante.tutor_nombre || 'Tutor(a)'},\nLe saludamos del Colegio Virgen de Copacabana. Le recordamos que el estudiante *${estudiante.nombre_completo}* (CI: ${estudiante.ci}) tiene su *CUPO ASEGURADO* para la Gestión 2027 en el curso *${estudiante.grado_destino_nombre}* (${estudiante.turno_destino_nombre}).\n\nActualmente su confirmación se encuentra *PENDIENTE*. Por favor ingrese a la página de reserva para validar su permanencia y asegurar su vacante definitiva.\n\nSaludos cordiales.`;
-    const url = `https://wa.me/${telefonoFinal}?text=${encodeURIComponent(textoMensaje)}`;
-    window.open(url, '_blank');
+
+    setEnviandoWhatsAppId(estudiante.estudiante_id);
+    const toastId = toast.loading(`Enviando recordatorio directo vía Evolution API a ${estudiante.tutor_nombre || 'tutor'}...`);
+
+    try {
+      const res = await reservaCupoService.enviarRecordatorioContinuidadWhatsApp({
+        estudiante_id: estudiante.estudiante_id,
+        tutor_telefono: estudiante.tutor_telefono,
+        tutor_nombre: estudiante.tutor_nombre || undefined,
+        nombre_completo: estudiante.nombre_completo,
+        ci: estudiante.ci,
+        grado_destino_nombre: estudiante.grado_destino_nombre,
+        turno_destino_nombre: estudiante.turno_destino_nombre,
+        mensaje_personalizado: mensajePersonalizado,
+        anio_destino: 2027
+      });
+
+      toast.success(res.message || 'Recordatorio enviado directamente vía WhatsApp (Evolution API)', { id: toastId });
+    } catch (error) {
+      console.error('Error al enviar recordatorio por WhatsApp:', error);
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      const msg = err.response?.data?.message || err.message || 'Error al enviar recordatorio vía WhatsApp';
+      toast.error(msg, { id: toastId });
+    } finally {
+      setEnviandoWhatsAppId(null);
+    }
+  };
+
+  const handleEnviarRecordatorioWhatsAppMasivo = async (estudiantes: EstudianteCupoAsegurado[]) => {
+    const pendientesConTel = estudiantes.filter(e => e.estado_confirmacion === 'PENDIENTE' && Boolean(e.tutor_telefono));
+    if (pendientesConTel.length === 0) {
+      toast.error('No hay estudiantes pendientes con número de WhatsApp registrado');
+      return;
+    }
+
+    setEnviandoWhatsAppMasivo(true);
+    const toastId = toast.loading(`Encolando ${pendientesConTel.length} recordatorios vía Evolution API...`);
+
+    try {
+      const res = await reservaCupoService.enviarRecordatorioContinuidadMasivoWhatsApp({
+        estudiantes: pendientesConTel,
+        anio_destino: 2027
+      });
+
+      toast.success(res.message || `Se encolaron ${pendientesConTel.length} recordatorios de cupo por WhatsApp`, { id: toastId });
+    } catch (error) {
+      console.error('Error en envío masivo de recordatorios:', error);
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      const msg = err.response?.data?.message || err.message || 'Error al enviar recordatorios masivos';
+      toast.error(msg, { id: toastId });
+    } finally {
+      setEnviandoWhatsAppMasivo(false);
+    }
+  };
+
+  // Consultar estado de campaña WhatsApp masiva y polling en tiempo real
+  const consultarEstadoCampana = async () => {
+    try {
+      const estado = await reservaCupoService.obtenerEstadoCampanaWhatsApp();
+      setEstadoCampanaWhatsApp(estado);
+      return estado;
+    } catch {
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    consultarEstadoCampana();
+  }, []);
+
+  useEffect(() => {
+    if (!estadoCampanaWhatsApp?.activo) return;
+    const interval = setInterval(async () => {
+      const est = await consultarEstadoCampana();
+      if (!est?.activo) {
+        clearInterval(interval);
+        cargarBalanceAsegurados();
+      }
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [estadoCampanaWhatsApp?.activo]);
+
+  const handleIniciarCampanaMasiva = async (params: {
+    grado_destino_id?: number | 'todos';
+    delay_min_seg?: number;
+    delay_max_seg?: number;
+  }) => {
+    setIsProcesandoCampana(true);
+    try {
+      const res = await reservaCupoService.iniciarCampanaWhatsApp({
+        grado_destino_id: params.grado_destino_id,
+        delay_min_seg: params.delay_min_seg,
+        delay_max_seg: params.delay_max_seg,
+        anio_destino: 2027
+      });
+      toast.success(res.message);
+      await consultarEstadoCampana();
+    } catch (error) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      toast.error(err.response?.data?.message || err.message || 'Error al iniciar campaña');
+    } finally {
+      setIsProcesandoCampana(false);
+    }
+  };
+
+  const handleDetenerCampanaMasiva = async () => {
+    setIsProcesandoCampana(true);
+    try {
+      const res = await reservaCupoService.detenerCampanaWhatsApp();
+      toast.success(res.message);
+      await consultarEstadoCampana();
+    } catch (error) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      toast.error(err.response?.data?.message || err.message || 'Error al detener campaña');
+    } finally {
+      setIsProcesandoCampana(false);
+    }
   };
 
   // Efectos de carga
@@ -1084,9 +1203,12 @@ export default function ReservaCuposDashboardPage() {
               <CuposAseguradosTab
                 balanceAsegurados={balanceAsegurados}
                 loadingBalance={loadingBalance}
+                estadoCampana={estadoCampanaWhatsApp}
                 onRefresh={cargarBalanceAsegurados}
                 onAbrirDetalleGrado={handleAbrirDetalleGrado}
                 onEmitirReporte={handleEmitirReporteGrado}
+                onAbrirCampanaWhatsApp={() => setModalCampanaWhatsAppOpen(true)}
+                onDetenerCampana={handleDetenerCampanaMasiva}
               />
             )}
           </Box>
@@ -1181,6 +1303,25 @@ export default function ReservaCuposDashboardPage() {
             }
           }}
           onEnviarWhatsApp={handleEnviarRecordatorioWhatsApp}
+          enviandoWhatsAppId={enviandoWhatsAppId}
+          enviandoWhatsAppMasivo={enviandoWhatsAppMasivo}
+          onEnviarWhatsAppMasivo={handleEnviarRecordatorioWhatsAppMasivo}
+        />
+
+        {/* MODAL DE CAMPAÑA MASIVA WHATSAPP ANTI-BANEO (COLEGIO COMPLETO O GRADO) */}
+        <ModalCampanaWhatsAppAdmin
+          open={modalCampanaWhatsAppOpen}
+          grados={balanceAsegurados?.grados || []}
+          totalPendientesColegio={
+            balanceAsegurados?.totales_globales?.total_restantes ??
+            balanceAsegurados?.resumen?.total_restantes ??
+            0
+          }
+          estadoCampana={estadoCampanaWhatsApp}
+          isProcesando={isProcesandoCampana}
+          onClose={() => setModalCampanaWhatsAppOpen(false)}
+          onIniciarCampana={handleIniciarCampanaMasiva}
+          onDetenerCampana={handleDetenerCampanaMasiva}
         />
       </Container>
     </Box>
