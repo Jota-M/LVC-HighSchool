@@ -38,6 +38,7 @@ import {
   HowToReg as HowToRegIcon,
   WhatsApp as WhatsAppIcon,
   PictureAsPdf as PdfIcon,
+  DeleteForeverRounded as DeleteIcon,
 } from '@mui/icons-material';
 import { ReservaCupoHermanoData } from '@/types/reservaCupoTypes';
 import { BtnDescarga, getInitials, usePalette } from './common';
@@ -57,6 +58,7 @@ interface HermanosTabProps {
   promoviendoHermanoId: number | null;
   onPromoverHermano: (hermano: ReservaCupoHermanoData) => void;
   onDescargarPDF: (codigo: string) => void;
+  onEliminarHermano: (hermano: ReservaCupoHermanoData) => void;
 }
 
 export const HermanosTab: React.FC<HermanosTabProps> = ({
@@ -74,6 +76,7 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
   promoviendoHermanoId,
   onPromoverHermano,
   onDescargarPDF,
+  onEliminarHermano,
 }) => {
   const { theme, isDark, gold: accentColor, gradBg } = usePalette();
 
@@ -263,30 +266,51 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
                     }}
                   >
                     <CardContent sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      {/* Badges superiores */}
+                      {/* Badges superiores y acción rápida */}
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, gap: 1, flexWrap: 'wrap' }}>
-                        <Chip
-                          size="small"
-                          icon={esEspera ? <WarningAmberIcon sx={{ fontSize: '13px !important', color: '#fff !important' }} /> : <CheckCircleIcon sx={{ fontSize: '13px !important', color: '#fff !important' }} />}
-                          label={esEspera ? `Lista de Espera · Puesto #${h.posicion_espera || 1}` : 'Cupo Directo Confirmado'}
-                          sx={{
-                            bgcolor: esEspera ? '#f59e0b' : '#10b981',
-                            color: '#fff',
-                            fontWeight: 800,
-                            fontSize: '0.72rem',
-                          }}
-                        />
-                        <Chip
-                          size="small"
-                          icon={<StarIcon sx={{ fontSize: '13px !important', color: isDark ? '#000 !important' : '#fff !important' }} />}
-                          label="Prioridad Familiar"
-                          sx={{
-                            bgcolor: isDark ? '#facc15' : '#0288d1',
-                            color: isDark ? '#000' : '#fff',
-                            fontWeight: 800,
-                            fontSize: '0.7rem',
-                          }}
-                        />
+                        <Box sx={{ display: 'flex', gap: 0.8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <Chip
+                            size="small"
+                            icon={esEspera ? <WarningAmberIcon sx={{ fontSize: '13px !important', color: '#fff !important' }} /> : <CheckCircleIcon sx={{ fontSize: '13px !important', color: '#fff !important' }} />}
+                            label={esEspera ? `Lista de Espera · Puesto #${h.posicion_espera || 1}` : 'Cupo Directo Confirmado'}
+                            sx={{
+                              bgcolor: esEspera ? '#f59e0b' : '#10b981',
+                              color: '#fff',
+                              fontWeight: 800,
+                              fontSize: '0.72rem',
+                            }}
+                          />
+                          <Chip
+                            size="small"
+                            icon={<StarIcon sx={{ fontSize: '13px !important', color: isDark ? '#000 !important' : '#fff !important' }} />}
+                            label="Prioridad Familiar"
+                            sx={{
+                              bgcolor: isDark ? '#facc15' : '#0288d1',
+                              color: isDark ? '#000' : '#fff',
+                              fontWeight: 800,
+                              fontSize: '0.7rem',
+                            }}
+                          />
+                        </Box>
+                        <Tooltip title="Eliminar este cupo de hermano (ej. duplicados)">
+                          <IconButton
+                            size="small"
+                            onClick={() => onEliminarHermano(h)}
+                            sx={{
+                              color: '#ef4444',
+                              bgcolor: alpha('#ef4444', 0.08),
+                              borderRadius: '8px',
+                              p: 0.6,
+                              transition: 'all 0.2s',
+                              '&:hover': {
+                                bgcolor: alpha('#ef4444', 0.2),
+                                transform: 'scale(1.08)',
+                              },
+                            }}
+                          >
+                            <DeleteIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
                       </Box>
 
                       {/* Datos del Hermano Postulante */}
@@ -384,7 +408,7 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
                           </Button>
                         )}
 
-                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, pt: 0.5 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.8, pt: 0.5, flexWrap: 'wrap' }}>
                           <Button
                             size="small"
                             variant="text"
@@ -409,6 +433,29 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
                             sx={{ textTransform: 'none', fontSize: '0.75rem', fontWeight: 700, color: 'text.secondary' }}
                           >
                             Recibo PDF
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            startIcon={<DeleteIcon sx={{ fontSize: '15px !important' }} />}
+                            onClick={() => onEliminarHermano(h)}
+                            sx={{
+                              textTransform: 'none',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              borderRadius: '8px',
+                              borderColor: alpha('#ef4444', 0.4),
+                              color: '#ef4444',
+                              px: 1.2,
+                              py: 0.3,
+                              '&:hover': {
+                                borderColor: '#ef4444',
+                                bgcolor: alpha('#ef4444', 0.08),
+                              },
+                            }}
+                          >
+                            Eliminar Cupo
                           </Button>
                         </Box>
                       </Stack>

@@ -16,12 +16,17 @@ export interface Cupo {
   created_at: string;
   updated_at: string;
   
-  // Joins
+  // Joins & Estadísticas detalladas
   periodo_nombre?: string;
   grado_nombre?: string;
   turno_nombre?: string;
   nivel_academico_nombre?: string;
   porcentaje_ocupacion?: number;
+  regulares_confirmados?: number;
+  hermanos_confirmados?: number;
+  preinscripciones_aprobadas?: number;
+  preinscripciones_total?: number;
+  preinscripciones_en_espera?: number;
 }
 
 export interface CupoFilters {

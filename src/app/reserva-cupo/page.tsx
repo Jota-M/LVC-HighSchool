@@ -1897,6 +1897,7 @@ export default function ReservaCupoPage() {
         onAgregar={handleAgregarHermano}
         estudiantesRegulares={estudiantesSeleccionados}
         periodoId={estudiantesSeleccionados[0]?.proyeccion_siguiente?.periodo_id}
+        hermanosYaAgregados={hermanosSeleccionados}
       />
 
       {/* Modal para registrar hermanito directamente cuando la reserva del regular ya está confirmada */}

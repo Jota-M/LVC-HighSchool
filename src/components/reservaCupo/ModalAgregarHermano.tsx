@@ -44,6 +44,7 @@ export interface ModalAgregarHermanoProps {
   onAgregarHermano?: (hermano: HermanoParaReserva) => void;
   estudiantesRegulares: any[];
   periodoId?: number;
+  hermanosYaAgregados?: HermanoParaReserva[];
 }
 
 export default function ModalAgregarHermano({
@@ -52,6 +53,7 @@ export default function ModalAgregarHermano({
   onAgregar,
   onAgregarHermano,
   estudiantesRegulares,
+  hermanosYaAgregados = [],
 }: ModalAgregarHermanoProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -104,6 +106,10 @@ export default function ModalAgregarHermano({
   const [isConsultandoDisp, setIsConsultandoDisp] = useState(false);
   const [errorValidacion, setErrorValidacion] = useState<string | null>(null);
 
+  // Verificación de duplicados en tiempo real (por CI o nombres completos)
+  const [duplicadoDetectado, setDuplicadoDetectado] = useState<string | null>(null);
+  const [isVerificandoDuplicado, setIsVerificandoDuplicado] = useState(false);
+
   // Cargar lista de grados
   useEffect(() => {
     if (open) {
@@ -150,6 +156,61 @@ export default function ModalAgregarHermano({
     }
   }, [open, gradoSolicitadoId, turnoSolicitadoId]);
 
+  // Detección de duplicados en tiempo real (por CI o nombres + apellidos)
+  useEffect(() => {
+    const ciTrim = ci.trim();
+    const nomTrim = nombres.trim();
+    const patTrim = apellidoPaterno.trim();
+
+    if (!ciTrim && (!nomTrim || !patTrim)) {
+      setDuplicadoDetectado(null);
+      return;
+    }
+
+    // 1. Chequeo local en la lista de hermanos ya añadidos en la misma sesión
+    if (hermanosYaAgregados && hermanosYaAgregados.length > 0) {
+      const yaEnLista = hermanosYaAgregados.some((h) => {
+        const coincideCi = ciTrim && h.ci && h.ci.trim().toLowerCase() === ciTrim.toLowerCase();
+        const coincideNombre =
+          nomTrim &&
+          patTrim &&
+          h.nombres?.trim().toLowerCase() === nomTrim.toLowerCase() &&
+          h.apellido_paterno?.trim().toLowerCase() === patTrim.toLowerCase();
+        return Boolean(coincideCi || coincideNombre);
+      });
+
+      if (yaEnLista) {
+        setDuplicadoDetectado('Ya has agregado a este hermanito en la lista actual de tu reserva.');
+        return;
+      }
+    }
+
+    // 2. Chequeo en la base de datos (con debounce para no saturar)
+    const timer = setTimeout(async () => {
+      setIsVerificandoDuplicado(true);
+      try {
+        const res = await reservaCupoService.verificarHermano({
+          ci: ciTrim || undefined,
+          nombres: nomTrim || undefined,
+          apellido_paterno: patTrim || undefined,
+          apellido_materno: apellidoMaterno.trim() || undefined,
+        });
+
+        if (res?.existe) {
+          setDuplicadoDetectado(res.mensaje || 'Este hermano ya se encuentra registrado en el sistema.');
+        } else {
+          setDuplicadoDetectado(null);
+        }
+      } catch (err) {
+        console.error('Error al verificar duplicado de hermano:', err);
+      } finally {
+        setIsVerificandoDuplicado(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [ci, nombres, apellidoPaterno, apellidoMaterno, hermanosYaAgregados]);
+
   const handleCerrar = () => {
     setNombres('');
     setApellidoPaterno('');
@@ -159,6 +220,8 @@ export default function ModalAgregarHermano({
     setGenero('M');
     setObservaciones('');
     setErrorValidacion(null);
+    setDuplicadoDetectado(null);
+    setIsVerificandoDuplicado(false);
     setDisponibilidad(null);
     onClose();
   };
@@ -169,7 +232,7 @@ export default function ModalAgregarHermano({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorValidacion(null);
 
@@ -231,6 +294,32 @@ export default function ModalAgregarHermano({
     if (!hermanoRegularId) {
       setErrorValidacion('Debe seleccionar a qué hermano regular respalda esta solicitud');
       return;
+    }
+
+    if (duplicadoDetectado) {
+      setErrorValidacion(duplicadoDetectado);
+      return;
+    }
+
+    // Doble verificación previa con el servidor para bloquear envíos duplicados
+    try {
+      setIsVerificandoDuplicado(true);
+      const res = await reservaCupoService.verificarHermano({
+        ci: ciLimpio || undefined,
+        nombres: nomLimpio || undefined,
+        apellido_paterno: patLimpio || undefined,
+        apellido_materno: matLimpio || undefined,
+      });
+
+      if (res?.existe) {
+        setDuplicadoDetectado(res.mensaje || 'Este hermano ya se encuentra registrado en el sistema.');
+        setErrorValidacion(res.mensaje || 'Este hermano ya se encuentra registrado en el sistema.');
+        return;
+      }
+    } catch (err) {
+      console.error('Error al verificar duplicado en envío:', err);
+    } finally {
+      setIsVerificandoDuplicado(false);
     }
 
     const gradoObj = grados.find((g) => g.id === Number(gradoSolicitadoId));
@@ -827,6 +916,32 @@ export default function ModalAgregarHermano({
               />
             </Grid>
           </Grid>
+
+          {/* Estado de Verificación de Duplicado */}
+          {isVerificandoDuplicado && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2.5, p: 1.5, borderRadius: '10px', bgcolor: bgField }}>
+              <CircularProgress size={16} sx={{ color: brand }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                Verificando en el sistema si el hermano ya fue registrado...
+              </Typography>
+            </Box>
+          )}
+
+          {duplicadoDetectado && (
+            <Alert
+              severity="error"
+              sx={{
+                mt: 2.5,
+                borderRadius: '12px',
+                fontWeight: 600,
+                fontSize: '0.82rem',
+                border: '1.5px solid rgba(239, 68, 68, 0.4)',
+                bgcolor: isDark ? alpha('#ef4444', 0.12) : '#fef2f2',
+              }}
+            >
+              <strong>⚠️ No se puede registrar:</strong> {duplicadoDetectado}
+            </Alert>
+          )}
         </DialogContent>
 
         {/* ── FOOTER SIEMPRE VISIBLE Y FIJO AL FONDO DEL MODAL ── */}
@@ -864,7 +979,8 @@ export default function ModalAgregarHermano({
           <Button
             type="submit"
             variant="contained"
-            startIcon={<PersonAddIcon sx={{ fontSize: 19 }} />}
+            disabled={Boolean(duplicadoDetectado) || isVerificandoDuplicado}
+            startIcon={isVerificandoDuplicado ? <CircularProgress size={18} color="inherit" /> : <PersonAddIcon sx={{ fontSize: 19 }} />}
             sx={{
               borderRadius: '12px',
               px: 3.5,
@@ -879,9 +995,13 @@ export default function ModalAgregarHermano({
                 background: isDark ? '#eab308' : '#01579b',
                 boxShadow: `0 6px 20px ${alpha(brand, 0.5)}`,
               },
+              '&.Mui-disabled': {
+                bgcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+                color: 'text.disabled',
+              },
             }}
           >
-            Agregar Hermanito a la Reserva
+            {isVerificandoDuplicado ? 'Verificando...' : 'Agregar Hermanito a la Reserva'}
           </Button>
         </Box>
       </form>

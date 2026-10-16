@@ -1,8 +1,7 @@
 // src/app/dashboard/preinscripciones/page.tsx
-
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   CircularProgress,
@@ -20,6 +19,10 @@ import {
   Stack,
   keyframes,
   alpha,
+  Badge,
+  ToggleButtonGroup,
+  ToggleButton,
+  Pagination,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { useRouter } from 'next/navigation';
@@ -36,15 +39,23 @@ import AddIcon from '@mui/icons-material/Add';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import TableChartIcon from '@mui/icons-material/TableChart';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import TableRowsIcon from '@mui/icons-material/TableRows';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 
 // Hooks
 import { usePreinscripciones } from '../../../hooks/usePreinscripciones';
+import api from '@/lib/api';
+import { gestionAcademicaService } from '@/services/estudiantesService';
 
 // Preinscripciones components
 import { StatCard } from '@/components/preinscripciones/StatCard';
 import { FilterSection } from '@/components/preinscripciones/FilterSection';
 import { PreinscripcionCard } from '@/components/preinscripciones/PreinscripcionCard';
+import { TablaPreinscripciones } from '@/components/preinscripciones/TablaPreinscripciones';
+import { ListaEsperaTab } from '@/components/preinscripciones/ListaEsperaTab';
 import { CuposTab } from '@/components/preinscripciones/CuposTab';
+import { CentroReportesPreinscripcionTab } from '@/components/preinscripciones/CentroReportesPreinscripcionTab';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -56,7 +67,7 @@ interface TabPanelProps {
 
 const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
   <div role="tabpanel" hidden={value !== index}>
-    {value === index && <Box sx={{ pt: 4 }}>{children}</Box>}
+    {value === index && <Box sx={{ pt: 3.5 }}>{children}</Box>}
   </div>
 );
 
@@ -72,8 +83,22 @@ export default function PreinscripcionesPage() {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const accent = isDark ? '#facc15' : '#0288d1';
+  const gradBg = isDark
+    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)';
 
+  // 0: Lista Preinscripciones, 1: Lista de Espera, 2: Gestión de Cupos y Aforos, 3: Centro de Reportes
   const [activeTab, setActiveTab] = useState(0);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+
+  // Paramétricas
+  const [grados, setGrados] = useState<any[]>([]);
+  const [turnos, setTurnos] = useState<any[]>([]);
+
+  // Paginación Tab 0
+  const [page, setPage] = useState(1);
+  const pageSize = 12;
+
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -81,6 +106,7 @@ export default function PreinscripcionesPage() {
   });
 
   const {
+    preinscripciones,
     filteredPreinscripciones,
     stats,
     loading,
@@ -102,6 +128,26 @@ export default function PreinscripcionesPage() {
   const showSnackbar = (message: string, severity: 'success' | 'error' = 'success') =>
     setSnackbar({ open: true, message, severity });
 
+  // Cargar paramétricas (grados y turnos)
+  useEffect(() => {
+    const cargarParametricas = async () => {
+      try {
+        const [dataGrados, resTurnos] = await Promise.all([
+          gestionAcademicaService.obtenerGrados(),
+          api.get('/turno'),
+        ]);
+        setGrados(dataGrados || []);
+        const listaTurnos = Array.isArray(resTurnos.data)
+          ? resTurnos.data
+          : (resTurnos.data?.data?.turnos || resTurnos.data?.turnos || []);
+        setTurnos(listaTurnos || []);
+      } catch (err) {
+        console.error('Error al cargar grados o turnos:', err);
+      }
+    };
+    cargarParametricas();
+  }, []);
+
   const handleDelete = async (id: number) => {
     if (!window.confirm('¿Está seguro de eliminar esta preinscripción? Esto liberará el cupo asignado.')) return;
     try {
@@ -112,20 +158,21 @@ export default function PreinscripcionesPage() {
     }
   };
 
-  const handlePromover = async (id: number) => {
-    if (!window.confirm('¿Deseas promover a este postulante de la Lista de Espera a cupo directo? Se le asignará una vacante disponible.')) return;
+  const handlePromover = async (id: number, motivo?: string) => {
     try {
-      await promoverEspera(id);
+      await promoverEspera(id, motivo);
+      await fetchPreinscripciones();
       showSnackbar('Postulante promovido exitosamente con vacante asignada');
     } catch (err: any) {
       showSnackbar(err.message || 'Error al promover de lista de espera', 'error');
+      throw err;
     }
   };
 
   const handleExport = async () => {
     try {
       await exportToExcel();
-      showSnackbar('Exportación exitosa');
+      showSnackbar('Exportación a Excel completada exitosamente');
     } catch (err) {
       showSnackbar(err instanceof Error ? err.message : 'Error al exportar', 'error');
     }
@@ -139,6 +186,12 @@ export default function PreinscripcionesPage() {
       showSnackbar(err instanceof Error ? err.message : 'Error al generar PDF', 'error');
     }
   };
+
+  const paginatedPreinscripciones = filteredPreinscripciones.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
+  const totalPages = Math.ceil(filteredPreinscripciones.length / pageSize) || 1;
 
   const statCards = [
     {
@@ -192,7 +245,7 @@ export default function PreinscripcionesPage() {
     transition: 'all 0.2s ease',
   };
 
-  if (loading) {
+  if (loading && preinscripciones.length === 0) {
     return (
       <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="80vh" gap={3}>
         <CircularProgress size={64} thickness={4} sx={{ color: accent }} />
@@ -203,11 +256,14 @@ export default function PreinscripcionesPage() {
     );
   }
 
-  if (error) {
+  if (error && preinscripciones.length === 0) {
     return (
       <Box textAlign="center" py={8}>
         <Typography variant="h6" color="error" mb={2}>Error al cargar las preinscripciones</Typography>
         <Typography variant="body2" color="text.secondary">{error}</Typography>
+        <Button variant="outlined" onClick={fetchPreinscripciones} sx={{ mt: 2 }}>
+          Reintentar
+        </Button>
       </Box>
     );
   }
@@ -216,7 +272,7 @@ export default function PreinscripcionesPage() {
     <Box sx={{ minHeight: '100vh', py: 4 }}>
       <Container maxWidth="xl">
 
-        {/* ── HEADER ── */}
+        {/* ── HEADER PRINCIPAL ── */}
         <Fade in timeout={500}>
           <Box sx={{ mb: 4 }}>
             <Box
@@ -229,7 +285,7 @@ export default function PreinscripcionesPage() {
                 mb: 3,
               }}
             >
-              {/* Título */}
+              {/* Título & Subtítulo */}
               <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <AssignmentIcon
@@ -240,88 +296,118 @@ export default function PreinscripcionesPage() {
                     sx={{
                       fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
                       fontWeight: 800,
-                      background: isDark
-                        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                      background: gradBg,
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                     }}
                   >
-                    Preinscripciones
+                    Preinscripciones y Admisiones
                   </Typography>
                 </Box>
                 <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500, letterSpacing: 0.3 }}>
-                  Gestiona solicitudes de inscripción y cupos disponibles
+                  Gestión integral de solicitudes, lista de espera, cupos escolares, continuidad y centro de reportes
                 </Typography>
               </Box>
 
-              {/* Acciones — solo en tab 0 */}
-              {activeTab === 0 && (
-                <Stack direction="row" spacing={1.5} alignItems="center">
-                  <Tooltip title="Actualizar">
-                    <IconButton onClick={fetchPreinscripciones} sx={iconBtnSx}>
-                      <RefreshIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Exportar Excel">
-                    <IconButton onClick={handleExport} sx={iconBtnSx}>
-                      <TableChartIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Exportar PDF">
-                    <IconButton onClick={handleExportPDF} sx={iconBtnSx}>
-                      <PictureAsPdfIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => router.push('/dashboard/preinscripciones/nueva')}
+              {/* Acciones principales de la cabecera */}
+              <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" gap={1}>
+                {activeTab === 0 && (
+                  <ToggleButtonGroup
+                    size="small"
+                    value={viewMode}
+                    exclusive
+                    onChange={(_, v) => v && setViewMode(v)}
                     sx={{
+                      bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.03),
                       borderRadius: '12px',
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      px: 3,
-                      py: 1.5,
-                      background: isDark
-                        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                      color: isDark ? '#000' : '#fff',
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: isDark
-                          ? '0 8px 24px rgba(250,204,21,0.3)'
-                          : '0 8px 24px rgba(2,136,209,0.3)',
+                      '& .MuiToggleButton-root': {
+                        borderRadius: '10px',
+                        border: 'none',
+                        px: 1.5,
+                        '&.Mui-selected': {
+                          bgcolor: accent,
+                          color: isDark ? '#000' : '#fff',
+                          '&:hover': { bgcolor: accent },
+                        },
                       },
-                      transition: 'all 0.3s ease',
                     }}
                   >
-                    Nueva
-                  </Button>
-                </Stack>
-              )}
+                    <ToggleButton value="cards">
+                      <ViewModuleIcon fontSize="small" />
+                    </ToggleButton>
+                    <ToggleButton value="table">
+                      <TableRowsIcon fontSize="small" />
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                )}
+
+                <Tooltip title="Actualizar datos">
+                  <IconButton onClick={fetchPreinscripciones} sx={iconBtnSx}>
+                    <RefreshIcon />
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title="Exportar Excel">
+                  <IconButton onClick={handleExport} sx={iconBtnSx}>
+                    <TableChartIcon />
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title="Exportar PDF">
+                  <IconButton onClick={handleExportPDF} sx={iconBtnSx}>
+                    <PictureAsPdfIcon />
+                  </IconButton>
+                </Tooltip>
+
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => router.push('/dashboard/preinscripciones/nueva')}
+                  sx={{
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    px: 3,
+                    py: 1.2,
+                    background: gradBg,
+                    color: isDark ? '#000' : '#fff',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 8px 24px ${alpha(accent, 0.3)}`,
+                    },
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  Nueva Solicitud
+                </Button>
+              </Stack>
             </Box>
 
-            {/* TABS */}
+            {/* ══ TABS DE NAVEGACIÓN MODULAR ══ */}
             <Tabs
               value={activeTab}
               onChange={(_, v) => setActiveTab(v)}
+              variant="scrollable"
+              scrollButtons="auto"
               sx={{
-                background: isDark
-                  ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                  : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                background: gradBg,
                 borderRadius: '16px',
                 p: 1,
+                boxShadow: `0 8px 24px ${alpha(accent, 0.2)}`,
                 '& .MuiTab-root': {
                   borderRadius: '12px',
                   textTransform: 'none',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   minHeight: 48,
-                  color: isDark ? '#00000099' : '#ffffff99',
+                  fontSize: '0.92rem',
+                  color: isDark ? '#000000a6' : '#ffffffb3',
+                  transition: 'all 0.2s',
+                  mx: 0.5,
                 },
                 '& .Mui-selected': {
                   color: `${isDark ? '#000' : '#fff'} !important`,
-                  fontWeight: 700,
+                  fontWeight: 800,
+                  bgcolor: isDark ? alpha('#000', 0.12) : alpha('#fff', 0.15),
                 },
                 '& .MuiTabs-indicator': {
                   backgroundColor: isDark ? '#000' : '#fff',
@@ -331,18 +417,35 @@ export default function PreinscripcionesPage() {
               }}
             >
               <Tab icon={<ListIcon />} iconPosition="start" label="Lista de Preinscripciones" />
-              <Tab icon={<EventSeatIcon />} iconPosition="start" label="Gestión de Cupos" />
+
+              <Tab
+                icon={
+                  <Badge
+                    badgeContent={stats.en_espera || 0}
+                    color="error"
+                    sx={{ '& .MuiBadge-badge': { fontWeight: 800 } }}
+                  >
+                    <HourglassEmptyIcon />
+                  </Badge>
+                }
+                iconPosition="start"
+                label="Lista de Espera"
+              />
+
+              <Tab icon={<EventSeatIcon />} iconPosition="start" label="Gestión de Cupos y Aforo" />
+
+              <Tab icon={<AssessmentIcon />} iconPosition="start" label="Centro de Reportes" />
             </Tabs>
           </Box>
         </Fade>
 
-        {/* ── TAB 0: PREINSCRIPCIONES ── */}
+        {/* ── TAB 0: LISTA DE PREINSCRIPCIONES ── */}
         <TabPanel value={activeTab} index={0}>
-          <Fade in timeout={700}>
+          <Fade in timeout={600}>
             <Box>
               <Grid container spacing={3} mb={4}>
                 {statCards.map((stat) => (
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
+                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }} key={stat.title}>
                     <StatCard {...stat} />
                   </Grid>
                 ))}
@@ -361,18 +464,41 @@ export default function PreinscripcionesPage() {
                 />
               </Box>
 
-              <Grid container spacing={3}>
-                {filteredPreinscripciones.map((p) => (
-                  <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={p.id}>
-                    <PreinscripcionCard
-                      preinscripcion={p}
-                      onRevisar={(id) => router.push(`/dashboard/preinscripciones/detalle/${id}`)}
-                      onEliminar={handleDelete}
-                      onPromover={handlePromover}
-                    />
-                  </Grid>
-                ))}
-              </Grid>
+              {viewMode === 'cards' ? (
+                <Grid container spacing={3}>
+                  {paginatedPreinscripciones.map((p) => (
+                    <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={p.id}>
+                      <PreinscripcionCard
+                        preinscripcion={p}
+                        onRevisar={(id) => router.push(`/dashboard/preinscripciones/detalle/${id}`)}
+                        onEliminar={handleDelete}
+                        onPromover={handlePromover}
+                        onSnackbar={showSnackbar}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : (
+                <TablaPreinscripciones
+                  preinscripciones={paginatedPreinscripciones}
+                  onRevisar={(id) => router.push(`/dashboard/preinscripciones/detalle/${id}`)}
+                  onEliminar={handleDelete}
+                  onPromover={handlePromover}
+                />
+              )}
+
+              {filteredPreinscripciones.length > pageSize && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={(_, val) => setPage(val)}
+                    color="primary"
+                    shape="rounded"
+                    size="large"
+                  />
+                </Box>
+              )}
 
               {filteredPreinscripciones.length === 0 && (
                 <Box display="flex" justifyContent="center" alignItems="center" minHeight={400} flexDirection="column" gap={2}>
@@ -385,17 +511,51 @@ export default function PreinscripcionesPage() {
           </Fade>
         </TabPanel>
 
-        {/* ── TAB 1: CUPOS ── */}
+        {/* ── TAB 1: LISTA DE ESPERA ── */}
         <TabPanel value={activeTab} index={1}>
-          <Fade in timeout={700}>
+          <Fade in timeout={600}>
             <Box>
-              <CuposTab onSnackbar={showSnackbar} />
+              <ListaEsperaTab
+                preinscripciones={preinscripciones}
+                loading={loading}
+                onRevisar={(id) => router.push(`/dashboard/preinscripciones/detalle/${id}`)}
+                onPromover={handlePromover}
+                onEliminar={handleDelete}
+                onSnackbar={showSnackbar}
+              />
+            </Box>
+          </Fade>
+        </TabPanel>
+
+        {/* ── TAB 2: GESTIÓN DE CUPOS Y AFORO ── */}
+        <TabPanel value={activeTab} index={2}>
+          <Fade in timeout={600}>
+            <Box>
+              <CuposTab
+                onSnackbar={showSnackbar}
+                preinscripciones={preinscripciones}
+                onRevisar={(id) => router.push(`/dashboard/preinscripciones/detalle/${id}`)}
+              />
+            </Box>
+          </Fade>
+        </TabPanel>
+
+        {/* ── TAB 3: CENTRO DE REPORTES ── */}
+        <TabPanel value={activeTab} index={3}>
+          <Fade in timeout={600}>
+            <Box>
+              <CentroReportesPreinscripcionTab
+                grados={grados}
+                turnos={turnos}
+                onSnackbar={showSnackbar}
+              />
             </Box>
           </Fade>
         </TabPanel>
 
       </Container>
 
+      {/* ══ SNACKBAR DE NOTIFICACIONES ══ */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}

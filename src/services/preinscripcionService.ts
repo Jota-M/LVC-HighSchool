@@ -306,10 +306,11 @@ export const preinscripcionService = {
   /**
    * Reenviar notificación de WhatsApp (ADMIN)
    */
-  async reenviarWhatsApp(id: number, observaciones?: string): Promise<any> {
+  async reenviarWhatsApp(id: number, observaciones?: string, tipo?: string): Promise<any> {
     try {
       const response = await api.post(`/preinscripcion/${id}/reenviar-whatsapp`, {
         observaciones,
+        tipo,
       });
       return response.data;
     } catch (error: any) {
@@ -551,6 +552,48 @@ export const preinscripcionService = {
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Error al exportar PDF');
     }
+  },
+
+  /**
+   * Descarga directa de reporte de preinscripciones en formato PDF o Excel
+   */
+  async exportarReporte(formato: 'excel' | 'pdf', params?: {
+    search?: string;
+    grado?: string;
+    turno?: string;
+    estado?: string;
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    titulo_reporte?: string;
+  }): Promise<void> {
+    const query = new URLSearchParams();
+    query.set('formato', formato);
+    if (params?.search) query.set('search', params.search);
+    if (params?.grado && params.grado !== 'todos') query.set('grado', params.grado);
+    if (params?.turno && params.turno !== 'todos') query.set('turno', params.turno);
+    if (params?.estado && params.estado !== 'todos') query.set('estado', params.estado);
+    if (params?.fecha_inicio) query.set('fecha_inicio', params.fecha_inicio);
+    if (params?.fecha_fin) query.set('fecha_fin', params.fecha_fin);
+
+    const response = await api.get(`/preinscripcion/export/${formato}?${query.toString()}`, {
+      responseType: 'blob',
+    });
+
+    const mime = formato === 'pdf'
+      ? 'application/pdf'
+      : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    const ext = formato === 'pdf' ? 'pdf' : 'xlsx';
+    const filename = `${params?.titulo_reporte ? params.titulo_reporte.replace(/\s+/g, '_') : 'Reporte_Preinscripciones'}_${new Date().toISOString().slice(0, 10)}.${ext}`;
+
+    const blob = new Blob([response.data], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   },
 
   /**

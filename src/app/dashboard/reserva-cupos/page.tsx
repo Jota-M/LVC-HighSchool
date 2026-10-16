@@ -61,10 +61,11 @@ import {
   REPORTES_DISPONIBLES,
   ReporteDef,
 } from '@/components/reservaCupo/admin/CentroReportesTab';
-import { CuposAseguradosTab } from '@/components/reservaCupo/admin/CuposAseguradosTab';
 import { ModalAnulacionAdmin } from '@/components/reservaCupo/admin/ModalAnulacionAdmin';
 import { ModalReactivacionAdmin } from '@/components/reservaCupo/admin/ModalReactivacionAdmin';
 import { ModalNominaAsegurados } from '@/components/reservaCupo/admin/ModalNominaAsegurados';
+import { ModalEliminarHermanoAdmin } from '@/components/reservaCupo/admin/ModalEliminarHermanoAdmin';
+import CuposAseguradosTab from '@/components/reservaCupo/admin/CuposAseguradosTab';
 
 export default function ReservaCuposDashboardPage() {
   const router = useRouter();
@@ -108,6 +109,10 @@ export default function ReservaCuposDashboardPage() {
   const [promoviendoHermanoId, setPromoviendoHermanoId] = useState<number | null>(null);
   const [exportandoHermanosExcel, setExportandoHermanosExcel] = useState(false);
   const [exportandoHermanosPdf, setExportandoHermanosPdf] = useState(false);
+  const [hermanoSeleccionadoEliminar, setHermanoSeleccionadoEliminar] = useState<ReservaCupoHermanoData | null>(null);
+  const [modalEliminarHermanoOpen, setModalEliminarHermanoOpen] = useState(false);
+  const [motivoEliminarHermano, setMotivoEliminarHermano] = useState('Registro duplicado por el tutor');
+  const [isEliminandoHermano, setIsEliminandoHermano] = useState(false);
 
   // Tab 3: Centro de Reportes (Tipo Docente)
   const [reporteSeleccionado, setReporteSeleccionado] = useState<ReporteDef>(REPORTES_DISPONIBLES[0]);
@@ -571,6 +576,36 @@ export default function ReservaCuposDashboardPage() {
     }
   };
 
+  // Eliminación definitiva de hermano (libera cupo en caso de duplicados)
+  const handleAbrirEliminarHermano = (hermano: ReservaCupoHermanoData) => {
+    setHermanoSeleccionadoEliminar(hermano);
+    setMotivoEliminarHermano('Registro duplicado por el tutor');
+    setModalEliminarHermanoOpen(true);
+  };
+
+  const handleConfirmarEliminarHermano = async () => {
+    if (!hermanoSeleccionadoEliminar) return;
+    setIsEliminandoHermano(true);
+    try {
+      const resp = await reservaCupoService.eliminarHermanoAdmin(
+        hermanoSeleccionadoEliminar.id,
+        motivoEliminarHermano.trim() || undefined
+      );
+      toast.success(resp.message || 'Registro de hermano eliminado y cupo liberado exitosamente');
+      setModalEliminarHermanoOpen(false);
+      setHermanoSeleccionadoEliminar(null);
+      setMotivoEliminarHermano('Registro duplicado por el tutor');
+      cargarHermanos();
+      cargarEstadisticas();
+      cargarBalanceAsegurados();
+    } catch (err: any) {
+      console.error('Error al eliminar cupo de hermano:', err);
+      toast.error(err?.response?.data?.message || err?.message || 'Error al eliminar el registro de hermano');
+    } finally {
+      setIsEliminandoHermano(false);
+    }
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', py: 4 }}>
       <Container maxWidth="xl">
@@ -1018,6 +1053,7 @@ export default function ReservaCuposDashboardPage() {
                 promoviendoHermanoId={promoviendoHermanoId}
                 onPromoverHermano={handlePromoverHermano}
                 onDescargarPDF={handleDescargarPDFRecibo}
+                onEliminarHermano={handleAbrirEliminarHermano}
               />
             )}
 
@@ -1082,6 +1118,22 @@ export default function ReservaCuposDashboardPage() {
           }}
           onMotivoChange={setMotivoAdmin}
           onConfirmar={handleConfirmarReactivacion}
+        />
+
+        {/* MODAL PARA ELIMINAR CUPO DE HERMANO (REGISTROS DUPLICADOS O BAJAS) */}
+        <ModalEliminarHermanoAdmin
+          open={modalEliminarHermanoOpen}
+          hermano={hermanoSeleccionadoEliminar}
+          motivo={motivoEliminarHermano}
+          isProcesando={isEliminandoHermano}
+          onClose={() => {
+            if (!isEliminandoHermano) {
+              setModalEliminarHermanoOpen(false);
+              setHermanoSeleccionadoEliminar(null);
+            }
+          }}
+          onMotivoChange={setMotivoEliminarHermano}
+          onConfirmar={handleConfirmarEliminarHermano}
         />
 
         {/* MODAL DE NÓMINA DE ESTUDIANTES CON CUPO ASEGURADO */}

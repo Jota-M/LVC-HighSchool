@@ -54,6 +54,20 @@ class ReservaCupoService {
   }
 
   /**
+   * Verifica si un hermano ya existe en el sistema (por CI o nombres completos)
+   */
+  async verificarHermano(params: {
+    ci?: string;
+    nombres?: string;
+    apellido_paterno?: string;
+    apellido_materno?: string;
+    periodo_academico_id?: number;
+  }): Promise<{ existe: boolean; tipo?: string; mensaje?: string; datos?: any }> {
+    const { data } = await api.get('/reserva-cupo/verificar-hermano', { params });
+    return data.data;
+  }
+
+  /**
    * Consulta una reserva por código (sea regular o hermano)
    */
   async consultarPorCodigo(codigo: string): Promise<ReservaCupoData | ReservaCupoHermanoData> {
@@ -222,6 +236,16 @@ class ReservaCupoService {
    */
   async reactivarHermanoAdmin(id: number, motivo?: string): Promise<{ message: string; data: ReservaCupoHermanoData }> {
     const { data } = await api.post(`/reserva-cupo/admin/hermanos/${id}/reactivar`, { motivo });
+    return data;
+  }
+
+  /**
+   * Elimina la reserva de un hermano definitivamente (liberando cupo en caso de duplicados o bajas)
+   */
+  async eliminarHermanoAdmin(id: number, motivo?: string): Promise<{ message: string; data: ReservaCupoHermanoData }> {
+    const { data } = await api.delete(`/reserva-cupo/admin/hermanos/${id}`, {
+      data: { motivo },
+    });
     return data;
   }
 
