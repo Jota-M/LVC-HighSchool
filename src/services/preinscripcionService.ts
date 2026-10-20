@@ -235,10 +235,11 @@ export const preinscripcionService = {
         ...data,
         data: {
           preinscripciones,
+          stats: data.data?.stats,
           paginacion: data.data?.paginacion || {
             total: preinscripciones.length,
             page: 1,
-            limit: 50,
+            limit: preinscripciones.length,
             totalPages: 1,
           }
         }

@@ -241,11 +241,20 @@ export const TablaPreinscripciones: React.FC<TablaPreinscripcionesProps> = ({
                   )}
                 </TableCell>
 
-                {/* Fecha */}
+                {/* Fecha y Hora de Registro */}
                 <TableCell sx={{ py: 1.8 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {p.created_at ? new Date(p.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                  </Typography>
+                  {p.created_at ? (
+                    <Box>
+                      <Typography variant="caption" fontWeight={600} color="text.primary" display="block">
+                        {new Date(p.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.68rem' }}>
+                        {new Date(p.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">—</Typography>
+                  )}
                 </TableCell>
 
                 {/* Acciones */}

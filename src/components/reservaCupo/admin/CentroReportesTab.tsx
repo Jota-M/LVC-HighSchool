@@ -55,12 +55,12 @@ export const REPORTES_DISPONIBLES: ReporteDef[] = [
   {
     id: 'general',
     titulo: 'Reporte General Consolidado 2027',
-    descripcion: 'Nómina oficial completa con estadísticas globales de todos los estudiantes regulares reservados.',
+    descripcion: 'Nómina oficial de toda la matrícula proyectada: confirmados, no continuarán declarados y sin formulario (no continuará). Filtrable por grado y turno.',
     icon: <SummarizeRoundedIcon />,
     color: '#3b82f6',
     gradient: 'linear-gradient(135deg, #3b82f6, #60a5fa)',
-    badge: 'Oficial',
-    filtros: ['turno', 'search'],
+    badge: 'Consolidado Total',
+    filtros: ['grado', 'turno', 'search'],
   },
   {
     id: 'por_grado_turno',

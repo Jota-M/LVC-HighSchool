@@ -23,6 +23,9 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Pagination,
+  Select,
+  MenuItem,
+  Paper,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { useRouter } from 'next/navigation';
@@ -76,6 +79,11 @@ const bounce = keyframes`
   50%       { transform: translateY(-6px); }
 `;
 
+const spin = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
 // ─── page ────────────────────────────────────────────────────────────────────
 
 export default function PreinscripcionesPage() {
@@ -97,7 +105,7 @@ export default function PreinscripcionesPage() {
 
   // Paginación Tab 0
   const [page, setPage] = useState(1);
-  const pageSize = 12;
+  const [pageSize, setPageSize] = useState(12);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -120,10 +128,16 @@ export default function PreinscripcionesPage() {
     setConCupoFilter,
     fetchPreinscripciones,
     deletePreinscripcion,
+    changeEstado,
     promoverEspera,
     exportToExcel,
     exportToPDF,
   } = usePreinscripciones();
+
+  // Reset a página 1 cuando los filtros cambian
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
 
   const showSnackbar = (message: string, severity: 'success' | 'error' = 'success') =>
     setSnackbar({ open: true, message, severity });
@@ -187,11 +201,18 @@ export default function PreinscripcionesPage() {
     }
   };
 
-  const paginatedPreinscripciones = filteredPreinscripciones.slice(
-    (page - 1) * pageSize,
-    page * pageSize
-  );
-  const totalPages = Math.ceil(filteredPreinscripciones.length / pageSize) || 1;
+  const paginatedPreinscripciones = pageSize === 0
+    ? filteredPreinscripciones
+    : filteredPreinscripciones.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = pageSize === 0 ? 1 : Math.ceil(filteredPreinscripciones.length / pageSize) || 1;
+
+  const handlePageChange = (_: React.ChangeEvent<unknown>, val: number) => {
+    setPage(val);
+    const elem = document.getElementById('preinscripciones-grid-anchor');
+    if (elem) {
+      elem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const statCards = [
     {
@@ -342,8 +363,15 @@ export default function PreinscripcionesPage() {
                 )}
 
                 <Tooltip title="Actualizar datos">
-                  <IconButton onClick={fetchPreinscripciones} sx={iconBtnSx}>
-                    <RefreshIcon />
+                  <IconButton
+                    onClick={async () => {
+                      await fetchPreinscripciones();
+                      showSnackbar('Datos actualizados exitosamente');
+                    }}
+                    disabled={loading}
+                    sx={iconBtnSx}
+                  >
+                    <RefreshIcon sx={{ animation: loading ? `${spin} 1s linear infinite` : 'none' }} />
                   </IconButton>
                 </Tooltip>
 
@@ -464,6 +492,8 @@ export default function PreinscripcionesPage() {
                 />
               </Box>
 
+              <Box id="preinscripciones-grid-anchor" sx={{ scrollMarginTop: '100px' }} />
+
               {viewMode === 'cards' ? (
                 <Grid container spacing={3}>
                   {paginatedPreinscripciones.map((p) => (
@@ -473,6 +503,7 @@ export default function PreinscripcionesPage() {
                         onRevisar={(id) => router.push(`/dashboard/preinscripciones/detalle/${id}`)}
                         onEliminar={handleDelete}
                         onPromover={handlePromover}
+                        onCambiarEstado={changeEstado}
                         onSnackbar={showSnackbar}
                       />
                     </Grid>
@@ -487,17 +518,78 @@ export default function PreinscripcionesPage() {
                 />
               )}
 
-              {filteredPreinscripciones.length > pageSize && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                  <Pagination
-                    count={totalPages}
-                    page={page}
-                    onChange={(_, val) => setPage(val)}
-                    color="primary"
-                    shape="rounded"
-                    size="large"
-                  />
-                </Box>
+              {/* ── BARRA DE PAGINACIÓN Y SELECTOR DE TAMAÑO ── */}
+              {filteredPreinscripciones.length > 0 && (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    mt: 4,
+                    p: 2,
+                    borderRadius: '16px',
+                    border: `1px solid ${alpha(isDark ? '#fff' : '#000', 0.08)}`,
+                    bgcolor: isDark ? alpha('#fff', 0.02) : '#fff',
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 2,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
+                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                      Mostrando{' '}
+                      <strong>
+                        {pageSize === 0 ? 1 : (page - 1) * pageSize + 1}
+                      </strong>{' '}
+                      -{' '}
+                      <strong>
+                        {pageSize === 0
+                          ? filteredPreinscripciones.length
+                          : Math.min(page * pageSize, filteredPreinscripciones.length)}
+                      </strong>{' '}
+                      de <strong>{filteredPreinscripciones.length}</strong> solicitudes
+                    </Typography>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: { sm: 2 } }}>
+                      <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                        Por página:
+                      </Typography>
+                      <Select
+                        size="small"
+                        value={pageSize}
+                        onChange={(e) => {
+                          setPageSize(Number(e.target.value));
+                          setPage(1);
+                        }}
+                        sx={{
+                          height: 32,
+                          fontSize: '0.8rem',
+                          borderRadius: '8px',
+                          bgcolor: isDark ? alpha('#fff', 0.05) : alpha('#000', 0.03),
+                        }}
+                      >
+                        <MenuItem value={8}>8</MenuItem>
+                        <MenuItem value={12}>12</MenuItem>
+                        <MenuItem value={24}>24</MenuItem>
+                        <MenuItem value={48}>48</MenuItem>
+                        <MenuItem value={0}>Todos</MenuItem>
+                      </Select>
+                    </Box>
+                  </Box>
+
+                  {totalPages > 1 && (
+                    <Pagination
+                      count={totalPages}
+                      page={page}
+                      onChange={handlePageChange}
+                      color="primary"
+                      shape="rounded"
+                      size="medium"
+                      showFirstButton
+                      showLastButton
+                    />
+                  )}
+                </Paper>
               )}
 
               {filteredPreinscripciones.length === 0 && (

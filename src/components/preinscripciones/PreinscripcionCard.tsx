@@ -28,6 +28,10 @@ import {
   DialogActions,
   CircularProgress,
   Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  TextField,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -51,8 +55,9 @@ import {
   Close as CloseIcon,
   ContentCopy as ContentCopyIcon,
   AccessTime as AccessTimeIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
-import { Preinscripcion } from '@/types/preinscripcionTypes';
+import { Preinscripcion, EstadoPreinscripcion } from '@/types/preinscripcionTypes';
 import { useRouter } from 'next/navigation';
 import { preinscripcionService } from '@/services/preinscripcionService';
 
@@ -61,6 +66,7 @@ interface PreinscripcionCardProps {
   onRevisar: (id: number) => void;
   onEliminar: (id: number) => void;
   onPromover?: (id: number) => void;
+  onCambiarEstado?: (id: number, estado: EstadoPreinscripcion, observaciones?: string) => Promise<void>;
   onSnackbar?: (message: string, severity?: 'success' | 'error') => void;
 }
 
@@ -152,6 +158,27 @@ const getIniciales = (nombre?: string) => {
   return nombre.substring(0, 2).toUpperCase();
 };
 
+const formatearFechaHora = (fecha?: string) => {
+  if (!fecha) return 'Sin fecha';
+  try {
+    const d = new Date(fecha);
+    if (isNaN(d.getTime())) return 'Sin fecha';
+    const f = d.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+    const h = d.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    return `${f} · ${h}`;
+  } catch {
+    return 'Sin fecha';
+  }
+};
+
 const formatearFecha = (fecha: string) => {
   if (!fecha) return 'Sin fecha';
   return new Date(fecha).toLocaleDateString('es-ES', {
@@ -166,6 +193,7 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
   onRevisar,
   onEliminar,
   onPromover,
+  onCambiarEstado,
   onSnackbar,
 }) => {
   const theme = useTheme();
@@ -182,6 +210,14 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
   // Menú contextual
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
+
+  // Modal de Cambiar Estado
+  const [modalEstadoOpen, setModalEstadoOpen] = useState(false);
+  const [nuevoEstado, setNuevoEstado] = useState<EstadoPreinscripcion>(
+    (preinscripcion.estado?.toLowerCase() as EstadoPreinscripcion) || 'iniciada'
+  );
+  const [observacionesEstado, setObservacionesEstado] = useState('');
+  const [guardandoEstado, setGuardandoEstado] = useState(false);
 
   // Modal de Reenviar Confirmación
   const [modalConfirmacionOpen, setModalConfirmacionOpen] = useState(false);
@@ -570,6 +606,17 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
                 </Typography>
               </Box>
 
+              {/* Fecha y Hora de Registro */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                <AccessTimeIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ fontSize: '0.72rem' }}>
+                  Registro:
+                </Typography>
+                <Typography variant="caption" fontWeight={700} sx={{ ml: 'auto', fontSize: '0.74rem' }}>
+                  {formatearFechaHora(preinscripcion.created_at || preinscripcion.fecha_inicio)}
+                </Typography>
+              </Box>
+
               {/* Indicador de Cupo / Estado */}
               {preinscripcion.tiene_cupo_asignado ? (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
@@ -756,6 +803,22 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
               </ListItemIcon>
               <ListItemText>Ver expediente</ListItemText>
             </MenuItem>
+
+            {onCambiarEstado && (
+              <MenuItem
+                onClick={() => {
+                  handleMenuClose();
+                  setNuevoEstado((preinscripcion.estado?.toLowerCase() as EstadoPreinscripcion) || 'iniciada');
+                  setObservacionesEstado(preinscripcion.observaciones || '');
+                  setModalEstadoOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <EditIcon fontSize="small" sx={{ color: accentColor }} />
+                </ListItemIcon>
+                <ListItemText sx={{ fontWeight: 600 }}>Cambiar estado</ListItemText>
+              </MenuItem>
+            )}
 
             {puedeConvertir && (
               <MenuItem
@@ -1112,6 +1175,107 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
             {enviandoWhatsApp ? 'Enviando notificación...' : 'Reenviar Confirmación'}
           </Button>
         </Box>
+      </Dialog>
+
+      {/* ── MODAL: CAMBIAR ESTADO DE PREINSCRIPCIÓN ── */}
+      <Dialog
+        open={modalEstadoOpen}
+        onClose={() => !guardandoEstado && setModalEstadoOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '20px !important',
+            overflow: 'hidden',
+            background: isDark ? '#09101d' : '#ffffff',
+            border: `1.5px solid ${alpha(accentColor, 0.3)}`,
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <EditIcon sx={{ color: accentColor }} />
+            <Typography variant="h6" fontWeight={800} sx={{ fontSize: '1.1rem' }}>
+              Actualizar Estado
+            </Typography>
+          </Box>
+          <IconButton size="small" onClick={() => setModalEstadoOpen(false)} disabled={guardandoEstado}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2.2, pt: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Postulante: <strong>{preinscripcion.estudiante_nombre}</strong>
+          </Typography>
+
+          <FormControl fullWidth size="small">
+            <InputLabel id="select-estado-label">Nuevo Estado</InputLabel>
+            <Select
+              labelId="select-estado-label"
+              value={nuevoEstado}
+              label="Nuevo Estado"
+              onChange={(e) => setNuevoEstado(e.target.value as EstadoPreinscripcion)}
+            >
+              <MenuItem value="iniciada">Iniciada</MenuItem>
+              <MenuItem value="datos_completos">Datos Completos</MenuItem>
+              <MenuItem value="documentos_pendientes">Documentos Pendientes</MenuItem>
+              <MenuItem value="en_revision">En Revisión</MenuItem>
+              <MenuItem value="documentos_aprobados">Documentos Aprobados</MenuItem>
+              <MenuItem value="aprobada">Aprobada</MenuItem>
+              <MenuItem value="rechazada">Rechazada</MenuItem>
+              <MenuItem value="en_espera">En Lista de Espera</MenuItem>
+            </Select>
+          </FormControl>
+
+          <TextField
+            label="Observaciones / Motivo (opcional)"
+            multiline
+            rows={3}
+            fullWidth
+            size="small"
+            value={observacionesEstado}
+            onChange={(e) => setObservacionesEstado(e.target.value)}
+            placeholder="Ingrese observaciones o motivo del cambio..."
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 1.5 }}>
+          <Button
+            variant="text"
+            onClick={() => setModalEstadoOpen(false)}
+            disabled={guardandoEstado}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={async () => {
+              if (!onCambiarEstado) return;
+              try {
+                setGuardandoEstado(true);
+                await onCambiarEstado(preinscripcion.id, nuevoEstado, observacionesEstado);
+                onSnackbar?.(`Estado actualizado a "${nuevoEstado}" exitosamente`, 'success');
+                setModalEstadoOpen(false);
+              } catch (err: any) {
+                onSnackbar?.(err.message || 'Error al actualizar estado', 'error');
+              } finally {
+                setGuardandoEstado(false);
+              }
+            }}
+            disabled={guardandoEstado}
+            sx={{
+              bgcolor: accentColor,
+              color: isDark ? '#000' : '#fff',
+              textTransform: 'none',
+              fontWeight: 700,
+              borderRadius: '10px',
+              px: 2.5,
+              '&:hover': { bgcolor: alpha(accentColor, 0.85) },
+            }}
+          >
+            {guardandoEstado ? <CircularProgress size={20} color="inherit" /> : 'Guardar Cambio'}
+          </Button>
+        </DialogActions>
       </Dialog>
     </>
   );

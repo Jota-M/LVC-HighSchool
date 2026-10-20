@@ -35,6 +35,7 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
   const [preinscripciones, setPreinscripciones] = useState<Preinscripcion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [serverStats, setServerStats] = useState<PreinscripcionStats | null>(null);
   
   const [filters, setFiltersState] = useState<PreinscripcionFilters>({
     searchTerm: '',
@@ -44,52 +45,6 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
     periodoFilter: 'todos', // 🆕
     conCupoFilter: 'todos', // 🆕
   });
-
-  // =============================================
-  // CALCULAR ESTADÍSTICAS (ACTUALIZADO)
-  // =============================================
-  const stats: PreinscripcionStats = useMemo(() => {
-    const total = preinscripciones.length;
-    
-    const pendientes = preinscripciones.filter(p => 
-      ['iniciada', 'datos_completos', 'documentos_pendientes', 'en_revision']
-        .includes(p.estado?.toLowerCase() || '')
-    ).length;
-    
-    const aprobadas = preinscripciones.filter(p => 
-      ['aprobada', 'documentos_aprobados'].includes(p.estado?.toLowerCase() || '')
-    ).length;
-    
-    const rechazadas = preinscripciones.filter(p => 
-      p.estado?.toLowerCase() === 'rechazada'
-    ).length;
-    
-    const convertidas = preinscripciones.filter(p =>
-      p.estado?.toLowerCase() === 'convertida'
-    ).length;
-    
-    const en_espera = preinscripciones.filter(p =>
-      p.estado?.toLowerCase() === 'en_espera'
-    ).length;
-
-    // 🆕 Stats de cupos
-    const con_cupo_asignado = preinscripciones.filter(p => 
-      p.tiene_cupo_asignado === true
-    ).length;
-    
-    const sin_cupo_asignado = total - con_cupo_asignado;
-    
-    return {
-      total,
-      pendientes,
-      aprobadas,
-      rechazadas,
-      convertidas,
-      en_espera,
-      con_cupo_asignado,
-      sin_cupo_asignado,
-    };
-  }, [preinscripciones]);
 
   // =============================================
   // APLICAR FILTROS (ACTUALIZADO)
@@ -130,6 +85,65 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
   }, [preinscripciones, filters]);
 
   // =============================================
+  // CALCULAR ESTADÍSTICAS (ACTUALIZADO)
+  // =============================================
+  const stats: PreinscripcionStats = useMemo(() => {
+    const hasFilters = 
+      Boolean(filters.searchTerm) || 
+      filters.estadoFilter !== 'todos' || 
+      filters.gradoFilter !== 'todos' || 
+      filters.turnoFilter !== 'todos' || 
+      filters.periodoFilter !== 'todos' || 
+      filters.conCupoFilter !== 'todos';
+
+    if (serverStats && !hasFilters) {
+      return serverStats;
+    }
+
+    const baseList = hasFilters ? filteredPreinscripciones : preinscripciones;
+    const total = baseList.length;
+    
+    const pendientes = baseList.filter(p => 
+      ['iniciada', 'datos_completos', 'documentos_pendientes', 'en_revision']
+        .includes(p.estado?.toLowerCase() || '')
+    ).length;
+    
+    const aprobadas = baseList.filter(p => 
+      ['aprobada', 'documentos_aprobados'].includes(p.estado?.toLowerCase() || '')
+    ).length;
+    
+    const rechazadas = baseList.filter(p => 
+      p.estado?.toLowerCase() === 'rechazada'
+    ).length;
+    
+    const convertidas = baseList.filter(p => 
+      p.estado?.toLowerCase() === 'convertida'
+    ).length;
+    
+    const en_espera = baseList.filter(p => 
+      p.estado?.toLowerCase() === 'en_espera'
+    ).length;
+
+    // 🆕 Stats de cupos
+    const con_cupo_asignado = baseList.filter(p => 
+      p.tiene_cupo_asignado === true
+    ).length;
+    
+    const sin_cupo_asignado = total - con_cupo_asignado;
+    
+    return {
+      total,
+      pendientes,
+      aprobadas,
+      rechazadas,
+      convertidas,
+      en_espera,
+      con_cupo_asignado,
+      sin_cupo_asignado,
+    };
+  }, [preinscripciones, filteredPreinscripciones, serverStats, filters]);
+
+  // =============================================
   // OBTENER PREINSCRIPCIONES
   // =============================================
   const fetchPreinscripciones = useCallback(async () => {
@@ -141,6 +155,9 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
       
       const data = response.data?.preinscripciones || [];
       setPreinscripciones(data);
+      if (response.data?.stats) {
+        setServerStats(response.data.stats);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al cargar las preinscripciones';
       setError(message);
