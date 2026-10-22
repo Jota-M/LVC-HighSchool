@@ -598,20 +598,55 @@ export const ModalPostulantesCurso: React.FC<ModalPostulantesCursoProps> = ({
                         >
                           <Box>
                             {/* Badges superiores */}
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, gap: 1, flexWrap: 'wrap' }}>
-                              <Chip
-                                size="small"
-                                icon={esEspera ? <WarningAmberIcon sx={{ fontSize: '12px !important' }} /> : <CheckCircleIcon sx={{ fontSize: '12px !important' }} />}
-                                label={esEspera ? `Espera #${h.posicion_espera || 1}` : 'Cupo Confirmado'}
-                                sx={{
-                                  height: 20,
-                                  fontSize: '0.64rem',
-                                  fontWeight: 800,
-                                  bgcolor: esEspera ? alpha('#f59e0b', 0.15) : alpha('#10b981', 0.15),
-                                  color: esEspera ? '#d97706' : '#10b981',
-                                  border: `1px solid ${alpha(esEspera ? '#f59e0b' : '#10b981', 0.3)}`,
-                                }}
-                              />
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, gap: 0.8, flexWrap: 'wrap' }}>
+                              <Box sx={{ display: 'flex', gap: 0.6, alignItems: 'center', flexWrap: 'wrap' }}>
+                                <Chip
+                                  size="small"
+                                  icon={esEspera ? <WarningAmberIcon sx={{ fontSize: '12px !important' }} /> : <CheckCircleIcon sx={{ fontSize: '12px !important' }} />}
+                                  label={esEspera ? `Espera #${h.posicion_espera || 1}` : 'Cupo Confirmado'}
+                                  sx={{
+                                    height: 20,
+                                    fontSize: '0.64rem',
+                                    fontWeight: 800,
+                                    bgcolor: esEspera ? alpha('#f59e0b', 0.15) : alpha('#10b981', 0.15),
+                                    color: esEspera ? '#d97706' : '#10b981',
+                                    border: `1px solid ${alpha(esEspera ? '#f59e0b' : '#10b981', 0.3)}`,
+                                  }}
+                                />
+                                <Chip
+                                  size="small"
+                                  label={
+                                    h.estado_entrevista === 'aprobada' || h.estado_entrevista === 'realizada'
+                                      ? '✅ Aprobada'
+                                      : h.estado_entrevista === 'no_asistio'
+                                      ? '❌ No asistió'
+                                      : h.estado_entrevista === 'programada'
+                                      ? `📅 Cita: ${h.fecha_entrevista_formateada || 'Programada'}`
+                                      : '⏳ Entrevista Pend.'
+                                  }
+                                  sx={{
+                                    height: 20,
+                                    fontSize: '0.62rem',
+                                    fontWeight: 800,
+                                    bgcolor:
+                                      h.estado_entrevista === 'aprobada' || h.estado_entrevista === 'realizada'
+                                        ? alpha('#10b981', 0.15)
+                                        : h.estado_entrevista === 'no_asistio'
+                                        ? alpha('#ef4444', 0.15)
+                                        : h.estado_entrevista === 'programada'
+                                        ? alpha('#3b82f6', 0.15)
+                                        : alpha('#f59e0b', 0.15),
+                                    color:
+                                      h.estado_entrevista === 'aprobada' || h.estado_entrevista === 'realizada'
+                                        ? '#10b981'
+                                        : h.estado_entrevista === 'no_asistio'
+                                        ? '#ef4444'
+                                        : h.estado_entrevista === 'programada'
+                                        ? '#3b82f6'
+                                        : '#f59e0b',
+                                  }}
+                                />
+                              </Box>
                               <Chip
                                 size="small"
                                 icon={<StarIcon sx={{ fontSize: '12px !important' }} />}

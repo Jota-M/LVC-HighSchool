@@ -66,6 +66,7 @@ import { ModalAnulacionAdmin } from '@/components/reservaCupo/admin/ModalAnulaci
 import { ModalReactivacionAdmin } from '@/components/reservaCupo/admin/ModalReactivacionAdmin';
 import { ModalNominaAsegurados } from '@/components/reservaCupo/admin/ModalNominaAsegurados';
 import { ModalEliminarHermanoAdmin } from '@/components/reservaCupo/admin/ModalEliminarHermanoAdmin';
+import { ModalAgendarEntrevistaHermano } from '@/components/reservaCupo/admin/ModalAgendarEntrevistaHermano';
 import { ModalCampanaWhatsAppAdmin } from '@/components/reservaCupo/admin/ModalCampanaWhatsAppAdmin';
 import CuposAseguradosTab from '@/components/reservaCupo/admin/CuposAseguradosTab';
 
@@ -115,6 +116,12 @@ export default function ReservaCuposDashboardPage() {
   const [modalEliminarHermanoOpen, setModalEliminarHermanoOpen] = useState(false);
   const [motivoEliminarHermano, setMotivoEliminarHermano] = useState('Registro duplicado por el tutor');
   const [isEliminandoHermano, setIsEliminandoHermano] = useState(false);
+
+  // Gestión de Entrevista para Hermanos (Tab 2)
+  const [filtroEstadoEntrevistaHermano, setFiltroEstadoEntrevistaHermano] = useState('');
+  const [hermanoSeleccionadoEntrevista, setHermanoSeleccionadoEntrevista] = useState<ReservaCupoHermanoData | null>(null);
+  const [modalEntrevistaHermanoOpen, setModalEntrevistaHermanoOpen] = useState(false);
+  const [isProcesandoEntrevistaHermano, setIsProcesandoEntrevistaHermano] = useState(false);
 
   // Tab 3: Centro de Reportes (Tipo Docente)
   const [reporteSeleccionado, setReporteSeleccionado] = useState<ReporteDef>(REPORTES_DISPONIBLES[0]);
@@ -266,6 +273,7 @@ export default function ReservaCuposDashboardPage() {
     try {
       const data = await reservaCupoService.listarHermanosAdmin({
         estado: filtroEstadoHermano || undefined,
+        estado_entrevista: filtroEstadoEntrevistaHermano || undefined,
         search: searchHermano.trim() || undefined,
         limit: 100,
       });
@@ -476,6 +484,12 @@ export default function ReservaCuposDashboardPage() {
       cargarBalanceAsegurados();
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 2) {
+      cargarHermanos();
+    }
+  }, [searchHermano, filtroEstadoHermano, filtroEstadoEntrevistaHermano]);
 
   useEffect(() => {
     if (activeTab === 0) {
@@ -722,6 +736,73 @@ export default function ReservaCuposDashboardPage() {
       toast.error(err?.response?.data?.message || err?.message || 'Error al eliminar el registro de hermano');
     } finally {
       setIsEliminandoHermano(false);
+    }
+  };
+
+  // Manejadores para la entrevista de hermanos
+  const handleAbrirAgendarEntrevista = (hermano: ReservaCupoHermanoData) => {
+    setHermanoSeleccionadoEntrevista(hermano);
+    setModalEntrevistaHermanoOpen(true);
+  };
+
+  const handleGuardarEntrevistaHermano = async (payload: {
+    fecha_entrevista: string;
+    modalidad_entrevista: 'presencial' | 'virtual';
+    lugar_entrevista?: string;
+    enlace_entrevista?: string;
+    observaciones_entrevista?: string;
+    notificar_whatsapp: boolean;
+    hermano_ids?: number[];
+  }) => {
+    if (!hermanoSeleccionadoEntrevista) return;
+    setIsProcesandoEntrevistaHermano(true);
+    try {
+      const resp = await reservaCupoService.agendarEntrevistaHermano(
+        hermanoSeleccionadoEntrevista.id,
+        payload
+      );
+      toast.success(resp.message || 'Entrevista agendada exitosamente');
+      if (payload.notificar_whatsapp) {
+        if (resp.whatsapp?.enviado) {
+          toast.success('Citación enviada por WhatsApp al tutor');
+        } else if (resp.whatsapp?.error) {
+          toast('Cita guardada pero hubo un aviso en WhatsApp: ' + resp.whatsapp.error, { icon: '⚠️' });
+        }
+      }
+      setModalEntrevistaHermanoOpen(false);
+      setHermanoSeleccionadoEntrevista(null);
+      cargarHermanos();
+    } catch (err: any) {
+      console.error('Error al agendar entrevista:', err);
+      toast.error(err?.response?.data?.message || err?.message || 'Error al agendar entrevista');
+    } finally {
+      setIsProcesandoEntrevistaHermano(false);
+    }
+  };
+
+  const handleCambiarEstadoEntrevistaHermano = async (
+    nuevoEstado: 'pendiente' | 'programada' | 'realizada' | 'aprobada' | 'no_asistio',
+    hermanoIds?: number[]
+  ) => {
+    if (!hermanoSeleccionadoEntrevista) return;
+    setIsProcesandoEntrevistaHermano(true);
+    try {
+      const resp = await reservaCupoService.actualizarEstadoEntrevistaHermano(
+        hermanoSeleccionadoEntrevista.id,
+        {
+          estado_entrevista: nuevoEstado,
+          hermano_ids: hermanoIds && hermanoIds.length > 0 ? hermanoIds : [hermanoSeleccionadoEntrevista.id],
+        }
+      );
+      toast.success(resp.message || `Estado de entrevista actualizado a "${nuevoEstado}"`);
+      setModalEntrevistaHermanoOpen(false);
+      setHermanoSeleccionadoEntrevista(null);
+      cargarHermanos();
+    } catch (err: any) {
+      console.error('Error al cambiar estado de entrevista:', err);
+      toast.error(err?.response?.data?.message || err?.message || 'Error al cambiar estado de entrevista');
+    } finally {
+      setIsProcesandoEntrevistaHermano(false);
     }
   };
 
@@ -1164,6 +1245,8 @@ export default function ReservaCuposDashboardPage() {
                 onSearchHermanoChange={setSearchHermano}
                 filtroEstadoHermano={filtroEstadoHermano}
                 onFiltroEstadoHermanoChange={setFiltroEstadoHermano}
+                filtroEstadoEntrevista={filtroEstadoEntrevistaHermano}
+                onFiltroEstadoEntrevistaChange={setFiltroEstadoEntrevistaHermano}
                 onRefresh={cargarHermanos}
                 onExportarExcel={handleExportarHermanosExcel}
                 onExportarPdf={handleExportarHermanosPdf}
@@ -1173,6 +1256,7 @@ export default function ReservaCuposDashboardPage() {
                 onPromoverHermano={handlePromoverHermano}
                 onDescargarPDF={handleDescargarPDFRecibo}
                 onEliminarHermano={handleAbrirEliminarHermano}
+                onAgendarEntrevista={handleAbrirAgendarEntrevista}
               />
             )}
 
@@ -1322,6 +1406,19 @@ export default function ReservaCuposDashboardPage() {
           onClose={() => setModalCampanaWhatsAppOpen(false)}
           onIniciarCampana={handleIniciarCampanaMasiva}
           onDetenerCampana={handleDetenerCampanaMasiva}
+        />
+
+        {/* MODAL DE AGENDAR / REPROGRAMAR ENTREVISTA DE HERMANO */}
+        <ModalAgendarEntrevistaHermano
+          open={modalEntrevistaHermanoOpen}
+          hermano={hermanoSeleccionadoEntrevista}
+          onClose={() => {
+            setModalEntrevistaHermanoOpen(false);
+            setHermanoSeleccionadoEntrevista(null);
+          }}
+          onGuardar={handleGuardarEntrevistaHermano}
+          onCambiarEstadoEntrevista={handleCambiarEstadoEntrevistaHermano}
+          isProcesando={isProcesandoEntrevistaHermano}
         />
       </Container>
     </Box>

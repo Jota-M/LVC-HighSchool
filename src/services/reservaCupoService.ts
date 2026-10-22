@@ -54,13 +54,10 @@ class ReservaCupoService {
   }
 
   /**
-   * Verifica si un hermano ya existe en el sistema (por CI o nombres completos)
+   * Verifica si un hermano ya existe en el sistema por su CI
    */
   async verificarHermano(params: {
-    ci?: string;
-    nombres?: string;
-    apellido_paterno?: string;
-    apellido_materno?: string;
+    ci: string;
     periodo_academico_id?: number;
   }): Promise<{ existe: boolean; tipo?: string; mensaje?: string; datos?: any }> {
     const { data } = await api.get('/reserva-cupo/verificar-hermano', { params });
@@ -207,6 +204,7 @@ class ReservaCupoService {
     grado_solicitado_id?: number;
     turno_solicitado_id?: number;
     estado?: string;
+    estado_entrevista?: string;
     periodo_academico_id?: number;
     page?: number;
     limit?: number;
@@ -246,6 +244,53 @@ class ReservaCupoService {
     const { data } = await api.delete(`/reserva-cupo/admin/hermanos/${id}`, {
       data: { motivo },
     });
+    return data;
+  }
+
+  /**
+   * Obtiene todos los hermanos postulantes registrados de la misma familia / tutor
+   */
+  async obtenerFamiliaHermano(id: number): Promise<{
+    hermano: ReservaCupoHermanoData;
+    hermanosFamilia: ReservaCupoHermanoData[];
+  }> {
+    const { data } = await api.get(`/reserva-cupo/admin/hermanos/${id}/familia`);
+    return data.data;
+  }
+
+  /**
+   * Agenda o reprograma la entrevista de un hermano postulante o familia conjunta
+   */
+  async agendarEntrevistaHermano(id: number, payload: {
+    fecha_entrevista: string;
+    modalidad_entrevista: 'presencial' | 'virtual';
+    lugar_entrevista?: string;
+    enlace_entrevista?: string;
+    observaciones_entrevista?: string;
+    notificar_whatsapp?: boolean;
+    hermano_ids?: number[];
+  }): Promise<{ success: boolean; message: string; data: ReservaCupoHermanoData; hermanos?: ReservaCupoHermanoData[]; whatsapp?: any }> {
+    const { data } = await api.patch(`/reserva-cupo/admin/hermanos/${id}/agendar-entrevista`, payload);
+    return data;
+  }
+
+  /**
+   * Actualiza el estado de la entrevista de un hermano o familia conjunta
+   */
+  async actualizarEstadoEntrevistaHermano(id: number, payload: {
+    estado_entrevista: 'pendiente' | 'programada' | 'realizada' | 'aprobada' | 'no_asistio';
+    observaciones_entrevista?: string;
+    hermano_ids?: number[];
+  }): Promise<{ success: boolean; message: string; data: ReservaCupoHermanoData; hermanos?: ReservaCupoHermanoData[] }> {
+    const { data } = await api.patch(`/reserva-cupo/admin/hermanos/${id}/estado-entrevista`, payload);
+    return data;
+  }
+
+  /**
+   * Notifica o reenvía la citación de entrevista al tutor vía WhatsApp institucional
+   */
+  async notificarEntrevistaHermanoWhatsApp(id: number, telefonoDestino?: string): Promise<{ success: boolean; message: string; data?: any }> {
+    const { data } = await api.post(`/reserva-cupo/admin/hermanos/${id}/notificar-entrevista-whatsapp`, { telefonoDestino });
     return data;
   }
 

@@ -173,6 +173,20 @@ export interface ReservaCupoHermanoData {
     regular_apellidos?: string;
     regular_grado_actual?: string;
     regular_foto_url?: string | null;
+    // Gestión de Entrevista
+    estado_entrevista?: 'pendiente' | 'programada' | 'realizada' | 'aprobada' | 'no_asistio';
+    fecha_entrevista?: string | null;
+    fecha_entrevista_formateada?: string;
+    fecha_entrevista_iso?: string;
+    fecha_entrevista_solo_fecha?: string;
+    fecha_entrevista_hora?: string;
+    modalidad_entrevista?: 'presencial' | 'virtual';
+    lugar_entrevista?: string;
+    enlace_entrevista?: string | null;
+    observaciones_entrevista?: string | null;
+    fecha_notificacion_entrevista?: string | null;
+    fecha_notificacion_formateada?: string;
+    notificado_whatsapp?: boolean;
 }
 
 export interface DisponibilidadHermanoResponse {

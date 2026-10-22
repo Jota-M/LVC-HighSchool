@@ -39,6 +39,9 @@ import {
   WhatsApp as WhatsAppIcon,
   PictureAsPdf as PdfIcon,
   DeleteForeverRounded as DeleteIcon,
+  EventAvailableRounded as EventIcon,
+  HourglassEmptyRounded as HourglassIcon,
+  EditCalendarRounded as EditCalendarIcon,
 } from '@mui/icons-material';
 import { ReservaCupoHermanoData } from '@/types/reservaCupoTypes';
 import { BtnDescarga, getInitials, usePalette } from './common';
@@ -50,6 +53,8 @@ interface HermanosTabProps {
   onSearchHermanoChange: (val: string) => void;
   filtroEstadoHermano: string;
   onFiltroEstadoHermanoChange: (val: string) => void;
+  filtroEstadoEntrevista?: string;
+  onFiltroEstadoEntrevistaChange?: (val: string) => void;
   exportandoExcel: boolean;
   exportandoPdf: boolean;
   onExportarExcel: () => void;
@@ -59,6 +64,7 @@ interface HermanosTabProps {
   onPromoverHermano: (hermano: ReservaCupoHermanoData) => void;
   onDescargarPDF: (codigo: string) => void;
   onEliminarHermano: (hermano: ReservaCupoHermanoData) => void;
+  onAgendarEntrevista?: (hermano: ReservaCupoHermanoData) => void;
 }
 
 export const HermanosTab: React.FC<HermanosTabProps> = ({
@@ -68,6 +74,8 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
   onSearchHermanoChange,
   filtroEstadoHermano,
   onFiltroEstadoHermanoChange,
+  filtroEstadoEntrevista = '',
+  onFiltroEstadoEntrevistaChange,
   exportandoExcel,
   exportandoPdf,
   onExportarExcel,
@@ -77,6 +85,7 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
   onPromoverHermano,
   onDescargarPDF,
   onEliminarHermano,
+  onAgendarEntrevista,
 }) => {
   const { theme, isDark, gold: accentColor, gradBg } = usePalette();
 
@@ -96,7 +105,7 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
         }}
       >
         <Grid container spacing={2} alignItems="center">
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid size={{ xs: 12, md: 3.5 }}>
             <TextField
               fullWidth
               size="small"
@@ -135,7 +144,7 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
             />
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Estado de Cupo</InputLabel>
               <Select
@@ -156,16 +165,46 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
                   },
                 }}
               >
-                <MenuItem value="">Todos los hermanos</MenuItem>
+                <MenuItem value="">Todos los cupos</MenuItem>
                 <MenuItem value="confirmada">Confirmada (Cupo Directo)</MenuItem>
-                <MenuItem value="en_espera">En Lista de Espera (Prioritaria)</MenuItem>
+                <MenuItem value="en_espera">En Lista de Espera</MenuItem>
                 <MenuItem value="solicitud_anulacion">Solicitud de Anulación</MenuItem>
                 <MenuItem value="anulada">Anulada / Cancelada</MenuItem>
               </Select>
             </FormControl>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 6, md: 5 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Estado Entrevista</InputLabel>
+              <Select
+                value={filtroEstadoEntrevista}
+                label="Estado Entrevista"
+                onChange={(e) => onFiltroEstadoEntrevistaChange?.(e.target.value)}
+                sx={{
+                  borderRadius: '14px',
+                  bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: alpha(isDark ? '#fff' : '#000', 0.1),
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: alpha(accentColor, 0.4),
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: accentColor,
+                  },
+                }}
+              >
+                <MenuItem value="">Todas las entrevistas</MenuItem>
+                <MenuItem value="pendiente">⏳ Entrevista Pendiente</MenuItem>
+                <MenuItem value="programada">📅 Entrevista Programada</MenuItem>
+                <MenuItem value="aprobada">✅ Entrevista Aprobada</MenuItem>
+                <MenuItem value="no_asistio">❌ No Asistió</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid size={{ xs: 12, sm: 12, md: 3.5 }}>
             <Box sx={{ display: 'flex', gap: 1.5, justifyContent: { xs: 'flex-start', md: 'flex-end' }, alignItems: 'center', flexWrap: 'wrap' }}>
               <BtnDescarga
                 label="Excel"
@@ -291,6 +330,42 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
                               fontSize: '0.7rem',
                             }}
                           />
+                          <Chip
+                            size="small"
+                            icon={
+                              h.estado_entrevista === 'aprobada' || h.estado_entrevista === 'realizada' ? (
+                                <CheckCircleIcon sx={{ fontSize: '13px !important', color: '#fff !important' }} />
+                              ) : h.estado_entrevista === 'no_asistio' ? (
+                                <WarningAmberIcon sx={{ fontSize: '13px !important', color: '#fff !important' }} />
+                              ) : h.estado_entrevista === 'programada' ? (
+                                <EventIcon sx={{ fontSize: '13px !important', color: '#fff !important' }} />
+                              ) : (
+                                <HourglassIcon sx={{ fontSize: '13px !important', color: '#fff !important' }} />
+                              )
+                            }
+                            label={
+                              h.estado_entrevista === 'aprobada' || h.estado_entrevista === 'realizada'
+                                ? 'Entrevista Aprobada'
+                                : h.estado_entrevista === 'no_asistio'
+                                ? 'No Asistió a Entrevista'
+                                : h.estado_entrevista === 'programada'
+                                ? `Cita: ${h.fecha_entrevista_formateada || 'Programada'}`
+                                : 'Entrevista Pendiente'
+                            }
+                            sx={{
+                              bgcolor:
+                                h.estado_entrevista === 'aprobada' || h.estado_entrevista === 'realizada'
+                                  ? '#059669'
+                                  : h.estado_entrevista === 'no_asistio'
+                                  ? '#dc2626'
+                                  : h.estado_entrevista === 'programada'
+                                  ? '#2563eb'
+                                  : '#d97706',
+                              color: '#fff',
+                              fontWeight: 800,
+                              fontSize: '0.7rem',
+                            }}
+                          />
                         </Box>
                         <Tooltip title="Eliminar este cupo de hermano (ej. duplicados)">
                           <IconButton
@@ -386,6 +461,34 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
 
                       {/* Botones de Acción */}
                       <Stack spacing={1} sx={{ mt: 'auto' }}>
+                        {/* Botón de Gestión de Entrevista */}
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          size="small"
+                          startIcon={<EventIcon />}
+                          onClick={() => onAgendarEntrevista?.(h)}
+                          sx={{
+                            borderRadius: '10px',
+                            textTransform: 'none',
+                            fontWeight: 800,
+                            py: 0.8,
+                            background:
+                              h.estado_entrevista === 'programada'
+                                ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
+                                : h.estado_entrevista === 'aprobada' || h.estado_entrevista === 'realizada'
+                                ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                                : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                            boxShadow: '0 4px 15px rgba(2, 136, 209, 0.25)',
+                          }}
+                        >
+                          {h.estado_entrevista === 'programada'
+                            ? `📅 Reprogramar (${h.fecha_entrevista_formateada || 'Ver Cita'})`
+                            : h.estado_entrevista === 'aprobada' || h.estado_entrevista === 'realizada'
+                            ? '✅ Entrevista Aprobada (Ver)'
+                            : '📅 Agendar Entrevista'}
+                        </Button>
+
                         {esEspera && (
                           <Button
                             fullWidth

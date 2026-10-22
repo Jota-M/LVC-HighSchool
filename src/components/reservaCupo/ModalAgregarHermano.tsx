@@ -156,13 +156,11 @@ export default function ModalAgregarHermano({
     }
   }, [open, gradoSolicitadoId, turnoSolicitadoId]);
 
-  // Detección de duplicados en tiempo real (por CI o nombres + apellidos)
+  // Detección de duplicados en tiempo real ÚNICAMENTE por CI (al igual que la búsqueda de tutores)
   useEffect(() => {
     const ciTrim = ci.trim();
-    const nomTrim = nombres.trim();
-    const patTrim = apellidoPaterno.trim();
 
-    if (!ciTrim && (!nomTrim || !patTrim)) {
+    if (!ciTrim || ciTrim.length < 4) {
       setDuplicadoDetectado(null);
       return;
     }
@@ -170,17 +168,11 @@ export default function ModalAgregarHermano({
     // 1. Chequeo local en la lista de hermanos ya añadidos en la misma sesión
     if (hermanosYaAgregados && hermanosYaAgregados.length > 0) {
       const yaEnLista = hermanosYaAgregados.some((h) => {
-        const coincideCi = ciTrim && h.ci && h.ci.trim().toLowerCase() === ciTrim.toLowerCase();
-        const coincideNombre =
-          nomTrim &&
-          patTrim &&
-          h.nombres?.trim().toLowerCase() === nomTrim.toLowerCase() &&
-          h.apellido_paterno?.trim().toLowerCase() === patTrim.toLowerCase();
-        return Boolean(coincideCi || coincideNombre);
+        return Boolean(h.ci && h.ci.trim().toLowerCase() === ciTrim.toLowerCase());
       });
 
       if (yaEnLista) {
-        setDuplicadoDetectado('Ya has agregado a este hermanito en la lista actual de tu reserva.');
+        setDuplicadoDetectado('Ya has agregado a un hermanito con este CI en la lista actual de tu reserva.');
         return;
       }
     }
@@ -190,10 +182,7 @@ export default function ModalAgregarHermano({
       setIsVerificandoDuplicado(true);
       try {
         const res = await reservaCupoService.verificarHermano({
-          ci: ciTrim || undefined,
-          nombres: nomTrim || undefined,
-          apellido_paterno: patTrim || undefined,
-          apellido_materno: apellidoMaterno.trim() || undefined,
+          ci: ciTrim,
         });
 
         if (res?.existe) {
@@ -202,14 +191,14 @@ export default function ModalAgregarHermano({
           setDuplicadoDetectado(null);
         }
       } catch (err) {
-        console.error('Error al verificar duplicado de hermano:', err);
+        console.error('Error al verificar duplicado de hermano por CI:', err);
       } finally {
         setIsVerificandoDuplicado(false);
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [ci, nombres, apellidoPaterno, apellidoMaterno, hermanosYaAgregados]);
+  }, [ci, hermanosYaAgregados]);
 
   const handleCerrar = () => {
     setNombres('');
@@ -301,25 +290,24 @@ export default function ModalAgregarHermano({
       return;
     }
 
-    // Doble verificación previa con el servidor para bloquear envíos duplicados
-    try {
-      setIsVerificandoDuplicado(true);
-      const res = await reservaCupoService.verificarHermano({
-        ci: ciLimpio || undefined,
-        nombres: nomLimpio || undefined,
-        apellido_paterno: patLimpio || undefined,
-        apellido_materno: matLimpio || undefined,
-      });
+    // Doble verificación previa con el servidor para bloquear envíos duplicados (solo si tiene CI)
+    if (ciLimpio && ciLimpio.length >= 4) {
+      try {
+        setIsVerificandoDuplicado(true);
+        const res = await reservaCupoService.verificarHermano({
+          ci: ciLimpio,
+        });
 
-      if (res?.existe) {
-        setDuplicadoDetectado(res.mensaje || 'Este hermano ya se encuentra registrado en el sistema.');
-        setErrorValidacion(res.mensaje || 'Este hermano ya se encuentra registrado en el sistema.');
-        return;
+        if (res?.existe) {
+          setDuplicadoDetectado(res.mensaje || 'Este hermano ya se encuentra registrado en el sistema.');
+          setErrorValidacion(res.mensaje || 'Este hermano ya se encuentra registrado en el sistema.');
+          return;
+        }
+      } catch (err) {
+        console.error('Error al verificar duplicado en envío:', err);
+      } finally {
+        setIsVerificandoDuplicado(false);
       }
-    } catch (err) {
-      console.error('Error al verificar duplicado en envío:', err);
-    } finally {
-      setIsVerificandoDuplicado(false);
     }
 
     const gradoObj = grados.find((g) => g.id === Number(gradoSolicitadoId));
@@ -864,10 +852,22 @@ export default function ModalAgregarHermano({
                   setCi(val);
                 }}
                 placeholder="Ej: 13948291"
-                helperText="Opcional si aún no tramitó CI"
+                helperText={
+                  isVerificandoDuplicado
+                    ? 'Verificando CI...'
+                    : duplicadoDetectado
+                    ? undefined
+                    : 'Opcional si aún no tramitó CI (verificación a partir de 4 dígitos)'
+                }
+                error={Boolean(duplicadoDetectado)}
                 sx={inputStyle}
                 slotProps={{
-                  htmlInput: { maxLength: 20 }
+                  htmlInput: { maxLength: 20 },
+                  input: {
+                    endAdornment: isVerificandoDuplicado ? (
+                      <CircularProgress size={18} sx={{ color: brand }} />
+                    ) : undefined,
+                  },
                 }}
               />
             </Grid>
