@@ -88,6 +88,8 @@ export const reportesService = {
     const response = await api.get('/reportes/preinscripcion/listado', {
       params: {
         estado: params.estado,
+        turno: params.turno,
+        grado: params.grado,
         fecha_inicio: params.fecha_inicio,
         fecha_fin: params.fecha_fin,
         formato: params.formato || 'pdf',

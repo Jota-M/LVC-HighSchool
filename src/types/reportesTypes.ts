@@ -33,6 +33,8 @@ export interface ReportePreInscripcionIndividualParams extends ReporteBaseParams
 
 export interface ReportePreInscripcionListadoParams extends ReporteBaseParams {
   estado?: string;
+  turno?: string;
+  grado?: string;
   fecha_inicio?: string;
   fecha_fin?: string;
 }

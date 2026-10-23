@@ -491,6 +491,19 @@ export const gestionAcademicaService = {
       return null;
     }
   },
+
+  async obtenerTurnos(): Promise<any[]> {
+    try {
+      const response = await api.get('/turno');
+      if (Array.isArray(response.data)) return response.data;
+      if (response.data?.data?.turnos) return response.data.data.turnos;
+      if (response.data?.turnos) return response.data.turnos;
+      return [];
+    } catch (error: any) {
+      console.error('❌ Error al obtener turnos:', error);
+      return [];
+    }
+  },
 };
 
 // =============================================

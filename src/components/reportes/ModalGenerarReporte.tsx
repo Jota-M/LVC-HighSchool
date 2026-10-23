@@ -27,6 +27,7 @@ import {
   Assessment as ReportIcon,
   CalendarToday as CalendarIcon,
   FilterList as FilterIcon,
+  Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import { useReportes } from '@/hooks/useReportes';
 import { gestionAcademicaService } from '@/services/estudiantesService';
@@ -67,6 +68,7 @@ export const ModalGenerarReporte: React.FC<ModalGenerarReporteProps> = ({
 
   // Estados para pre-inscripciones
   const [estadoPreinscripcion, setEstadoPreinscripcion] = useState<string>('');
+  const [turnoPreinscripcion, setTurnoPreinscripcion] = useState<string>('');
   const [fechaInicio, setFechaInicio] = useState<string>('');
   const [fechaFin, setFechaFin] = useState<string>('');
 
@@ -74,9 +76,11 @@ export const ModalGenerarReporte: React.FC<ModalGenerarReporteProps> = ({
   const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);
   const [paralelos, setParalelos] = useState<Paralelo[]>([]);
   const [niveles, setNiveles] = useState<NivelAcademico[]>([]);
+  const [turnos, setTurnos] = useState<any[]>([]);
   const [loadingPeriodos, setLoadingPeriodos] = useState(false);
   const [loadingParalelos, setLoadingParalelos] = useState(false);
   const [loadingNiveles, setLoadingNiveles] = useState(false);
+  const [loadingTurnos, setLoadingTurnos] = useState(false);
 
   // ==========================================
   // EFECTOS DE CARGA
@@ -90,6 +94,7 @@ export const ModalGenerarReporte: React.FC<ModalGenerarReporteProps> = ({
         cargarPeriodos();
         cargarNiveles();
       } else {
+        cargarTurnos();
         // Para pre-inscripciones, inicializar fechas del mes actual
         const hoy = new Date();
         const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -161,6 +166,18 @@ export const ModalGenerarReporte: React.FC<ModalGenerarReporteProps> = ({
     }
   };
 
+  const cargarTurnos = async () => {
+    setLoadingTurnos(true);
+    try {
+      const data = await gestionAcademicaService.obtenerTurnos();
+      setTurnos(data);
+    } catch (error) {
+      console.error('Error al cargar turnos:', error);
+    } finally {
+      setLoadingTurnos(false);
+    }
+  };
+
   // ==========================================
   // UTILIDADES
   // ==========================================
@@ -177,6 +194,7 @@ export const ModalGenerarReporte: React.FC<ModalGenerarReporteProps> = ({
     setParaleloId('');
     setNivelId('');
     setEstadoPreinscripcion('');
+    setTurnoPreinscripcion('');
     setFechaInicio('');
     setFechaFin('');
   };
@@ -247,6 +265,7 @@ export const ModalGenerarReporte: React.FC<ModalGenerarReporteProps> = ({
       case 'preinscripcion_listado':
         generarReportePreInscripcionListado({
           estado: estadoPreinscripcion || undefined,
+          turno: turnoPreinscripcion || undefined,
           fecha_inicio: fechaInicio || undefined,
           fecha_fin: fechaFin || undefined,
           formato,
@@ -416,6 +435,38 @@ export const ModalGenerarReporte: React.FC<ModalGenerarReporteProps> = ({
                     <MenuItem value="aprobada">Aprobada</MenuItem>
                     <MenuItem value="rechazada">Rechazada</MenuItem>
                     <MenuItem value="convertida">Convertida</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+
+              {/* Filtro de Turno (solo para listado) */}
+              {tipo === 'preinscripcion_listado' && (
+                <FormControl fullWidth>
+                  <InputLabel>Turno (Opcional)</InputLabel>
+                  <Select
+                    value={turnoPreinscripcion}
+                    onChange={(e) => setTurnoPreinscripcion(e.target.value)}
+                    disabled={isGenerating || loadingTurnos}
+                    label="Turno (Opcional)"
+                    startAdornment={
+                      <ScheduleIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                    }
+                  >
+                    <MenuItem value="">
+                      <em>Todos los turnos</em>
+                    </MenuItem>
+                    {turnos.length > 0 ? (
+                      turnos.map((t: any) => (
+                        <MenuItem key={t.id || t.nombre} value={t.nombre}>
+                          Turno {t.nombre}
+                        </MenuItem>
+                      ))
+                    ) : (
+                      <>
+                        <MenuItem value="Mañana">Turno Mañana</MenuItem>
+                        <MenuItem value="Tarde">Turno Tarde</MenuItem>
+                      </>
+                    )}
                   </Select>
                 </FormControl>
               )}

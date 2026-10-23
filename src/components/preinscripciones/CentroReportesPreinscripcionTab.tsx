@@ -64,7 +64,7 @@ export const REPORTES_PREINSCRIPCION: ReportePreinscripcionDef[] = [
     color: '#0288d1',
     gradient: 'linear-gradient(135deg, #0288d1, #38bdf8)',
     badge: 'Oficial',
-    filtros: ['turno', 'estado', 'fechas', 'search'],
+    filtros: ['grado', 'turno', 'estado', 'fechas', 'search'],
   },
   {
     id: 'aprobados',
@@ -411,8 +411,18 @@ export const CentroReportesPreinscripcionTab: React.FC<CentroReportesPreinscripc
                     sx={{ borderRadius: '12px' }}
                   >
                     <MenuItem value="todos">Todos los Turnos</MenuItem>
-                    <MenuItem value="mañana">Turno Mañana</MenuItem>
-                    <MenuItem value="tarde">Turno Tarde</MenuItem>
+                    {turnos && turnos.length > 0 ? (
+                      turnos.map((t: any) => (
+                        <MenuItem key={t.id || t.nombre} value={t.nombre || String(t.id)}>
+                          Turno {t.nombre}
+                        </MenuItem>
+                      ))
+                    ) : (
+                      <>
+                        <MenuItem value="Mañana">Turno Mañana</MenuItem>
+                        <MenuItem value="Tarde">Turno Tarde</MenuItem>
+                      </>
+                    )}
                   </Select>
                 </FormControl>
               )}

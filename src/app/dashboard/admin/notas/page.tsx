@@ -10,7 +10,7 @@ import {
   TableCell, TableContainer, TableHead, TableRow, Paper, TextField,
   InputAdornment, Button, Stack, ToggleButton, ToggleButtonGroup,
   Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem,
-  FormControl, InputLabel, CircularProgress, Divider, Alert,
+  FormControl, InputLabel, CircularProgress, Divider, Alert, Tabs, Tab, Badge,
 } from '@mui/material';
 import { keyframes } from '@mui/system';
 import { useSnackbar } from 'notistack';
@@ -35,6 +35,7 @@ import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import FilterAltRoundedIcon from '@mui/icons-material/FilterAltRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
+import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 
 // Hooks y Servicios
 import { useAcademicos } from '@/hooks/useAcademicos';
@@ -48,6 +49,7 @@ import {
 } from '@/services/adminNotasService';
 import BoletinGeneralAnual from '@/components/padre/notas/BoletinGeneralAnual';
 import BoletinNotas from '@/components/padre/notas/BoletinNotas';
+import EstudiantesCriticosTab from '@/components/admin/notas/EstudiantesCriticosTab';
 import {
   ResumenMateriaPadre,
   ResumenMateriaAnual,
@@ -232,6 +234,9 @@ export default function AdminNotasPage() {
 
   // Modo de visualización: 'sabana' (matriz) o 'boletin' (individual tipo padres)
   const [modoVista, setModoVista] = useState<'sabana' | 'boletin'>('sabana');
+
+  // Pestaña principal del módulo: 'sabana' (notas normales) o 'criticos' (estudiantes en riesgo)
+  const [tabModulo, setTabModulo] = useState<'sabana' | 'criticos'>('sabana');
 
   // Datos del curso cargados desde backend
   const [cursoData, setCursoData] = useState<CursoNotasData | null>(null);
@@ -471,15 +476,62 @@ export default function AdminNotasPage() {
     return list;
   }, [cursoData, busqueda, filtroEstado]);
 
+  // ── Solo mostrar materias con notas registradas (obviar materias de apoyo o sin notas) ──
+  const materiasConNotas = useMemo(() => {
+    if (!cursoData) return [];
+    return cursoData.materias.filter(mat => {
+      return cursoData.estudiantes.some(est => {
+        const hasTri = est.trimestres?.some(t => {
+          const m = t.materias?.find(sub => sub.grado_materia_id === mat.grado_materia_id || sub.materia_id === mat.materia_id);
+          return m && m.nota_final != null;
+        });
+        if (hasTri) return true;
+        const mAnual = est.materias_anuales?.find(sub => sub.grado_materia_id === mat.grado_materia_id || sub.materia_id === mat.materia_id);
+        return mAnual && mAnual.promedio_anual != null;
+      });
+    });
+  }, [cursoData]);
+
+  // Conteo de estudiantes críticos para el badge de la pestaña
+  const totalEstudiantesCriticos = useMemo(() => {
+    if (!cursoData || materiasConNotas.length === 0) return 0;
+    return cursoData.estudiantes.filter(est => {
+      const tri1 = est.trimestres?.find(t => t.periodo_orden === 1);
+      const tri2 = est.trimestres?.find(t => t.periodo_orden === 2);
+      let materiasEnRiesgo = 0;
+      let tieneIrrecuperable = false;
+      let sumaTotal = 0;
+      let countMaterias = 0;
+
+      materiasConNotas.forEach(mat => {
+        const mTri1 = tri1?.materias?.find(m => m.grado_materia_id === mat.grado_materia_id || m.materia_id === mat.materia_id);
+        const mTri2 = tri2?.materias?.find(m => m.grado_materia_id === mat.grado_materia_id || m.materia_id === mat.materia_id);
+        const t1 = mTri1?.nota_final != null ? Number(mTri1.nota_final) : null;
+        const t2 = mTri2?.nota_final != null ? Number(mTri2.nota_final) : null;
+        if (t1 != null || t2 != null) {
+          const suma = (t1 ?? 0) + (t2 ?? 0);
+          const req = Math.max(0, 153 - suma);
+          if (req > 100) tieneIrrecuperable = true;
+          if (req > 51) materiasEnRiesgo++;
+          sumaTotal += suma / ((t1 != null ? 1 : 0) + (t2 != null ? 1 : 0));
+          countMaterias++;
+        }
+      });
+
+      const prom = countMaterias > 0 ? sumaTotal / countMaterias : null;
+      return materiasEnRiesgo >= 2 || tieneIrrecuperable || (prom != null && prom < 51);
+    }).length;
+  }, [cursoData, materiasConNotas]);
+
   // Exportar matriz actual a CSV compatible con Excel
   const handleExportarCSV = () => {
     if (!cursoData || cursoData.estudiantes.length === 0) return;
 
-    const materiasHeaders = cursoData.materias.map(m => `"${m.materia_nombre.replace(/"/g, '""')}"`);
+    const materiasHeaders = materiasConNotas.map(m => `"${m.materia_nombre.replace(/"/g, '""')}"`);
     const headerRow = ['"Nro"', '"CI"', '"Estudiante"', ...materiasHeaders, '"Promedio"', '"Estado"'].join(',');
 
     const rows = cursoData.estudiantes.map((est, idx) => {
-      const notasCols = cursoData.materias.map(mat => {
+      const notasCols = materiasConNotas.map(mat => {
         if (tabPeriodo === 'anual') {
           const matAnual = est.materias_anuales.find(m => m.grado_materia_id === mat.grado_materia_id);
           return matAnual?.promedio_anual != null ? matAnual.promedio_anual : '';
@@ -863,7 +915,60 @@ export default function AdminNotasPage() {
               </Box>
             </Card>
 
-            {/* ══ SELECTOR DE TRIMESTRE & MODO DE VISTA (Estilo idéntico al portal de padres) ══ */}
+            {/* ══ PESTAÑAS PRINCIPALES: SÁBANA DE NOTAS VS ESTUDIANTES CRÍTICOS ══ */}
+            <Box sx={{ mb: 3 }}>
+              <Tabs
+                value={tabModulo}
+                onChange={(_, val) => setTabModulo(val)}
+                sx={{
+                  bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.02),
+                  borderRadius: 3,
+                  p: 0.8,
+                  border: `1px solid ${isDark ? alpha('#fff', 0.08) : alpha('#000', 0.08)}`,
+                  '& .MuiTab-root': {
+                    borderRadius: 2.2,
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    minHeight: 46,
+                    fontSize: '0.92rem',
+                    color: 'text.secondary',
+                    transition: 'all 0.2s',
+                    mr: 1,
+                  },
+                  '& .Mui-selected': {
+                    color: `${isDark ? '#000' : '#fff'} !important`,
+                    fontWeight: 800,
+                    background: gradBg,
+                    boxShadow: `0 4px 14px ${alpha(primary, 0.35)}`,
+                  },
+                  '& .MuiTabs-indicator': { display: 'none' },
+                }}
+              >
+                <Tab
+                  value="sabana"
+                  icon={<AutoAwesomeMosaicRoundedIcon sx={{ fontSize: 20 }} />}
+                  iconPosition="start"
+                  label="Sábana y Calificaciones"
+                />
+                <Tab
+                  value="criticos"
+                  icon={
+                    <Badge
+                      badgeContent={totalEstudiantesCriticos}
+                      color="error"
+                      sx={{ '& .MuiBadge-badge': { fontWeight: 800 } }}
+                    >
+                      <WarningAmberRoundedIcon sx={{ fontSize: 20 }} />
+                    </Badge>
+                  }
+                  iconPosition="start"
+                  label="Estudiantes en Riesgo Crítico (T1 y T2)"
+                />
+              </Tabs>
+            </Box>
+
+            {/* ══ SELECTOR DE TRIMESTRE & MODO DE VISTA (solo visible en modo sábana) ══ */}
+            {tabModulo === 'sabana' && (
             <Box
               sx={{
                 display: 'flex',
@@ -981,6 +1086,7 @@ export default function AdminNotasPage() {
                 </ToggleButton>
               </ToggleButtonGroup>
             </Box>
+            )}
           </Box>
         </Fade>
 
@@ -1035,6 +1141,17 @@ export default function AdminNotasPage() {
           <Fade in timeout={600}>
             <Box sx={{ animation: `${fadeSlideUp} 0.4s ease-out` }}>
 
+              {tabModulo === 'criticos' ? (
+                <EstudiantesCriticosTab
+                  cursoData={cursoData}
+                  materiasConNotas={materiasConNotas}
+                  isDark={isDark}
+                  primary={primary}
+                  gradBg={gradBg}
+                  onVerBoletin={(est) => setModalEstudiante(est)}
+                />
+              ) : (
+                <>
               {/* ────────────────────────────────────────── */}
               {/* MODO 1: VISTA SÁBANA (CONSOLIDADO DEL CURSO) */}
               {/* ────────────────────────────────────────── */}
@@ -1251,7 +1368,7 @@ export default function AdminNotasPage() {
                         >
                           <TableCell sx={{ width: 40, pl: 2 }}>#</TableCell>
                           <TableCell sx={{ minWidth: 220 }}>Estudiante</TableCell>
-                          {cursoData.materias.map(mat => (
+                          {materiasConNotas.map(mat => (
                             <TableCell key={mat.materia_id} align="center" sx={{ minWidth: 110 }}>
                               <Tooltip title={mat.docente_nombre ? `Docente: ${mat.docente_nombre}` : mat.materia_nombre} arrow>
                                 <Box sx={{ cursor: 'pointer' }}>
@@ -1334,7 +1451,7 @@ export default function AdminNotasPage() {
                               </TableCell>
 
                               {/* Notas de cada materia */}
-                              {cursoData.materias.map(mat => {
+                              {materiasConNotas.map(mat => {
                                 let notaAMostrar: number | null = null;
                                 let aprobado: boolean | null = null;
 
@@ -1660,6 +1777,9 @@ export default function AdminNotasPage() {
                   )}
                 </Box>
               )}
+
+              </>
+            )}
 
             </Box>
           </Fade>
