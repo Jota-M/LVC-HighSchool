@@ -69,6 +69,7 @@ import { ModalEliminarHermanoAdmin } from '@/components/reservaCupo/admin/ModalE
 import { ModalAgendarEntrevistaHermano } from '@/components/reservaCupo/admin/ModalAgendarEntrevistaHermano';
 import { ModalCampanaWhatsAppAdmin } from '@/components/reservaCupo/admin/ModalCampanaWhatsAppAdmin';
 import CuposAseguradosTab from '@/components/reservaCupo/admin/CuposAseguradosTab';
+import { ModalNuevaReservaAdmin } from '@/components/reservaCupo/admin/ModalNuevaReservaAdmin';
 
 export default function ReservaCuposDashboardPage() {
   const router = useRouter();
@@ -152,6 +153,7 @@ export default function ReservaCuposDashboardPage() {
   const [isProcesandoCampana, setIsProcesandoCampana] = useState(false);
 
   // Modales de acciones administrativas (Anulación y Reactivación)
+  const [modalNuevaReservaOpen, setModalNuevaReservaOpen] = useState(false);
   const [modalAnulacionOpen, setModalAnulacionOpen] = useState(false);
   const [modalReactivacionOpen, setModalReactivacionOpen] = useState(false);
   const [reservaSeleccionada, setReservaSeleccionada] = useState<ReservaCupoData | null>(null);
@@ -924,7 +926,7 @@ export default function ReservaCuposDashboardPage() {
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
-                  onClick={() => router.push('/reserva-cupo')}
+                  onClick={() => setModalNuevaReservaOpen(true)}
                   sx={{
                     borderRadius: '12px',
                     fontWeight: 800,
@@ -1419,6 +1421,18 @@ export default function ReservaCuposDashboardPage() {
           onGuardar={handleGuardarEntrevistaHermano}
           onCambiarEstadoEntrevista={handleCambiarEstadoEntrevistaHermano}
           isProcesando={isProcesandoEntrevistaHermano}
+        />
+
+        {/* MODAL DE REGISTRAR NUEVA RESERVA DIRECTA EN ADMINISTRACIÓN */}
+        <ModalNuevaReservaAdmin
+          open={modalNuevaReservaOpen}
+          onClose={() => setModalNuevaReservaOpen(false)}
+          onReservaExitosa={() => {
+            cargarReservas();
+            cargarEstadisticas();
+            cargarHermanos();
+            cargarBalanceAsegurados();
+          }}
         />
       </Container>
     </Box>

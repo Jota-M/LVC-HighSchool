@@ -136,7 +136,7 @@ export const EstudiantesCriticosTab: React.FC<EstudiantesCriticosTabProps> = ({
         const t1 = mTri1?.nota_final != null ? Number(mTri1.nota_final) : null;
         const t2 = mTri2?.nota_final != null ? Number(mTri2.nota_final) : null;
         const notaMinima = Number(mat.nota_minima_aprobacion || 51);
-        const puntosNecesariosAnual = notaMinima * 3; // 153 puntos normalmente
+        const puntosNecesariosAnual = notaMinima * 3;
 
         if (t1 == null && t2 == null) {
           return {

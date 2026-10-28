@@ -178,11 +178,19 @@ export const ModalAgendarEntrevistaHermano: React.FC<ModalAgendarEntrevistaHerma
 
     const nombresHermanos = hermanosFamilia
       .filter((h) => selectedHermanoIds.includes(h.id))
-      .map((h) => `${h.nombres} ${h.apellido_paterno} (${h.codigo_reserva})`)
+      .map((h) => `${h.nombres} ${h.apellido_paterno}`)
       .join(', ');
 
+    const textoObs = observaciones && observaciones.trim()
+      ? `\n\n📝 *Instrucciones / Observaciones:*\n${observaciones.trim()}`
+      : '';
+
+    const textoMaps = modalidad === 'presencial'
+      ? '\n\n📍 *Ubicación del Colegio (Google Maps):*\nhttps://maps.app.goo.gl/dWapCMNPguGBMUTv9'
+      : '';
+
     const texto = encodeURIComponent(
-      `Estimado/a ${hermano.tutor_nombre}, le comunicamos de la Unidad Educativa La Voz de Cristo que la entrevista institucional familiar para sus hijos postulantes: ${nombresHermanos} ha sido agendada para: ${fechaPretty} (${modalidad === 'presencial' ? `Lugar: ${lugar}` : `Enlace: ${enlace}`}). Para optimizar su tiempo, se llevará a cabo una sola entrevista conjunta para toda la familia. Es indispensable la asistencia del tutor junto con los postulantes.`
+      `Estimado/a ${hermano.tutor_nombre}, le comunicamos de la Unidad Educativa La Voz de Cristo que la entrevista institucional familiar para sus hijos postulantes: ${nombresHermanos} ha sido agendada para: ${fechaPretty} (${modalidad === 'presencial' ? `Lugar: ${lugar}` : `Enlace: ${enlace}`}). Para optimizar su tiempo, se llevará a cabo una sola entrevista conjunta para toda la familia. Es indispensable la asistencia del tutor junto con los postulantes.${textoObs}${textoMaps}`
     );
     return `https://api.whatsapp.com/send?phone=${num}&text=${texto}`;
   };
