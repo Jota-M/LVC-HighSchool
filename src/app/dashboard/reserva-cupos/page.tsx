@@ -18,6 +18,8 @@ import {
   Paper,
   Chip,
   Badge,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   BookmarkAdded as BookmarkAddedIcon,
@@ -36,7 +38,7 @@ import {
   HowToReg as HowToRegIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
+import { toast, Toaster } from 'react-hot-toast';
 import api from '@/lib/api';
 import reservaCupoService, {
   BalanceCuposAseguradosData,
@@ -113,6 +115,8 @@ export default function ReservaCuposDashboardPage() {
   const [promoviendoHermanoId, setPromoviendoHermanoId] = useState<number | null>(null);
   const [exportandoHermanosExcel, setExportandoHermanosExcel] = useState(false);
   const [exportandoHermanosPdf, setExportandoHermanosPdf] = useState(false);
+  const [exportandoCronogramaExcel, setExportandoCronogramaExcel] = useState(false);
+  const [exportandoCronogramaPdf, setExportandoCronogramaPdf] = useState(false);
   const [hermanoSeleccionadoEliminar, setHermanoSeleccionadoEliminar] = useState<ReservaCupoHermanoData | null>(null);
   const [modalEliminarHermanoOpen, setModalEliminarHermanoOpen] = useState(false);
   const [motivoEliminarHermano, setMotivoEliminarHermano] = useState('Registro duplicado por el tutor');
@@ -123,6 +127,21 @@ export default function ReservaCuposDashboardPage() {
   const [hermanoSeleccionadoEntrevista, setHermanoSeleccionadoEntrevista] = useState<ReservaCupoHermanoData | null>(null);
   const [modalEntrevistaHermanoOpen, setModalEntrevistaHermanoOpen] = useState(false);
   const [isProcesandoEntrevistaHermano, setIsProcesandoEntrevistaHermano] = useState(false);
+
+  // Feedback Snackbar estilo Asignación Docente
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+
+  const showSnackbar = (message: string, severity: 'success' | 'error' | 'info' | 'warning' = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
 
   // Tab 3: Centro de Reportes (Tipo Docente)
   const [reporteSeleccionado, setReporteSeleccionado] = useState<ReporteDef>(REPORTES_DISPONIBLES[0]);
@@ -532,6 +551,40 @@ export default function ReservaCuposDashboardPage() {
     }
   };
 
+  const handleExportarCronogramaExcel = async () => {
+    setExportandoCronogramaExcel(true);
+    try {
+      await reservaCupoService.exportarCronogramaEntrevistas('excel', {
+        search: searchHermano.trim() || undefined,
+        estado: filtroEstadoHermano || undefined,
+        estado_entrevista: filtroEstadoEntrevistaHermano || undefined,
+      });
+      toast.success('Cronograma de Entrevistas descargado en Excel correctamente');
+    } catch (err) {
+      console.error('Error al exportar cronograma a Excel:', err);
+      toast.error('Error al exportar cronograma de entrevistas a Excel.');
+    } finally {
+      setExportandoCronogramaExcel(false);
+    }
+  };
+
+  const handleExportarCronogramaPdf = async () => {
+    setExportandoCronogramaPdf(true);
+    try {
+      await reservaCupoService.exportarCronogramaEntrevistas('pdf', {
+        search: searchHermano.trim() || undefined,
+        estado: filtroEstadoHermano || undefined,
+        estado_entrevista: filtroEstadoEntrevistaHermano || undefined,
+      });
+      toast.success('Cronograma de Entrevistas descargado en PDF correctamente');
+    } catch (err) {
+      console.error('Error al exportar cronograma a PDF:', err);
+      toast.error('Error al exportar cronograma de entrevistas a PDF.');
+    } finally {
+      setExportandoCronogramaPdf(false);
+    }
+  };
+
   // Promover hermano a confirmado
   const handlePromoverHermano = async (hermano: ReservaCupoHermanoData) => {
     const nombreCompleto = `${hermano.nombres} ${hermano.apellido_paterno}`;
@@ -541,12 +594,16 @@ export default function ReservaCuposDashboardPage() {
     setPromoviendoHermanoId(hermano.id);
     try {
       const res = await reservaCupoService.promoverHermanoAdmin(hermano.id, 'Promovido manualmente por administración tras vacancia');
-      toast.success(res.message || `Cupo confirmado para ${nombreCompleto}`);
+      const msg = res.message || `Cupo confirmado para ${nombreCompleto}`;
+      showSnackbar(msg, 'success');
+      toast.success(msg);
       cargarHermanos();
       cargarEstadisticas();
     } catch (err: any) {
       console.error('Error al promover hermano:', err);
-      toast.error(err.response?.data?.message || 'Error al promover hermano');
+      const errorMsg = err.response?.data?.message || 'Error al promover hermano';
+      showSnackbar(errorMsg, 'error');
+      toast.error(errorMsg);
     } finally {
       setPromoviendoHermanoId(null);
     }
@@ -602,13 +659,15 @@ export default function ReservaCuposDashboardPage() {
     const setLoader = formato === 'pdf' ? setRepDescargandoPdf : setRepDescargandoExcel;
     setLoader(true);
     try {
-      if (reporteSeleccionado.id === 'hermanos' || reporteSeleccionado.id === 'hermanos_espera') {
+      if (reporteSeleccionado.id === 'hermanos' || reporteSeleccionado.id === 'hermanos_espera' || reporteSeleccionado.id === 'hermanos_cronograma') {
         const estadoHermanos = reporteSeleccionado.id === 'hermanos_espera' ? 'en_espera' : undefined;
+        const tipoReporte = reporteSeleccionado.id === 'hermanos_cronograma' ? 'cronograma' : 'padron';
         await reservaCupoService.exportarReporteHermanos(formato, {
           search: repSearch.trim() || undefined,
           grado_solicitado_id: repGradoId ? Number(repGradoId) : undefined,
           turno_solicitado_id: repTurnoId ? Number(repTurnoId) : undefined,
           estado: estadoHermanos,
+          tipo_reporte: tipoReporte,
         });
         toast.success(`Reporte ${reporteSeleccionado.titulo} (${formato.toUpperCase()}) generado con éxito`);
         return;
@@ -726,7 +785,9 @@ export default function ReservaCuposDashboardPage() {
         hermanoSeleccionadoEliminar.id,
         motivoEliminarHermano.trim() || undefined
       );
-      toast.success(resp.message || 'Registro de hermano eliminado y cupo liberado exitosamente');
+      const msg = resp.message || 'Registro de hermano eliminado y cupo liberado exitosamente';
+      showSnackbar(msg, 'success');
+      toast.success(msg);
       setModalEliminarHermanoOpen(false);
       setHermanoSeleccionadoEliminar(null);
       setMotivoEliminarHermano('Registro duplicado por el tutor');
@@ -735,7 +796,9 @@ export default function ReservaCuposDashboardPage() {
       cargarBalanceAsegurados();
     } catch (err: any) {
       console.error('Error al eliminar cupo de hermano:', err);
-      toast.error(err?.response?.data?.message || err?.message || 'Error al eliminar el registro de hermano');
+      const errorMsg = err?.response?.data?.message || err?.message || 'Error al eliminar el registro de hermano';
+      showSnackbar(errorMsg, 'error');
+      toast.error(errorMsg);
     } finally {
       setIsEliminandoHermano(false);
     }
@@ -763,20 +826,31 @@ export default function ReservaCuposDashboardPage() {
         hermanoSeleccionadoEntrevista.id,
         payload
       );
-      toast.success(resp.message || 'Entrevista agendada exitosamente');
-      if (payload.notificar_whatsapp) {
-        if (resp.whatsapp?.enviado) {
-          toast.success('Citación enviada por WhatsApp al tutor');
-        } else if (resp.whatsapp?.error) {
-          toast('Cita guardada pero hubo un aviso en WhatsApp: ' + resp.whatsapp.error, { icon: '⚠️' });
-        }
-      }
+
+      // 1. Cerrar el modal inmediatamente
       setModalEntrevistaHermanoOpen(false);
       setHermanoSeleccionadoEntrevista(null);
-      cargarHermanos();
+
+      // 2. Feedback visual con mensaje exitoso (estilo AsignacionesDocente)
+      let exitoMsg = resp.message || '¡Entrevista agendada exitosamente!';
+      if (payload.notificar_whatsapp) {
+        if (resp.whatsapp?.enviado) {
+          exitoMsg += ' · Notificación enviada por WhatsApp al tutor.';
+        } else if (resp.whatsapp?.error) {
+          exitoMsg += ' · (Aviso WhatsApp: ' + resp.whatsapp.error + ')';
+        }
+      }
+      showSnackbar(exitoMsg, 'success');
+      toast.success(exitoMsg);
+
+      // 3. Petición GET para refrescar la lista de hermanos actualizada y estadísticas
+      await cargarHermanos();
+      await cargarEstadisticas();
     } catch (err: any) {
       console.error('Error al agendar entrevista:', err);
-      toast.error(err?.response?.data?.message || err?.message || 'Error al agendar entrevista');
+      const errorMsg = err?.response?.data?.message || err?.message || 'Error al agendar entrevista';
+      showSnackbar(errorMsg, 'error');
+      toast.error(errorMsg);
     } finally {
       setIsProcesandoEntrevistaHermano(false);
     }
@@ -796,13 +870,24 @@ export default function ReservaCuposDashboardPage() {
           hermano_ids: hermanoIds && hermanoIds.length > 0 ? hermanoIds : [hermanoSeleccionadoEntrevista.id],
         }
       );
-      toast.success(resp.message || `Estado de entrevista actualizado a "${nuevoEstado}"`);
+
+      // 1. Cerrar el modal
       setModalEntrevistaHermanoOpen(false);
       setHermanoSeleccionadoEntrevista(null);
-      cargarHermanos();
+
+      // 2. Mensaje de éxito estilo AsignacionesDocente
+      const exitoMsg = resp.message || `¡Estado de entrevista actualizado a "${nuevoEstado}" exitosamente!`;
+      showSnackbar(exitoMsg, 'success');
+      toast.success(exitoMsg);
+
+      // 3. Petición GET para actualizar registros
+      await cargarHermanos();
+      await cargarEstadisticas();
     } catch (err: any) {
       console.error('Error al cambiar estado de entrevista:', err);
-      toast.error(err?.response?.data?.message || err?.message || 'Error al cambiar estado de entrevista');
+      const errorMsg = err?.response?.data?.message || err?.message || 'Error al cambiar estado de entrevista';
+      showSnackbar(errorMsg, 'error');
+      toast.error(errorMsg);
     } finally {
       setIsProcesandoEntrevistaHermano(false);
     }
@@ -1252,8 +1337,12 @@ export default function ReservaCuposDashboardPage() {
                 onRefresh={cargarHermanos}
                 onExportarExcel={handleExportarHermanosExcel}
                 onExportarPdf={handleExportarHermanosPdf}
+                onExportarCronogramaExcel={handleExportarCronogramaExcel}
+                onExportarCronogramaPdf={handleExportarCronogramaPdf}
                 exportandoExcel={exportandoHermanosExcel}
                 exportandoPdf={exportandoHermanosPdf}
+                exportandoCronogramaExcel={exportandoCronogramaExcel}
+                exportandoCronogramaPdf={exportandoCronogramaPdf}
                 promoviendoHermanoId={promoviendoHermanoId}
                 onPromoverHermano={handlePromoverHermano}
                 onDescargarPDF={handleDescargarPDFRecibo}
@@ -1434,6 +1523,34 @@ export default function ReservaCuposDashboardPage() {
             cargarBalanceAsegurados();
           }}
         />
+
+        {/* Notificación Feedback Snackbar (idéntica a AsignacionesDocente) */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={4000}
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          TransitionComponent={Fade}
+        >
+          <Alert
+            onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+            severity={snackbar.severity}
+            variant="filled"
+            sx={{
+              width: '100%',
+              borderRadius: '12px',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              alignItems: 'center',
+              bgcolor: snackbar.severity === 'success' ? '#10b981' : undefined,
+            }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+
+        <Toaster position="top-right" />
       </Container>
     </Box>
   );

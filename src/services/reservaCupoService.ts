@@ -302,6 +302,8 @@ class ReservaCupoService {
     grado_solicitado_id?: number;
     turno_solicitado_id?: number;
     estado?: string;
+    estado_entrevista?: string;
+    tipo_reporte?: 'padron' | 'cronograma';
     periodo_academico_id?: number;
   }): Promise<void> {
     const query = new URLSearchParams();
@@ -310,6 +312,8 @@ class ReservaCupoService {
     if (params?.grado_solicitado_id) query.set('grado_solicitado_id', params.grado_solicitado_id.toString());
     if (params?.turno_solicitado_id) query.set('turno_solicitado_id', params.turno_solicitado_id.toString());
     if (params?.estado) query.set('estado', params.estado);
+    if (params?.estado_entrevista) query.set('estado_entrevista', params.estado_entrevista);
+    if (params?.tipo_reporte) query.set('tipo_reporte', params.tipo_reporte);
     if (params?.periodo_academico_id) query.set('periodo_academico_id', params.periodo_academico_id.toString());
 
     const response = await api.get(`/reserva-cupo/admin/hermanos/exportar?${query.toString()}`, {
@@ -320,7 +324,10 @@ class ReservaCupoService {
       ? 'application/pdf'
       : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     const ext = formato === 'pdf' ? 'pdf' : 'xlsx';
-    const filename = `Reporte_Hermanos_Postulantes_2027_${new Date().toISOString().slice(0, 10)}.${ext}`;
+    const baseName = params?.tipo_reporte === 'cronograma'
+      ? 'Cronograma_Entrevistas_Hermanos_2027'
+      : 'Reporte_Hermanos_Postulantes_2027';
+    const filename = `${baseName}_${new Date().toISOString().slice(0, 10)}.${ext}`;
 
     const blob = new Blob([response.data], { type: mime });
     const url = URL.createObjectURL(blob);
@@ -331,6 +338,23 @@ class ReservaCupoService {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Exporta el cronograma de entrevistas ordenado cronológicamente
+   */
+  async exportarCronogramaEntrevistas(formato: 'pdf' | 'excel', params?: {
+    search?: string;
+    grado_solicitado_id?: number;
+    turno_solicitado_id?: number;
+    estado?: string;
+    estado_entrevista?: string;
+    periodo_academico_id?: number;
+  }): Promise<void> {
+    return this.exportarReporteHermanos(formato, {
+      ...params,
+      tipo_reporte: 'cronograma',
+    });
   }
 
   /**

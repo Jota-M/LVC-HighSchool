@@ -1,7 +1,7 @@
 // components/reservaCupo/ModalAgregarHermano.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -47,13 +47,16 @@ export interface ModalAgregarHermanoProps {
   hermanosYaAgregados?: HermanoParaReserva[];
 }
 
+const EMPTY_HERMANOS_LIST: HermanoParaReserva[] = [];
+const EMPTY_REGULARES_LIST: any[] = [];
+
 export default function ModalAgregarHermano({
   open,
   onClose,
   onAgregar,
   onAgregarHermano,
-  estudiantesRegulares,
-  hermanosYaAgregados = [],
+  estudiantesRegulares = EMPTY_REGULARES_LIST,
+  hermanosYaAgregados = EMPTY_HERMANOS_LIST,
 }: ModalAgregarHermanoProps) {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -66,8 +69,13 @@ export default function ModalAgregarHermano({
   const bgField = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
   const borderField = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)';
 
+  // Huella de estudiantes para evitar recalcular innecesariamente
+  const regularesIdsKey = (estudiantesRegulares || [])
+    .map((item: any) => item?.estudiante?.id || item?.id || '')
+    .join(',');
+
   // Normalizar lista de estudiantes regulares
-  const listaRegulares = React.useMemo(() => {
+  const listaRegulares = useMemo(() => {
     return (estudiantesRegulares || []).map((item: any) => {
       if (item.estudiante) {
         return {
@@ -84,7 +92,16 @@ export default function ModalAgregarHermano({
         ci: item.ci || 'S/N',
       };
     });
-  }, [estudiantesRegulares]);
+  }, [regularesIdsKey]);
+
+  // Serialización de CIs de hermanos ya agregados para prevenir re-renders por cambio de referencia de array
+  const cisHermanosAgregados = useMemo(() => {
+    return (hermanosYaAgregados || [])
+      .map((h) => (h.ci || '').trim().toLowerCase())
+      .filter(Boolean)
+      .sort()
+      .join(',');
+  }, [hermanosYaAgregados]);
 
   // Estados del formulario
   const [grados, setGrados] = useState<Array<{ id: number; nombre: string; nivel_nombre?: string }>>([]);
@@ -106,20 +123,30 @@ export default function ModalAgregarHermano({
   const [isConsultandoDisp, setIsConsultandoDisp] = useState(false);
   const [errorValidacion, setErrorValidacion] = useState<string | null>(null);
 
-  // Verificación de duplicados en tiempo real (por CI o nombres completos)
+  // Verificación de duplicados en tiempo real (por CI)
   const [duplicadoDetectado, setDuplicadoDetectado] = useState<string | null>(null);
   const [isVerificandoDuplicado, setIsVerificandoDuplicado] = useState(false);
+  const [ciVerificado, setCiVerificado] = useState(false);
+  const ultimoCiVerificadoRef = useRef<string>('');
 
-  // Cargar lista de grados
+  // Sincronizar hermanoRegularId inicial cuando cambie listaRegulares
   useEffect(() => {
-    if (open) {
-      if (listaRegulares.length > 0 && (!hermanoRegularId || !listaRegulares.some((r: any) => r.id === hermanoRegularId))) {
+    if (open && listaRegulares.length > 0) {
+      if (!hermanoRegularId || !listaRegulares.some((r: any) => r.id === hermanoRegularId)) {
         setHermanoRegularId(listaRegulares[0].id);
       }
+    }
+  }, [open, listaRegulares, hermanoRegularId]);
+
+  // Cargar lista de grados solo una vez cuando el modal abre y aún no tiene grados
+  useEffect(() => {
+    if (open && grados.length === 0) {
+      let isMounted = true;
       const cargarGrados = async () => {
         setIsLoadingGrados(true);
         try {
           const list = await reservaCupoService.obtenerGradosDisponibles();
+          if (!isMounted) return;
           setGrados(list);
           if (list.length > 0 && !gradoSolicitadoId) {
             setGradoSolicitadoId(list[0].id);
@@ -127,16 +154,20 @@ export default function ModalAgregarHermano({
         } catch (e) {
           console.error('Error al cargar grados:', e);
         } finally {
-          setIsLoadingGrados(false);
+          if (isMounted) setIsLoadingGrados(false);
         }
       };
       cargarGrados();
+      return () => {
+        isMounted = false;
+      };
     }
-  }, [open, listaRegulares]);
+  }, [open, grados.length, gradoSolicitadoId]);
 
   // Consultar disponibilidad al cambiar grado o turno
   useEffect(() => {
     if (open && gradoSolicitadoId && turnoSolicitadoId) {
+      let isMounted = true;
       const consultar = async () => {
         setIsConsultandoDisp(true);
         try {
@@ -144,61 +175,94 @@ export default function ModalAgregarHermano({
             grado_id: Number(gradoSolicitadoId),
             turno_id: Number(turnoSolicitadoId),
           });
+          if (!isMounted) return;
           setDisponibilidad(disp);
         } catch (e) {
+          if (!isMounted) return;
           console.error('Error al consultar disponibilidad:', e);
           setDisponibilidad(null);
         } finally {
-          setIsConsultandoDisp(false);
+          if (isMounted) setIsConsultandoDisp(false);
         }
       };
       consultar();
+      return () => {
+        isMounted = false;
+      };
     }
   }, [open, gradoSolicitadoId, turnoSolicitadoId]);
 
-  // Detección de duplicados en tiempo real ÚNICAMENTE por CI (al igual que la búsqueda de tutores)
+  // Detección de duplicados en tiempo real ÚNICAMENTE por CI con debounce y control de estado
   useEffect(() => {
+    if (!open) {
+      return;
+    }
+
     const ciTrim = ci.trim();
 
     if (!ciTrim || ciTrim.length < 4) {
       setDuplicadoDetectado(null);
+      setCiVerificado(false);
+      setIsVerificandoDuplicado(false);
+      ultimoCiVerificadoRef.current = '';
       return;
     }
 
     // 1. Chequeo local en la lista de hermanos ya añadidos en la misma sesión
-    if (hermanosYaAgregados && hermanosYaAgregados.length > 0) {
-      const yaEnLista = hermanosYaAgregados.some((h) => {
-        return Boolean(h.ci && h.ci.trim().toLowerCase() === ciTrim.toLowerCase());
-      });
+    const yaEnLista = (hermanosYaAgregados || []).some((h) => {
+      return Boolean(h.ci && h.ci.trim().toLowerCase() === ciTrim.toLowerCase());
+    });
 
-      if (yaEnLista) {
-        setDuplicadoDetectado('Ya has agregado a un hermanito con este CI en la lista actual de tu reserva.');
-        return;
-      }
+    if (yaEnLista) {
+      setDuplicadoDetectado('Ya has agregado a un hermanito con este CI en la lista actual de tu reserva.');
+      setCiVerificado(false);
+      setIsVerificandoDuplicado(false);
+      ultimoCiVerificadoRef.current = ciTrim;
+      return;
     }
 
-    // 2. Chequeo en la base de datos (con debounce para no saturar)
+    // Si ya fue verificado este mismo CI contra la base de datos, evitar petición redundante
+    if (ultimoCiVerificadoRef.current === ciTrim) {
+      return;
+    }
+
+    let isMounted = true;
+    setIsVerificandoDuplicado(true);
+
+    // 2. Chequeo en la base de datos (con debounce para no saturar al usuario mientras escribe)
     const timer = setTimeout(async () => {
-      setIsVerificandoDuplicado(true);
       try {
         const res = await reservaCupoService.verificarHermano({
           ci: ciTrim,
         });
 
+        if (!isMounted) return;
+
+        ultimoCiVerificadoRef.current = ciTrim;
+
         if (res?.existe) {
           setDuplicadoDetectado(res.mensaje || 'Este hermano ya se encuentra registrado en el sistema.');
+          setCiVerificado(false);
         } else {
           setDuplicadoDetectado(null);
+          setCiVerificado(true);
         }
       } catch (err) {
+        if (!isMounted) return;
         console.error('Error al verificar duplicado de hermano por CI:', err);
+        setCiVerificado(false);
       } finally {
-        setIsVerificandoDuplicado(false);
+        if (isMounted) {
+          setIsVerificandoDuplicado(false);
+        }
       }
     }, 500);
 
-    return () => clearTimeout(timer);
-  }, [ci, hermanosYaAgregados]);
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [open, ci, cisHermanosAgregados]);
 
   const handleCerrar = () => {
     setNombres('');
@@ -210,6 +274,8 @@ export default function ModalAgregarHermano({
     setObservaciones('');
     setErrorValidacion(null);
     setDuplicadoDetectado(null);
+    setCiVerificado(false);
+    ultimoCiVerificadoRef.current = '';
     setIsVerificandoDuplicado(false);
     setDisponibilidad(null);
     onClose();
@@ -854,18 +920,34 @@ export default function ModalAgregarHermano({
                 placeholder="Ej: 13948291"
                 helperText={
                   isVerificandoDuplicado
-                    ? 'Verificando CI...'
+                    ? 'Verificando CI en el sistema...'
                     : duplicadoDetectado
-                    ? undefined
+                    ? duplicadoDetectado
+                    : ciVerificado
+                    ? '✓ CI verificado (disponible para registro)'
                     : 'Opcional si aún no tramitó CI (verificación a partir de 4 dígitos)'
                 }
                 error={Boolean(duplicadoDetectado)}
-                sx={inputStyle}
+                sx={{
+                  ...inputStyle,
+                  '& .MuiFormHelperText-root': {
+                    color: duplicadoDetectado
+                      ? '#ef4444 !important'
+                      : ciVerificado
+                      ? '#10b981 !important'
+                      : undefined,
+                    fontWeight: ciVerificado || duplicadoDetectado ? 600 : undefined,
+                  },
+                }}
                 slotProps={{
                   htmlInput: { maxLength: 20 },
                   input: {
                     endAdornment: isVerificandoDuplicado ? (
                       <CircularProgress size={18} sx={{ color: brand }} />
+                    ) : duplicadoDetectado ? (
+                      <CloseIcon sx={{ color: '#ef4444', fontSize: 18 }} />
+                    ) : ciVerificado ? (
+                      <CheckCircleIcon sx={{ color: '#10b981', fontSize: 18 }} />
                     ) : undefined,
                   },
                 }}

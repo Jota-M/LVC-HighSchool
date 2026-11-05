@@ -37,6 +37,7 @@ import {
   Search as SearchIcon,
   ChevronRightRounded as ChevronRightIcon,
   CheckCircleRounded as CheckCircleIcon,
+  CalendarMonthRounded as CalendarMonthIcon,
 } from '@mui/icons-material';
 import { BtnDescarga, usePalette } from './common';
 
@@ -138,6 +139,16 @@ export const REPORTES_DISPONIBLES: ReporteDef[] = [
     color: '#d97706',
     gradient: 'linear-gradient(135deg, #d97706, #b45309)',
     badge: 'En Espera',
+    filtros: ['grado', 'turno', 'search'],
+  },
+  {
+    id: 'hermanos_cronograma',
+    titulo: 'Cronograma de Entrevistas (Hermanos 2027)',
+    descripcion: 'Agenda cronológica oficial de entrevistas institucionales familiares con fechas, horarios, enlaces, lugares y contactos directos.',
+    icon: <CalendarMonthIcon />,
+    color: '#0284c7',
+    gradient: 'linear-gradient(135deg, #0284c7, #38bdf8)',
+    badge: 'Cronograma',
     filtros: ['grado', 'turno', 'search'],
   },
 ];

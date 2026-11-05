@@ -1,6 +1,6 @@
 // app/reserva-cupo/page.tsx
 'use client';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -695,6 +695,20 @@ export default function ReservaCupoPage() {
     setErrorValidacion(null);
     setErrorConfirmacion(null);
   };
+
+  // Memoizar estudiante regular vinculado al postular hermano desde recibo para evitar renders innecesarios
+  const estudiantesRegularesRecibo = useMemo(() => {
+    if (!reservaActivaParaHermano) return [];
+    return [
+      {
+        id: reservaActivaParaHermano.estudiante_id,
+        nombre_completo:
+          reservaActivaParaHermano.estudiante_nombre_completo ||
+          `${reservaActivaParaHermano.estudiante_nombres || ''} ${reservaActivaParaHermano.estudiante_apellido_paterno || ''}`.trim(),
+        ci: reservaActivaParaHermano.estudiante_ci || 'S/N',
+      },
+    ];
+  }, [reservaActivaParaHermano]);
 
   return (
     <Box
@@ -1905,20 +1919,9 @@ export default function ReservaCupoPage() {
         open={modalHermanoDesdeReciboOpen}
         onClose={() => setModalHermanoDesdeReciboOpen(false)}
         onAgregar={handleGuardarHermanoDesdeRecibo}
-        estudiantesRegulares={
-          reservaActivaParaHermano
-            ? [
-                {
-                  id: reservaActivaParaHermano.estudiante_id,
-                  nombre_completo:
-                    reservaActivaParaHermano.estudiante_nombre_completo ||
-                    `${reservaActivaParaHermano.estudiante_nombres || ''} ${reservaActivaParaHermano.estudiante_apellido_paterno || ''}`.trim(),
-                  ci: reservaActivaParaHermano.estudiante_ci || 'S/N',
-                },
-              ]
-            : []
-        }
+        estudiantesRegulares={estudiantesRegularesRecibo}
         periodoId={reservaActivaParaHermano?.periodo_academico_id}
+        hermanosYaAgregados={hermanosSeleccionados}
       />
 
       {/* Modal para registrar a un hermano que también es estudiante regular del colegio */}

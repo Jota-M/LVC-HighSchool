@@ -43,9 +43,16 @@ import {
   HourglassEmptyRounded as HourglassIcon,
   EditCalendarRounded as EditCalendarIcon,
   FamilyRestroomRounded as FamilyIcon,
+  CalendarMonthRounded as CalendarMonthIcon,
+
+
 } from '@mui/icons-material';
 import { ReservaCupoHermanoData } from '@/types/reservaCupoTypes';
+import CancelIcon from '@mui/icons-material/Cancel';
 import { BtnDescarga, getInitials, usePalette } from './common';
+import { ModalCronogramaEntrevistas } from './ModalCronogramaEntrevistas';
+import { toast } from 'react-hot-toast';
+import { reservaCupoService } from '@/services/reservaCupoService';
 
 export interface FamiliaGrupo {
   key: string;
@@ -74,6 +81,10 @@ interface HermanosTabProps {
   exportandoPdf: boolean;
   onExportarExcel: () => void;
   onExportarPdf: () => void;
+  onExportarCronogramaPdf?: () => void;
+  onExportarCronogramaExcel?: () => void;
+  exportandoCronogramaPdf?: boolean;
+  exportandoCronogramaExcel?: boolean;
   onRefresh: () => void;
   promoviendoHermanoId: number | null;
   onPromoverHermano: (hermano: ReservaCupoHermanoData) => void;
@@ -95,6 +106,10 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
   exportandoPdf,
   onExportarExcel,
   onExportarPdf,
+  onExportarCronogramaPdf,
+  onExportarCronogramaExcel,
+  exportandoCronogramaPdf = false,
+  exportandoCronogramaExcel = false,
   onRefresh,
   promoviendoHermanoId,
   onPromoverHermano,
@@ -103,6 +118,38 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
   onAgendarEntrevista,
 }) => {
   const { theme, isDark, gold: accentColor, gradBg } = usePalette();
+  const [modalCronogramaOpen, setModalCronogramaOpen] = React.useState(false);
+  const [enviandoWhatsAppHermanoId, setEnviandoWhatsAppHermanoId] = React.useState<number | null>(null);
+  const [calificandoEntrevistaId, setCalificandoEntrevistaId] = React.useState<number | null>(null);
+
+  // Calificar la entrevista de la familia (Aprobada / No Asistió) con 1 clic
+  const handleCalificarEntrevistaFamilia = async (
+    fam: FamiliaGrupo,
+    nuevoEstado: 'aprobada' | 'no_asistio'
+  ) => {
+    const primerH = fam.hermanos[0];
+    if (!primerH) return;
+    const hermanoIds = fam.hermanos.map((h) => h.id);
+    const label = nuevoEstado === 'aprobada' ? 'Aprobada' : 'No Asistió';
+    setCalificandoEntrevistaId(primerH.id);
+    const toastId = toast.loading(`Marcando entrevista como ${label}...`);
+    try {
+      const resp = await reservaCupoService.actualizarEstadoEntrevistaHermano(primerH.id, {
+        estado_entrevista: nuevoEstado,
+        hermano_ids: hermanoIds,
+      });
+      if (resp?.success) {
+        toast.success(resp.message || `Entrevista calificada como ${label}`, { id: toastId });
+        onRefresh();
+      } else {
+        toast.error(resp?.message || 'Error al calificar entrevista', { id: toastId });
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Error al calificar entrevista', { id: toastId });
+    } finally {
+      setCalificandoEntrevistaId(null);
+    }
+  };
 
   // Agrupar hermanos en una sola Card por familia y ordenar por fecha de registro de cupo ASC
   const familiasAgrupadas = React.useMemo(() => {
@@ -111,10 +158,10 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
       const key = h.hermano_regular_id
         ? `reg_${h.hermano_regular_id}`
         : (h.tutor_ci && h.tutor_ci.trim()
-            ? `ci_${h.tutor_ci.trim()}`
-            : (h.tutor_telefono && h.tutor_telefono.trim()
-                ? `tel_${h.tutor_telefono.trim()}`
-                : `h_${h.id}`));
+          ? `ci_${h.tutor_ci.trim()}`
+          : (h.tutor_telefono && h.tutor_telefono.trim()
+            ? `tel_${h.tutor_telefono.trim()}`
+            : `h_${h.id}`));
 
       if (!map.has(key)) {
         map.set(key, {
@@ -152,42 +199,39 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
     return listaFamilias;
   }, [hermanosList]);
 
-  // Enlace directo WhatsApp sin códigos de estudiante y con enlace a Google Maps institucional
-  const handleAbrirWhatsAppFamilia = (fam: FamiliaGrupo) => {
-    const tel = (fam.tutor_telefono || '').replace(/\D/g, '');
-    const num = tel.startsWith('591') ? tel : `591${tel}`;
-
-    const nombresHermanos = fam.hermanos
-      .map((h) => `${h.nombres} ${h.apellido_paterno} (${h.grado_solicitado_nombre || h.grado_nombre})`)
-      .join(', ');
-
+  // Envío automático directo mediante el Bot oficial de WhatsApp
+  const handleEnviarWhatsAppBotFamilia = async (fam: FamiliaGrupo) => {
     const primerH = fam.hermanos[0];
-    const tieneEntrevista = primerH?.estado_entrevista === 'programada' && primerH?.fecha_entrevista_formateada;
+    if (!primerH) return;
 
-    let texto = '';
-    if (tieneEntrevista) {
-      const lugar = primerH.modalidad_entrevista === 'virtual'
-        ? `Enlace de reunión: ${primerH.enlace_entrevista || 'Por coordinar'}`
-        : `Lugar: ${primerH.lugar_entrevista || 'Dirección del Colegio - Oficina Principal'}`;
-
-      const linkMaps = primerH.modalidad_entrevista !== 'virtual'
-        ? '\n\n📍 *Ubicación del Colegio (Google Maps):*\nhttps://maps.app.goo.gl/dWapCMNPguGBMUTv9'
-        : '';
-
-      const hijosTexto = fam.hermanos.length > 1
-        ? `sus hijos postulantes: ${nombresHermanos}`
-        : `su hijo(a) postulante: ${nombresHermanos}`;
-
-      texto = `Estimado/a ${fam.tutor_nombre}, le comunicamos de la Unidad Educativa La Voz de Cristo que la entrevista institucional familiar para ${hijosTexto} ha sido agendada para: *${primerH.fecha_entrevista_formateada}* (${lugar}). Para optimizar su tiempo, se llevará a cabo una sola entrevista conjunta para toda la familia. Es indispensable la asistencia del tutor junto con los postulantes.${linkMaps}\n\nSecretaría: +591 69624189`;
-    } else {
-      const hijosTexto = fam.hermanos.length > 1
-        ? `sus hijos postulantes: ${nombresHermanos}`
-        : `su hijo(a) postulante: ${nombresHermanos}`;
-
-      texto = `Estimado/a ${fam.tutor_nombre}, le contactamos del colegio La Voz de Cristo referente a la postulación con Prioridad Hermano para ${hijosTexto}. Nos comunicaremos a la brevedad para coordinar la entrevista institucional familiar.\n\n📍 *Ubicación del Colegio (Google Maps):*\nhttps://maps.app.goo.gl/dWapCMNPguGBMUTv9\n\nSecretaría: +591 69624189`;
+    const tel = (fam.tutor_telefono || '').replace(/\D/g, '');
+    if (!tel) {
+      toast.error('No hay número de teléfono o celular registrado para este tutor.');
+      return;
     }
 
-    window.open(`https://api.whatsapp.com/send?phone=${num}&text=${encodeURIComponent(texto)}`, '_blank');
+    if (!primerH.fecha_entrevista) {
+      toast.error('La familia debe tener una entrevista agendada con fecha y hora para enviar el recordatorio por el bot.');
+      return;
+    }
+
+    setEnviandoWhatsAppHermanoId(primerH.id);
+    const toastId = toast.loading(`Enviando notificación por bot de WhatsApp a ${fam.tutor_nombre}...`);
+    try {
+      const resp = await reservaCupoService.notificarEntrevistaHermanoWhatsApp(primerH.id);
+      if (resp?.success) {
+        toast.success(resp.message || 'Mensaje enviado exitosamente vía bot de WhatsApp.', { id: toastId });
+        onRefresh();
+      } else {
+        toast.error(resp?.message || 'El bot no pudo entregar el mensaje por WhatsApp.', { id: toastId });
+      }
+    } catch (err: any) {
+      console.error('Error enviando WhatsApp bot:', err);
+      const msg = err.response?.data?.message || err.message || 'Error al conectar con el servicio del bot de WhatsApp';
+      toast.error(msg, { id: toastId });
+    } finally {
+      setEnviandoWhatsAppHermanoId(null);
+    }
   };
 
   return (
@@ -206,7 +250,7 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
         }}
       >
         <Grid container spacing={2} alignItems="center">
-          <Grid size={{ xs: 12, md: 3.5 }}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
               size="small"
@@ -245,7 +289,7 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
             />
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Estado de Cupo</InputLabel>
               <Select
@@ -275,7 +319,7 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
             </FormControl>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
             <FormControl fullWidth size="small">
               <InputLabel>Estado Entrevista</InputLabel>
               <Select
@@ -305,8 +349,31 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
             </FormControl>
           </Grid>
 
-          <Grid size={{ xs: 12, sm: 12, md: 3.5 }}>
-            <Box sx={{ display: 'flex', gap: 1.5, justifyContent: { xs: 'flex-start', md: 'flex-end' }, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Grid size={{ xs: 12, sm: 12, md: 5 }}>
+            <Box sx={{ display: 'flex', gap: 1.2, justifyContent: { xs: 'flex-start', md: 'flex-end' }, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                startIcon={<CalendarMonthIcon sx={{ fontSize: 18 }} />}
+                onClick={() => setModalCronogramaOpen(true)}
+                sx={{
+                  background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: '0.82rem',
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  px: 1.8,
+                  py: 0.8,
+                  boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
+                  whiteSpace: 'nowrap',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #172554 0%, #1d4ed8 100%)',
+                    boxShadow: '0 6px 18px rgba(37, 99, 235, 0.45)',
+                  },
+                }}
+              >
+                Ver Cronograma
+              </Button>
               <BtnDescarga
                 label="Excel"
                 icon={<TableChartRoundedIcon sx={{ fontSize: 18 }} />}
@@ -342,7 +409,7 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
           </Grid>
         </Grid>
 
-        {/* Acceso Rápido a Estados de Entrevista */}
+        {/* Acceso Rápido a Estados de Entrevista y Cronograma */}
         <Box
           sx={{
             display: 'flex',
@@ -357,6 +424,22 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
           <Typography variant="caption" fontWeight={800} color="text.secondary" sx={{ mr: 0.5 }}>
             Filtro Rápido:
           </Typography>
+          <Chip
+            clickable
+            size="small"
+            icon={<CalendarMonthIcon sx={{ fontSize: '15px !important', color: '#1e40af !important' }} />}
+            label="📅 Ver Cronograma y Agenda de Citas"
+            onClick={() => setModalCronogramaOpen(true)}
+            sx={{
+              fontWeight: 800,
+              bgcolor: isDark ? alpha('#2563eb', 0.2) : alpha('#2563eb', 0.12),
+              color: isDark ? '#93c5fd' : '#1e40af',
+              border: `1px solid ${alpha('#2563eb', 0.35)}`,
+              '&:hover': {
+                bgcolor: alpha('#2563eb', 0.25),
+              },
+            }}
+          />
           <Chip
             clickable
             size="small"
@@ -448,16 +531,16 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
             const estadoEntrevistaGlobal = todosAprobados
               ? 'aprobada'
               : algunNoAsistio
-              ? 'no_asistio'
-              : algunProgramada
-              ? 'programada'
-              : 'pendiente';
+                ? 'no_asistio'
+                : algunProgramada
+                  ? 'programada'
+                  : 'pendiente';
 
             const cardBorderColor = esMultiHermano
               ? isDark ? 'rgba(99, 102, 241, 0.55)' : '#818cf8'
               : esEsperaGlobal
-              ? isDark ? 'rgba(245, 158, 11, 0.55)' : '#fcd34d'
-              : isDark ? 'rgba(16, 185, 129, 0.55)' : '#86efac';
+                ? isDark ? 'rgba(245, 158, 11, 0.55)' : '#fcd34d'
+                : isDark ? 'rgba(16, 185, 129, 0.55)' : '#86efac';
 
             return (
               <Grid
@@ -570,22 +653,22 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
                               estadoEntrevistaGlobal === 'aprobada'
                                 ? 'Entrevista Aprobada'
                                 : estadoEntrevistaGlobal === 'no_asistio'
-                                ? 'No Asistió'
-                                : estadoEntrevistaGlobal === 'programada'
-                                ? primerHermano.fecha_entrevista_formateada
-                                  ? `Cita: ${primerHermano.fecha_entrevista_formateada}`
-                                  : 'Cita Programada'
-                                : 'Entrevista Pendiente'
+                                  ? 'No Asistió'
+                                  : estadoEntrevistaGlobal === 'programada'
+                                    ? primerHermano.fecha_entrevista_formateada
+                                      ? `Cita: ${primerHermano.fecha_entrevista_formateada}`
+                                      : 'Cita Programada'
+                                    : 'Entrevista Pendiente'
                             }
                             sx={{
                               bgcolor:
                                 estadoEntrevistaGlobal === 'aprobada'
                                   ? '#059669'
                                   : estadoEntrevistaGlobal === 'no_asistio'
-                                  ? '#dc2626'
-                                  : estadoEntrevistaGlobal === 'programada'
-                                  ? '#2563eb'
-                                  : '#d97706',
+                                    ? '#dc2626'
+                                    : estadoEntrevistaGlobal === 'programada'
+                                      ? '#2563eb'
+                                      : '#d97706',
                               color: '#fff',
                               fontWeight: 800,
                               fontSize: '0.68rem',
@@ -877,10 +960,10 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
                               estadoEntrevistaGlobal === 'programada'
                                 ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
                                 : estadoEntrevistaGlobal === 'aprobada'
-                                ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
-                                : esMultiHermano
-                                ? 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)'
-                                : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                                  ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                                  : esMultiHermano
+                                    ? 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)'
+                                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
                             boxShadow: esMultiHermano
                               ? '0 4px 15px rgba(79, 70, 229, 0.3)'
                               : '0 4px 15px rgba(2, 136, 209, 0.25)',
@@ -890,14 +973,63 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
                             ? estadoEntrevistaGlobal === 'programada'
                               ? '✏️ Reprogramar Cita Familiar'
                               : estadoEntrevistaGlobal === 'aprobada'
-                              ? '✅ Entrevista Familiar Aprobada (Ver)'
-                              : `📅 Agendar Cita Familiar (${fam.hermanos.length} Hermanos)`
+                                ? '✅ Entrevista Familiar Aprobada (Ver)'
+                                : `📅 Agendar Cita Familiar (${fam.hermanos.length} Hermanos)`
                             : estadoEntrevistaGlobal === 'programada'
-                            ? '✏️ Reprogramar Cita'
-                            : estadoEntrevistaGlobal === 'aprobada'
-                            ? '✅ Entrevista Aprobada (Ver)'
-                            : '📅 Agendar Entrevista'}
+                              ? '✏️ Reprogramar Cita'
+                              : estadoEntrevistaGlobal === 'aprobada'
+                                ? '✅ Entrevista Aprobada (Ver)'
+                                : '📅 Agendar Entrevista'}
                         </Button>
+
+                        {/* Botones directos para calificar la entrevista si está programada */}
+                        {estadoEntrevistaGlobal === 'programada' && (
+                          <Stack direction="row" spacing={1}>
+                            <Button
+                              fullWidth
+                              size="small"
+                              variant="contained"
+                              color="success"
+                              disabled={calificandoEntrevistaId === primerHermano.id}
+                              startIcon={
+                                calificandoEntrevistaId === primerHermano.id ? (
+                                  <CircularProgress size={14} color="inherit" />
+                                ) : (
+                                  <CheckCircleIcon sx={{ fontSize: 16 }} />
+                                )
+                              }
+                              onClick={() => handleCalificarEntrevistaFamilia(fam, 'aprobada')}
+                              sx={{
+                                borderRadius: '10px',
+                                textTransform: 'none',
+                                fontWeight: 800,
+                                fontSize: '0.78rem',
+                                py: 0.7,
+                                bgcolor: '#16a34a',
+                                '&:hover': { bgcolor: '#15803d' },
+                              }}
+                            >
+                              {esMultiHermano ? 'Aprobar Cita Familiar' : 'Aprobar Entrevista'}
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              disabled={calificandoEntrevistaId === primerHermano.id}
+                              startIcon={<CancelIcon sx={{ fontSize: 15 }} />}
+                              onClick={() => handleCalificarEntrevistaFamilia(fam, 'no_asistio')}
+                              sx={{
+                                borderRadius: '10px',
+                                textTransform: 'none',
+                                fontWeight: 700,
+                                fontSize: '0.75rem',
+                                px: 1.5,
+                              }}
+                            >
+                              Faltó
+                            </Button>
+                          </Stack>
+                        )}
 
                         {/* Botón de promover para cupo individual en espera */}
                         {!esMultiHermano && esEsperaGlobal && (
@@ -932,11 +1064,20 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
                           <Button
                             size="small"
                             variant="text"
-                            startIcon={<WhatsAppIcon sx={{ color: '#16a34a' }} />}
-                            onClick={() => handleAbrirWhatsAppFamilia(fam)}
+                            disabled={enviandoWhatsAppHermanoId === primerHermano.id}
+                            startIcon={
+                              enviandoWhatsAppHermanoId === primerHermano.id ? (
+                                <CircularProgress size={15} color="inherit" />
+                              ) : (
+                                <WhatsAppIcon sx={{ color: '#16a34a' }} />
+                              )
+                            }
+                            onClick={() => handleEnviarWhatsAppBotFamilia(fam)}
                             sx={{ textTransform: 'none', fontSize: '0.78rem', fontWeight: 700, color: 'text.secondary' }}
                           >
-                            {esMultiHermano ? 'WhatsApp Familiar' : 'WhatsApp'}
+                            {enviandoWhatsAppHermanoId === primerHermano.id
+                              ? 'Enviando...'
+                              : (esMultiHermano ? 'Recordar Bot Familiar' : 'Recordar Bot')}
                           </Button>
 
                           {!esMultiHermano && (
@@ -985,6 +1126,25 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
           })}
         </Grid>
       )}
+
+      {/* MODAL CRONOGRAMA OFICIAL DE ENTREVISTAS */}
+      <ModalCronogramaEntrevistas
+        open={modalCronogramaOpen}
+        onClose={() => setModalCronogramaOpen(false)}
+        hermanosList={hermanosList}
+        onEditarEntrevista={(hermano) => {
+          setModalCronogramaOpen(false);
+          onAgendarEntrevista?.(hermano);
+        }}
+        onRefresh={onRefresh}
+        onExportarPdf={onExportarCronogramaPdf || onExportarPdf}
+        onExportarExcel={onExportarCronogramaExcel || onExportarExcel}
+        exportandoPdf={exportandoCronogramaPdf}
+        exportandoExcel={exportandoCronogramaExcel}
+        onPromoverHermano={onPromoverHermano}
+        onDescargarPDF={onDescargarPDF}
+        promoviendoHermanoId={promoviendoHermanoId}
+      />
     </Box>
   );
 };
