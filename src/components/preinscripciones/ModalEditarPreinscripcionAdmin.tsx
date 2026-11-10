@@ -14,6 +14,7 @@ import {
   Chip,
   Alert,
   CircularProgress,
+  LinearProgress,
   useTheme,
   alpha,
   FormControl,
@@ -98,6 +99,7 @@ export default function ModalEditarPreinscripcionAdmin({
 
   // Observaciones
   const [observaciones, setObservaciones] = useState('');
+  const [loadingDetalle, setLoadingDetalle] = useState(false);
 
   // Cargar paramétricas si vienen vacías
   useEffect(() => {
@@ -127,37 +129,76 @@ export default function ModalEditarPreinscripcionAdmin({
     if (!open || !preinscripcion) return;
 
     setError(null);
-    setGradoId(preinscripcion.grado_id || '');
-    setTurnoId(preinscripcion.turno_preferido_id || '');
-    setEstado(preinscripcion.estado || 'iniciada');
-    setObservaciones(preinscripcion.observaciones || '');
 
-    // Estudiante (puede venir en preinscripcion.estudiante o planos)
-    const est = preinscripcion.estudiante || {};
-    setNombres(est.nombres || preinscripcion.estudiante_nombre?.split(' ')[0] || '');
-    setApellidoPaterno(
-      est.apellido_paterno || preinscripcion.estudiante_nombre?.split(' ')[1] || ''
-    );
-    setApellidoMaterno(est.apellido_materno || '');
-    setCi(est.ci || preinscripcion.estudiante_ci || '');
-    setRude(est.rude || '');
-    setFechaNacimiento(est.fecha_nacimiento ? est.fecha_nacimiento.substring(0, 10) : '');
-    const genStr = (est.genero || '').toLowerCase();
-    setGenero(genStr.startsWith('f') ? 'femenino' : 'masculino');
-    setTelefono(est.telefono || '');
-    setEmail(est.email || '');
-    setDireccion(est.direccion || '');
+    const rellenarFormulario = (data: any) => {
+      if (!data) return;
+      const est = data.estudiante || {};
+      const tut = data.tutor || {};
 
-    // Tutor
-    const tut = preinscripcion.tutor || {};
-    setTutorNombres(tut.nombres || preinscripcion.tutor_nombre?.split(' ')[0] || '');
-    setTutorApellidoPaterno(
-      tut.apellido_paterno || preinscripcion.tutor_nombre?.split(' ')[1] || ''
-    );
-    setTutorApellidoMaterno(tut.apellido_materno || '');
-    setTutorCi(tut.ci || '');
-    setTutorTelefono(tut.telefono || tut.celular || preinscripcion.tutor_telefono || '');
-    setTutorParentesco(tut.parentesco || 'padre');
+      setGradoId(data.grado_id || est.grado_solicitado_id || '');
+      setTurnoId(data.turno_preferido_id || est.turno_solicitado_id || '');
+      setEstado(data.estado || 'iniciada');
+      setObservaciones(data.observaciones || '');
+
+      // Estudiante (priorizar campos estructurados del estudiante)
+      setNombres(est.nombres || (data.estudiante_nombre ? data.estudiante_nombre.split(' ')[0] : ''));
+      setApellidoPaterno(
+        est.apellido_paterno || (data.estudiante_nombre ? data.estudiante_nombre.split(' ')[1] : '')
+      );
+      setApellidoMaterno(est.apellido_materno || '');
+      setCi(est.ci || data.estudiante_ci || '');
+      setRude(est.rude || '');
+
+      let fNac = '';
+      if (est.fecha_nacimiento) {
+        if (typeof est.fecha_nacimiento === 'string') {
+          fNac = est.fecha_nacimiento.substring(0, 10);
+        } else {
+          try {
+            fNac = new Date(est.fecha_nacimiento).toISOString().substring(0, 10);
+          } catch {}
+        }
+      }
+      setFechaNacimiento(fNac);
+
+      const genStr = (est.genero || '').toLowerCase();
+      setGenero(genStr.startsWith('f') ? 'femenino' : 'masculino');
+      setTelefono(est.telefono || '');
+      setEmail(est.email || '');
+      setDireccion(est.direccion || '');
+
+      // Tutor (priorizar campos estructurados del tutor)
+      setTutorNombres(tut.nombres || (data.tutor_nombre ? data.tutor_nombre.split(' ')[0] : ''));
+      setTutorApellidoPaterno(
+        tut.apellido_paterno || (data.tutor_nombre ? data.tutor_nombre.split(' ')[1] : '')
+      );
+      setTutorApellidoMaterno(tut.apellido_materno || '');
+      setTutorCi(tut.ci || data.tutor_ci || '');
+      setTutorTelefono(tut.telefono || tut.celular || data.tutor_telefono || '');
+
+      const pNorm = (tut.parentesco || 'padre').toLowerCase();
+      setTutorParentesco(pNorm);
+    };
+
+    // 1. Poblado inmediato con los datos que ya tengamos
+    rellenarFormulario(preinscripcion);
+
+    // 2. Traer el detalle completo del backend para asegurar RUDE, CI tutor, fecha de nacimiento, dirección, etc.
+    if (preinscripcion.id) {
+      setLoadingDetalle(true);
+      preinscripcionService.obtenerPreinscripcion(preinscripcion.id)
+        .then((detalleCompleto) => {
+          if (detalleCompleto) {
+            rellenarFormulario(detalleCompleto);
+          }
+        })
+        .catch((err) => {
+          console.warn('No se pudo cargar el detalle completo de la preinscripción:', err);
+        })
+        .finally(() => {
+          setLoadingDetalle(false);
+        });
+    }
   }, [open, preinscripcion]);
 
   const handleGuardar = async () => {
@@ -269,6 +310,16 @@ export default function ModalEditarPreinscripcionAdmin({
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
+
+      {loadingDetalle && (
+        <LinearProgress
+          sx={{
+            height: 3,
+            bgcolor: alpha(accent, 0.1),
+            '& .MuiLinearProgress-bar': { bgcolor: accent },
+          }}
+        />
+      )}
 
       <DialogContent sx={{ p: { xs: 2.5, sm: 3 } }}>
         <Stack spacing={3}>
@@ -585,6 +636,9 @@ export default function ModalEditarPreinscripcionAdmin({
                     <MenuItem value="tio">Tío / Tía</MenuItem>
                     <MenuItem value="hermano">Hermano / Hermana Mayor</MenuItem>
                     <MenuItem value="otro">Otro</MenuItem>
+                    {!['padre', 'madre', 'tutor', 'abuelo', 'tio', 'hermano', 'otro'].includes(tutorParentesco) && tutorParentesco && (
+                      <MenuItem value={tutorParentesco}>{tutorParentesco}</MenuItem>
+                    )}
                   </Select>
                 </FormControl>
               </Grid>

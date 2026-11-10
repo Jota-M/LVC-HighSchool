@@ -33,15 +33,19 @@ const mapPreinscripcion = (p: any): Preinscripcion => ({
   cupo_preinscripcion_id: p.cupo_preinscripcion_id,
   tiene_cupo_asignado: p.tiene_cupo_asignado || false,
   
+  // Objetos completos (si vienen de join)
+  estudiante: p.estudiante,
+  tutor: p.tutor,
+
   // Estudiante
-  estudiante_nombre: p.estudiante_nombre || 'Sin nombre',
-  estudiante_ci: p.estudiante_ci || p.ci || 'Sin CI',
-  estudiante_foto: p.estudiante_foto || p.foto_url,
-  grado_solicitado: p.grado_solicitado || '',
+  estudiante_nombre: p.estudiante_nombre || (p.estudiante ? `${p.estudiante.nombres || ''} ${p.estudiante.apellido_paterno || ''} ${p.estudiante.apellido_materno || ''}`.trim() : 'Sin nombre'),
+  estudiante_ci: p.estudiante_ci || p.estudiante?.ci || p.ci || 'Sin CI',
+  estudiante_foto: p.estudiante_foto || p.estudiante?.foto_url || p.foto_url,
+  grado_solicitado: p.grado_solicitado || p.estudiante?.grado_solicitado || '',
   
   // Tutor
-  tutor_nombre: p.tutor_nombre || 'Sin nombre',
-  tutor_telefono: p.tutor_telefono || 'Sin teléfono',
+  tutor_nombre: p.tutor_nombre || (p.tutor ? `${p.tutor.nombres || ''} ${p.tutor.apellido_paterno || ''} ${p.tutor.apellido_materno || ''}`.trim() : 'Sin nombre'),
+  tutor_telefono: p.tutor_telefono || p.tutor?.telefono || p.tutor?.celular || 'Sin teléfono',
   
   // Joins
   grado_nombre: p.grado_nombre,

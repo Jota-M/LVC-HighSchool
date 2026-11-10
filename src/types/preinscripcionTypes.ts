@@ -79,6 +79,8 @@ export interface PreInscripcion {
   updated_at: string;
   deleted_at: string | null;
   
+  estudiante?: PreEstudiante;
+  tutor?: PreTutor;
   estudiante_nombre?: string;
   estudiante_ci?: string;
   estudiante_foto?: string;
