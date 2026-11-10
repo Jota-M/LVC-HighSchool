@@ -56,6 +56,7 @@ import {
   ContentCopy as ContentCopyIcon,
   AccessTime as AccessTimeIcon,
   Edit as EditIcon,
+  People as PeopleIcon,
 } from '@mui/icons-material';
 import { Preinscripcion, EstadoPreinscripcion } from '@/types/preinscripcionTypes';
 import { useRouter } from 'next/navigation';
@@ -68,6 +69,8 @@ interface PreinscripcionCardProps {
   onPromover?: (id: number) => void;
   onCambiarEstado?: (id: number, estado: EstadoPreinscripcion, observaciones?: string) => Promise<void>;
   onSnackbar?: (message: string, severity?: 'success' | 'error') => void;
+  onAgendarFamiliar?: (id: number) => void;
+  onEditar?: (preinscripcion: Preinscripcion) => void;
 }
 
 // ─── Configuración de estados ────────────────────────────────────────────────
@@ -195,6 +198,8 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
   onPromover,
   onCambiarEstado,
   onSnackbar,
+  onAgendarFamiliar,
+  onEditar,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -491,6 +496,31 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
                   color: accentColor,
                 }}
               />
+              {Boolean(preinscripcion.total_hermanos && preinscripcion.total_hermanos > 0) && (
+                <Tooltip title={`Familia con ${preinscripcion.total_hermanos! + 1} postulantes. Clic para agendar entrevista familiar conjunta.`}>
+                  <Chip
+                    icon={<PeopleIcon sx={{ fontSize: 13, color: '#3b82f6 !important' }} />}
+                    label={`${preinscripcion.total_hermanos! + 1} Hermanos`}
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAgendarFamiliar?.(preinscripcion.id);
+                    }}
+                    sx={{
+                      fontWeight: 800,
+                      fontSize: '0.68rem',
+                      height: 22,
+                      backgroundColor: alpha('#3b82f6', 0.15),
+                      color: '#3b82f6',
+                      border: '1px solid rgba(59, 130, 246, 0.4)',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: alpha('#3b82f6', 0.28),
+                      },
+                    }}
+                  />
+                </Tooltip>
+              )}
             </Box>
 
             {/* Botón de acción directa centrado .btn-gestionar */}
@@ -688,6 +718,46 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
                   </IconButton>
                 </Tooltip>
 
+                {/* Editar datos y cupo */}
+                {onEditar && (
+                  <Tooltip title="Editar datos, curso y cupo">
+                    <IconButton
+                      size="small"
+                      onClick={() => onEditar(preinscripcion)}
+                      sx={{
+                        bgcolor: alpha('#f59e0b', 0.12),
+                        color: '#f59e0b',
+                        borderRadius: '8px',
+                        p: 0.7,
+                        '&:hover': { bgcolor: alpha('#f59e0b', 0.25), transform: 'scale(1.08)' },
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <EditIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+
+                {/* Agendar Familiar Conjunto si tiene hermanos */}
+                {Boolean(preinscripcion.total_hermanos && preinscripcion.total_hermanos > 0) && (
+                  <Tooltip title={`Agendar entrevista familiar conjunta (${preinscripcion.total_hermanos! + 1} hermanos)`}>
+                    <IconButton
+                      size="small"
+                      onClick={() => onAgendarFamiliar?.(preinscripcion.id)}
+                      sx={{
+                        bgcolor: alpha('#3b82f6', 0.12),
+                        color: '#3b82f6',
+                        borderRadius: '8px',
+                        p: 0.7,
+                        '&:hover': { bgcolor: alpha('#3b82f6', 0.25), transform: 'scale(1.08)' },
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <PeopleIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+
                 {/* Si puede convertir */}
                 {puedeConvertir && (
                   <Tooltip title="Convertir a estudiante oficial">
@@ -803,6 +873,38 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
               </ListItemIcon>
               <ListItemText>Ver expediente</ListItemText>
             </MenuItem>
+
+            {Boolean(preinscripcion.total_hermanos && preinscripcion.total_hermanos > 0) && (
+              <MenuItem
+                onClick={() => {
+                  handleMenuClose();
+                  onAgendarFamiliar?.(preinscripcion.id);
+                }}
+              >
+                <ListItemIcon>
+                  <PeopleIcon fontSize="small" sx={{ color: '#3b82f6' }} />
+                </ListItemIcon>
+                <ListItemText sx={{ color: '#3b82f6', fontWeight: 700 }}>
+                  Agendar familia ({preinscripcion.total_hermanos! + 1} hermanos)
+                </ListItemText>
+              </MenuItem>
+            )}
+
+            {onEditar && (
+              <MenuItem
+                onClick={() => {
+                  handleMenuClose();
+                  onEditar(preinscripcion);
+                }}
+              >
+                <ListItemIcon>
+                  <EditIcon fontSize="small" sx={{ color: '#f59e0b' }} />
+                </ListItemIcon>
+                <ListItemText sx={{ color: '#d97706', fontWeight: 600 }}>
+                  Editar datos y cupo
+                </ListItemText>
+              </MenuItem>
+            )}
 
             {onCambiarEstado && (
               <MenuItem

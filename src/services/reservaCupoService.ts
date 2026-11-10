@@ -197,6 +197,27 @@ class ReservaCupoService {
   }
 
   /**
+   * Actualiza los datos de una reserva regular (estudiante, curso destino, turno, tutor, observaciones)
+   */
+  async actualizarReservaAdmin(id: number, payload: {
+    grado_destino_id?: number;
+    turno_destino_id?: number;
+    tutor_nombre?: string;
+    tutor_ci?: string;
+    tutor_parentesco?: string;
+    tutor_telefono?: string;
+    observaciones?: string;
+    estado?: string;
+    estudiante_nombres?: string;
+    estudiante_apellido_paterno?: string;
+    estudiante_apellido_materno?: string;
+    estudiante_ci?: string;
+  }): Promise<{ success: boolean; message: string; data: ReservaCupoData }> {
+    const { data } = await api.put(`/reserva-cupo/admin/${id}`, payload);
+    return data;
+  }
+
+  /**
    * Lista hermanos registrados (panel administrativo)
    */
   async listarHermanosAdmin(params?: {
@@ -234,6 +255,29 @@ class ReservaCupoService {
    */
   async reactivarHermanoAdmin(id: number, motivo?: string): Promise<{ message: string; data: ReservaCupoHermanoData }> {
     const { data } = await api.post(`/reserva-cupo/admin/hermanos/${id}/reactivar`, { motivo });
+    return data;
+  }
+
+  /**
+   * Actualiza los datos de un hermano postulante (nombres, curso solicitado, turno, tutor, observaciones, estado)
+   */
+  async actualizarHermanoAdmin(id: number, payload: {
+    nombres?: string;
+    apellido_paterno?: string;
+    apellido_materno?: string;
+    ci?: string;
+    fecha_nacimiento?: string;
+    genero?: string;
+    grado_solicitado_id?: number;
+    turno_solicitado_id?: number;
+    tutor_nombre?: string;
+    tutor_ci?: string;
+    tutor_parentesco?: string;
+    tutor_telefono?: string;
+    observaciones?: string;
+    estado?: string;
+  }): Promise<{ success: boolean; message: string; data: ReservaCupoHermanoData }> {
+    const { data } = await api.put(`/reserva-cupo/admin/hermanos/${id}`, payload);
     return data;
   }
 

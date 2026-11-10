@@ -59,6 +59,9 @@ import { TablaPreinscripciones } from '@/components/preinscripciones/TablaPreins
 import { ListaEsperaTab } from '@/components/preinscripciones/ListaEsperaTab';
 import { CuposTab } from '@/components/preinscripciones/CuposTab';
 import { CentroReportesPreinscripcionTab } from '@/components/preinscripciones/CentroReportesPreinscripcionTab';
+import ModalAgendarEntrevistaFamiliar from '@/components/preinscripciones/ModalAgendarEntrevistaFamiliar';
+import ModalEditarPreinscripcionAdmin from '@/components/preinscripciones/ModalEditarPreinscripcionAdmin';
+import { Preinscripcion } from '@/types/preinscripcionTypes';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -106,6 +109,9 @@ export default function PreinscripcionesPage() {
   // Paginación Tab 0
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
+
+  const [familiaModalId, setFamiliaModalId] = useState<number | null>(null);
+  const [preinscripcionEditar, setPreinscripcionEditar] = useState<Preinscripcion | null>(null);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -505,6 +511,8 @@ export default function PreinscripcionesPage() {
                         onPromover={handlePromover}
                         onCambiarEstado={changeEstado}
                         onSnackbar={showSnackbar}
+                        onAgendarFamiliar={(id) => setFamiliaModalId(id)}
+                        onEditar={(item) => setPreinscripcionEditar(item)}
                       />
                     </Grid>
                   ))}
@@ -515,6 +523,8 @@ export default function PreinscripcionesPage() {
                   onRevisar={(id) => router.push(`/dashboard/preinscripciones/detalle/${id}`)}
                   onEliminar={handleDelete}
                   onPromover={handlePromover}
+                  onAgendarFamiliar={(id) => setFamiliaModalId(id)}
+                  onEditar={(item) => setPreinscripcionEditar(item)}
                 />
               )}
 
@@ -658,6 +668,30 @@ export default function PreinscripcionesPage() {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* ══ MODAL PARA AGENDAR ENTREVISTA FAMILIAR CONJUNTA ══ */}
+      <ModalAgendarEntrevistaFamiliar
+        open={familiaModalId !== null}
+        onClose={() => setFamiliaModalId(null)}
+        preinscripcionId={familiaModalId}
+        onSuccess={() => {
+          fetchPreinscripciones();
+          showSnackbar('Entrevista familiar agendada exitosamente para los hermanos postulantes');
+        }}
+      />
+
+      {/* ══ MODAL PARA EDITAR DATOS, CURSO Y CUPO (ADMIN) ══ */}
+      <ModalEditarPreinscripcionAdmin
+        open={preinscripcionEditar !== null}
+        onClose={() => setPreinscripcionEditar(null)}
+        preinscripcion={preinscripcionEditar}
+        gradosList={grados}
+        turnosList={turnos}
+        onSuccess={() => {
+          fetchPreinscripciones();
+          showSnackbar('Expediente de preinscripción, curso y cupo actualizados exitosamente');
+        }}
+      />
     </Box>
   );
 }

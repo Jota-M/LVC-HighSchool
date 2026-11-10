@@ -1,7 +1,7 @@
 // components/preinscripcion/revision/PasoDatosPersonales.tsx
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Paper,
@@ -12,6 +12,8 @@ import {
   Divider,
   Grid,
   Stack,
+  Alert,
+  AlertTitle,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -29,6 +31,8 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import EmailIcon from '@mui/icons-material/Email';
 import WorkIcon from '@mui/icons-material/Work';
 import BadgeIcon from '@mui/icons-material/Badge';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import NotificationsOffIcon from '@mui/icons-material/NotificationsOff';
 import { useRouter } from 'next/navigation';
 import { PreInscripcionDetalle } from '@/types/preinscripcionTypes';
 
@@ -36,10 +40,11 @@ interface PasoDatosPersonalesProps {
   preinscripcion: PreInscripcionDetalle;
   notasVerificacionDatos: string;
   setNotasVerificacionDatos: (notas: string) => void;
-  aprobarDatos: () => Promise<void>;
+  aprobarDatos: (notificarWhatsapp?: boolean) => Promise<void>;
   rechazar: (motivo: string) => Promise<void>;
   setActiveStep: (step: number) => void;
   saving: boolean;
+  reenviarWhatsApp?: (observaciones?: string) => Promise<any>;
 }
 
 export default function PasoDatosPersonales({
@@ -50,12 +55,30 @@ export default function PasoDatosPersonales({
   rechazar,
   setActiveStep,
   saving,
+  reenviarWhatsApp,
 }: PasoDatosPersonalesProps) {
   const router = useRouter();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const accent = isDark ? '#facc15' : '#0288d1';
   const accentDark = isDark ? '#f59e0b' : '#01579b';
+
+  const [reenviandoWA, setReenviandoWA] = useState(false);
+  const [feedbackWA, setFeedbackWA] = useState<string | null>(null);
+
+  const handleReenviarWA = async () => {
+    if (!reenviarWhatsApp) return;
+    try {
+      setReenviandoWA(true);
+      setFeedbackWA(null);
+      await reenviarWhatsApp(notasVerificacionDatos || undefined);
+      setFeedbackWA('Notificación de estado enviada exitosamente por WhatsApp al tutor.');
+    } catch (err: any) {
+      alert(err.message || 'Error al enviar WhatsApp');
+    } finally {
+      setReenviandoWA(false);
+    }
+  };
 
   const formatearFecha = (fecha?: string) => {
     if (!fecha) return 'No especificada';
@@ -511,6 +534,34 @@ export default function PasoDatosPersonales({
             }}
           />
 
+          {/* Alertas de Notificación WhatsApp */}
+          {feedbackWA && (
+            <Alert
+              severity="success"
+              onClose={() => setFeedbackWA(null)}
+              sx={{ mb: 2.5, borderRadius: '14px', fontWeight: 600 }}
+            >
+              {feedbackWA}
+            </Alert>
+          )}
+
+          <Alert
+            severity="info"
+            sx={{
+              mb: 3,
+              borderRadius: '14px',
+              bgcolor: alpha(accent, 0.08),
+              border: `1px solid ${alpha(accent, 0.25)}`,
+              color: 'text.primary',
+              '& .MuiAlert-icon': {
+                color: accent,
+              },
+            }}
+          >
+            <AlertTitle sx={{ fontWeight: 700 }}>Control de Notificaciones WhatsApp</AlertTitle>
+            Puedes elegir si deseas únicamente actualizar el estado interno en el sistema (<strong>"Solo Aprobar"</strong>) o también notificar automáticamente al tutor <strong>{preinscripcion.tutor?.nombres}</strong> vía WhatsApp indicándole que los datos y documentos fueron validados y su trámite pasa a etapa de entrevista.
+          </Alert>
+
           {/* Botones de acción */}
           <Box
             sx={{
@@ -550,7 +601,7 @@ export default function PasoDatosPersonales({
                 color="error"
                 startIcon={<CancelIcon />}
                 onClick={() => rechazar(notasVerificacionDatos)}
-                disabled={saving}
+                disabled={saving || reenviandoWA}
                 sx={{
                   borderRadius: '12px',
                   textTransform: 'none',
@@ -570,34 +621,79 @@ export default function PasoDatosPersonales({
                 Rechazar
               </Button>
 
+              {/* Opción 1: Solo cambiar estado en el sistema SIN enviar WhatsApp */}
+              <Button
+                variant="outlined"
+                startIcon={<NotificationsOffIcon />}
+                onClick={() => aprobarDatos(false)}
+                disabled={saving || reenviandoWA}
+                sx={{
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 2.5,
+                  py: 1.2,
+                  borderColor: alpha(isDark ? '#fff' : '#000', 0.22),
+                  color: isDark ? '#e2e8f0' : '#475569',
+                  bgcolor: isDark ? alpha('#fff', 0.03) : alpha('#000', 0.03),
+                  '&:hover': {
+                    bgcolor: isDark ? alpha('#fff', 0.08) : alpha('#000', 0.06),
+                    borderColor: alpha(isDark ? '#fff' : '#000', 0.4),
+                  },
+                }}
+              >
+                {saving ? 'Guardando...' : 'Solo Aprobar (Sin WA)'}
+              </Button>
+
+              {/* Opción 2: Reenviar o notificar por WhatsApp al tutor */}
+              {reenviarWhatsApp && (
+                <Button
+                  variant="outlined"
+                  startIcon={<WhatsAppIcon sx={{ color: '#25D366' }} />}
+                  onClick={handleReenviarWA}
+                  disabled={saving || reenviandoWA}
+                  sx={{
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    px: 2.5,
+                    py: 1.2,
+                    borderColor: alpha('#25D366', 0.6),
+                    color: isDark ? '#4ade80' : '#15803d',
+                    bgcolor: alpha('#25D366', 0.08),
+                    '&:hover': {
+                      bgcolor: alpha('#25D366', 0.18),
+                      borderColor: '#25D366',
+                    },
+                  }}
+                >
+                  {reenviandoWA ? 'Enviando...' : 'Notificar / Reenviar WA'}
+                </Button>
+              )}
+
+              {/* Opción 3 Principal: Aprobar Datos Y Notificar por WhatsApp */}
               <Button
                 variant="contained"
-                startIcon={<TaskAltIcon />}
-                onClick={aprobarDatos}
-                disabled={saving}
+                startIcon={<WhatsAppIcon />}
+                onClick={() => aprobarDatos(true)}
+                disabled={saving || reenviandoWA}
                 sx={{
                   borderRadius: '12px',
                   textTransform: 'none',
                   fontWeight: 700,
                   px: 3,
                   py: 1.2,
-                  background: isDark
-                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
-                  color: isDark ? '#000' : '#fff',
-                  boxShadow: isDark
-                    ? '0 6px 20px rgba(250,204,21,0.3)'
-                    : '0 6px 20px rgba(2,136,209,0.3)',
+                  background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                  color: '#fff',
+                  boxShadow: '0 6px 20px rgba(37, 211, 102, 0.35)',
                   '&:hover': {
                     transform: 'translateY(-2px)',
-                    boxShadow: isDark
-                      ? '0 8px 24px rgba(250,204,21,0.45)'
-                      : '0 8px 24px rgba(2,136,209,0.45)',
+                    boxShadow: '0 8px 24px rgba(37, 211, 102, 0.5)',
                   },
                   transition: 'all 0.25s ease',
                 }}
               >
-                {saving ? 'Guardando...' : 'Aprobar Datos y Continuar'}
+                {saving ? 'Guardando...' : 'Aprobar Datos y Enviar WhatsApp'}
               </Button>
             </Stack>
           </Box>

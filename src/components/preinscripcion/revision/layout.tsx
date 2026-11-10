@@ -30,6 +30,9 @@ import PersonIcon from '@mui/icons-material/Person';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import PeopleIcon from '@mui/icons-material/People';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 import { useRouter } from 'next/navigation';
 
 import { usePreinscripcionDetalle } from '@/hooks/usePreinscripcionDetalle';
@@ -37,6 +40,8 @@ import ProgresoStepper from './ProgresoStepper';
 import PasoDatosPersonales from './PasoDatosPersonales';
 import PasoEntrevista from './PasoEntrevista';
 import PasoDecisionFinal from './PasoDecisionFinal';
+import ModalAgendarEntrevistaFamiliar from '@/components/preinscripciones/ModalAgendarEntrevistaFamiliar';
+import ModalEditarPreinscripcionAdmin from '@/components/preinscripciones/ModalEditarPreinscripcionAdmin';
 
 interface RevisionLayoutProps {
   id: string | string[];
@@ -52,6 +57,8 @@ export default function RevisionLayout({ id }: RevisionLayoutProps) {
   const hookData = usePreinscripcionDetalle(id);
   const { preinscripcion, loading, error, activeStep, setActiveStep, fetchPreinscripcion } = hookData;
   const [copied, setCopied] = React.useState(false);
+  const [modalAgendarFamiliarOpen, setModalAgendarFamiliarOpen] = React.useState(false);
+  const [modalEditarOpen, setModalEditarOpen] = React.useState(false);
 
   const handleCopyCode = () => {
     if (preinscripcion?.codigo_inscripcion) {
@@ -220,6 +227,29 @@ export default function RevisionLayout({ id }: RevisionLayoutProps) {
                   <RefreshIcon />
                 </IconButton>
               </Tooltip>
+
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<EditNoteIcon />}
+                onClick={() => setModalEditarOpen(true)}
+                sx={{
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  px: 2,
+                  py: 0.8,
+                  borderColor: alpha(accent, 0.6),
+                  color: accent,
+                  backgroundColor: alpha(accent, 0.08),
+                  '&:hover': {
+                    borderColor: accent,
+                    backgroundColor: alpha(accent, 0.18),
+                  },
+                }}
+              >
+                Editar Datos y Cupo
+              </Button>
 
               <Button
                 variant="outlined"
@@ -623,6 +653,133 @@ export default function RevisionLayout({ id }: RevisionLayoutProps) {
         </Alert>
       )}
 
+      {/* BANNER HERMANOS POSTULANTES DETECTADOS (GRUPO FAMILIAR) */}
+      {preinscripcion.hermanos && preinscripcion.hermanos.length > 0 && (
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 3,
+            p: 2.5,
+            borderRadius: '20px',
+            border: isDark ? '1.5px solid rgba(59, 130, 246, 0.45)' : '1.5px solid rgba(2, 136, 209, 0.35)',
+            background: isDark
+              ? 'linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(15, 23, 42, 0.7) 100%)'
+              : 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)',
+            boxShadow: isDark
+              ? '0 6px 20px rgba(59, 130, 246, 0.15)'
+              : '0 4px 16px rgba(2, 136, 209, 0.08)',
+          }}
+        >
+          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Avatar
+                sx={{
+                  bgcolor: '#3b82f6',
+                  color: '#fff',
+                  width: 48,
+                  height: 48,
+                  boxShadow: '0 4px 14px rgba(59, 130, 246, 0.35)',
+                }}
+              >
+                <PeopleIcon />
+              </Avatar>
+              <Box>
+                <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                  <Typography variant="subtitle1" fontWeight={800} color="text.primary">
+                    Familia con {preinscripcion.hermanos.length + 1} Postulantes Registrados
+                  </Typography>
+                  <Chip
+                    label="Hermanos en Preinscripción"
+                    size="small"
+                    sx={{
+                      bgcolor: alpha('#3b82f6', 0.15),
+                      color: '#3b82f6',
+                      fontWeight: 800,
+                      fontSize: '0.72rem',
+                    }}
+                  />
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  Tutor Principal: <strong>{preinscripcion.tutor?.nombres} {preinscripcion.tutor?.apellido_paterno}</strong> • Puedes cambiar entre sus expedientes o agendar la entrevista conjunta:
+                </Typography>
+              </Box>
+            </Box>
+
+            <Button
+              variant="contained"
+              startIcon={<CalendarMonthIcon />}
+              onClick={() => setModalAgendarFamiliarOpen(true)}
+              sx={{
+                bgcolor: '#3b82f6',
+                color: '#fff',
+                fontWeight: 700,
+                borderRadius: '12px',
+                textTransform: 'none',
+                px: 2.5,
+                py: 1,
+                boxShadow: '0 4px 14px rgba(59, 130, 246, 0.3)',
+                '&:hover': { bgcolor: '#2563eb' },
+              }}
+            >
+              Agendar Entrevista Familiar Conjunta
+            </Button>
+          </Box>
+
+          {/* Chips interactivos de todos los hermanos */}
+          <Stack
+            direction="row"
+            spacing={1.5}
+            flexWrap="wrap"
+            sx={{
+              mt: 2,
+              pt: 1.5,
+              borderTop: `1px dashed ${alpha(theme.palette.divider, 0.5)}`,
+              gap: 1,
+            }}
+          >
+            {/* Postulante actual */}
+            <Chip
+              avatar={
+                <Avatar sx={{ bgcolor: isDark ? '#facc15' : '#0288d1', color: isDark ? '#000' : '#fff' }}>
+                  {preinscripcion.estudiante.nombres?.[0] || 'A'}
+                </Avatar>
+              }
+              label={`${nombreCompleto} (${preinscripcion.grado_nombre || preinscripcion.estudiante.grado_solicitado}) • Viendo Actualmente`}
+              color="primary"
+              sx={{ fontWeight: 800 }}
+            />
+
+            {/* Hermanos */}
+            {preinscripcion.hermanos.map((h) => (
+              <Tooltip key={h.id} title="Haz clic para abrir el expediente de este hermano">
+                <Chip
+                  avatar={
+                    <Avatar sx={{ bgcolor: alpha('#3b82f6', 0.2), color: '#3b82f6' }}>
+                      {h.estudiante_nombre?.[0] || 'H'}
+                    </Avatar>
+                  }
+                  label={`${h.estudiante_nombre} (${h.grado_nombre || 'Sin grado'}) • ${getEstadoColor(h.estado).label}`}
+                  onClick={() => router.push(`/dashboard/preinscripciones/detalle/${h.id}`)}
+                  variant="outlined"
+                  sx={{
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    borderColor: alpha('#3b82f6', 0.6),
+                    bgcolor: alpha('#3b82f6', 0.05),
+                    '&:hover': {
+                      bgcolor: alpha('#3b82f6', 0.18),
+                      borderColor: '#3b82f6',
+                      transform: 'translateY(-1px)',
+                    },
+                    transition: 'all 0.2s ease',
+                  }}
+                />
+              </Tooltip>
+            ))}
+          </Stack>
+        </Paper>
+      )}
+
       {/* CUERPO PRINCIPAL: STEPPER LATERAL Y PASO ACTIVO */}
       <Grid container spacing={3}>
         {/* Panel Izquierdo - Progreso */}
@@ -641,6 +798,7 @@ export default function RevisionLayout({ id }: RevisionLayoutProps) {
               notasVerificacionDatos={hookData.notasVerificacionDatos}
               setNotasVerificacionDatos={hookData.setNotasVerificacionDatos}
               aprobarDatos={hookData.aprobarDatos}
+              reenviarWhatsApp={hookData.reenviarWhatsApp}
               rechazar={hookData.rechazar}
               setActiveStep={hookData.setActiveStep}
               saving={hookData.saving}
@@ -675,6 +833,22 @@ export default function RevisionLayout({ id }: RevisionLayoutProps) {
           )}
         </Grid>
       </Grid>
+
+      {/* MODAL PARA AGENDAR ENTREVISTA FAMILIAR CONJUNTA */}
+      <ModalAgendarEntrevistaFamiliar
+        open={modalAgendarFamiliarOpen}
+        onClose={() => setModalAgendarFamiliarOpen(false)}
+        preinscripcionId={preinscripcion.id}
+        onSuccess={() => fetchPreinscripcion()}
+      />
+
+      {/* MODAL PARA EDITAR INFORMACIÓN, CURSO Y CUPO */}
+      <ModalEditarPreinscripcionAdmin
+        open={modalEditarOpen}
+        onClose={() => setModalEditarOpen(false)}
+        preinscripcion={preinscripcion}
+        onSuccess={() => fetchPreinscripcion()}
+      />
     </Box>
   );
 }

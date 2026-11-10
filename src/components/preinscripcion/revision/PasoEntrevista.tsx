@@ -14,6 +14,8 @@ import {
   Alert,
   AlertTitle,
   Stack,
+  Checkbox,
+  Switch,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -28,6 +30,7 @@ import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import PersonIcon from '@mui/icons-material/Person';
+import PeopleIcon from '@mui/icons-material/People';
 import PhoneIcon from '@mui/icons-material/Phone';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
@@ -35,6 +38,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import NotificationsOffIcon from '@mui/icons-material/NotificationsOff';
 import { PreInscripcionDetalle } from '@/types/preinscripcionTypes';
+import { preinscripcionService } from '@/services/preinscripcionService';
 
 dayjs.locale('es');
 
@@ -66,6 +70,12 @@ export default function PasoEntrevista({
   const [reenviandoWA, setReenviandoWA] = useState(false);
   const [feedback, setFeedback] = useState<{ tipo: 'success' | 'error' | 'info'; texto: string } | null>(null);
 
+  const tieneHermanos = Boolean(preinscripcion.hermanos && preinscripcion.hermanos.length > 0);
+  const [incluirHermanos, setIncluirHermanos] = useState(true);
+  const [hermanosSeleccionados, setHermanosSeleccionados] = useState<number[]>(
+    preinscripcion.hermanos ? preinscripcion.hermanos.map((h) => h.id) : []
+  );
+
   const nombreCompleto = `${preinscripcion.estudiante.nombres} ${preinscripcion.estudiante.apellido_paterno} ${preinscripcion.estudiante.apellido_materno || ''}`.trim();
   const iniciales = `${preinscripcion.estudiante.nombres?.[0] || '?'}${preinscripcion.estudiante.apellido_paterno?.[0] || '?'}`.toUpperCase();
 
@@ -77,6 +87,37 @@ export default function PasoEntrevista({
 
     const fechaTexto = fechaEntrevista.format('DD/MM/YYYY');
     const horaTexto = fechaEntrevista.format('HH:mm');
+
+    // Si tiene hermanos y se activó la opción familiar conjunta:
+    if (tieneHermanos && incluirHermanos && hermanosSeleccionados.length > 0) {
+      const todosIds = [preinscripcion.id, ...hermanosSeleccionados];
+      try {
+        setFeedback(null);
+        await preinscripcionService.agendarEntrevistaFamiliar({
+          preinscripcion_ids: todosIds,
+          fecha_texto: fechaTexto,
+          hora_texto: horaTexto,
+          modalidad,
+          lugar: modalidad === 'presencial' ? lugar : undefined,
+          enlace: modalidad === 'virtual' ? enlaceVirtual : undefined,
+          observaciones: observaciones.trim() || undefined,
+          notificarWhatsapp,
+        });
+        setFeedback({
+          tipo: 'success',
+          texto: notificarWhatsapp
+            ? `Entrevista familiar agendada exitosamente para ${todosIds.length} hermanos y citación consolidada enviada por WhatsApp al tutor.`
+            : `Entrevista familiar agendada exitosamente para ${todosIds.length} hermanos (sin enviar WhatsApp).`,
+        });
+        await cambiarEstado('entrevista_programada', '', false);
+      } catch (err: any) {
+        setFeedback({
+          tipo: 'error',
+          texto: err.message || 'Error al agendar entrevista familiar',
+        });
+      }
+      return;
+    }
 
     const notasEntrevista = `
 Entrevista agendada${isAgendada ? ' (Reprogramación)' : ''}:
@@ -114,6 +155,26 @@ ${observaciones ? `\n- 📝 Observaciones: ${observaciones}` : ''}
 
       const fechaTexto = fechaEntrevista ? fechaEntrevista.format('DD/MM/YYYY') : '';
       const horaTexto = fechaEntrevista ? fechaEntrevista.format('HH:mm') : '';
+
+      // Si es citación familiar conjunta
+      if (tieneHermanos && incluirHermanos && hermanosSeleccionados.length > 0) {
+        const todosIds = [preinscripcion.id, ...hermanosSeleccionados];
+        await preinscripcionService.agendarEntrevistaFamiliar({
+          preinscripcion_ids: todosIds,
+          fecha_texto: fechaTexto || dayjs().format('DD/MM/YYYY'),
+          hora_texto: horaTexto || '09:00',
+          modalidad,
+          lugar: modalidad === 'presencial' ? lugar : undefined,
+          enlace: modalidad === 'virtual' ? enlaceVirtual : undefined,
+          observaciones: observaciones.trim() || undefined,
+          notificarWhatsapp: true,
+        });
+        setFeedback({
+          tipo: 'success',
+          texto: 'Notificación oficial de citación familiar reenviada exitosamente al tutor vía WhatsApp.',
+        });
+        return;
+      }
 
       const notasActuales = fechaEntrevista
         ? `
@@ -366,6 +427,109 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
                 {preinscripcion.observaciones}
               </Typography>
             </Alert>
+          )}
+
+          {/* OPCIÓN FAMILIAR: AGENDAR A TODOS LOS HERMANOS CONJUNTAMENTE */}
+          {tieneHermanos && preinscripcion.hermanos && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2.5,
+                mb: 3,
+                borderRadius: '18px',
+                bgcolor: isDark ? alpha('#3b82f6', 0.12) : '#eff6ff',
+                border: `1.5px solid ${alpha('#3b82f6', 0.35)}`,
+              }}
+            >
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={1} flexWrap="wrap" gap={1}>
+                <Box display="flex" alignItems="center" gap={1.2}>
+                  <PeopleIcon sx={{ color: '#3b82f6', fontSize: 24 }} />
+                  <Typography variant="subtitle2" fontWeight={800} color="text.primary">
+                    ¿Agendar Entrevista Familiar Conjunta? ({preinscripcion.hermanos.length + 1} Postulantes)
+                  </Typography>
+                </Box>
+                <Switch
+                  checked={incluirHermanos}
+                  onChange={(e) => setIncluirHermanos(e.target.checked)}
+                  color="primary"
+                />
+              </Box>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1.8, fontSize: '0.85rem' }}>
+                Al activar esta opción, se programará la misma fecha y hora para toda la familia y se enviará <strong>un solo mensaje oficial por WhatsApp</strong> al tutor con todos los hermanos citados (optimizando la asistencia de los padres).
+              </Typography>
+
+              {incluirHermanos && (
+                <Stack spacing={1}>
+                  {/* Postulante actual (fijado) */}
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 1.2,
+                      px: 2,
+                      borderRadius: '12px',
+                      bgcolor: isDark ? alpha('#3b82f6', 0.2) : '#dbeafe',
+                      border: `1px solid ${alpha('#3b82f6', 0.4)}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Checkbox checked disabled size="small" sx={{ p: 0.2 }} />
+                      <Typography variant="body2" fontWeight={800}>
+                        {nombreCompleto} ({preinscripcion.grado_nombre || preinscripcion.estudiante.grado_solicitado})
+                      </Typography>
+                    </Box>
+                    <Chip label="Postulante Actual" size="small" color="primary" sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }} />
+                  </Paper>
+
+                  {/* Hermanos */}
+                  {preinscripcion.hermanos.map((h) => {
+                    const isSel = hermanosSeleccionados.includes(h.id);
+                    return (
+                      <Paper
+                        key={h.id}
+                        elevation={0}
+                        onClick={() => {
+                          if (isSel) {
+                            setHermanosSeleccionados(hermanosSeleccionados.filter((id) => id !== h.id));
+                          } else {
+                            setHermanosSeleccionados([...hermanosSeleccionados, h.id]);
+                          }
+                        }}
+                        sx={{
+                          p: 1.2,
+                          px: 2,
+                          borderRadius: '12px',
+                          bgcolor: isSel ? (isDark ? alpha('#3b82f6', 0.15) : '#f0f9ff') : 'transparent',
+                          border: isSel ? `1px solid ${alpha('#3b82f6', 0.4)}` : `1px solid ${alpha(theme.palette.divider, 0.4)}`,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          '&:hover': {
+                            borderColor: '#3b82f6',
+                          },
+                        }}
+                      >
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Checkbox checked={isSel} size="small" sx={{ p: 0.2 }} />
+                          <Typography variant="body2" fontWeight={600}>
+                            {h.estudiante_nombre} ({h.grado_nombre || 'Sin grado'})
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={h.estado}
+                          size="small"
+                          sx={{ height: 20, fontSize: '0.68rem', textTransform: 'capitalize' }}
+                        />
+                      </Paper>
+                    );
+                  })}
+                </Stack>
+              )}
+            </Paper>
           )}
 
           <Grid container spacing={3}>

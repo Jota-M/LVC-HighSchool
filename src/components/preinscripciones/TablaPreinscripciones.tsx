@@ -27,6 +27,8 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import HowToRegIcon from '@mui/icons-material/HowToReg';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import PeopleIcon from '@mui/icons-material/People';
+import EditIcon from '@mui/icons-material/Edit';
 import { Preinscripcion } from '@/types/preinscripcionTypes';
 import { useRouter } from 'next/navigation';
 
@@ -35,6 +37,8 @@ interface TablaPreinscripcionesProps {
   onRevisar: (id: number) => void;
   onEliminar: (id: number) => void;
   onPromover?: (id: number) => void;
+  onAgendarFamiliar?: (id: number) => void;
+  onEditar?: (preinscripcion: Preinscripcion) => void;
 }
 
 const getEstadoConfig = (estado: string) => {
@@ -64,6 +68,8 @@ export const TablaPreinscripciones: React.FC<TablaPreinscripcionesProps> = ({
   onRevisar,
   onEliminar,
   onPromover,
+  onAgendarFamiliar,
+  onEditar,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -148,6 +154,28 @@ export const TablaPreinscripciones: React.FC<TablaPreinscripcionesProps> = ({
                           <Typography variant="caption" color="text.secondary">
                             • CI: {p.estudiante_ci}
                           </Typography>
+                        )}
+                        {Boolean(p.total_hermanos && p.total_hermanos > 0) && (
+                          <Tooltip title={`Familia con ${p.total_hermanos! + 1} postulantes. Clic para agendar entrevista familiar conjunta.`}>
+                            <Chip
+                              icon={<PeopleIcon sx={{ fontSize: '13px !important', color: '#3b82f6 !important' }} />}
+                              label={`${p.total_hermanos! + 1} Hermanos`}
+                              size="small"
+                              onClick={() => onAgendarFamiliar?.(p.id)}
+                              sx={{
+                                fontWeight: 800,
+                                fontSize: '0.68rem',
+                                height: 20,
+                                bgcolor: alpha('#3b82f6', 0.15),
+                                color: '#3b82f6',
+                                border: '1px solid rgba(59, 130, 246, 0.4)',
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  bgcolor: alpha('#3b82f6', 0.28),
+                                },
+                              }}
+                            />
+                          </Tooltip>
                         )}
                       </Box>
                     </Box>
@@ -313,6 +341,41 @@ export const TablaPreinscripciones: React.FC<TablaPreinscripcionesProps> = ({
                         <VisibilityIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+
+                    {onEditar && (
+                      <Tooltip title="Editar datos, curso y cupo">
+                        <IconButton
+                          size="small"
+                          onClick={() => onEditar(p)}
+                          sx={{
+                            border: '1px solid rgba(245,158,11,0.4)',
+                            color: '#f59e0b',
+                            borderRadius: '10px',
+                            '&:hover': { bgcolor: '#f59e0b', color: '#fff' },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+
+                    {Boolean(p.total_hermanos && p.total_hermanos > 0) && (
+                      <Tooltip title={`Agendar entrevista familiar conjunta (${p.total_hermanos! + 1} hermanos)`}>
+                        <IconButton
+                          size="small"
+                          onClick={() => onAgendarFamiliar?.(p.id)}
+                          sx={{
+                            border: '1px solid rgba(59, 130, 246, 0.4)',
+                            color: '#3b82f6',
+                            bgcolor: alpha('#3b82f6', 0.1),
+                            borderRadius: '10px',
+                            '&:hover': { bgcolor: '#3b82f6', color: '#fff' },
+                          }}
+                        >
+                          <PeopleIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
 
                     <Tooltip title="Eliminar registro">
                       <IconButton

@@ -14,6 +14,7 @@ import {
   ExportarRequest,
   EstadoPreinscripcion,
   Preinscripcion,
+  HermanoPostulanteInfo,
 } from '@/types/preinscripcionTypes';
 
 /**
@@ -64,6 +65,8 @@ const mapPreinscripcion = (p: any): Preinscripcion => ({
   convertida_por: p.convertida_por,
   estudiante_id: p.estudiante_id,
   matricula_id: p.matricula_id,
+  total_hermanos: Number(p.total_hermanos || 0),
+  hermanos: Array.isArray(p.hermanos) ? p.hermanos : [],
 });
 
 export const preinscripcionService = {
@@ -332,6 +335,55 @@ export const preinscripcionService = {
       throw new Error(
         error.response?.data?.message || 'Error al promover de lista de espera'
       );
+    }
+  },
+
+  /**
+   * Obtener grupo familiar y hermanos postulantes de una preinscripción
+   */
+  async obtenerFamilia(id: number): Promise<{
+    tutor: any;
+    total_postulantes: number;
+    postulantes: HermanoPostulanteInfo[];
+  }> {
+    try {
+      const response = await api.get(`/preinscripcion/${id}/familia`);
+      return response.data?.familia || response.data?.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Error al obtener grupo familiar');
+    }
+  },
+
+  /**
+   * Agendar entrevista conjunta para toda la familia (varios hermanos)
+   */
+  async agendarEntrevistaFamiliar(payload: {
+    preinscripcion_ids: number[];
+    fecha_texto: string;
+    hora_texto: string;
+    modalidad?: 'presencial' | 'virtual';
+    lugar?: string;
+    enlace?: string;
+    observaciones?: string;
+    notificarWhatsapp?: boolean;
+  }): Promise<any> {
+    try {
+      const response = await api.post('/preinscripcion/agendar-familiar', payload);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Error al agendar entrevista familiar');
+    }
+  },
+
+  /**
+   * Actualizar datos completos, curso, turno y cupo de preinscripción (ADMIN)
+   */
+  async actualizarAdmin(id: number, payload: any): Promise<any> {
+    try {
+      const response = await api.put(`/preinscripcion/${id}/admin`, payload);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Error al actualizar preinscripción');
     }
   },
 

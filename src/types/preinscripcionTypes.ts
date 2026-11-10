@@ -91,6 +91,23 @@ export interface PreInscripcion {
   cupos_disponibles?: number;
   posicion_espera?: number;
   es_lista_espera?: boolean;
+  total_hermanos?: number;
+  hermanos?: HermanoPostulanteInfo[];
+}
+
+export interface HermanoPostulanteInfo {
+  id: number;
+  codigo_inscripcion: string;
+  estado: EstadoPreInscripcion;
+  estudiante_nombre: string;
+  estudiante_ci?: string;
+  estudiante_foto?: string;
+  grado_nombre?: string;
+  turno_nombre?: string;
+  observaciones?: string | null;
+  posicion_espera?: number;
+  tiene_cupo_asignado?: boolean;
+  es_actual?: boolean;
 }
 
 export type EstadoPreInscripcion = 
@@ -526,6 +543,8 @@ export interface PreInscripcionDetalle {
   cupos_disponibles?: number;
   posicion_espera?: number;
   es_lista_espera?: boolean;
+  total_hermanos?: number;
+  hermanos?: HermanoPostulanteInfo[];
   estudiante: PreEstudiante;
   tutor: PreTutor;
   documentos: PreDocumento[];

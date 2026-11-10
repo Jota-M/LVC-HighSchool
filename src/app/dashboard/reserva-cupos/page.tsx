@@ -72,6 +72,7 @@ import { ModalAgendarEntrevistaHermano } from '@/components/reservaCupo/admin/Mo
 import { ModalCampanaWhatsAppAdmin } from '@/components/reservaCupo/admin/ModalCampanaWhatsAppAdmin';
 import CuposAseguradosTab from '@/components/reservaCupo/admin/CuposAseguradosTab';
 import { ModalNuevaReservaAdmin } from '@/components/reservaCupo/admin/ModalNuevaReservaAdmin';
+import { ModalEditarCupoAdmin } from '@/components/reservaCupo/admin/ModalEditarCupoAdmin';
 
 export default function ReservaCuposDashboardPage() {
   const router = useRouter();
@@ -178,6 +179,30 @@ export default function ReservaCuposDashboardPage() {
   const [reservaSeleccionada, setReservaSeleccionada] = useState<ReservaCupoData | null>(null);
   const [motivoAdmin, setMotivoAdmin] = useState('');
   const [isProcesandoAccion, setIsProcesandoAccion] = useState(false);
+
+  // Modal de Edición Integral de Cupos (Regular o Hermano)
+  const [modalEditarCupoOpen, setModalEditarCupoOpen] = useState(false);
+  const [itemEditarCupo, setItemEditarCupo] = useState<ReservaCupoData | ReservaCupoHermanoData | null>(null);
+  const [tipoEditarCupo, setTipoEditarCupo] = useState<'regular' | 'hermano'>('regular');
+
+  const handleAbrirEditarRegular = (reserva: ReservaCupoData) => {
+    setItemEditarCupo(reserva);
+    setTipoEditarCupo('regular');
+    setModalEditarCupoOpen(true);
+  };
+
+  const handleAbrirEditarHermano = (hermano: ReservaCupoHermanoData) => {
+    setItemEditarCupo(hermano);
+    setTipoEditarCupo('hermano');
+    setModalEditarCupoOpen(true);
+  };
+
+  const handleEdicionCupoExitosa = () => {
+    cargarReservas();
+    cargarHermanos();
+    cargarEstadisticas();
+    cargarBalanceAsegurados();
+  };
 
   // Estadísticas globales
   const [stats, setStats] = useState({
@@ -1307,6 +1332,7 @@ export default function ReservaCuposDashboardPage() {
                 onWhatsApp={handleWhatsAppReserva}
                 onAbrirAnular={handleAbrirAnular}
                 onAbrirReactivar={handleAbrirReactivar}
+                onEditarReserva={handleAbrirEditarRegular}
               />
             )}
 
@@ -1348,6 +1374,7 @@ export default function ReservaCuposDashboardPage() {
                 onDescargarPDF={handleDescargarPDFRecibo}
                 onEliminarHermano={handleAbrirEliminarHermano}
                 onAgendarEntrevista={handleAbrirAgendarEntrevista}
+                onEditarHermano={handleAbrirEditarHermano}
               />
             )}
 
@@ -1522,6 +1549,20 @@ export default function ReservaCuposDashboardPage() {
             cargarHermanos();
             cargarBalanceAsegurados();
           }}
+        />
+
+        {/* MODAL DE EDICIÓN INTEGRAL DE CUPOS (REGULARES Y HERMANOS) */}
+        <ModalEditarCupoAdmin
+          open={modalEditarCupoOpen}
+          onClose={() => {
+            setModalEditarCupoOpen(false);
+            setItemEditarCupo(null);
+          }}
+          tipo={tipoEditarCupo}
+          item={itemEditarCupo}
+          gradosList={grados}
+          turnosList={turnos}
+          onSuccess={handleEdicionCupoExitosa}
         />
 
         {/* Notificación Feedback Snackbar (idéntica a AsignacionesDocente) */}
