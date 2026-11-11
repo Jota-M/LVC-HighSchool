@@ -65,6 +65,7 @@ import {
   Refresh as RefreshIcon,
   HowToRegRounded as HowToRegIcon,
   BookmarkAddedRounded as BookmarkAddedIcon,
+  EditOutlined as EditIcon,
 } from '@mui/icons-material';
 import { ReservaCupoHermanoData } from '@/types/reservaCupoTypes';
 import { BtnDescarga, getInitials, usePalette } from './common';
@@ -87,6 +88,7 @@ interface ModalCronogramaEntrevistasProps {
   onPromoverHermano?: (hermano: ReservaCupoHermanoData) => void;
   onDescargarPDF?: (codigo: string) => void;
   promoviendoHermanoId?: number | null;
+  onEditarHermano?: (hermano: ReservaCupoHermanoData) => void;
 }
 
 interface GrupoDiaEntrevistas {
@@ -109,6 +111,7 @@ export const ModalCronogramaEntrevistas: React.FC<ModalCronogramaEntrevistasProp
   onPromoverHermano,
   onDescargarPDF,
   promoviendoHermanoId = null,
+  onEditarHermano,
 }) => {
   const { theme, isDark, gold: accentColor } = usePalette();
 
@@ -1129,6 +1132,25 @@ export const ModalCronogramaEntrevistas: React.FC<ModalCronogramaEntrevistasProp
                                   <EditCalendarIcon sx={{ fontSize: 18 }} />
                                 </IconButton>
                               </Tooltip>
+
+                              {/* Editar Datos del Hermano Postulante / Curso */}
+                              {onEditarHermano && (
+                                <Tooltip title="Editar datos del postulante, curso o tutor">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => onEditarHermano(h)}
+                                    sx={{
+                                      border: `1px solid ${alpha('#8b5cf6', 0.4)}`,
+                                      borderRadius: '8px',
+                                      p: 0.5,
+                                      color: '#8b5cf6',
+                                      '&:hover': { bgcolor: alpha('#8b5cf6', 0.1) },
+                                    }}
+                                  >
+                                    <EditIcon sx={{ fontSize: 18 }} />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
                             </Box>
                           </Box>
                         </Card>
@@ -1365,6 +1387,19 @@ export const ModalCronogramaEntrevistas: React.FC<ModalCronogramaEntrevistasProp
                               <EditCalendarIcon sx={{ fontSize: 18 }} />
                             </IconButton>
                           </Tooltip>
+
+                          {/* Editar Datos del Postulante / Curso */}
+                          {onEditarHermano && (
+                            <Tooltip title="Editar datos del postulante / curso / tutor">
+                              <IconButton
+                                size="small"
+                                sx={{ p: 0.4, color: '#8b5cf6' }}
+                                onClick={() => onEditarHermano(h)}
+                              >
+                                <EditIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
                         </Stack>
                       </TableCell>
                     </TableRow>

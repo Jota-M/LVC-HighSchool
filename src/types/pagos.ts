@@ -162,11 +162,20 @@ export interface EstudianteMoroso {
   apellidos: string;
   grado: string;
   paralelo: string;
+  grado_id?: number;
+  paralelo_id?: number;
   numero_cuota: number;
   mes_correspondiente: string;
   fecha_vencimiento: string;
   monto_final: number;
+  saldo_pendiente?: number;
   dias_mora: number;
+  tutor_id?: number;
+  tutor_nombre?: string;
+  tutor_celular?: string;
+  tutor_telefono?: string;
+  tutor_ci?: string;
+  tutor_parentesco?: string;
 }
 
 export interface ResumenPagos {
@@ -583,6 +592,7 @@ export interface RegistrarPagoMultipleRequest {
   entrego_factura?: boolean;
   numero_factura?: string;
   observaciones?: string;
+  fecha_pago?: string;
 }
 
 export interface PagoMultipleRegistrado {

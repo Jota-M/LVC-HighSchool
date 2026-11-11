@@ -23,7 +23,7 @@ export interface CuotaMatrizItem {
   monto_beca: number;
   monto_recargo: number;
   monto_final: number;
-  estado: 'pagado' | 'pendiente' | 'cancelado' | 'pagado_parcial' | 'vencido' | 'anulado' | 'no_generado';
+  estado: 'pagado' | 'pendiente' | 'cancelado' | 'pagado_parcial' | 'vencido' | 'anulado' | 'no_generado' | 'no_aplica';
   observaciones: string | null;
   fecha_vencimiento: string | null;
   pagos: PagoHistoricoItem[];

@@ -49,6 +49,7 @@ import {
   Close as CloseIcon,
   ChevronRight as ChevronRightIcon,
   Person as PersonIcon,
+  EditOutlined as EditIcon,
 } from '@mui/icons-material';
 import { ReservaCupoData } from '@/types/reservaCupoTypes';
 import { getNivelColor, getInitials, getEstadoBadgeConfig, usePalette } from './common';
@@ -78,6 +79,7 @@ interface ListaReservasTabProps {
   onWhatsApp: (reserva: ReservaCupoData) => void;
   onAbrirAnular: (reserva: ReservaCupoData) => void;
   onAbrirReactivar: (reserva: ReservaCupoData) => void;
+  onEditarReserva?: (reserva: ReservaCupoData) => void;
 }
 
 export const ListaReservasTab: React.FC<ListaReservasTabProps> = ({
@@ -105,6 +107,7 @@ export const ListaReservasTab: React.FC<ListaReservasTabProps> = ({
   onWhatsApp,
   onAbrirAnular,
   onAbrirReactivar,
+  onEditarReserva,
 }) => {
   const { theme, isDark, gold: accentColor, gradBg } = usePalette();
 
@@ -688,6 +691,24 @@ export const ListaReservasTab: React.FC<ListaReservasTabProps> = ({
                             </IconButton>
                           </Tooltip>
 
+                          {onEditarReserva && (
+                            <Tooltip title="Editar Reserva (Curso, Turno, Tutor)">
+                              <IconButton
+                                size="small"
+                                onClick={() => onEditarReserva(r)}
+                                sx={{
+                                  bgcolor: alpha('#2563eb', 0.1),
+                                  color: '#2563eb',
+                                  borderRadius: '8px',
+                                  p: 0.7,
+                                  '&:hover': { bgcolor: alpha('#2563eb', 0.2) },
+                                }}
+                              >
+                                <EditIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+
                           {r.estado === 'confirmada' && (
                             <Tooltip title="Anular Reserva">
                               <IconButton
@@ -965,6 +986,18 @@ export const ListaReservasTab: React.FC<ListaReservasTabProps> = ({
                             <WhatsAppIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
+
+                        {onEditarReserva && (
+                          <Tooltip title="Editar Reserva (Curso, Turno, Tutor)">
+                            <IconButton
+                              size="small"
+                              sx={{ color: '#2563eb' }}
+                              onClick={() => onEditarReserva(r)}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
 
                         {r.estado === 'confirmada' && (
                           <Tooltip title="Anular Reserva">

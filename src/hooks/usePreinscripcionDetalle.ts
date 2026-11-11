@@ -161,17 +161,17 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
   // =============================================
   // APROBAR DATOS PERSONALES
   // =============================================
-  const aprobarDatos = useCallback(async () => {
+  const aprobarDatos = useCallback(async (notificarWhatsapp: boolean = true) => {
     setSaving(true);
     try {
-      await cambiarEstado('entrevista_pendiente', notasVerificacionDatos);
+      await cambiarEstado('entrevista_pendiente', notasVerificacionDatos, notificarWhatsapp);
       setActiveStep(1);
     } catch (err: any) {
       alert(err.message || 'Error al aprobar datos');
     } finally {
       setSaving(false);
     }
-  }, [notasVerificacionDatos, cambiarEstado]);
+  }, [notasVerificacionDatos, cambiarEstado, setActiveStep]);
 
   // =============================================
   // RECHAZAR PREINSCRIPCIÓN

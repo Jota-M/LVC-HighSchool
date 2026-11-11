@@ -355,6 +355,18 @@ export const tutoresService = {
   async remover(estudianteId: number, relacionId: number) {
     await api.delete(`/estudiante/${estudianteId}/tutores/${relacionId}`);
   },
+
+  async buscarPadres(search: string = '', limit: number = 10) {
+    const response = await api.get('/padre-familia', {
+      params: { search, limit }
+    });
+    return response.data.data;
+  },
+
+  async obtenerEstudiantesDePadre(padreId: number) {
+    const response = await api.get(`/padre-familia/${padreId}/estudiantes`);
+    return response.data.data.estudiantes || [];
+  },
 };
 
 // =============================================

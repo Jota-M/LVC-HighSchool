@@ -630,6 +630,59 @@ export const PlanillaCursoMatriz: React.FC<Props> = ({
                                   </Typography>
                                 </Box>
                               </Tooltip>
+                            ) : esParcial ? (
+                              <Tooltip
+                                title={
+                                  <Box sx={{ p: 0.5 }}>
+                                    <Typography variant="caption" fontWeight={700} display="block" color="warning.main">
+                                      {c.mes.toUpperCase()} - PAGO PARCIAL
+                                    </Typography>
+                                    <Typography variant="caption" display="block">
+                                      Pagado: Bs {c.pagos?.reduce((s, p) => s + Number(p.monto_pagado || 0), 0) || 0} de Bs {c.monto_final}
+                                    </Typography>
+                                    <Typography variant="caption" display="block">
+                                      Saldo pendiente: Bs {Math.max(0, c.monto_final - (c.pagos?.reduce((s, p) => s + Number(p.monto_pagado || 0), 0) || 0))}
+                                    </Typography>
+                                    {primerPago?.numero_comprobante && (
+                                      <Typography variant="caption" display="block">
+                                        Comprobante: {primerPago.numero_comprobante}
+                                      </Typography>
+                                    )}
+                                    <Typography variant="caption" color="primary.main" fontWeight={700} sx={{ mt: 0.5, display: 'block' }}>
+                                      👉 Clic para registrar saldo o editar
+                                    </Typography>
+                                  </Box>
+                                }
+                                arrow
+                              >
+                                <Box
+                                  onClick={() => handleAbrirPago(est, c)}
+                                  sx={{
+                                    p: 0.75,
+                                    borderRadius: '8px',
+                                    bgcolor: isDark ? alpha('#f59e0b', 0.2) : alpha('#f59e0b', 0.12),
+                                    border: '1px solid',
+                                    borderColor: isDark ? alpha('#f59e0b', 0.4) : alpha('#f59e0b', 0.3),
+                                    color: isDark ? '#fbbf24' : '#b45309',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease',
+                                    '&:hover': {
+                                      transform: 'scale(1.03)',
+                                      bgcolor: isDark ? alpha('#f59e0b', 0.3) : alpha('#f59e0b', 0.2)
+                                    }
+                                  }}
+                                >
+                                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                                    <Receipt sx={{ fontSize: 13 }} />
+                                    <Typography variant="caption" fontWeight={700} sx={{ fontSize: '0.65rem' }}>
+                                      PARCIAL
+                                    </Typography>
+                                  </Box>
+                                  <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.9, display: 'block' }}>
+                                    Bs {c.pagos?.reduce((s, p) => s + Number(p.monto_pagado || 0), 0) || 0}
+                                  </Typography>
+                                </Box>
+                              </Tooltip>
                             ) : esCancelado ? (
                               <Tooltip title="Cuota exonerada por beca. Clic para editar" arrow>
                                 <Box

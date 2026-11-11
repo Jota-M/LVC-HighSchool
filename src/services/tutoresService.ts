@@ -64,6 +64,28 @@ export interface AsignarTutorPayload {
  
 // ─── Service ─────────────────────────────────────────────────────────────────
  
+export interface HijoResumen {
+  id: number;
+  codigo: string;
+  nombres: string;
+  apellido_paterno: string;
+  apellido_materno?: string;
+}
+
+export interface PadreFamiliaBusqueda {
+  id: number;
+  nombres: string;
+  apellido_paterno: string;
+  apellido_materno?: string;
+  ci: string;
+  telefono?: string;
+  celular?: string;
+  email?: string;
+  parentesco?: string;
+  total_estudiantes?: number;
+  hijos?: HijoResumen[];
+}
+
 export const tutoresService = {
  
   /**
@@ -136,6 +158,26 @@ export const tutoresService = {
     return response.data.data.relacion;
   },
  
+  /**
+   * Buscar o listar padres/tutores con sus hijos
+   * GET /padre-familia?search=...&limit=15
+   */
+  async buscarPadres(search: string = '', limit: number = 10): Promise<{ tutores: PadreFamiliaBusqueda[]; paginacion: any }> {
+    const response = await api.get('/padre-familia', {
+      params: { search, limit }
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Obtener estudiantes completos asociados a un padre/tutor
+   * GET /padre-familia/:id/estudiantes
+   */
+  async obtenerEstudiantesDePadre(padreId: number): Promise<any[]> {
+    const response = await api.get(`/padre-familia/${padreId}/estudiantes`);
+    return response.data.data.estudiantes || [];
+  },
+
   /**
    * Remover tutor del estudiante (elimina la fila de estudiante_tutor).
    * DELETE /api/estudiante/:estudianteId/tutores/:relacionId

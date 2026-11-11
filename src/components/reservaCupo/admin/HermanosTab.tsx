@@ -44,8 +44,7 @@ import {
   EditCalendarRounded as EditCalendarIcon,
   FamilyRestroomRounded as FamilyIcon,
   CalendarMonthRounded as CalendarMonthIcon,
-
-
+  EditOutlined as EditIcon,
 } from '@mui/icons-material';
 import { ReservaCupoHermanoData } from '@/types/reservaCupoTypes';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -91,6 +90,7 @@ interface HermanosTabProps {
   onDescargarPDF: (codigo: string) => void;
   onEliminarHermano: (hermano: ReservaCupoHermanoData) => void;
   onAgendarEntrevista?: (hermano: ReservaCupoHermanoData) => void;
+  onEditarHermano?: (hermano: ReservaCupoHermanoData) => void;
 }
 
 export const HermanosTab: React.FC<HermanosTabProps> = ({
@@ -116,6 +116,7 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
   onDescargarPDF,
   onEliminarHermano,
   onAgendarEntrevista,
+  onEditarHermano,
 }) => {
   const { theme, isDark, gold: accentColor, gradBg } = usePalette();
   const [modalCronogramaOpen, setModalCronogramaOpen] = React.useState(false);
@@ -872,6 +873,21 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
                                         <PdfIcon sx={{ fontSize: 14 }} />
                                       </IconButton>
                                     </Tooltip>
+                                    {onEditarHermano && (
+                                      <Tooltip title={`Editar cupo / datos (${h.nombres})`}>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => onEditarHermano(h)}
+                                          sx={{
+                                            p: 0.3,
+                                            color: '#2563eb',
+                                            '&:hover': { color: '#1d4ed8' },
+                                          }}
+                                        >
+                                          <EditIcon sx={{ fontSize: 14 }} />
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
                                     <Tooltip title={`Eliminar cupo (${h.nombres})`}>
                                       <IconButton
                                         size="small"
@@ -1091,6 +1107,17 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
                               >
                                 Recibo PDF
                               </Button>
+                              {onEditarHermano && (
+                                <Button
+                                  size="small"
+                                  variant="text"
+                                  startIcon={<EditIcon sx={{ color: '#2563eb' }} />}
+                                  onClick={() => onEditarHermano(primerHermano)}
+                                  sx={{ textTransform: 'none', fontSize: '0.78rem', fontWeight: 700, color: 'text.secondary' }}
+                                >
+                                  Editar Cupo
+                                </Button>
+                              )}
                               <Button
                                 size="small"
                                 variant="outlined"
@@ -1144,6 +1171,7 @@ export const HermanosTab: React.FC<HermanosTabProps> = ({
         onPromoverHermano={onPromoverHermano}
         onDescargarPDF={onDescargarPDF}
         promoviendoHermanoId={promoviendoHermanoId}
+        onEditarHermano={onEditarHermano}
       />
     </Box>
   );

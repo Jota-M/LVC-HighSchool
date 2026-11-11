@@ -13,9 +13,11 @@ import {
   Settings as SettingsIcon,
   AttachMoney as MoneyIcon,
   ReceiptLong as ReceiptLongIcon,
+  WarningAmber as WarningAmberIcon,
 } from '@mui/icons-material';
 import { DashboardPagos } from '@/components/pagos/DashboardPagos';
 import { RegistroPagos } from '@/components/pagos/RegistroPagos';
+import { ControlMorosos } from '@/components/pagos/ControlMorosos';
 import { ReportesPagos } from '@/components/pagos/ReportesPagos';
 import { ConfiguracionCostos } from '@/components/pagos/ConfiguracionCostos';
 import { GestionFacturas } from '@/components/pagos/GestionFacturas';
@@ -81,39 +83,52 @@ export const Pagos: React.FC = () => {
               </Box>
             </Box>
 
-            {/* Tabs — ahora con 5 pestañas */}
+            {/* Tabs — ahora con 5 pestañas estilo segmented pill */}
             <Tabs
               value={activeTab}
               onChange={(_, v) => setActiveTab(v)}
               variant="scrollable"
               scrollButtons="auto"
               sx={{
-                background: isDark
-                  ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                  : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                background: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)',
                 borderRadius: '16px',
-                p: 1,
+                p: '6px',
+                border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'}`,
+                '& .MuiTabs-indicator': {
+                  display: 'none',
+                },
                 '& .MuiTab-root': {
                   borderRadius: '12px',
                   textTransform: 'none',
                   fontWeight: 600,
-                  minHeight: 48,
-                  color: isDark ? '#000' : '#fff',
-                  fontSize: { xs: '0.75rem', md: '0.875rem' },
-                },
-                '& .Mui-selected': { color: isDark ? '#000' : '#fff' },
-                '& .MuiTabs-indicator': {
-                  backgroundColor: isDark ? '#000' : '#fff',
-                  height: 3,
-                  borderRadius: '3px 3px 0 0',
+                  minHeight: 44,
+                  px: 2.5,
+                  mr: 1,
+                  color: isDark ? '#94a3b8' : '#64748b',
+                  fontSize: { xs: '0.8rem', md: '0.875rem' },
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    color: isDark ? '#fff' : '#000',
+                    background: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                  },
+                  '&.Mui-selected': {
+                    background: isDark
+                      ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                      : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                    color: isDark ? '#000 !important' : '#fff !important',
+                    fontWeight: 700,
+                    boxShadow: isDark
+                      ? '0 4px 14px rgba(250, 204, 21, 0.3)'
+                      : '0 4px 14px rgba(2, 136, 209, 0.3)',
+                  },
                 },
               }}
             >
               <Tab icon={<DashboardIcon />} iconPosition="start" label="Dashboard" />
               <Tab icon={<PaymentIcon />} iconPosition="start" label="Registro de Pagos" />
+              <Tab icon={<WarningAmberIcon />} iconPosition="start" label="Control de Morosos" />
               <Tab icon={<ReportIcon />} iconPosition="start" label="Reportes" />
               <Tab icon={<SettingsIcon />} iconPosition="start" label="Configuración" />
-              {/* ✅ Nueva pestaña */}
               <Tab icon={<ReceiptLongIcon />} iconPosition="start" label="Facturas" />
             </Tabs>
           </Box>
@@ -126,12 +141,15 @@ export const Pagos: React.FC = () => {
           <Fade in timeout={700}><Box><RegistroPagos /></Box></Fade>
         </TabPanel>
         <TabPanel value={activeTab} index={2}>
-          <Fade in timeout={700}><Box><ReportesPagos /></Box></Fade>
+          <Fade in timeout={700}><Box><ControlMorosos onIrACobrar={() => setActiveTab(1)} /></Box></Fade>
         </TabPanel>
         <TabPanel value={activeTab} index={3}>
-          <Fade in timeout={700}><Box><ConfiguracionCostos /></Box></Fade>
+          <Fade in timeout={700}><Box><ReportesPagos /></Box></Fade>
         </TabPanel>
         <TabPanel value={activeTab} index={4}>
+          <Fade in timeout={700}><Box><ConfiguracionCostos /></Box></Fade>
+        </TabPanel>
+        <TabPanel value={activeTab} index={5}>
           <Fade in timeout={700}><Box><GestionFacturas /></Box></Fade>
         </TabPanel>
       </Container>
