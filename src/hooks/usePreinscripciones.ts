@@ -25,7 +25,7 @@ interface UsePreinscripcionesReturn {
   setConCupoFilter: (conCupo: string) => void; // 🆕
   fetchPreinscripciones: () => Promise<void>;
   deletePreinscripcion: (id: number) => Promise<void>;
-  changeEstado: (id: number, estado: EstadoPreinscripcion, observaciones?: string) => Promise<void>;
+  changeEstado: (id: number, estado: EstadoPreinscripcion, observaciones?: string, notificarWhatsapp?: boolean) => Promise<void>;
   promoverEspera: (id: number, motivo?: string) => Promise<void>;
   exportToExcel: () => Promise<void>;
   exportToPDF: () => Promise<void>; // 🆕
@@ -186,10 +186,11 @@ export const usePreinscripciones = (): UsePreinscripcionesReturn => {
   const changeEstado = useCallback(async (
     id: number, 
     estado: EstadoPreinscripcion,
-    observaciones?: string
+    observaciones?: string,
+    notificarWhatsapp: boolean = true
   ) => {
     try {
-      await preinscripcionService.cambiarEstado(id, { estado, observaciones });
+      await preinscripcionService.cambiarEstado(id, { estado, observaciones, notificarWhatsapp });
       await fetchPreinscripciones();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al cambiar estado';

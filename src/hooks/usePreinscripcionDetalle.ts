@@ -191,7 +191,7 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
   // =============================================
   // 🆕 CONFIRMAR DECISIÓN FINAL (CON CUPO)
   // =============================================
-  const confirmarDecision = useCallback(async () => {
+  const confirmarDecision = useCallback(async (notificarWhatsapp: boolean = true) => {
     if (!decisionFinal) {
       throw new Error('Debe seleccionar una decisión final');
     }
@@ -202,7 +202,7 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
 
     setSaving(true);
     try {
-      await cambiarEstado(decisionFinal, notasDecisionFinal);
+      await cambiarEstado(decisionFinal, notasDecisionFinal, notificarWhatsapp);
       router.push('/dashboard/preinscripciones');
     } catch (err: any) {
       throw err;

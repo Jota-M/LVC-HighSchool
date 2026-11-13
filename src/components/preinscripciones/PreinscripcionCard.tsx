@@ -32,6 +32,9 @@ import {
   InputLabel,
   Select,
   TextField,
+  Switch,
+  FormControlLabel,
+  Paper,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -49,6 +52,7 @@ import {
   PersonAdd as PersonAddIcon,
   ChevronRight as ChevronRightIcon,
   WhatsApp as WhatsAppIcon,
+  NotificationsOff as NotificationsOffIcon,
   Send as SendIcon,
   HourglassEmpty as HourglassEmptyIcon,
   Cancel as CancelIcon,
@@ -67,7 +71,7 @@ interface PreinscripcionCardProps {
   onRevisar: (id: number) => void;
   onEliminar: (id: number) => void;
   onPromover?: (id: number) => void;
-  onCambiarEstado?: (id: number, estado: EstadoPreinscripcion, observaciones?: string) => Promise<void>;
+  onCambiarEstado?: (id: number, estado: EstadoPreinscripcion, observaciones?: string, notificarWhatsapp?: boolean) => Promise<void>;
   onSnackbar?: (message: string, severity?: 'success' | 'error') => void;
   onAgendarFamiliar?: (id: number) => void;
   onEditar?: (preinscripcion: Preinscripcion) => void;
@@ -223,6 +227,7 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
   );
   const [observacionesEstado, setObservacionesEstado] = useState('');
   const [guardandoEstado, setGuardandoEstado] = useState(false);
+  const [notificarWhatsappEstado, setNotificarWhatsappEstado] = useState(true);
 
   // Modal de Reenviar Confirmación
   const [modalConfirmacionOpen, setModalConfirmacionOpen] = useState(false);
@@ -1339,6 +1344,54 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
             onChange={(e) => setObservacionesEstado(e.target.value)}
             placeholder="Ingrese observaciones o motivo del cambio..."
           />
+
+          {/* Opción Notificar por WhatsApp */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 1.5,
+              borderRadius: '12px',
+              backgroundColor: notificarWhatsappEstado
+                ? 'rgba(37, 211, 102, 0.08)'
+                : alpha(theme.palette.text.secondary, 0.05),
+              border: `1px solid ${
+                notificarWhatsappEstado
+                  ? 'rgba(37, 211, 102, 0.3)'
+                  : alpha(theme.palette.divider, 0.4)
+              }`,
+            }}
+          >
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={notificarWhatsappEstado}
+                  onChange={(e) => setNotificarWhatsappEstado(e.target.checked)}
+                  color="success"
+                  size="small"
+                />
+              }
+              label={
+                <Box display="flex" alignItems="center" gap={1}>
+                  {notificarWhatsappEstado ? (
+                    <WhatsAppIcon sx={{ color: '#25D366', fontSize: 20 }} />
+                  ) : (
+                    <NotificationsOffIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                  )}
+                  <Box>
+                    <Typography variant="body2" fontWeight={700}>
+                      {notificarWhatsappEstado ? 'Notificar cambio por WhatsApp al tutor' : 'No enviar mensaje por WhatsApp'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {notificarWhatsappEstado
+                        ? 'Se enviará el mensaje oficial al número de WhatsApp registrado.'
+                        : 'Solo se actualizará el estado en el sistema, sin enviar mensajes.'}
+                    </Typography>
+                  </Box>
+                </Box>
+              }
+              sx={{ m: 0, width: '100%' }}
+            />
+          </Paper>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 1.5 }}>
           <Button
@@ -1355,7 +1408,7 @@ export const PreinscripcionCard: React.FC<PreinscripcionCardProps> = ({
               if (!onCambiarEstado) return;
               try {
                 setGuardandoEstado(true);
-                await onCambiarEstado(preinscripcion.id, nuevoEstado, observacionesEstado);
+                await onCambiarEstado(preinscripcion.id, nuevoEstado, observacionesEstado, notificarWhatsappEstado);
                 onSnackbar?.(`Estado actualizado a "${nuevoEstado}" exitosamente`, 'success');
                 setModalEstadoOpen(false);
               } catch (err: any) {

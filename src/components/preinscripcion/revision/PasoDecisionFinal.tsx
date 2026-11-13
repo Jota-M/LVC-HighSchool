@@ -24,6 +24,8 @@ import {
   DialogActions,
   IconButton,
   Divider,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -34,6 +36,7 @@ import PendingIcon from '@mui/icons-material/Pending';
 import SendIcon from '@mui/icons-material/Send';
 import DownloadIcon from '@mui/icons-material/Download';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import NotificationsOffIcon from '@mui/icons-material/NotificationsOff';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
@@ -48,7 +51,7 @@ interface PasoDecisionFinalProps {
   setNotasDecisionFinal: (notas: string) => void;
   decisionFinal: EstadoPreInscripcion | '';
   setDecisionFinal: (decision: EstadoPreInscripcion | '') => void;
-  confirmarDecision: () => Promise<void>;
+  confirmarDecision: (notificarWhatsapp?: boolean) => Promise<void>;
   setActiveStep: (step: number) => void;
   saving: boolean;
   cuposDisponibles: any[];
@@ -76,9 +79,10 @@ export default function PasoDecisionFinal({
   const accent = isDark ? '#facc15' : '#0288d1';
   const accentDark = isDark ? '#f59e0b' : '#01579b';
 
-  // Estado para el modal de confirmación
+  // Estado para el modal de confirmación y opción de WhatsApp
   const [openModalConfirmacion, setOpenModalConfirmacion] = React.useState(false);
   const [errorModal, setErrorModal] = React.useState<string | null>(null);
+  const [notificarWhatsapp, setNotificarWhatsapp] = React.useState(true);
 
   const handleAbrirModal = () => {
     setErrorModal(null);
@@ -91,10 +95,11 @@ export default function PasoDecisionFinal({
     setErrorModal(null);
   };
 
-  const handleEjecutarDecision = async () => {
+  const handleEjecutarDecision = async (conWhatsapp?: boolean) => {
     try {
       setErrorModal(null);
-      await confirmarDecision();
+      const deberiaNotificar = conWhatsapp !== undefined ? conWhatsapp : notificarWhatsapp;
+      await confirmarDecision(deberiaNotificar);
     } catch (err: any) {
       setErrorModal(err.message || 'Error al confirmar la decisión final');
     }
@@ -860,26 +865,59 @@ export default function PasoDecisionFinal({
             </Stack>
           </Paper>
 
-          {/* Notificación informativa sobre WhatsApp */}
-          <Box
+          {/* Opción Interactiva de Notificación por WhatsApp */}
+          <Paper
+            elevation={0}
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              p: 1.5,
-              borderRadius: '12px',
-              backgroundColor: 'rgba(37, 211, 102, 0.08)',
-              border: '1px solid rgba(37, 211, 102, 0.25)',
+              p: 2,
+              borderRadius: '16px',
+              backgroundColor: notificarWhatsapp
+                ? 'rgba(37, 211, 102, 0.08)'
+                : alpha(theme.palette.text.secondary, 0.06),
+              border: `1px solid ${
+                notificarWhatsapp
+                  ? 'rgba(37, 211, 102, 0.35)'
+                  : alpha(theme.palette.divider, 0.5)
+              }`,
+              transition: 'all 0.25s ease',
             }}
           >
-            <WhatsAppIcon sx={{ color: '#25D366', fontSize: 24 }} />
-            <Typography variant="caption" fontWeight={600} color="text.secondary">
-              Se enviará automáticamente un mensaje oficial de confirmación vía WhatsApp a los tutores registrados.
-            </Typography>
-          </Box>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={notificarWhatsapp}
+                  onChange={(e) => setNotificarWhatsapp(e.target.checked)}
+                  color="success"
+                  disabled={saving}
+                />
+              }
+              label={
+                <Box display="flex" alignItems="center" gap={1.2}>
+                  {notificarWhatsapp ? (
+                    <WhatsAppIcon sx={{ color: '#25D366', fontSize: 24 }} />
+                  ) : (
+                    <NotificationsOffIcon sx={{ color: 'text.secondary', fontSize: 24 }} />
+                  )}
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight={700} color="text.primary">
+                      {notificarWhatsapp
+                        ? 'Notificar resolución por WhatsApp al tutor'
+                        : 'Aprobar sin enviar mensaje por WhatsApp'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {notificarWhatsapp
+                        ? 'Se enviará la confirmación oficial al número de WhatsApp del tutor registrado.'
+                        : 'El estudiante quedará admitido y aprobado formalmente en el sistema sin enviar ningún mensaje al tutor.'}
+                    </Typography>
+                  </Box>
+                </Box>
+              }
+              sx={{ m: 0, width: '100%' }}
+            />
+          </Paper>
         </DialogContent>
 
-        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, gap: 1 }}>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <Button
             variant="outlined"
             onClick={handleCerrarModal}
@@ -894,35 +932,81 @@ export default function PasoDecisionFinal({
             Volver y Revisar
           </Button>
 
-          <Button
-            variant="contained"
-            onClick={handleEjecutarDecision}
-            disabled={saving}
-            startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SendIcon />}
-            sx={{
-              borderRadius: '12px',
-              textTransform: 'none',
-              fontWeight: 700,
-              px: 3,
-              backgroundColor:
-                decisionFinal === 'aprobada'
-                  ? '#10b981'
-                  : decisionFinal === 'rechazada'
-                  ? '#ef4444'
-                  : accent,
-              color: '#fff',
-              '&:hover': {
+          {decisionFinal === 'aprobada' ? (
+            <>
+              {/* Opción 1: Solo Aprobar Sin WhatsApp */}
+              <Button
+                variant="outlined"
+                onClick={() => handleEjecutarDecision(false)}
+                disabled={saving}
+                startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <CheckCircleIcon />}
+                sx={{
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  px: 2.5,
+                  borderColor: '#10b981',
+                  color: isDark ? '#34d399' : '#059669',
+                  bgcolor: alpha('#10b981', 0.08),
+                  '&:hover': {
+                    borderColor: '#059669',
+                    bgcolor: alpha('#10b981', 0.16),
+                  },
+                }}
+              >
+                Solo Aprobar (Sin WhatsApp)
+              </Button>
+
+              {/* Opción 2: Aprobar Y Enviar WhatsApp */}
+              <Button
+                variant="contained"
+                onClick={() => handleEjecutarDecision(true)}
+                disabled={saving}
+                startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <WhatsAppIcon />}
+                sx={{
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  px: 3,
+                  background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                  color: '#fff',
+                  boxShadow: '0 6px 20px rgba(37, 211, 102, 0.35)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #20ba5a 0%, #0e7065 100%)',
+                    boxShadow: '0 8px 24px rgba(37, 211, 102, 0.5)',
+                  },
+                }}
+              >
+                {saving ? 'Confirmando...' : 'Aprobar y Enviar WhatsApp'}
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="contained"
+              onClick={() => handleEjecutarDecision()}
+              disabled={saving}
+              startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SendIcon />}
+              sx={{
+                borderRadius: '12px',
+                textTransform: 'none',
+                fontWeight: 700,
+                px: 3,
                 backgroundColor:
-                  decisionFinal === 'aprobada'
-                    ? '#059669'
-                    : decisionFinal === 'rechazada'
-                    ? '#dc2626'
-                    : accentDark,
-              },
-            }}
-          >
-            {saving ? 'Confirmando...' : 'Sí, Confirmar Resolución'}
-          </Button>
+                  decisionFinal === 'rechazada'
+                    ? '#ef4444'
+                    : accent,
+                color: '#fff',
+                '&:hover': {
+                  backgroundColor:
+                    decisionFinal === 'rechazada'
+                      ? '#dc2626'
+                      : accentDark,
+                },
+              }}
+            >
+              {saving ? 'Confirmando...' : 'Sí, Confirmar Resolución'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </>
