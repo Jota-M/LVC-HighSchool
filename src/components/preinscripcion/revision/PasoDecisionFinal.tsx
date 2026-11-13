@@ -89,6 +89,12 @@ export default function PasoDecisionFinal({
     setOpenModalConfirmacion(true);
   };
 
+  const handleAbrirModalConWA = (conWA: boolean) => {
+    setNotificarWhatsapp(conWA);
+    setErrorModal(null);
+    setOpenModalConfirmacion(true);
+  };
+
   const handleCerrarModal = () => {
     if (saving) return;
     setOpenModalConfirmacion(false);
@@ -596,28 +602,54 @@ export default function PasoDecisionFinal({
             }}
           />
 
-          {/* Notificaciones Automáticas */}
+          {/* Notificaciones y Canales */}
           <Paper
             elevation={0}
             sx={{
               p: 2.5,
               borderRadius: '16px',
-              bgcolor: isDark ? alpha('#fff', 0.02) : alpha(accent, 0.03),
-              border: `1px solid ${alpha(accent, 0.15)}`,
+              bgcolor: notificarWhatsapp
+                ? isDark ? alpha('#25D366', 0.08) : alpha('#25D366', 0.05)
+                : isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02),
+              border: `1px solid ${
+                notificarWhatsapp ? alpha('#25D366', 0.35) : alpha(theme.palette.divider, 0.25)
+              }`,
               mb: 3,
+              transition: 'all 0.25s ease',
             }}
           >
-            <Box display="flex" alignItems="center" gap={1.5} mb={1.5}>
-              <WhatsAppIcon sx={{ color: '#25D366', fontSize: 24 }} />
-              <Typography variant="subtitle2" fontWeight={700} color="text.primary">
-                Canales de Notificación
-              </Typography>
-            </Box>
-
-            <Typography variant="body2" color="text.secondary">
-              Al confirmar, el sistema registrará la resolución y notificará a los tutores registrados
-              vía WhatsApp oficial y panel de consulta.
-            </Typography>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={notificarWhatsapp}
+                  onChange={(e) => setNotificarWhatsapp(e.target.checked)}
+                  color="success"
+                  disabled={saving}
+                />
+              }
+              label={
+                <Box display="flex" alignItems="center" gap={1.5} ml={0.5}>
+                  {notificarWhatsapp ? (
+                    <WhatsAppIcon sx={{ color: '#25D366', fontSize: 26 }} />
+                  ) : (
+                    <NotificationsOffIcon sx={{ color: 'text.secondary', fontSize: 26 }} />
+                  )}
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight={700} color="text.primary">
+                      {notificarWhatsapp
+                        ? 'Notificar resolución oficial por WhatsApp al tutor'
+                        : 'Aprobar en el sistema sin enviar WhatsApp'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {notificarWhatsapp
+                        ? 'Al confirmar, el sistema registrará la resolución y notificará a los tutores registrados vía WhatsApp oficial.'
+                        : 'El estudiante quedará admitido formalmente en el sistema sin enviar ningún mensaje de WhatsApp.'}
+                    </Typography>
+                  </Box>
+                </Box>
+              }
+              sx={{ m: 0, width: '100%' }}
+            />
           </Paper>
 
           {/* Botones de Acción */}
@@ -653,39 +685,94 @@ export default function PasoDecisionFinal({
               Volver a Entrevista
             </Button>
 
-            <Button
-              variant="contained"
-              startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SendIcon />}
-              disabled={!decisionFinal || saving}
-              onClick={handleAbrirModal}
-              sx={{
-                borderRadius: '12px',
-                textTransform: 'none',
-                fontWeight: 700,
-                px: 3.5,
-                py: 1.3,
-                background: decisionFinal
-                  ? isDark
-                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)'
-                  : alpha(theme.palette.divider, 0.5),
-                color: isDark ? '#000' : '#fff',
-                boxShadow: decisionFinal
-                  ? isDark
-                    ? '0 6px 20px rgba(250,204,21,0.35)'
-                    : '0 6px 20px rgba(2,136,209,0.35)'
-                  : 'none',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: isDark
-                    ? '0 8px 24px rgba(250,204,21,0.5)'
-                    : '0 8px 24px rgba(2,136,209,0.5)',
-                },
-                transition: 'all 0.25s ease',
-              }}
-            >
-              {saving ? 'Procesando...' : 'Confirmar Resolución Final'}
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+              {decisionFinal === 'aprobada' ? (
+                <>
+                  {/* Botón 1: Solo Aprobar (Sin WhatsApp) */}
+                  <Button
+                    variant="outlined"
+                    startIcon={saving && !notificarWhatsapp ? <CircularProgress size={18} color="inherit" /> : <NotificationsOffIcon />}
+                    disabled={!decisionFinal || saving}
+                    onClick={() => handleAbrirModalConWA(false)}
+                    sx={{
+                      borderRadius: '12px',
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      px: 2.8,
+                      py: 1.3,
+                      borderColor: '#10b981',
+                      color: isDark ? '#34d399' : '#059669',
+                      bgcolor: alpha('#10b981', 0.08),
+                      '&:hover': {
+                        borderColor: '#059669',
+                        bgcolor: alpha('#10b981', 0.18),
+                        transform: 'translateY(-2px)',
+                      },
+                      transition: 'all 0.25s ease',
+                    }}
+                  >
+                    {saving && !notificarWhatsapp ? 'Procesando...' : 'Solo Aprobar (Sin WhatsApp)'}
+                  </Button>
+
+                  {/* Botón 2: Aprobar y Enviar WhatsApp */}
+                  <Button
+                    variant="contained"
+                    startIcon={saving && notificarWhatsapp ? <CircularProgress size={18} color="inherit" /> : <WhatsAppIcon />}
+                    disabled={!decisionFinal || saving}
+                    onClick={() => handleAbrirModalConWA(true)}
+                    sx={{
+                      borderRadius: '12px',
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      px: 3.2,
+                      py: 1.3,
+                      background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                      color: '#fff',
+                      boxShadow: '0 6px 20px rgba(37, 211, 102, 0.35)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #20ba5a 0%, #0e7065 100%)',
+                        boxShadow: '0 8px 24px rgba(37, 211, 102, 0.5)',
+                        transform: 'translateY(-2px)',
+                      },
+                      transition: 'all 0.25s ease',
+                    }}
+                  >
+                    {saving && notificarWhatsapp ? 'Procesando...' : 'Aprobar y Enviar WhatsApp'}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="contained"
+                  startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SendIcon />}
+                  disabled={!decisionFinal || saving}
+                  onClick={handleAbrirModal}
+                  sx={{
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    px: 3.5,
+                    py: 1.3,
+                    background: decisionFinal
+                      ? decisionFinal === 'rechazada'
+                        ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                        : isDark
+                        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)'
+                      : alpha(theme.palette.divider, 0.5),
+                    color: decisionFinal === 'rechazada' ? '#fff' : (isDark ? '#000' : '#fff'),
+                    boxShadow: decisionFinal
+                      ? '0 6px 20px rgba(0,0,0,0.2)'
+                      : 'none',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                    },
+                    transition: 'all 0.25s ease',
+                  }}
+                >
+                  {saving ? 'Procesando...' : 'Confirmar Resolución Final'}
+                </Button>
+              )}
+            </Box>
           </Box>
         </Box>
       </Paper>
