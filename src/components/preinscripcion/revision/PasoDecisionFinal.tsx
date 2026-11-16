@@ -518,15 +518,14 @@ export default function PasoDecisionFinal({
                     bgcolor: isSelected
                       ? lightColor
                       : isDark
-                      ? alpha('#fff', 0.02)
-                      : alpha('#000', 0.02),
-                    border: `2px solid ${
-                      isSelected
+                        ? alpha('#fff', 0.02)
+                        : alpha('#000', 0.02),
+                    border: `2px solid ${isSelected
                         ? color
                         : isDark
-                        ? alpha('#fff', 0.08)
-                        : alpha('#000', 0.08)
-                    }`,
+                          ? alpha('#fff', 0.08)
+                          : alpha('#000', 0.08)
+                      }`,
                     cursor: 'pointer',
                     transition: 'all 0.25s ease',
                     '&:hover': {
@@ -611,9 +610,8 @@ export default function PasoDecisionFinal({
               bgcolor: notificarWhatsapp
                 ? isDark ? alpha('#25D366', 0.08) : alpha('#25D366', 0.05)
                 : isDark ? alpha('#fff', 0.02) : alpha('#000', 0.02),
-              border: `1px solid ${
-                notificarWhatsapp ? alpha('#25D366', 0.35) : alpha(theme.palette.divider, 0.25)
-              }`,
+              border: `1px solid ${notificarWhatsapp ? alpha('#25D366', 0.35) : alpha(theme.palette.divider, 0.25)
+                }`,
               mb: 3,
               transition: 'all 0.25s ease',
             }}
@@ -756,8 +754,8 @@ export default function PasoDecisionFinal({
                       ? decisionFinal === 'rechazada'
                         ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
                         : isDark
-                        ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
-                        : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)'
+                          ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                          : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)'
                       : alpha(theme.palette.divider, 0.5),
                     color: decisionFinal === 'rechazada' ? '#fff' : (isDark ? '#000' : '#fff'),
                     boxShadow: decisionFinal
@@ -811,14 +809,14 @@ export default function PasoDecisionFinal({
                   decisionFinal === 'aprobada'
                     ? 'rgba(16, 185, 129, 0.15)'
                     : decisionFinal === 'rechazada'
-                    ? 'rgba(239, 68, 68, 0.15)'
-                    : 'rgba(2, 136, 209, 0.15)',
+                      ? 'rgba(239, 68, 68, 0.15)'
+                      : 'rgba(2, 136, 209, 0.15)',
                 color:
                   decisionFinal === 'aprobada'
                     ? '#10b981'
                     : decisionFinal === 'rechazada'
-                    ? '#ef4444'
-                    : accent,
+                      ? '#ef4444'
+                      : accent,
               }}
             >
               {decisionFinal === 'aprobada' ? (
@@ -870,10 +868,10 @@ export default function PasoDecisionFinal({
                   decisionFinal === 'aprobada'
                     ? 'APROBADA'
                     : decisionFinal === 'rechazada'
-                    ? 'RECHAZADA'
-                    : decisionFinal
-                    ? decisionFinal.toUpperCase()
-                    : ''
+                      ? 'RECHAZADA'
+                      : decisionFinal
+                        ? decisionFinal.toUpperCase()
+                        : ''
                 }
                 sx={{
                   fontWeight: 800,
@@ -883,21 +881,20 @@ export default function PasoDecisionFinal({
                     decisionFinal === 'aprobada'
                       ? 'rgba(16, 185, 129, 0.18)'
                       : decisionFinal === 'rechazada'
-                      ? 'rgba(239, 68, 68, 0.18)'
-                      : 'rgba(2, 136, 209, 0.18)',
+                        ? 'rgba(239, 68, 68, 0.18)'
+                        : 'rgba(2, 136, 209, 0.18)',
                   color:
                     decisionFinal === 'aprobada'
                       ? '#10b981'
                       : decisionFinal === 'rechazada'
-                      ? '#ef4444'
-                      : accent,
-                  border: `1px solid ${
-                    decisionFinal === 'aprobada'
+                        ? '#ef4444'
+                        : accent,
+                  border: `1px solid ${decisionFinal === 'aprobada'
                       ? 'rgba(16, 185, 129, 0.4)'
                       : decisionFinal === 'rechazada'
-                      ? 'rgba(239, 68, 68, 0.4)'
-                      : alpha(accent, 0.4)
-                  }`,
+                        ? 'rgba(239, 68, 68, 0.4)'
+                        : alpha(accent, 0.4)
+                    }`,
                 }}
               />
             </Box>
@@ -961,11 +958,10 @@ export default function PasoDecisionFinal({
               backgroundColor: notificarWhatsapp
                 ? 'rgba(37, 211, 102, 0.08)'
                 : alpha(theme.palette.text.secondary, 0.06),
-              border: `1px solid ${
-                notificarWhatsapp
+              border: `1px solid ${notificarWhatsapp
                   ? 'rgba(37, 211, 102, 0.35)'
                   : alpha(theme.palette.divider, 0.5)
-              }`,
+                }`,
               transition: 'all 0.25s ease',
             }}
           >

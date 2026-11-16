@@ -43,6 +43,8 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { AgendaSlotsSelector } from '@/components/agenda/AgendaSlotsSelector';
+import { useAgendaCitas } from '@/hooks/useAgendaCitas';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { preinscripcionService } from '@/services/preinscripcionService';
 import { HermanoPostulanteInfo } from '@/types/preinscripcionTypes';
@@ -84,6 +86,9 @@ export default function ModalAgendarEntrevistaFamiliar({
   const [enlaceVirtual, setEnlaceVirtual] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [notificarWhatsapp, setNotificarWhatsapp] = useState(true);
+
+  // Hook de citas ocupadas de la institución
+  const { citasOcupadas, cargando: cargandoCitas, registrarCita } = useAgendaCitas(preinscripcionId);
 
   // Cargar grupo familiar
   useEffect(() => {
@@ -151,6 +156,9 @@ export default function ModalAgendarEntrevistaFamiliar({
 
     const fechaTexto = fechaEntrevista.format('DD/MM/YYYY');
     const horaTexto = fechaEntrevista.format('HH:mm');
+
+    // Registrar en memoria para continuidad
+    registrarCita(fechaTexto, horaTexto, tutorInfo ? `${tutorInfo.nombres} ${tutorInfo.apellido_paterno}` : 'Familia', 'FAMILIAR');
 
     try {
       const res = await preinscripcionService.agendarEntrevistaFamiliar({
@@ -458,6 +466,15 @@ export default function ModalAgendarEntrevistaFamiliar({
 
               {/* Formulario de Fecha, Hora y Modalidad */}
               <Box>
+                {/* PLANIFICADOR INTELIGENTE DE TURNOS LIBRES */}
+                <AgendaSlotsSelector
+                  valorActual={fechaEntrevista}
+                  onSeleccionar={(nuevaFecha) => setFechaEntrevista(nuevaFecha)}
+                  citasOcupadas={citasOcupadas}
+                  cargandoCitas={cargandoCitas}
+                  estudianteActualNombre={tutorInfo ? `Familia de ${tutorInfo.nombres} ${tutorInfo.apellido_paterno}` : ''}
+                />
+
                 <Typography variant="subtitle2" fontWeight={800} color="text.primary" mb={2}>
                   Datos de la Cita de Entrevista:
                 </Typography>
@@ -466,7 +483,7 @@ export default function ModalAgendarEntrevistaFamiliar({
                   {/* Selector Fecha y Hora */}
                   <Grid size={{ xs: 12, sm: 6 }}>
                     <DateTimePicker
-                      label="Fecha y Hora de la Entrevista *"
+                      label="Fecha y Hora Confirmada (O Ajuste Manual) *"
                       value={fechaEntrevista}
                       onChange={(newVal) => setFechaEntrevista(newVal)}
                       ampm={false}
@@ -475,7 +492,7 @@ export default function ModalAgendarEntrevistaFamiliar({
                         textField: {
                           fullWidth: true,
                           size: 'small',
-                          helperText: 'Horario institucional de atención',
+                          helperText: 'Puedes usar los bloques rápidos de arriba o ajustar aquí',
                         },
                       }}
                     />

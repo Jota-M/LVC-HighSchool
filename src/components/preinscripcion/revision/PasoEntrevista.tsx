@@ -1,7 +1,8 @@
 // components/preinscripcion/revision/PasoEntrevista.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Paper,
@@ -37,8 +38,13 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import NotificationsOffIcon from '@mui/icons-material/NotificationsOff';
+import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
+import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { PreInscripcionDetalle } from '@/types/preinscripcionTypes';
 import { preinscripcionService } from '@/services/preinscripcionService';
+import { AgendaSlotsSelector } from '@/components/agenda/AgendaSlotsSelector';
+import { useAgendaCitas } from '@/hooks/useAgendaCitas';
+import { extraerInfoCitaDeTexto } from '@/utils/agendaUtils';
 
 dayjs.locale('es');
 
@@ -57,12 +63,34 @@ export default function PasoEntrevista({
   reenviarWhatsApp,
   saving,
 }: PasoEntrevistaProps) {
+  const router = useRouter();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const accent = isDark ? '#facc15' : '#0288d1';
   const accentDark = isDark ? '#f59e0b' : '#01579b';
 
-  const [fechaEntrevista, setFechaEntrevista] = useState<Dayjs | null>(null);
+  // Hook de citas ocupadas y siguiente postulante en espera
+  const {
+    citasOcupadas,
+    cargando: cargandoCitas,
+    siguientePostulanteId,
+    totalPendientes,
+    registrarCita,
+  } = useAgendaCitas(preinscripcion.id);
+
+  // Inicializar fecha si ya venía agendada previamente
+  const infoPrevia = useMemo(() => {
+    return extraerInfoCitaDeTexto(preinscripcion.observaciones);
+  }, [preinscripcion.observaciones]);
+
+  const [fechaEntrevista, setFechaEntrevista] = useState<Dayjs | null>(() => {
+    if (infoPrevia.fechaISO && infoPrevia.hora) {
+      const d = dayjs(`${infoPrevia.fechaISO} ${infoPrevia.hora}`);
+      return d.isValid() ? d : null;
+    }
+    return null;
+  });
+
   const [modalidad, setModalidad] = useState<'presencial' | 'virtual'>('presencial');
   const [lugar, setLugar] = useState('Dirección del Colegio - Oficina Principal');
   const [enlaceVirtual, setEnlaceVirtual] = useState('');
@@ -79,7 +107,7 @@ export default function PasoEntrevista({
   const nombreCompleto = `${preinscripcion.estudiante.nombres} ${preinscripcion.estudiante.apellido_paterno} ${preinscripcion.estudiante.apellido_materno || ''}`.trim();
   const iniciales = `${preinscripcion.estudiante.nombres?.[0] || '?'}${preinscripcion.estudiante.apellido_paterno?.[0] || '?'}`.toUpperCase();
 
-  const handleAgendarEntrevista = async (notificarWhatsapp: boolean = true) => {
+  const handleAgendarEntrevista = async (notificarWhatsapp: boolean = true, irAlSiguiente: boolean = false) => {
     if (!fechaEntrevista) {
       alert('Debes seleccionar una fecha y hora para la entrevista');
       return;
@@ -87,6 +115,9 @@ export default function PasoEntrevista({
 
     const fechaTexto = fechaEntrevista.format('DD/MM/YYYY');
     const horaTexto = fechaEntrevista.format('HH:mm');
+
+    // Registrar en memoria la última cita para continuidad en siguientes postulantes
+    registrarCita(fechaTexto, horaTexto, nombreCompleto, preinscripcion.codigo_inscripcion);
 
     // Si tiene hermanos y se activó la opción familiar conjunta:
     if (tieneHermanos && incluirHermanos && hermanosSeleccionados.length > 0) {
@@ -110,6 +141,14 @@ export default function PasoEntrevista({
             : `Entrevista familiar agendada exitosamente para ${todosIds.length} hermanos (sin enviar WhatsApp).`,
         });
         await cambiarEstado('entrevista_programada', '', false);
+
+        if (irAlSiguiente) {
+          if (siguientePostulanteId) {
+            router.push(`/dashboard/preinscripciones/${siguientePostulanteId}/revision`);
+          } else {
+            router.push('/dashboard/preinscripciones');
+          }
+        }
       } catch (err: any) {
         setFeedback({
           tipo: 'error',
@@ -139,6 +178,14 @@ ${observaciones ? `\n- 📝 Observaciones: ${observaciones}` : ''}
             : 'Entrevista agendada y notificación enviada por WhatsApp al tutor.'
           : 'Estado de entrevista guardado exitosamente (sin enviar mensaje por WhatsApp).',
       });
+
+      if (irAlSiguiente) {
+        if (siguientePostulanteId) {
+          router.push(`/dashboard/preinscripciones/${siguientePostulanteId}/revision`);
+        } else {
+          router.push('/dashboard/preinscripciones');
+        }
+      }
     } catch (err: any) {
       setFeedback({
         tipo: 'error',
@@ -532,11 +579,21 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
             </Paper>
           )}
 
+          {/* PLANIFICADOR INTELIGENTE DE TURNOS LIBRES Y AGENDA */}
+          <AgendaSlotsSelector
+            valorActual={fechaEntrevista}
+            onSeleccionar={(nuevaFecha) => setFechaEntrevista(nuevaFecha)}
+            citasOcupadas={citasOcupadas}
+            cargandoCitas={cargandoCitas}
+            estudianteActualNombre={nombreCompleto}
+            codigoActual={preinscripcion.codigo_inscripcion}
+          />
+
           <Grid container spacing={3}>
             {/* Fecha y Hora */}
             <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="caption" fontWeight={700} color={accent} sx={{ display: 'block', mb: 1, textTransform: 'uppercase' }}>
-                Fecha y Hora de la Entrevista
+                Fecha y Hora Confirmada (O Ajuste Manual)
               </Typography>
               <DateTimePicker
                 value={fechaEntrevista}
@@ -545,7 +602,8 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
                 slotProps={{
                   textField: {
                     fullWidth: true,
-                    placeholder: 'Selecciona fecha y hora...',
+                    placeholder: 'Selecciona o usa las pastillas de arriba...',
+                    helperText: 'Puedes usar los bloques rápidos de arriba o ajustar los minutos aquí',
                     sx: {
                       '& .MuiOutlinedInput-root': {
                         borderRadius: '14px',
@@ -858,7 +916,7 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
               <Button
                 variant="contained"
                 startIcon={<WhatsAppIcon />}
-                onClick={() => handleAgendarEntrevista(true)}
+                onClick={() => handleAgendarEntrevista(true, false)}
                 disabled={!fechaEntrevista || saving || reenviandoWA}
                 sx={{
                   borderRadius: '12px',
@@ -880,6 +938,41 @@ ${observaciones ? `\n- Observaciones: ${observaciones}` : ''}
                   : isAgendada
                   ? 'Reprogramar y Enviar WA'
                   : 'Agendar y Enviar WhatsApp'}
+              </Button>
+
+              {/* Opción Flujo Ágil: Agendar y Pasar Directo al Siguiente Postulante */}
+              <Button
+                variant="contained"
+                startIcon={<BoltRoundedIcon sx={{ color: isDark ? '#000' : '#fff' }} />}
+                endIcon={<ArrowForwardRoundedIcon sx={{ color: isDark ? '#000' : '#fff' }} />}
+                onClick={() => handleAgendarEntrevista(true, true)}
+                disabled={!fechaEntrevista || saving || reenviandoWA}
+                sx={{
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 800,
+                  px: 3,
+                  py: 1.2,
+                  background: isDark
+                    ? 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)'
+                    : 'linear-gradient(135deg, #0288d1 0%, #01579b 100%)',
+                  color: isDark ? '#000' : '#fff',
+                  boxShadow: isDark
+                    ? '0 6px 20px rgba(250, 204, 21, 0.35)'
+                    : '0 6px 20px rgba(2, 136, 209, 0.35)',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: isDark
+                      ? '0 8px 24px rgba(250, 204, 21, 0.5)'
+                      : '0 8px 24px rgba(2, 136, 209, 0.5)',
+                  },
+                }}
+              >
+                {saving
+                  ? 'Guardando...'
+                  : siguientePostulanteId
+                  ? 'Agendar y Siguiente ➡️'
+                  : 'Agendar y Finalizar'}
               </Button>
             </Stack>
           </Box>

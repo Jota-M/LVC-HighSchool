@@ -41,6 +41,9 @@ import {
 import { ReservaCupoHermanoData } from '@/types/reservaCupoTypes';
 import { reservaCupoService } from '@/services/reservaCupoService';
 import { getInitials } from './common';
+import dayjs from 'dayjs';
+import { AgendaSlotsSelector } from '@/components/agenda/AgendaSlotsSelector';
+import { useAgendaCitas } from '@/hooks/useAgendaCitas';
 
 interface ModalAgendarEntrevistaHermanoProps {
   open: boolean;
@@ -79,6 +82,9 @@ export const ModalAgendarEntrevistaHermano: React.FC<ModalAgendarEntrevistaHerma
   const [enlace, setEnlace] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [notificarWhatsapp, setNotificarWhatsapp] = useState(true);
+
+  // Hook de citas ocupadas de la institución
+  const { citasOcupadas, cargando: cargandoCitas, registrarCita } = useAgendaCitas(hermano?.id);
 
   // Hermanos de la misma familia detectados
   const [hermanosFamilia, setHermanosFamilia] = useState<ReservaCupoHermanoData[]>([]);
@@ -158,6 +164,16 @@ export const ModalAgendarEntrevistaHermano: React.FC<ModalAgendarEntrevistaHerma
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fechaHora) return;
+
+    if (fechaHora && hermano) {
+      const partes = fechaHora.split('T');
+      if (partes.length === 2) {
+        const [fIso, hIso] = partes;
+        const d = dayjs(fechaHora);
+        const fTexto = d.isValid() ? d.format('DD/MM/YYYY') : fIso;
+        registrarCita(fTexto, hIso, `${hermano.nombres} ${hermano.apellido_paterno}`, hermano.codigo_reserva);
+      }
+    }
 
     await onGuardar({
       fecha_entrevista: fechaHora,
@@ -508,10 +524,20 @@ export const ModalAgendarEntrevistaHermano: React.FC<ModalAgendarEntrevistaHerma
         {/* Formulario de Agendamiento */}
         <Box component="form" onSubmit={handleSubmit}>
           <Stack spacing={2}>
-            {/* Fecha y Hora */}
+            {/* PLANIFICADOR INTELIGENTE DE TURNOS LIBRES */}
+            <AgendaSlotsSelector
+              valorActual={fechaHora ? dayjs(fechaHora) : null}
+              onSeleccionar={(d) => setFechaHora(d.format('YYYY-MM-DDTHH:mm'))}
+              citasOcupadas={citasOcupadas}
+              cargandoCitas={cargandoCitas}
+              estudianteActualNombre={hermano ? `${hermano.nombres} ${hermano.apellido_paterno}` : ''}
+              codigoActual={hermano?.codigo_reserva}
+            />
+
+            {/* Fecha y Hora Confirmada (O Ajuste Manual) */}
             <Box>
               <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 0.8, display: 'block' }}>
-                Fecha y Hora de la Entrevista {esGrupoFamiliar ? '(Válida para toda la familia)' : ''} *
+                Fecha y Hora Confirmada (O Ajuste Manual) {esGrupoFamiliar ? '(Válida para toda la familia)' : ''} *
               </Typography>
               <TextField
                 fullWidth
