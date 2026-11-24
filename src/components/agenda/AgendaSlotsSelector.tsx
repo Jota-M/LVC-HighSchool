@@ -658,7 +658,7 @@ export const AgendaSlotsSelector: React.FC<AgendaSlotsSelectorProps> = ({
             }
             label={
               <Typography variant="caption" fontWeight={700}>
-                Habilitar Turno Tarde (14:30 - 17:30)
+                Habilitar Turno Tarde (14:00 - 17:30)
               </Typography>
             }
           />

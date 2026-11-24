@@ -11,9 +11,9 @@ dayjs.extend(customParseFormat);
 export interface ConfiguracionAgenda {
   duracionMinutos: number; // 20, 30, 40, 45, 60
   atencionTarde: boolean;
-  horaInicioManana: string; // "08:30"
+  horaInicioManana: string; // "08:00"
   horaFinManana: string;    // "12:30"
-  horaInicioTarde: string;  // "14:30"
+  horaInicioTarde: string;  // "14:00"
   horaFinTarde: string;     // "17:30"
   diasLaborales: number[];  // [1, 2, 3, 4, 5] -> Lun(1) a Vie(5)
 }
@@ -21,9 +21,9 @@ export interface ConfiguracionAgenda {
 export const CONFIG_AGENDA_DEFAULT: ConfiguracionAgenda = {
   duracionMinutos: 30,
   atencionTarde: true,
-  horaInicioManana: '08:30',
+  horaInicioManana: '08:00',
   horaFinManana: '12:30',
-  horaInicioTarde: '14:30',
+  horaInicioTarde: '14:00',
   horaFinTarde: '17:30',
   diasLaborales: [1, 2, 3, 4, 5],
 };
@@ -67,7 +67,11 @@ export function obtenerConfiguracionAgenda(): ConfiguracionAgenda {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_CONFIG);
     if (!raw) return CONFIG_AGENDA_DEFAULT;
-    return { ...CONFIG_AGENDA_DEFAULT, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    // Normalizar si se tenían las horas antiguas por defecto
+    if (parsed.horaInicioManana === '08:30') parsed.horaInicioManana = '08:00';
+    if (parsed.horaInicioTarde === '14:30') parsed.horaInicioTarde = '14:00';
+    return { ...CONFIG_AGENDA_DEFAULT, ...parsed };
   } catch {
     return CONFIG_AGENDA_DEFAULT;
   }
@@ -313,7 +317,7 @@ export function calcularSiguienteTurnoLibre(
     fechaInicio = propuesta;
     horaInicioStr = propuesta.format('HH:mm');
   } else {
-    // Por defecto: mañana a primera hora (08:30)
+    // Por defecto: mañana a primera hora (08:00)
     let manana = dayjs().add(1, 'day');
     const diasValidos = config.diasLaborales || [1, 2, 3, 4, 5];
     while (!diasValidos.includes(manana.day())) {
