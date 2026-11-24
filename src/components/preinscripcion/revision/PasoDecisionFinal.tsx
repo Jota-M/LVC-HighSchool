@@ -43,6 +43,7 @@ import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import EventSeatIcon from '@mui/icons-material/EventSeat';
 import SchoolIcon from '@mui/icons-material/School';
+import { toast } from 'react-hot-toast';
 import { PreInscripcionDetalle, EstadoPreInscripcion } from '@/types/preinscripcionTypes';
 
 interface PasoDecisionFinalProps {
@@ -105,9 +106,20 @@ export default function PasoDecisionFinal({
     try {
       setErrorModal(null);
       const deberiaNotificar = conWhatsapp !== undefined ? conWhatsapp : notificarWhatsapp;
+      setNotificarWhatsapp(deberiaNotificar);
       await confirmarDecision(deberiaNotificar);
+      toast.success(
+        deberiaNotificar
+          ? 'Resolución final registrada y notificación enviada por WhatsApp al tutor.'
+          : 'Resolución final registrada exitosamente (sin enviar WhatsApp).'
+      );
+      if (openModalConfirmacion) {
+        setOpenModalConfirmacion(false);
+      }
     } catch (err: any) {
-      setErrorModal(err.message || 'Error al confirmar la decisión final');
+      const msg = err.message || 'Error al confirmar la decisión final';
+      setErrorModal(msg);
+      toast.error(msg);
     }
   };
 
@@ -650,6 +662,12 @@ export default function PasoDecisionFinal({
             />
           </Paper>
 
+          {errorModal && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: '12px' }}>
+              {errorModal}
+            </Alert>
+          )}
+
           {/* Botones de Acción */}
           <Box
             sx={{
@@ -686,12 +704,12 @@ export default function PasoDecisionFinal({
             <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
               {decisionFinal === 'aprobada' ? (
                 <>
-                  {/* Botón 1: Solo Aprobar (Sin WhatsApp) */}
+                  {/* Botón 1: Solo Aprobar (Sin WhatsApp) - Ejecución Directa */}
                   <Button
                     variant="outlined"
                     startIcon={saving && !notificarWhatsapp ? <CircularProgress size={18} color="inherit" /> : <NotificationsOffIcon />}
                     disabled={!decisionFinal || saving}
-                    onClick={() => handleAbrirModalConWA(false)}
+                    onClick={() => handleEjecutarDecision(false)}
                     sx={{
                       borderRadius: '12px',
                       textTransform: 'none',
@@ -709,15 +727,15 @@ export default function PasoDecisionFinal({
                       transition: 'all 0.25s ease',
                     }}
                   >
-                    {saving && !notificarWhatsapp ? 'Procesando...' : 'Solo Aprobar (Sin WhatsApp)'}
+                    {saving && !notificarWhatsapp ? 'Aprobando...' : 'Solo Aprobar (Sin WhatsApp)'}
                   </Button>
 
-                  {/* Botón 2: Aprobar y Enviar WhatsApp */}
+                  {/* Botón 2: Aprobar y Enviar WhatsApp - Ejecución Directa */}
                   <Button
                     variant="contained"
                     startIcon={saving && notificarWhatsapp ? <CircularProgress size={18} color="inherit" /> : <WhatsAppIcon />}
                     disabled={!decisionFinal || saving}
-                    onClick={() => handleAbrirModalConWA(true)}
+                    onClick={() => handleEjecutarDecision(true)}
                     sx={{
                       borderRadius: '12px',
                       textTransform: 'none',
@@ -735,7 +753,7 @@ export default function PasoDecisionFinal({
                       transition: 'all 0.25s ease',
                     }}
                   >
-                    {saving && notificarWhatsapp ? 'Procesando...' : 'Aprobar y Enviar WhatsApp'}
+                    {saving && notificarWhatsapp ? 'Aprobando...' : 'Aprobar y Enviar WhatsApp'}
                   </Button>
                 </>
               ) : (
