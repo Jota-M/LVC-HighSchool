@@ -631,6 +631,7 @@ export const preinscripcionService = {
     if (params?.estado && params.estado !== 'todos') query.set('estado', params.estado);
     if (params?.fecha_inicio) query.set('fecha_inicio', params.fecha_inicio);
     if (params?.fecha_fin) query.set('fecha_fin', params.fecha_fin);
+    if (params?.titulo_reporte) query.set('titulo_reporte', params.titulo_reporte);
 
     const response = await api.get(`/preinscripcion/export/${formato}?${query.toString()}`, {
       responseType: 'blob',

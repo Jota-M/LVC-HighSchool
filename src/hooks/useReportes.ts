@@ -150,15 +150,21 @@ export const useReportes = () => {
   const reportePreInscripcionListadoMutation = useMutation({
     mutationFn: (params: ReportePreInscripcionListadoParams) =>
       reportesService.descargarReportePreInscripcionListado(params),
-    onMutate: () => {
+    onMutate: (variables) => {
       setIsGenerating(true);
-      enqueueSnackbar('Generando listado de pre-inscripciones...', {
+      const msg = variables.estado === 'entrevista_programada' || (variables.titulo_reporte && variables.titulo_reporte.toLowerCase().includes('entrevista'))
+        ? 'Generando reporte de entrevistas programadas...'
+        : 'Generando listado de pre-inscripciones...';
+      enqueueSnackbar(msg, {
         variant: 'info',
       });
     },
     onSuccess: (blob, variables) => {
+      const prefijo = variables.estado === 'entrevista_programada' || (variables.titulo_reporte && variables.titulo_reporte.toLowerCase().includes('entrevista'))
+        ? 'entrevistas-programadas'
+        : 'listado-preinscripciones';
       const nombre = generarNombreArchivo(
-        'listado-preinscripciones',
+        prefijo,
         variables.formato || 'pdf'
       );
       descargarArchivo(blob, nombre);

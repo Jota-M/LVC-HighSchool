@@ -37,7 +37,8 @@ type TipoReporte =
   | 'paralelo'
   | 'estadistico_matricula'
   | 'preinscripcion_listado'
-  | 'preinscripcion_estadistico';
+  | 'preinscripcion_estadistico'
+  | 'preinscripcion_entrevistas';
 
 interface ModalGenerarReporteProps {
   open: boolean;
@@ -186,7 +187,9 @@ export const ModalGenerarReporte: React.FC<ModalGenerarReporteProps> = ({
     tipo === 'paralelo' || tipo === 'estadistico_matricula';
 
   const esReportePreInscripcion = () =>
-    tipo === 'preinscripcion_listado' || tipo === 'preinscripcion_estadistico';
+    tipo === 'preinscripcion_listado' ||
+    tipo === 'preinscripcion_estadistico' ||
+    tipo === 'preinscripcion_entrevistas';
 
   const resetForm = () => {
     setFormato('pdf');
@@ -207,6 +210,8 @@ export const ModalGenerarReporte: React.FC<ModalGenerarReporteProps> = ({
         return 'Estadísticas de Matrículas';
       case 'preinscripcion_listado':
         return 'Listado de Pre-inscripciones';
+      case 'preinscripcion_entrevistas':
+        return 'Padrón de Entrevistas Programadas';
       case 'preinscripcion_estadistico':
         return 'Estadísticas de Pre-inscripciones';
       default:
@@ -231,6 +236,7 @@ export const ModalGenerarReporte: React.FC<ModalGenerarReporteProps> = ({
       case 'estadistico_matricula':
         return periodoId;
       case 'preinscripcion_listado':
+      case 'preinscripcion_entrevistas':
       case 'preinscripcion_estadistico':
         return true; // Los filtros son opcionales
       default:
@@ -268,6 +274,17 @@ export const ModalGenerarReporte: React.FC<ModalGenerarReporteProps> = ({
           turno: turnoPreinscripcion || undefined,
           fecha_inicio: fechaInicio || undefined,
           fecha_fin: fechaFin || undefined,
+          formato,
+        });
+        break;
+
+      case 'preinscripcion_entrevistas':
+        generarReportePreInscripcionListado({
+          estado: 'entrevista_programada',
+          turno: turnoPreinscripcion || undefined,
+          fecha_inicio: fechaInicio || undefined,
+          fecha_fin: fechaFin || undefined,
+          titulo_reporte: 'Padrón de Entrevistas Programadas',
           formato,
         });
         break;
@@ -432,6 +449,7 @@ export const ModalGenerarReporte: React.FC<ModalGenerarReporteProps> = ({
                     <MenuItem value="iniciada">Iniciada</MenuItem>
                     <MenuItem value="datos_completos">Datos Completos</MenuItem>
                     <MenuItem value="en_revision">En Revisión</MenuItem>
+                    <MenuItem value="entrevista_programada">Entrevista Programada</MenuItem>
                     <MenuItem value="aprobada">Aprobada</MenuItem>
                     <MenuItem value="rechazada">Rechazada</MenuItem>
                     <MenuItem value="convertida">Convertida</MenuItem>
@@ -439,8 +457,8 @@ export const ModalGenerarReporte: React.FC<ModalGenerarReporteProps> = ({
                 </FormControl>
               )}
 
-              {/* Filtro de Turno (solo para listado) */}
-              {tipo === 'preinscripcion_listado' && (
+              {/* Filtro de Turno (para listado y entrevistas) */}
+              {(tipo === 'preinscripcion_listado' || tipo === 'preinscripcion_entrevistas') && (
                 <FormControl fullWidth>
                   <InputLabel>Turno (Opcional)</InputLabel>
                   <Select

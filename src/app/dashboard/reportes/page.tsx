@@ -26,6 +26,7 @@ import {
   BarChart as BarChartIcon,
   School as SchoolIcon,
   HowToReg as HowToRegIcon,
+  EventAvailable as EventAvailableIcon,
 } from '@mui/icons-material';
 import { ModalGenerarReporte } from '@/components/reportes/ModalGenerarReporte';
 import { useRouter } from 'next/navigation';
@@ -39,7 +40,8 @@ type TipoReporte =
   | 'paralelo' 
   | 'estadistico_matricula' 
   | 'preinscripcion_listado' 
-  | 'preinscripcion_estadistico';
+  | 'preinscripcion_estadistico'
+  | 'preinscripcion_entrevistas';
 
 export const Reportes: React.FC = () => {
   const theme = useTheme();
@@ -105,6 +107,15 @@ export const Reportes: React.FC = () => {
       icon: ListIcon,
       color: isDark ? '#ec4899' : '#db2777',
       accion: () => handleOpenModal('preinscripcion_listado'),
+    },
+    {
+      id: 'preinscripcion_entrevistas',
+      titulo: 'Entrevistas Programadas',
+      descripcion: 'Cronograma ordenado por hora y fecha de los postulantes con entrevista agendada, modalidad y contacto.',
+      icon: EventAvailableIcon,
+      color: isDark ? '#38bdf8' : '#0284c7',
+      accion: () => handleOpenModal('preinscripcion_entrevistas'),
+      badge: 'Entrevistas',
     },
     {
       id: 'preinscripcion_estadistico',

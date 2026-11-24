@@ -37,6 +37,7 @@ export interface ReportePreInscripcionListadoParams extends ReporteBaseParams {
   grado?: string;
   fecha_inicio?: string;
   fecha_fin?: string;
+  titulo_reporte?: string;
 }
 
 export interface ReportePreInscripcionEstadisticoParams extends ReporteBaseParams {

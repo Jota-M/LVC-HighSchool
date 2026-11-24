@@ -92,6 +92,7 @@ export const reportesService = {
         grado: params.grado,
         fecha_inicio: params.fecha_inicio,
         fecha_fin: params.fecha_fin,
+        titulo_reporte: params.titulo_reporte,
         formato: params.formato || 'pdf',
       },
       responseType: 'blob',

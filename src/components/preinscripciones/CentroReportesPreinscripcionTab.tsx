@@ -40,6 +40,7 @@ import {
   Search as SearchIcon,
   ChevronRightRounded as ChevronRightIcon,
   EventSeat as EventSeatIcon,
+  EventAvailableRounded as EventAvailableRoundedIcon,
 } from '@mui/icons-material';
 import preinscripcionService from '@/services/preinscripcionService';
 
@@ -75,6 +76,17 @@ export const REPORTES_PREINSCRIPCION: ReportePreinscripcionDef[] = [
     gradient: 'linear-gradient(135deg, #10b981, #34d399)',
     badge: 'Aprobados',
     estadoDefault: 'aprobada',
+    filtros: ['grado', 'turno', 'fechas', 'search'],
+  },
+  {
+    id: 'entrevistas_programadas',
+    titulo: 'Padrón de Entrevistas Programadas',
+    descripcion: 'Nómina oficial de postulantes ordenada cronológicamente por hora y fecha de cita, con modalidad (presencial/virtual) y citación de tutores.',
+    icon: <EventAvailableRoundedIcon />,
+    color: '#0284c7',
+    gradient: 'linear-gradient(135deg, #0284c7, #38bdf8)',
+    badge: 'Entrevistas',
+    estadoDefault: 'entrevista_programada',
     filtros: ['grado', 'turno', 'fechas', 'search'],
   },
   {
@@ -443,6 +455,9 @@ export const CentroReportesPreinscripcionTab: React.FC<CentroReportesPreinscripc
                     <MenuItem value="documentos_pendientes">Documentos Pendientes</MenuItem>
                     <MenuItem value="en_revision">En Revisión</MenuItem>
                     <MenuItem value="documentos_aprobados">Documentos Aprobados</MenuItem>
+                    <MenuItem value="entrevista_pendiente">Entrevista Pendiente</MenuItem>
+                    <MenuItem value="entrevista_programada">Entrevista Programada</MenuItem>
+                    <MenuItem value="entrevista_completada">Entrevista Completada</MenuItem>
                     <MenuItem value="aprobada">Aprobada</MenuItem>
                     <MenuItem value="en_espera">En Lista de Espera</MenuItem>
                     <MenuItem value="convertida">Convertida / Matriculada</MenuItem>
