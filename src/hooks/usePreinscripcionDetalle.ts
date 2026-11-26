@@ -94,15 +94,29 @@ export const usePreinscripcionDetalle = (id: string | string[]) => {
       const response = await preinscripcionService.verificarDisponibilidad(
         preinscripcion.grado_id,
         preinscripcion.turno_preferido_id,
-        preinscripcion.periodo_academico_id
+        preinscripcion.periodo_academico_id,
+        {
+          exclude_preinscripcion_id: preinscripcion.id,
+          solo_aprobadas: true,
+        }
       );
 
-      if (response.data?.tiene_cupos && response.data?.cupo) {
-        setCuposDisponibles([response.data.cupo]);
-        
+      const dispData = response.data as any;
+      if (dispData?.tiene_cupos) {
+        const cupoObj = dispData.cupo || {
+          id: dispData.cupo_id || 0,
+          periodo_academico_id: preinscripcion.periodo_academico_id,
+          grado_id: preinscripcion.grado_id,
+          turno_id: preinscripcion.turno_preferido_id,
+          cupos_totales: dispData.cupos_totales ?? 0,
+          cupos_ocupados: dispData.cupos_ocupados ?? 0,
+          cupos_disponibles: dispData.cupos_disponibles ?? 0,
+        };
+        setCuposDisponibles([cupoObj]);
+
         // Si no tiene cupo asignado, seleccionar automáticamente el disponible
-        if (!preinscripcion.tiene_cupo_asignado) {
-          setCupoSeleccionado(response.data.cupo.id);
+        if (!preinscripcion.tiene_cupo_asignado && cupoObj.id) {
+          setCupoSeleccionado(cupoObj.id);
         }
       } else {
         setCuposDisponibles([]);

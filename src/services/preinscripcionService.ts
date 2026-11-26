@@ -174,7 +174,8 @@ export const preinscripcionService = {
   async verificarDisponibilidad(
     grado_id: number,
     turno_id: number,
-    periodo_academico_id: number
+    periodo_academico_id: number,
+    options?: { exclude_preinscripcion_id?: number; solo_aprobadas?: boolean }
   ): Promise<VerificarDisponibilidadResponse> {
     try {
       const params = new URLSearchParams({
@@ -182,6 +183,12 @@ export const preinscripcionService = {
         turno_id: turno_id.toString(),
         periodo_academico_id: periodo_academico_id.toString(),
       });
+      if (options?.exclude_preinscripcion_id) {
+        params.set('exclude_preinscripcion_id', options.exclude_preinscripcion_id.toString());
+      }
+      if (options?.solo_aprobadas) {
+        params.set('solo_aprobadas', 'true');
+      }
 
       const response = await api.get<VerificarDisponibilidadResponse>(
         `/cupos/disponibilidad?${params}`
