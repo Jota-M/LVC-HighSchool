@@ -61,6 +61,7 @@ import { Cupo } from '@/hooks/useCupos';
 import { getInitials } from '@/components/reservaCupo/admin/common';
 import { ReservaCupoHermanoData } from '@/types/reservaCupoTypes';
 import { reservaCupoService } from '@/services/reservaCupoService';
+import preinscripcionService from '@/services/preinscripcionService';
 import { ModalEliminarHermanoAdmin } from '@/components/reservaCupo/admin/ModalEliminarHermanoAdmin';
 
 interface ModalPostulantesCursoProps {
@@ -102,6 +103,27 @@ export const ModalPostulantesCurso: React.FC<ModalPostulantesCursoProps> = ({
   const [modalEliminarHermanoOpen, setModalEliminarHermanoOpen] = useState(false);
   const [motivoEliminarHermano, setMotivoEliminarHermano] = useState('Registro duplicado por el tutor');
   const [isEliminandoHermano, setIsEliminandoHermano] = useState(false);
+
+  const [mandandoEsperaId, setMandandoEsperaId] = useState<number | null>(null);
+
+  const handleMandarEspera = async (p: Preinscripcion) => {
+    const nombre = p.estudiante_nombre || p.codigo_inscripcion || `#${p.id}`;
+    if (!window.confirm(`¿Mandar a Lista de Espera a ${nombre}? Se liberará su cupo asignado.`)) return;
+    setMandandoEsperaId(p.id);
+    try {
+      await preinscripcionService.cambiarEstado(p.id, {
+        estado: 'en_espera',
+        observaciones: 'Movido manualmente a lista de espera',
+        notificarWhatsapp: false,
+      });
+      toast.success(`${nombre} movido a Lista de Espera`);
+      onCupoUpdated?.();
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al mover a lista de espera');
+    } finally {
+      setMandandoEsperaId(null);
+    }
+  };
 
   const cargarHermanosCurso = async () => {
     if (!cupo?.grado_id) return;
@@ -1096,6 +1118,34 @@ export const ModalPostulantesCurso: React.FC<ModalPostulantesCursoProps> = ({
                             </Button>
                           )}
 
+                          {!['en_espera', 'convertida', 'rechazada', 'cancelada'].includes((p.estado || '').toLowerCase()) && (
+                            <Tooltip title="Mandar a Lista de Espera y liberar cupo">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  disabled={mandandoEsperaId === p.id}
+                                  onClick={() => handleMandarEspera(p)}
+                                  sx={{
+                                    borderRadius: '9px',
+                                    color: '#8b5cf6',
+                                    bgcolor: alpha('#8b5cf6', 0.08),
+                                    border: `1px solid ${alpha('#8b5cf6', 0.35)}`,
+                                    '&:hover': {
+                                      bgcolor: alpha('#8b5cf6', 0.18),
+                                      borderColor: '#8b5cf6',
+                                    },
+                                  }}
+                                >
+                                  {mandandoEsperaId === p.id ? (
+                                    <CircularProgress size={14} color="inherit" />
+                                  ) : (
+                                    <HourglassEmptyIcon sx={{ fontSize: 16 }} />
+                                  )}
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          )}
+
                           <Button
                             size="small"
                             variant="contained"
@@ -1289,6 +1339,33 @@ export const ModalPostulantesCurso: React.FC<ModalPostulantesCursoProps> = ({
                               >
                                 <WhatsAppIcon sx={{ fontSize: 16 }} />
                               </IconButton>
+                            </Tooltip>
+                          )}
+
+                          {!['en_espera', 'convertida', 'rechazada', 'cancelada'].includes((p.estado || '').toLowerCase()) && (
+                            <Tooltip title="Mandar a Lista de Espera y liberar cupo">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  disabled={mandandoEsperaId === p.id}
+                                  onClick={() => handleMandarEspera(p)}
+                                  sx={{
+                                    borderRadius: '8px',
+                                    color: '#8b5cf6',
+                                    bgcolor: alpha('#8b5cf6', 0.08),
+                                    border: `1px solid ${alpha('#8b5cf6', 0.3)}`,
+                                    '&:hover': {
+                                      bgcolor: alpha('#8b5cf6', 0.18),
+                                    },
+                                  }}
+                                >
+                                  {mandandoEsperaId === p.id ? (
+                                    <CircularProgress size={14} color="inherit" />
+                                  ) : (
+                                    <HourglassEmptyIcon sx={{ fontSize: 16 }} />
+                                  )}
+                                </IconButton>
+                              </span>
                             </Tooltip>
                           )}
 

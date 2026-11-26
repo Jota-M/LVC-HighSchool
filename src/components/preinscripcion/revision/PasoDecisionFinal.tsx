@@ -168,6 +168,14 @@ export default function PasoDecisionFinal({
       desc: 'Requerir documentación complementaria o aclaración previa a la decisión final.',
       icon: <PendingIcon sx={{ fontSize: 26 }} />,
     },
+    {
+      key: 'en_espera' as EstadoPreInscripcion,
+      color: '#8b5cf6',
+      lightColor: alpha('#8b5cf6', 0.12),
+      title: 'Mover a Lista de Espera',
+      desc: 'Pasar al postulante a lista de espera y liberar su cupo (ej. inasistencia a entrevista o falta de vacante).',
+      icon: <AccessTimeIcon sx={{ fontSize: 26 }} />,
+    },
   ];
 
   const cardStyle = {

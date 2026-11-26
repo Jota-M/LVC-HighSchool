@@ -39,6 +39,7 @@ interface TablaPreinscripcionesProps {
   onPromover?: (id: number) => void;
   onAgendarFamiliar?: (id: number) => void;
   onEditar?: (preinscripcion: Preinscripcion) => void;
+  onMandarEspera?: (id: number) => void;
 }
 
 const getEstadoConfig = (estado: string) => {
@@ -70,6 +71,7 @@ export const TablaPreinscripciones: React.FC<TablaPreinscripcionesProps> = ({
   onPromover,
   onAgendarFamiliar,
   onEditar,
+  onMandarEspera,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -341,6 +343,23 @@ export const TablaPreinscripciones: React.FC<TablaPreinscripcionesProps> = ({
                         <VisibilityIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+
+                    {onMandarEspera && !['en_espera', 'convertida', 'rechazada', 'cancelada'].includes((p.estado || '').toLowerCase()) && (
+                      <Tooltip title="Mandar a Lista de Espera y liberar cupo">
+                        <IconButton
+                          size="small"
+                          onClick={() => onMandarEspera(p.id)}
+                          sx={{
+                            border: '1px solid rgba(139,92,246,0.4)',
+                            color: '#8b5cf6',
+                            borderRadius: '10px',
+                            '&:hover': { bgcolor: '#8b5cf6', color: '#fff' },
+                          }}
+                        >
+                          <HourglassEmptyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
 
                     {onEditar && (
                       <Tooltip title="Editar datos, curso y cupo">

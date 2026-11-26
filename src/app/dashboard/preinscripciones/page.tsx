@@ -525,6 +525,15 @@ export default function PreinscripcionesPage() {
                   onPromover={handlePromover}
                   onAgendarFamiliar={(id) => setFamiliaModalId(id)}
                   onEditar={(item) => setPreinscripcionEditar(item)}
+                  onMandarEspera={async (id) => {
+                    if (!window.confirm('¿Mandar esta preinscripción a Lista de Espera? Se liberará su cupo asignado.')) return;
+                    try {
+                      await changeEstado(id, 'en_espera', 'Movido manualmente a lista de espera', false);
+                      showSnackbar('Postulante movido a Lista de Espera', 'success');
+                    } catch (err: any) {
+                      showSnackbar(err?.message || 'Error al mover a lista de espera', 'error');
+                    }
+                  }}
                 />
               )}
 
@@ -637,6 +646,7 @@ export default function PreinscripcionesPage() {
                 onSnackbar={showSnackbar}
                 preinscripciones={preinscripciones}
                 onRevisar={(id) => router.push(`/dashboard/preinscripciones/detalle/${id}`)}
+                onRefreshPreinscripciones={() => fetchPreinscripciones()}
               />
             </Box>
           </Fade>

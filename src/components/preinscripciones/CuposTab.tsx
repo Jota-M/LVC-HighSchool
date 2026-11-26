@@ -62,12 +62,14 @@ interface CuposTabProps {
   onSnackbar: (message: string, severity?: 'success' | 'error') => void;
   preinscripciones?: Preinscripcion[];
   onRevisar?: (id: number) => void;
+  onRefreshPreinscripciones?: () => void;
 }
 
 export const CuposTab: React.FC<CuposTabProps> = ({
   onSnackbar,
   preinscripciones = [],
   onRevisar = () => {},
+  onRefreshPreinscripciones,
 }) => {
   const { isDark, gold: accentColor, gradBg } = usePalette();
 
@@ -1139,6 +1141,7 @@ export const CuposTab: React.FC<CuposTabProps> = ({
           onCupoUpdated={() => {
             fetchCupos();
             cargarBalance();
+            onRefreshPreinscripciones?.();
           }}
         />
       )}
