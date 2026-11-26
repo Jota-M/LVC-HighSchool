@@ -243,17 +243,17 @@ export const CuposTab: React.FC<CuposTabProps> = ({
     );
 
     let regInscritos = balGrado?.total_asegurados || 0;
-    let regConfirmados = cupoParaModal.regulares_confirmados ?? balGrado?.total_confirmados ?? 0;
+    let regConfirmados = cupoParaModal.regulares_confirmados !== undefined ? cupoParaModal.regulares_confirmados : (balGrado?.total_confirmados ?? 0);
 
     const esManana = (cupoParaModal.turno_nombre || '').toLowerCase().includes('mañana') || (cupoParaModal.turno_nombre || '').toLowerCase().includes('manana');
     const esTarde = (cupoParaModal.turno_nombre || '').toLowerCase().includes('tarde');
 
-    if (esManana && balGrado?.turnos?.manana?.asegurados) {
-      regInscritos = balGrado.turnos.manana.asegurados;
-      if (cupoParaModal.regulares_confirmados === undefined) regConfirmados = balGrado.turnos.manana.confirmados;
-    } else if (esTarde && balGrado?.turnos?.tarde?.asegurados) {
-      regInscritos = balGrado.turnos.tarde.asegurados;
-      if (cupoParaModal.regulares_confirmados === undefined) regConfirmados = balGrado.turnos.tarde.confirmados;
+    if (esManana && balGrado?.turnos?.manana) {
+      regInscritos = balGrado.turnos.manana.asegurados ?? regInscritos;
+      if (cupoParaModal.regulares_confirmados === undefined) regConfirmados = balGrado.turnos.manana.confirmados ?? 0;
+    } else if (esTarde && balGrado?.turnos?.tarde) {
+      regInscritos = balGrado.turnos.tarde.asegurados ?? regInscritos;
+      if (cupoParaModal.regulares_confirmados === undefined) regConfirmados = balGrado.turnos.tarde.confirmados ?? 0;
     }
 
     const aforoTotal = cupoParaModal.cupos_totales || 25;
@@ -755,17 +755,17 @@ export const CuposTab: React.FC<CuposTabProps> = ({
             );
 
             let regInscritos = balGrado?.total_asegurados || 0;
-            let regConfirmados = cupo.regulares_confirmados ?? balGrado?.total_confirmados ?? 0;
+            let regConfirmados = cupo.regulares_confirmados !== undefined ? cupo.regulares_confirmados : (balGrado?.total_confirmados ?? 0);
 
             const esManana = (cupo.turno_nombre || '').toLowerCase().includes('mañana') || (cupo.turno_nombre || '').toLowerCase().includes('manana');
             const esTarde = (cupo.turno_nombre || '').toLowerCase().includes('tarde');
 
-            if (esManana && balGrado?.turnos?.manana?.asegurados) {
-              regInscritos = balGrado.turnos.manana.asegurados;
-              if (cupo.regulares_confirmados === undefined) regConfirmados = balGrado.turnos.manana.confirmados;
-            } else if (esTarde && balGrado?.turnos?.tarde?.asegurados) {
-              regInscritos = balGrado.turnos.tarde.asegurados;
-              if (cupo.regulares_confirmados === undefined) regConfirmados = balGrado.turnos.tarde.confirmados;
+            if (esManana && balGrado?.turnos?.manana) {
+              regInscritos = balGrado.turnos.manana.asegurados ?? regInscritos;
+              if (cupo.regulares_confirmados === undefined) regConfirmados = balGrado.turnos.manana.confirmados ?? 0;
+            } else if (esTarde && balGrado?.turnos?.tarde) {
+              regInscritos = balGrado.turnos.tarde.asegurados ?? regInscritos;
+              if (cupo.regulares_confirmados === undefined) regConfirmados = balGrado.turnos.tarde.confirmados ?? 0;
             }
 
             // Hermanos confirmados (de reserva_cupo_hermano - Prioridad Hermano)
