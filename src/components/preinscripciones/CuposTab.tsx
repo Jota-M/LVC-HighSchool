@@ -205,9 +205,9 @@ export const CuposTab: React.FC<CuposTabProps> = ({
     let sobrantes = 0;
     cupos.forEach((c) => {
       const bal = balanceAsegurados?.grados?.find((g) => g.grado_destino_id === c.grado_id);
-      const conf = c.regulares_confirmados ?? bal?.total_confirmados ?? 0;
+      const regProt = c.regulares_protegidos ?? c.regulares_confirmados ?? bal?.total_confirmados ?? 0;
       const herm = Number(c.hermanos_confirmados || 0);
-      sobrantes += Math.max(0, c.cupos_totales - conf - herm);
+      sobrantes += Math.max(0, c.cupos_totales - regProt - herm);
     });
     return {
       totalSobrantesRegularesGlobal: sobrantes,
@@ -258,8 +258,9 @@ export const CuposTab: React.FC<CuposTabProps> = ({
 
     const aforoTotal = cupoParaModal.cupos_totales || 25;
     const hermanosConfirmados = Number(cupoParaModal.hermanos_confirmados || 0);
-    // Descontar tanto regulares confirmados como prioridad hermano
-    const cuposSobrantes = Math.max(0, aforoTotal - regConfirmados - hermanosConfirmados);
+    const regProtegidos = cupoParaModal.regulares_protegidos ?? regConfirmados;
+    // Descontar regulares que retienen plaza (protegidos) y prioridad hermano
+    const cuposSobrantes = Math.max(0, aforoTotal - regProtegidos - hermanosConfirmados);
 
     const postulantesCurso = preinscripciones.filter((p) => {
       const matchGrado = p.grado_id === cupoParaModal.grado_id;
@@ -756,6 +757,7 @@ export const CuposTab: React.FC<CuposTabProps> = ({
 
             let regInscritos = balGrado?.total_asegurados || 0;
             let regConfirmados = cupo.regulares_confirmados !== undefined ? cupo.regulares_confirmados : (balGrado?.total_confirmados ?? 0);
+            let regNoContinua = cupo.regulares_no_continua ?? balGrado?.total_no_continua ?? 0;
 
             const esManana = (cupo.turno_nombre || '').toLowerCase().includes('mañana') || (cupo.turno_nombre || '').toLowerCase().includes('manana');
             const esTarde = (cupo.turno_nombre || '').toLowerCase().includes('tarde');
@@ -763,10 +765,15 @@ export const CuposTab: React.FC<CuposTabProps> = ({
             if (esManana && balGrado?.turnos?.manana) {
               regInscritos = balGrado.turnos.manana.asegurados ?? regInscritos;
               if (cupo.regulares_confirmados === undefined) regConfirmados = balGrado.turnos.manana.confirmados ?? 0;
+              if (cupo.regulares_no_continua === undefined) regNoContinua = balGrado.turnos.manana.no_continua ?? 0;
             } else if (esTarde && balGrado?.turnos?.tarde) {
               regInscritos = balGrado.turnos.tarde.asegurados ?? regInscritos;
               if (cupo.regulares_confirmados === undefined) regConfirmados = balGrado.turnos.tarde.confirmados ?? 0;
+              if (cupo.regulares_no_continua === undefined) regNoContinua = balGrado.turnos.tarde.no_continua ?? 0;
             }
+
+            // Regulares que retienen cupo (proyectados activos menos no_continua/anuladas)
+            const regProtegidos = cupo.regulares_protegidos ?? Math.max(regConfirmados, regInscritos - regNoContinua);
 
             // Hermanos confirmados (de reserva_cupo_hermano - Prioridad Hermano)
             const hermanosConfirmados = Number(cupo.hermanos_confirmados || 0);
@@ -774,9 +781,8 @@ export const CuposTab: React.FC<CuposTabProps> = ({
             // Aforo total
             const aforo = cupo.cupos_totales;
 
-            // 🌟 CÁLCULO CLAVE: Cupos que sobran tras descontar regulares confirmados Y prioridad hermanos
-            // Ejemplo: Aforo 25, regulares confirmados 0 (p.ej. primera sección), prioridad hermanos 5 -> Quedan 20 cupos sobrantes para nuevos postulantes
-            const cuposSobrantes = Math.max(0, aforo - regConfirmados - hermanosConfirmados);
+            // 🌟 CÁLCULO CLAVE: Cupos que sobran tras descontar regulares protegidos Y prioridad hermanos
+            const cuposSobrantes = Math.max(0, aforo - regProtegidos - hermanosConfirmados);
 
             // Postulantes preinscritos que aplicaron a este grado y turno
             const postulantesCurso = preinscripciones.filter((p) => {
@@ -791,8 +797,8 @@ export const CuposTab: React.FC<CuposTabProps> = ({
             // Vacantes que aún quedan libres para nuevos ingresos
             const vacantesLibresFinales = Math.max(0, cuposSobrantes - postConCupo);
 
-            // Ocupación total sobre aforo (Regulares confirmados + prioridad hermanos confirmados + nuevos con cupo)
-            const ocupadosTotales = regConfirmados + hermanosConfirmados + postConCupo;
+            // Ocupación total sobre aforo (Regulares protegidos + prioridad hermanos confirmados + nuevos con cupo)
+            const ocupadosTotales = regProtegidos + hermanosConfirmados + postConCupo;
             const pctOcupacionTotal = aforo > 0 ? (ocupadosTotales / aforo) * 100 : 0;
             const ocupColor = getOcupacionColor(pctOcupacionTotal);
 
@@ -930,6 +936,17 @@ export const CuposTab: React.FC<CuposTabProps> = ({
                             {regInscritos} / {regConfirmados}
                           </Typography>
                         </Box>
+
+                        {regNoContinua > 0 && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.4 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem', fontWeight: 600 }}>
+                              Liberados (No continúa)
+                            </Typography>
+                            <Typography variant="caption" fontWeight={800} sx={{ color: '#10b981' }}>
+                              +{regNoContinua} cupo{regNoContinua > 1 ? 's' : ''}
+                            </Typography>
+                          </Box>
+                        )}
 
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.8 }}>
                           <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem', fontWeight: 600 }}>

@@ -539,8 +539,8 @@ export interface BalanceCupoGrado {
   total_restantes: number;
   porcentaje_confirmado: number;
   turnos: {
-    manana: { asegurados: number; confirmados: number; restantes: number };
-    tarde: { asegurados: number; confirmados: number; restantes: number };
+    manana: { asegurados: number; confirmados: number; no_continua?: number; restantes: number };
+    tarde: { asegurados: number; confirmados: number; no_continua?: number; restantes: number };
   };
 }
 

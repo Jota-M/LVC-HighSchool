@@ -23,6 +23,8 @@ export interface Cupo {
   nivel_academico_nombre?: string;
   porcentaje_ocupacion?: number;
   regulares_confirmados?: number;
+  regulares_protegidos?: number;
+  regulares_no_continua?: number;
   hermanos_confirmados?: number;
   preinscripciones_aprobadas?: number;
   preinscripciones_total?: number;
